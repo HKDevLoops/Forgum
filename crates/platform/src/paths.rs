@@ -233,6 +233,57 @@ pub fn is_canonical(path: &Path) -> bool {
         .unwrap_or(false)
 }
 
+/// Compute the path to a daemon state file for a given session ID.
+///
+/// On Unix: `$XDG_RUNTIME_DIR/Forgum/daemon-{id}.json`
+/// On Windows: `%LOCALAPPDATA%/Forgum/daemon-{id}.json`
+#[must_use]
+pub fn daemon_state_path(session_id: &str) -> PathBuf {
+    runtime_dir()
+        .unwrap_or_else(|_| PathBuf::from("/tmp"))
+        .join(format!("daemon-{}.json", session_id))
+}
+
+/// Compute the path to a control socket for a given session ID.
+///
+/// On Unix: `$XDG_RUNTIME_DIR/Forgum/ctrl-{id}.sock`
+/// On Windows: `%LOCALAPPDATA%/Forgum/ctrl-{id}.pipe`
+#[must_use]
+pub fn control_socket_path(session_id: &str) -> PathBuf {
+    let base = runtime_dir().unwrap_or_else(|_| PathBuf::from("/tmp"));
+    if cfg!(unix) {
+        base.join(format!("ctrl-{}.sock", session_id))
+    } else {
+        base.join(format!("ctrl-{}.pipe", session_id))
+    }
+}
+
+/// Determine a session identifier from the environment.
+///
+/// Priority:
+/// 1. `$TMUX_PANE` (tmux)
+/// 2. `$ZELLIJ_SESSION_ID` (zellij)
+/// 3. Parent shell PID
+#[must_use]
+pub fn detect_session_id() -> String {
+    if let Ok(pane) = std::env::var("TMUX_PANE") {
+        return pane;
+    }
+    if let Ok(session) = std::env::var("ZELLIJ_SESSION_ID") {
+        return session;
+    }
+    // Fallback: parent PID
+    #[cfg(unix)]
+    {
+        let ppid = unsafe { libc::getppid() };
+        format!("shell-{}", ppid)
+    }
+    #[cfg(windows)]
+    {
+        format!("shell-{}", std::process::id())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

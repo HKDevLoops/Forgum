@@ -18,15 +18,10 @@ fn shutdown_flag_starts_false() {
 #[test]
 fn shutdown_flag_can_be_triggered_externally() {
     let flag = ShutdownFlag::new();
-    let handle = flag.handle();
-    // Spawn a thread that sets the flag after 50 ms.
+    let handle = flag.shutdown_handle();
     std::thread::spawn(move || {
         std::thread::sleep(std::time::Duration::from_millis(50));
-        // SAFETY: we know the Arc lives as long as `flag` does; the spawn
-        // here is bounded.
     });
-    // We can't easily race here without sending a signal; just trigger
-    // manually and assert it's visible.
     flag.trigger();
     assert!(flag.is_shutdown());
     drop(handle);
@@ -35,12 +30,11 @@ fn shutdown_flag_can_be_triggered_externally() {
 #[test]
 fn handle_shares_state() {
     let flag = ShutdownFlag::new();
-    let h1 = flag.handle();
-    let h2 = flag.handle();
+    let h1 = flag.shutdown_handle();
+    let h2 = flag.shutdown_handle();
     let counter = Arc::new(AtomicUsize::new(0));
     let counter_for_thread = Arc::clone(&counter);
 
-    // One thread waits for the flag, another sets it.
     let wait_handle = std::thread::spawn(move || {
         for _ in 0..100 {
             if h1.load(Ordering::Relaxed) {

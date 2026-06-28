@@ -9,6 +9,8 @@
 
 pub mod cli;
 pub mod config;
+pub mod control_socket;
+pub mod daemon;
 pub mod effects;
 pub mod framebuffer;
 pub mod protocol;

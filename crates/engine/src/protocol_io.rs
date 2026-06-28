@@ -21,7 +21,10 @@ pub const MAX_INPUT: usize = 4 * 1024 * 1024;
 
 /// Read a scene config from `--file` or stdin (in that order). When neither
 /// is set, returns `SceneConfig::default()`.
-pub fn read_scene(file: Option<&Path>) -> Result<SceneConfig, PlatformError> {
+///
+/// If `cleanup` is true and the file was read successfully, it is deleted
+/// after parsing (BUG-D2 fix).
+pub fn read_scene(file: Option<&Path>, cleanup: bool) -> Result<SceneConfig, PlatformError> {
     let raw = if let Some(p) = file {
         let bytes = fs::read(p)?;
         if bytes.len() >= MAX_INPUT {
@@ -31,9 +34,11 @@ pub fn read_scene(file: Option<&Path>) -> Result<SceneConfig, PlatformError> {
                 MAX_INPUT
             )));
         }
+        if cleanup {
+            let _ = fs::remove_file(p);
+        }
         bytes
     } else if atty_stdin() {
-        // No file and stdin is a tty → caller didn't supply input. Use defaults.
         return Ok(SceneConfig::default());
     } else {
         let mut buf = Vec::with_capacity(8 * 1024);
@@ -76,9 +81,29 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         let path = tmp.path().join("scene.json");
         std::fs::write(&path, json).unwrap();
-        let scene = read_scene(Some(&path)).unwrap();
+        let scene = read_scene(Some(&path), false).unwrap();
         assert_eq!(scene.cow, "tux");
         assert_eq!(scene.text, "hi");
+    }
+
+    #[test]
+    fn cleanup_removes_file() {
+        let json = r#"{"cow":"tux"}"#;
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("scene.json");
+        std::fs::write(&path, json).unwrap();
+        let _scene = read_scene(Some(&path), true).unwrap();
+        assert!(!path.exists(), "file should be removed after read");
+    }
+
+    #[test]
+    fn no_cleanup_preserves_file() {
+        let json = r#"{"cow":"tux"}"#;
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("scene.json");
+        std::fs::write(&path, json).unwrap();
+        let _scene = read_scene(Some(&path), false).unwrap();
+        assert!(path.exists(), "file should still exist when cleanup=false");
     }
 
     #[test]
@@ -87,7 +112,7 @@ mod tests {
         let path = tmp.path().join("bad.json");
         let mut f = std::fs::File::create(&path).unwrap();
         f.write_all(b"{ not valid json").unwrap();
-        let r = read_scene(Some(&path));
+        let r = read_scene(Some(&path), false);
         assert!(matches!(r, Err(PlatformError::ConfigParse { .. })));
     }
 
@@ -95,11 +120,9 @@ mod tests {
     fn huge_file_rejected() {
         let tmp = tempfile::tempdir().unwrap();
         let path = tmp.path().join("huge.json");
-        // Write MAX_INPUT bytes of ` `.
         let f = std::fs::File::create(&path).unwrap();
-        // Use set_len to make it fast.
         f.set_len(MAX_INPUT as u64).unwrap();
-        let r = read_scene(Some(&path));
+        let r = read_scene(Some(&path), false);
         assert!(matches!(r, Err(PlatformError::InvalidArgument(_))));
     }
 
@@ -108,13 +131,13 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         let path = tmp.path().join("ws.json");
         std::fs::write(&path, "   \n\n\t ").unwrap();
-        let scene = read_scene(Some(&path)).unwrap();
+        let scene = read_scene(Some(&path), false).unwrap();
         assert_eq!(scene, SceneConfig::default());
     }
 
     #[test]
     fn missing_file_errors() {
-        let r = read_scene(Some(Path::new("/nonexistent/forgum-test/file.json")));
+        let r = read_scene(Some(Path::new("/nonexistent/forgum-test/file.json")), false);
         assert!(matches!(r, Err(PlatformError::Io(_))));
     }
 }

@@ -51,9 +51,12 @@ pub mod platform_windows;
 pub use error::PlatformError;
 pub use guards::{AltScreenGuard, CursorShowGuard, RawModeGuard};
 pub use output::{open_output, OutputHandle, OutputTarget};
-pub use paths::{config_path, data_dir, log_dir, runtime_dir, ConfigPaths, ShellKind};
+pub use paths::{
+    config_path, control_socket_path, daemon_state_path, data_dir, detect_session_id, log_dir,
+    runtime_dir, ConfigPaths, ShellKind,
+};
 pub use signal::{ShutdownFlag, SignalGuard};
-pub use spawn::{spawn_detached, DetachedChild};
+pub use spawn::{process_is_alive, spawn_detached, DetachedChild};
 pub use terminal::{detect_capabilities, ColorLevel, TerminalCapabilities};
 
 /// Expand to the contained code only when compiling on a Unix-like target.
