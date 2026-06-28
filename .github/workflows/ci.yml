@@ -1,0 +1,107 @@
+# Forgum Phase 0 CI
+# Runs on every push and PR. Gates:
+#   1. Rust build + test (ubuntu-latest, windows-latest)
+#   2. cargo clippy -- -D warnings
+#   3. cargo fmt --check
+#   4. cfg-grep gate (no platform #[cfg] in engine source)
+#   5. Pester tests (ubuntu via pwsh, windows native)
+#   6. cargo audit (deny known vulnerabilities)
+#   7. Version parity check (Cargo.toml version field exists)
+
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: "-D warnings"
+
+jobs:
+  rust-build-test:
+    name: Rust (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - uses: Swatinem/rust-cache@v2
+      - name: Build
+        run: cargo build --workspace --verbose
+      - name: Test
+        run: cargo test --workspace --verbose
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+      - name: Format check
+        run: cargo fmt --check
+
+  cfg-grep:
+    name: Platform cfg isolation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Grep for platform cfg in engine source
+        run: |
+          HITS=$(grep -rn '#\[cfg(unix)\]\|cfg!(unix)\|#\[cfg(windows)\]\|cfg!(windows)\|#\[cfg(target_os\|cfg!(target_os\|#\[cfg(target_family\|cfg!(target_family' crates/engine/src/ || true)
+          if [ -n "$HITS" ]; then
+            echo "ERROR: engine/src/ contains platform-targeting #[cfg] attributes."
+            echo "All platform branching must live in forgum-platform."
+            echo "$HITS"
+            exit 1
+          fi
+          echo "OK: no platform cfg in engine source."
+
+  pester:
+    name: Pester (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build engine
+        run: cargo build --workspace
+      - name: Run Pester tests
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Continue'
+          $results = Invoke-Pester -Path Tests/ -Output Detailed -PassThru
+          if ($results.FailedCount -gt 0) {
+            Write-Error "Pester: $($results.FailedCount) test(s) failed."
+            exit 1
+          }
+
+  cargo-audit:
+    name: Security audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install cargo-audit
+        run: cargo install cargo-audit
+      - name: Run cargo audit
+        run: cargo audit
+
+  version-parity:
+    name: Version parity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check Cargo.toml version exists
+        run: |
+          VERSION=$(grep -m1 '^version' Cargo.toml | sed 's/.*"\(.*\)".*/\1/')
+          if [ -z "$VERSION" ]; then
+            echo "ERROR: No version field found in Cargo.toml."
+            exit 1
+          fi
+          echo "Cargo.toml version: $VERSION"

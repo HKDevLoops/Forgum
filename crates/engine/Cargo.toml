@@ -1,0 +1,37 @@
+[package]
+name = "forgum-engine"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Forgum's Rust animation engine: the binary that renders cowsay+fortune+lolcat with effects, above the prompt as a non-blocking overlay."
+repository.workspace = true
+readme = "../../README.md"
+keywords = ["cowsay", "fortune", "animation", "terminal", "rust"]
+categories = ["command-line-interface", "games", "graphics"]
+
+[lib]
+name = "forgum_engine"
+path = "src/lib.rs"
+
+[[bin]]
+name = "forgum-engine"
+path = "src/main.rs"
+
+[lints]
+workspace = true
+
+[dependencies]
+forgum-platform = { path = "../platform" }
+crossterm = "0.28"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "1"
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
+[dev-dependencies]
+assert_cmd = "2"
+predicates = "3"
+tempfile = "3"

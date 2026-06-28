@@ -1,0 +1,54 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/platform",
+    "crates/engine",
+]
+
+[workspace.package]
+version = "0.4.0"
+edition = "2021"
+rust-version = "1.85"
+license = "MIT"
+authors = ["Forgum Contributors"]
+repository = "https://github.com/harish2222/Forgum"
+description = "Cross-platform cowsay+fortune+lolcat with a Rust ANSI animation engine"
+
+[workspace.lints.rust]
+unsafe_code = "deny"
+missing_debug_implementations = "warn"
+unreachable_pub = "allow"   # bin crates intentionally expose items only to tests
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
+pedantic = { level = "allow", priority = -1 }   # opt-in per-module
+nursery = { level = "allow", priority = -1 }
+cargo = { level = "warn", priority = -1 }
+correctness = { level = "warn", priority = -1 }
+suspicious = { level = "warn", priority = -1 }
+# crossterm pulls in windows-sys 0.61; we want 0.59. We can't avoid both
+# being in the dep graph without forking crossterm, so just suppress.
+multiple_crate_versions = "allow"
+# Allow these noisy ones.
+module_name_repetitions = "allow"
+must_use_candidate = "allow"
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+cast_precision_loss = "allow"
+cast_possible_truncation = "allow"
+cast_sign_loss = "allow"
+missing_const_for_fn = "allow"
+needless_pass_by_value = "allow"
+items_after_statements = "allow"
+too_long_first_doc_paragraph = "allow"
+
+[workspace.dependencies]
+# Pin shared versions so we don't end up with 0.59 + 0.61 in the dep graph.
+windows-sys = { version = "0.59", default-features = false }
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+strip = "debuginfo"
+panic = "unwind"   # RAII guards must run on panic

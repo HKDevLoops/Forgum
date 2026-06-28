@@ -1,0 +1,32 @@
+# Rust
+/target/
+**/*.rs.bk
+Cargo.lock.bak
+*.pdb
+
+# PowerShell
+*.tmp
+*.err
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*~
+
+# Secrets / local
+.env
+.env.local
+*.pem
+*.key
+secrets/
+
+# Build artifacts
+*.exe
+*.dll
+*.dylib
+*.so
