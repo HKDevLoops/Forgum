@@ -1,0 +1,39 @@
+The cow is the embodiment of the earth.
+%
+To be is to do — Socrates
+%
+In the beginning was the command line.
+%
+All that glitters is not gold — Shakespeare
+%
+A journey of a thousand miles begins with a single step — Lao Tzu
+%
+The only way to do great work is to love what you do — Steve Jobs
+%
+Stay hungry, stay foolish — Stewart Brand
+%
+Talk is cheap. Show me the code — Linus Torvalds
+%
+First, solve the problem. Then, write the code — John Johnson
+%
+The best error message is the one that never shows up — Thomas Fuchs
+%
+Code is like humor. When you have to explain it, it's bad — Cory House
+%
+Simplicity is the soul of efficiency — Austin Freeman
+%
+Fix the cause, not the symptom.
+%
+Optimism is an occupational hazard of programming: feedback is the treatment.
+%
+It works on my machine.
+%
+There are only two hard things in Computer Science: cache invalidation and naming things — Phil Karlton
+%
+It's not a bug — it's an undocumented feature.
+%
+99 little bugs in the code, 99 little bugs. Take one down, patch it around, 127 little bugs in the code.
+%
+A computer lets you make more mistakes faster than any other invention in human history — Mitch Ratcliffe
+%
+The most dangerous phrase in the English language is: "We've always done it this way." — Grace Hopper

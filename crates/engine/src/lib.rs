@@ -8,11 +8,15 @@
 //! delegated to `forgum-platform`. CI greps `engine/src/` and fails on hits.
 
 pub mod cli;
+pub mod completions;
 pub mod config;
 pub mod control_socket;
+pub mod cow;
 pub mod daemon;
 pub mod effects;
+pub mod fortune;
 pub mod framebuffer;
+pub mod init;
 pub mod protocol;
 pub mod protocol_io;
 pub mod render;

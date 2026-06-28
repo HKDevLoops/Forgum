@@ -23,7 +23,7 @@ function Get-ForgumEngineBinary {
 
     # 2. Module-relative.
     $moduleRoot = $PSScriptRoot | Split-Path -Parent
-    $candidate = Join-Path $moduleRoot 'bin' $exeName
+    $candidate = Join-Path (Join-Path $moduleRoot 'bin') $exeName
     if (Test-Path -LiteralPath $candidate) {
         return (Resolve-Path -LiteralPath $candidate).Path
     }

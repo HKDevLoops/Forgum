@@ -46,22 +46,29 @@ const _PROMPT_GUARD: u16 = PROMPT_GUARD; // keep for Phase 2 overlay region math
 
 /// Run the foreground render loop. Owns the alternate screen; exits on
 /// `q`/Esc/`SIGINT`/`SIGTERM`/`SIGHUP` or when `duration` elapses.
+///
+/// If `composed_text` is provided, it's used directly as the cow art
+/// (pre-composed with speech bubble by the cow module). Otherwise falls
+/// back to the Phase 0 static cow rendering.
 pub fn render_loop_foreground(
     mut out: OutputHandle,
     config: SceneConfig,
     shutdown: ShutdownFlag,
+    composed_text: Option<&str>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let _signals = SignalGuard::install(shutdown.clone())?;
 
     let caps = TerminalCapabilities::probe();
     let (mut cols, mut rows) = (caps.width.max(1), caps.height.max(1));
 
+    let cow_display = composed_text.unwrap_or(&config.text);
+
     // Tiny-terminal guard: print static text and exit.
     if cols < MIN_COLS || rows < MIN_ROWS {
-        let cow_text = if config.text.is_empty() {
+        let cow_text = if cow_display.is_empty() {
             effects::default_cow_text().to_string()
         } else {
-            format!("{}\n{}", effects::default_cow_text(), config.text)
+            format!("{}\n{}", effects::default_cow_text(), cow_display)
         };
         let _ = out.write_all(cow_text.as_bytes());
         let _ = out.write_all(b"\n");
@@ -78,10 +85,10 @@ pub fn render_loop_foreground(
     let mut scheduler = Scheduler::new(config.fps);
     let max_frames = compute_max_frames(config.duration, config.fps);
 
-    let cow_text = if config.text.is_empty() {
+    let cow_text = if cow_display.is_empty() {
         effects::default_cow_text().to_string()
     } else {
-        format!("{}\n{}", effects::default_cow_text(), config.text)
+        cow_display.to_string()
     };
 
     let mut frame_count: u64 = 0;
@@ -124,6 +131,7 @@ pub fn render_loop_background(
     mut out: OutputHandle,
     config: SceneConfig,
     shutdown: ShutdownFlag,
+    composed_text: Option<&str>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let _signals = SignalGuard::install(shutdown.clone())?;
 
@@ -131,12 +139,14 @@ pub fn render_loop_background(
     let mut cols = caps.width.max(1);
     let mut rows = caps.height.max(1);
 
+    let cow_display = composed_text.unwrap_or(&config.text);
+
     // Tiny-terminal guard: print static text and exit.
     if cols < MIN_COLS || rows < MIN_ROWS {
-        let cow_text = if config.text.is_empty() {
+        let cow_text = if cow_display.is_empty() {
             effects::default_cow_text().to_string()
         } else {
-            format!("{}\n{}", effects::default_cow_text(), config.text)
+            format!("{}\n{}", effects::default_cow_text(), cow_display)
         };
         let _ = out.write_all(cow_text.as_bytes());
         let _ = out.write_all(b"\n");
@@ -151,10 +161,10 @@ pub fn render_loop_background(
     let mut scheduler = Scheduler::new(config.fps);
     let max_frames = compute_max_frames(config.duration, config.fps);
 
-    let cow_text = if config.text.is_empty() {
+    let cow_text = if cow_display.is_empty() {
         effects::default_cow_text().to_string()
     } else {
-        format!("{}\n{}", effects::default_cow_text(), config.text)
+        cow_display.to_string()
     };
 
     let mut frame_count: u64 = 0;
