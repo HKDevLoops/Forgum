@@ -30,9 +30,19 @@ use crate::framebuffer::FrameBuffer;
 use crate::protocol::SceneConfig;
 use crate::scheduler::Scheduler;
 
-/// Maximum time we'll sleep in one go. Smaller values let us react faster to
-/// signals; larger values waste less CPU on wakeups. 50 ms is a good balance.
+/// Maximum time we'll sleep in one go.
 const MAX_SLEEP: Duration = Duration::from_millis(50);
+
+/// Minimum terminal dimensions for animation. Below this, we print static text.
+const MIN_COLS: u16 = 20;
+const MIN_ROWS: u16 = 5;
+
+/// Number of rows reserved for the prompt (never render here). Used for
+/// computing overlay bounds in background mode.
+const PROMPT_GUARD: u16 = 3;
+
+#[allow(dead_code)]
+const _PROMPT_GUARD: u16 = PROMPT_GUARD; // keep for Phase 2 overlay region math
 
 /// Run the foreground render loop. Owns the alternate screen; exits on
 /// `q`/Esc/`SIGINT`/`SIGTERM`/`SIGHUP` or when `duration` elapses.
@@ -44,7 +54,20 @@ pub fn render_loop_foreground(
     let _signals = SignalGuard::install(shutdown.clone())?;
 
     let caps = TerminalCapabilities::probe();
-    let (cols, rows) = (caps.width.max(1), caps.height.max(1));
+    let (mut cols, mut rows) = (caps.width.max(1), caps.height.max(1));
+
+    // Tiny-terminal guard: print static text and exit.
+    if cols < MIN_COLS || rows < MIN_ROWS {
+        let cow_text = if config.text.is_empty() {
+            effects::default_cow_text().to_string()
+        } else {
+            format!("{}\n{}", effects::default_cow_text(), config.text)
+        };
+        let _ = out.write_all(cow_text.as_bytes());
+        let _ = out.write_all(b"\n");
+        let _ = out.flush();
+        return Ok(());
+    }
 
     let _raw = RawModeGuard::acquire()?;
     let writer_ptr = out.raw_writer_mut();
@@ -66,6 +89,15 @@ pub fn render_loop_foreground(
         if max_frames > 0 && frame_count >= max_frames {
             break;
         }
+
+        // Handle resize events (SIGWINCH).
+        if shutdown.check_and_clear_resize() {
+            let new_caps = TerminalCapabilities::probe();
+            cols = new_caps.width.max(1);
+            rows = new_caps.height.max(1);
+            fb.resize(usize::from(cols), usize::from(rows));
+        }
+
         let _dt = scheduler.tick();
         fb.clear();
         effects::render_static_cow(&mut fb, &cow_text);
@@ -96,7 +128,22 @@ pub fn render_loop_background(
     let _signals = SignalGuard::install(shutdown.clone())?;
 
     let caps = TerminalCapabilities::probe();
-    let (cols, rows) = (caps.width.max(1), caps.height.max(1));
+    let mut cols = caps.width.max(1);
+    let mut rows = caps.height.max(1);
+
+    // Tiny-terminal guard: print static text and exit.
+    if cols < MIN_COLS || rows < MIN_ROWS {
+        let cow_text = if config.text.is_empty() {
+            effects::default_cow_text().to_string()
+        } else {
+            format!("{}\n{}", effects::default_cow_text(), config.text)
+        };
+        let _ = out.write_all(cow_text.as_bytes());
+        let _ = out.write_all(b"\n");
+        let _ = out.flush();
+        return Ok(());
+    }
+
     let writer_ptr = out.raw_writer_mut();
     let _cur = unsafe { CursorShowGuard::acquire(writer_ptr)? };
 
@@ -115,6 +162,15 @@ pub fn render_loop_background(
         if max_frames > 0 && frame_count >= max_frames {
             break;
         }
+
+        // Handle resize events (SIGWINCH).
+        if shutdown.check_and_clear_resize() {
+            let new_caps = TerminalCapabilities::probe();
+            cols = new_caps.width.max(1);
+            rows = new_caps.height.max(1);
+            fb.resize(usize::from(cols), usize::from(rows));
+        }
+
         let _dt = scheduler.tick();
         fb.clear();
         effects::render_static_cow(&mut fb, &cow_text);

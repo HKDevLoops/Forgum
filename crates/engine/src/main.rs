@@ -39,7 +39,7 @@ fn main() -> ExitCode {
     }
 
     // Read scene: --file overrides stdin; if neither, use defaults.
-    let scene_from_file = match read_scene(args.file.as_deref()) {
+    let scene_from_file = match read_scene(args.file.as_deref(), false) {
         Ok(s) => Some(s),
         Err(e) => {
             eprintln!("{PROGRAM}: {e}");
@@ -56,6 +56,11 @@ fn main() -> ExitCode {
             return ExitCode::from(65);
         }
     };
+
+    // Clean up temp file after building config (BUG-D2 fix).
+    if let Some(path) = &args.file {
+        let _ = std::fs::remove_file(path);
+    }
 
     // Daemon mode stub — Phase 1 will replace this with setsid + PID file.
     if args.daemon {

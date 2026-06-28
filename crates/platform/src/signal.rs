@@ -22,36 +22,53 @@ use std::sync::Arc;
 
 use crate::error::PlatformError;
 
-/// A cloneable handle to the shutdown flag.
+/// A cloneable handle to the shutdown and resize flags.
 #[derive(Debug, Clone)]
 pub struct ShutdownFlag {
-    flag: Arc<AtomicBool>,
+    shutdown: Arc<AtomicBool>,
+    resize: Arc<AtomicBool>,
 }
 
 impl ShutdownFlag {
     #[must_use]
     pub fn new() -> Self {
         Self {
-            flag: Arc::new(AtomicBool::new(false)),
+            shutdown: Arc::new(AtomicBool::new(false)),
+            resize: Arc::new(AtomicBool::new(false)),
         }
     }
 
-    /// Returns `true` once a signal has been received.
+    /// Returns `true` once a termination signal has been received.
     #[must_use]
     pub fn is_shutdown(&self) -> bool {
-        self.flag.load(Ordering::Relaxed)
+        self.shutdown.load(Ordering::Relaxed)
     }
 
-    /// Returns the underlying `Arc` for sharing with control socket threads.
+    /// Returns `true` if a SIGWINCH/resize was received; clears the flag.
     #[must_use]
-    pub fn handle(&self) -> Arc<AtomicBool> {
-        Arc::clone(&self.flag)
+    pub fn check_and_clear_resize(&self) -> bool {
+        self.resize.swap(false, Ordering::Relaxed)
     }
 
-    /// Test/utility: set the flag without a real signal (used by the control
-    /// socket on STOP and by the unit tests).
+    /// Manually set the resize flag (for testing).
+    pub fn trigger_resize(&self) {
+        self.resize.store(true, Ordering::Relaxed);
+    }
+
+    /// Returns the underlying shutdown `Arc` for sharing with control socket threads.
+    #[must_use]
+    pub fn shutdown_handle(&self) -> Arc<AtomicBool> {
+        Arc::clone(&self.shutdown)
+    }
+
+    /// Returns the underlying resize `Arc` for sharing with signal handlers.
+    #[must_use]
+    pub fn resize_handle(&self) -> Arc<AtomicBool> {
+        Arc::clone(&self.resize)
+    }
+    /// Test/utility: set the shutdown flag without a real signal.
     pub fn trigger(&self) {
-        self.flag.store(true, Ordering::Relaxed);
+        self.shutdown.store(true, Ordering::Relaxed);
     }
 }
 
@@ -76,6 +93,7 @@ struct UnixSignalState {
     _int: signal_hook_registry::SigId,
     _term: signal_hook_registry::SigId,
     _hup: signal_hook_registry::SigId,
+    _winch: signal_hook_registry::SigId,
 }
 
 impl SignalGuard {
@@ -83,37 +101,43 @@ impl SignalGuard {
     pub fn install(flag: ShutdownFlag) -> Result<Self, PlatformError> {
         #[cfg(unix)]
         {
-            use signal_hook::consts::{SIGHUP, SIGINT, SIGTERM};
+            use signal_hook::consts::{SIGHUP, SIGINT, SIGTERM, SIGWINCH};
             use signal_hook_registry::{register, SignalHook};
 
-            let handle = flag.handle();
+            let shutdown_handle = flag.shutdown_handle();
+            let resize_handle = flag.resize_handle();
 
-            // The closure must be `Fn` + `Send` + Sync + 'static and is
-            // called from the signal-hook dispatch thread, not interrupt
-            // context, so we can do regular atomic operations.
-            let h_for_int = Arc::clone(&handle);
-            let h_for_term = Arc::clone(&handle);
-            let h_for_hup = Arc::clone(&handle);
+            let h_for_int = Arc::clone(&shutdown_handle);
+            let h_for_term = Arc::clone(&shutdown_handle);
+            let h_for_hup = Arc::clone(&shutdown_handle);
+            let h_for_winch = Arc::clone(&resize_handle);
 
             let int_id = register(SIGINT, move || {
-                h_for_int.store(true, std::sync::atomic::Ordering::Relaxed);
+                h_for_int.store(true, Ordering::Relaxed);
             })
             .map_err(|e| PlatformError::SignalRegistration {
                 signal: "SIGINT",
                 source: e,
             })?;
             let term_id = register(SIGTERM, move || {
-                h_for_term.store(true, std::sync::atomic::Ordering::Relaxed);
+                h_for_term.store(true, Ordering::Relaxed);
             })
             .map_err(|e| PlatformError::SignalRegistration {
                 signal: "SIGTERM",
                 source: e,
             })?;
             let hup_id = register(SIGHUP, move || {
-                h_for_hup.store(true, std::sync::atomic::Ordering::Relaxed);
+                h_for_hup.store(true, Ordering::Relaxed);
             })
             .map_err(|e| PlatformError::SignalRegistration {
                 signal: "SIGHUP",
+                source: e,
+            })?;
+            let winch_id = register(SIGWINCH, move || {
+                h_for_winch.store(true, Ordering::Relaxed);
+            })
+            .map_err(|e| PlatformError::SignalRegistration {
+                signal: "SIGWINCH",
                 source: e,
             })?;
             return Ok(Self {
@@ -121,6 +145,7 @@ impl SignalGuard {
                     _int: int_id,
                     _term: term_id,
                     _hup: hup_id,
+                    _winch: winch_id,
                 }),
             });
         }
@@ -162,10 +187,6 @@ unsafe extern "system" fn windows_ctrl_handler(event_type: u32) -> i32 {
     use windows_sys::Win32::System::Console::{
         CTRL_BREAK_EVENT, CTRL_CLOSE_EVENT, CTRL_C_EVENT, CTRL_LOGOFF_EVENT, CTRL_SHUTDOWN_EVENT,
     };
-    // We handle all events by setting the flag. Returning TRUE tells the
-    // kernel we handled it (so it doesn't kill us); for close/logoff/
-    // shutdown the kernel will kill us anyway after a short grace period,
-    // but setting the flag first lets the render loop notice and clean up.
     let triggered = matches!(
         event_type,
         CTRL_C_EVENT
@@ -175,8 +196,6 @@ unsafe extern "system" fn windows_ctrl_handler(event_type: u32) -> i32 {
             | CTRL_SHUTDOWN_EVENT
     );
     if triggered {
-        // SAFETY: this function is called from the kernel's console-handler
-        // thread, not interrupt context. We only do atomic ops below.
         let flag_opt = unsafe { WINDOWS_FLAG.as_ref() };
         if let Some(flag) = flag_opt {
             flag.store(true, Ordering::Relaxed);
@@ -190,7 +209,7 @@ unsafe extern "system" fn windows_ctrl_handler(event_type: u32) -> i32 {
 fn install_windows(flag: ShutdownFlag) -> Result<(), PlatformError> {
     use windows_sys::Win32::System::Console::SetConsoleCtrlHandler;
     unsafe {
-        WINDOWS_FLAG = Some(flag.handle());
+        WINDOWS_FLAG = Some(flag.shutdown_handle());
         let result = SetConsoleCtrlHandler(Some(windows_ctrl_handler as ConsoleHandlerRoutine), 1);
         if result == 0 {
             return Err(PlatformError::SignalRegistration {
@@ -210,9 +229,10 @@ mod tests {
     fn flag_starts_false_and_is_cloneable() {
         let flag = ShutdownFlag::new();
         assert!(!flag.is_shutdown());
-        let h1 = flag.handle();
-        let h2 = flag.handle();
-        assert!(!Arc::ptr_eq(&h1, &h2) || Arc::strong_count(&h1) == 3); // flag + h1 + h2
+        assert!(!flag.check_and_clear_resize());
+        let h1 = flag.shutdown_handle();
+        let h2 = flag.shutdown_handle();
+        assert!(!Arc::ptr_eq(&h1, &h2) || Arc::strong_count(&h1) == 3);
     }
 
     #[test]
@@ -223,19 +243,25 @@ mod tests {
     }
 
     #[test]
+    fn resize_flag_works() {
+        let flag = ShutdownFlag::new();
+        assert!(!flag.check_and_clear_resize());
+        flag.trigger_resize();
+        assert!(flag.check_and_clear_resize());
+        assert!(!flag.check_and_clear_resize()); // cleared after read
+    }
+
+    #[test]
     fn install_succeeds_in_isolation() {
         let flag = ShutdownFlag::new();
         let guard = SignalGuard::install(flag.clone());
         assert!(guard.is_ok(), "install failed: {:?}", guard.err());
-        // Triggering from any thread should be visible.
         flag.trigger();
         assert!(flag.is_shutdown());
     }
 
     #[test]
     fn install_twice_overwrites() {
-        // signal-hook allows multiple registrations; Windows SetConsoleCtrlHandler
-        // overwrites. Both should still leave the flag functional.
         let a = ShutdownFlag::new();
         let _g1 = SignalGuard::install(a.clone()).unwrap();
         let b = ShutdownFlag::new();

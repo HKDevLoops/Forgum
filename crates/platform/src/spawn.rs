@@ -104,6 +104,38 @@ pub fn spawn_silent(program: &Path, args: &[&str]) -> Result<DetachedChild, Plat
     Ok(DetachedChild { inner: child })
 }
 
+/// Check if a process with the given PID is still alive.
+///
+/// On Unix, uses `kill(pid, 0)` to check without sending a signal.
+/// On Windows, uses `OpenProcess` + `GetExitCodeProcess`.
+#[cfg(unix)]
+pub fn process_is_alive(pid: u32) -> bool {
+    unsafe { libc::kill(pid as i32, 0) == 0 }
+}
+
+/// Check if a process with the given PID is still alive (Windows).
+#[cfg(windows)]
+#[allow(unsafe_code)]
+pub fn process_is_alive(pid: u32) -> bool {
+    use windows_sys::Win32::Foundation::CloseHandle;
+    use windows_sys::Win32::System::Threading::{
+        GetExitCodeProcess, OpenProcess, PROCESS_QUERY_LIMITED_INFORMATION,
+    };
+    unsafe {
+        let handle = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, pid);
+        if handle.is_null() {
+            return false;
+        }
+        let mut exit_code = 0u32;
+        let ok = GetExitCodeProcess(handle, &mut exit_code);
+        CloseHandle(handle);
+        if ok == 0 {
+            return false;
+        }
+        exit_code == 259 // STILL_ACTIVE
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
