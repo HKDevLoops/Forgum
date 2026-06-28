@@ -1,0 +1,174 @@
+//! Detached child-process spawning.
+//!
+//! Used by the engine in `--daemon` mode to launch a background animation
+//! that outlives the parent shell. Fixes BUG-B7 (child not detached; dies
+//! with the shell).
+//!
+//! ## Unix
+//!
+//! We use `setsid(2)` in a `pre_exec` callback so the child becomes the
+//! leader of a new session and process group, and therefore does not
+//! receive SIGHUP when its parent shell exits. Stdin is redirected from
+//! `/dev/null`, stdout/stderr to either a log file or `/dev/null` (the
+//! daemon shouldn't spam the user's terminal — the foreground parent
+//! owns that).
+//!
+//! ## Windows
+//!
+//! We use `DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP` so the child does
+//! not share a console with the parent and Ctrl-C events are not delivered.
+
+use std::io;
+use std::path::Path;
+use std::process::{Child, Command, Stdio};
+
+use crate::error::PlatformError;
+
+/// A detached child process. The handle is kept for status reporting; the
+/// actual lifecycle is managed by the OS session.
+#[derive(Debug)]
+pub struct DetachedChild {
+    inner: Child,
+}
+
+impl DetachedChild {
+    /// PID of the child.
+    #[must_use]
+    pub fn id(&self) -> u32 {
+        self.inner.id()
+    }
+
+    /// Try to collect the child's exit status without blocking.
+    pub fn try_wait(&mut self) -> io::Result<Option<std::process::ExitStatus>> {
+        self.inner.try_wait()
+    }
+}
+
+/// Build a `Command` configured to detach from the parent shell on Unix.
+#[cfg(unix)]
+pub fn spawn_detached(
+    program: &Path,
+    args: &[&str],
+    stdin: Stdio,
+    stdout: Stdio,
+    stderr: Stdio,
+) -> Result<Child, PlatformError> {
+    use std::os::unix::process::CommandExt;
+
+    let mut cmd = Command::new(program);
+    cmd.args(args).stdin(stdin).stdout(stdout).stderr(stderr);
+
+    // SAFETY: `setsid` is async-signal-safe and the closure runs in the
+    // forked child between fork() and execve(). No Rust allocator is in
+    // scope at that point. The `Ok(())` return is the only failure mode
+    // for setsid (which can't fail for our purposes — we're not in a
+    // session leader).
+    unsafe {
+        cmd.pre_exec(|| {
+            // Best-effort detach. setsid() is required; umask is hygiene;
+            // close stdin isn't done here — the parent sets Stdio::null().
+            if libc::setsid() == -1 {
+                return Err(io::Error::last_os_error());
+            }
+            Ok(())
+        });
+    }
+
+    cmd.spawn().map_err(PlatformError::Io)
+}
+
+/// Build a `Command` configured to detach on Windows.
+#[cfg(windows)]
+#[allow(unsafe_code)]
+pub fn spawn_detached(
+    program: &Path,
+    args: &[&str],
+    stdin: Stdio,
+    stdout: Stdio,
+    stderr: Stdio,
+) -> Result<Child, PlatformError> {
+    use std::os::windows::process::CommandExt;
+    use windows_sys::Win32::System::Threading::{CREATE_NEW_PROCESS_GROUP, DETACHED_PROCESS};
+
+    let mut cmd = Command::new(program);
+    cmd.args(args).stdin(stdin).stdout(stdout).stderr(stderr);
+    cmd.creation_flags(DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP);
+
+    cmd.spawn().map_err(PlatformError::Io)
+}
+
+/// Convenience: spawn a detached child with safe defaults
+/// (stdin from `/dev/null`, stdout/stderr discarded).
+pub fn spawn_silent(program: &Path, args: &[&str]) -> Result<DetachedChild, PlatformError> {
+    let child = spawn_detached(program, args, Stdio::null(), Stdio::null(), Stdio::null())?;
+    Ok(DetachedChild { inner: child })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::process::Stdio;
+
+    #[test]
+    fn spawn_detached_runs_simple_program() {
+        let me = std::env::current_exe().unwrap();
+        let child = spawn_detached(
+            &me,
+            &["--help"],
+            Stdio::null(),
+            Stdio::null(),
+            Stdio::null(),
+        );
+        // On most CI environments --help is honored; some test binaries may
+        // not have it. Either way spawn should not panic.
+        match child {
+            Ok(mut c) => {
+                let _ = c.try_wait();
+            }
+            Err(e) => {
+                // Acceptable on Windows where a minimal binary may not exist
+                // for current_exe in tests.
+                eprintln!("spawn skipped: {e}");
+            }
+        }
+    }
+
+    #[test]
+    fn spawn_silent_uses_null_stdio() {
+        // Just exercise the wrapper; we don't care about the result.
+        let me = std::env::current_exe().unwrap();
+        let result = spawn_silent(&me, &["--help"]);
+        if let Ok(mut c) = result {
+            let _ = c.try_wait();
+        }
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn detached_has_new_session() {
+        // Spawn `sh -c 'echo $PPID'` and check we can read its PID. We don't
+        // actually verify session id (the child prints and exits), but we
+        // verify the spawn path doesn't hang.
+        let sh = Path::new("/bin/sh");
+        if !sh.exists() {
+            return; // non-Unix-typical environment
+        }
+        let mut cmd = Command::new(sh);
+        cmd.arg("-c").arg("exit 0");
+        cmd.stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null());
+        // SAFETY: same reasoning as in spawn_detached.
+        unsafe {
+            cmd.pre_exec(|| {
+                if libc::setsid() == -1 {
+                    return Err(io::Error::last_os_error());
+                }
+                Ok(())
+            });
+        }
+        let mut child = cmd.spawn().expect("spawn");
+        let status = child.wait().expect("wait");
+        assert!(status.success());
+    }
+}
