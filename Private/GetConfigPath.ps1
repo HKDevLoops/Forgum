@@ -22,17 +22,17 @@ function Get-ForgumConfigPath {
         if (-not $appdata) {
             throw "Cannot resolve Forgum config: neither `$env:FORGUM_CONFIG nor `$env:APPDATA is set."
         }
-        return (Join-Path $appdata 'Forgum' 'config.json')
+        return (Join-Path (Join-Path $appdata 'Forgum') 'config.json')
     } else {
         $xdg = $env:XDG_CONFIG_HOME
         if ($xdg) {
-            return (Join-Path $xdg 'Forgum' 'config.json')
+            return (Join-Path (Join-Path $xdg 'Forgum') 'config.json')
         }
         $home = $env:HOME
         if (-not $home) {
             throw "Cannot resolve Forgum config: neither `$env:FORGUM_CONFIG nor `$env:XDG_CONFIG_HOME nor `$env:HOME is set."
         }
-        return (Join-Path $home '.config' 'Forgum' 'config.json')
+        return (Join-Path (Join-Path (Join-Path $home '.config') 'Forgum') 'config.json')
     }
 }
 
