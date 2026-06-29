@@ -1,0 +1,144 @@
+{
+  "dragon": {
+    "base": "Breathe",
+    "particles": {
+      "type": "Fire",
+      "rate": 18,
+      "life": [0.6, 1.4],
+      "speed": [0.3, 0.8],
+      "palette": ["#ff8800", "#ff2200", "#440000"]
+    },
+    "speed": 1.0,
+    "amplitude": { "breath": 0.6, "sway": 0.2, "float": 0.1 },
+    "palette": ["#ff8800", "#ff2200", "#440000"],
+    "easing": { "base": "sine_inout", "particle_alpha": "expo_out", "particle_velocity": "cubic_out" },
+    "phase_seed": 4242,
+    "glow": { "color": "#ff6600", "radius": 6.0, "falloff": "gaussian" }
+  },
+  "default": {
+    "base": "Breathe",
+    "particles": { "type": "Fire", "rate": 0 },
+    "speed": 0.8,
+    "amplitude": { "breath": 0.3, "sway": 0.1, "float": 0.05 },
+    "palette": ["#ffffff"],
+    "easing": { "base": "sine_inout" },
+    "phase_seed": 1234,
+    "glow": { "color": "#ffffff", "radius": 2.0, "falloff": "gaussian" }
+  },
+  "nyan": {
+    "base": "Breathe",
+    "particles": {
+      "type": "Stars",
+      "rate": 25,
+      "life": [0.4, 0.8],
+      "speed": [0.5, 1.0],
+      "palette": ["#ff0000", "#ff8800", "#ffff00", "#00ff00", "#0088ff", "#8800ff"]
+    },
+    "speed": 2.0,
+    "amplitude": { "breath": 0.4, "sway": 0.3, "float": 0.2 },
+    "palette": ["#ff0000", "#ff8800", "#ffff00", "#00ff00", "#0088ff", "#8800ff"],
+    "easing": { "base": "linear" },
+    "phase_seed": 9999,
+    "glow": { "color": "#ffffff", "radius": 3.0, "falloff": "gaussian" }
+  },
+  "dolphin": {
+    "base": "Breathe",
+    "particles": {
+      "type": "Bubbles",
+      "rate": 12,
+      "life": [1.5, 3.0],
+      "speed": [0.2, 0.6],
+      "palette": ["#88ddff", "#44aaff", "#0066cc"]
+    },
+    "speed": 0.7,
+    "amplitude": { "breath": 0.5, "sway": 0.15, "float": 0.3 },
+    "palette": ["#88ddff", "#44aaff"],
+    "easing": { "base": "sine_inout" },
+    "phase_seed": 5555,
+    "glow": { "color": "#88ddff", "radius": 4.0, "falloff": "gaussian" }
+  },
+  "ghost": {
+    "base": "Breathe",
+    "particles": {
+      "type": "Glitch",
+      "rate": 8,
+      "life": [0.1, 0.3],
+      "speed": [0.5, 1.0],
+      "palette": ["#00ff00", "#ff0000"]
+    },
+    "speed": 0.6,
+    "amplitude": { "breath": 0.4, "sway": 0.3, "float": 0.5 },
+    "palette": ["#cccccc", "#888888"],
+    "easing": { "base": "sine_inout" },
+    "phase_seed": 7777,
+    "glow": { "color": "#ffffff", "radius": 5.0, "falloff": "gaussian" }
+  },
+  "koala": {
+    "base": "Breathe",
+    "particles": {
+      "type": "Zzz",
+      "rate": 5,
+      "life": [2.0, 4.0],
+      "speed": [0.1, 0.3],
+      "palette": ["#b8a0d0", "#9070b0"]
+    },
+    "speed": 0.3,
+    "amplitude": { "breath": 0.6, "sway": 0.05, "float": 0.02 },
+    "palette": ["#b8a0d0"],
+    "easing": { "base": "sine_inout" },
+    "phase_seed": 3333,
+    "glow": { "color": "#b8a0d0", "radius": 3.0, "falloff": "gaussian" }
+  },
+  "skeleton": {
+    "base": "Glitch",
+    "particles": {
+      "type": "Glitch",
+      "rate": 15,
+      "life": [0.1, 0.2],
+      "speed": [0.8, 1.5],
+      "palette": ["#00ff00", "#ff0000"]
+    },
+    "speed": 1.2,
+    "amplitude": { "breath": 0.0, "sway": 0.0, "float": 0.0 },
+    "palette": ["#ffffff", "#888888"],
+    "easing": { "base": "linear" },
+    "phase_seed": 6666,
+    "glow": { "color": "#00ff00", "radius": 2.0, "falloff": "gaussian" }
+  },
+  "doge": {
+    "base": "Glitch",
+    "particles": {
+      "type": "Pulse",
+      "rate": 10,
+      "life": [0.5, 1.0],
+      "speed": [0.3, 0.8],
+      "palette": ["#ffaa00", "#ff6600"]
+    },
+    "speed": 0.9,
+    "amplitude": { "breath": 0.3, "sway": 0.1, "float": 0.05 },
+    "palette": ["#ffaa00", "#ff8800"],
+    "easing": { "base": "sine_inout" },
+    "phase_seed": 8888,
+    "glow": { "color": "#ffaa00", "radius": 4.0, "falloff": "gaussian" }
+  },
+  "tux": {
+    "base": "Breathe",
+    "particles": { "type": "Fire", "rate": 0 },
+    "speed": 0.7,
+    "amplitude": { "breath": 0.4, "sway": 0.1, "float": 0.05 },
+    "palette": ["#ffffff", "#000000"],
+    "easing": { "base": "sine_inout" },
+    "phase_seed": 2222,
+    "glow": { "color": "#ffffff", "radius": 2.0, "falloff": "gaussian" }
+  },
+  "cat": {
+    "base": "Breathe",
+    "particles": { "type": "Fire", "rate": 0 },
+    "speed": 0.6,
+    "amplitude": { "breath": 0.5, "sway": 0.2, "float": 0.1 },
+    "palette": ["#ff8800", "#cc6600"],
+    "easing": { "base": "sine_inout" },
+    "phase_seed": 4444,
+    "glow": { "color": "#ff8800", "radius": 3.0, "falloff": "gaussian" }
+  }
+}
