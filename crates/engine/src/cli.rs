@@ -114,6 +114,8 @@ pub enum Commands {
         #[command(subcommand)]
         sub: ThemeSub,
     },
+    /// Run the showcase demo.
+    Demo,
 }
 
 #[derive(Debug, Subcommand)]
@@ -177,6 +179,12 @@ pub enum HerdSub {
     },
     /// Drop all daemons to idle (low FPS).
     Quiet,
+    /// Only the focused pane animates; others idle.
+    Follow {
+        /// Pane to keep active (e.g. "%3"). Defaults to current pane.
+        #[arg(long)]
+        pane: Option<String>,
+    },
 }
 
 #[derive(Debug, Subcommand)]
@@ -187,6 +195,12 @@ pub enum ThemeSub {
     Apply {
         /// Theme name.
         name: String,
+    },
+    /// Cycle through themes every N minutes.
+    Rotate {
+        /// Interval in minutes between theme changes.
+        #[arg(long, default_value = "5")]
+        interval: u32,
     },
 }
 
@@ -222,6 +236,7 @@ pub enum Command {
     StatusLine,
     Herd,
     Theme,
+    Demo,
     Unknown(String),
 }
 
@@ -258,6 +273,7 @@ pub fn parse_args(argv: Vec<String>) -> Result<(Args, Option<Commands>), String>
         Some(Commands::StatusLine { .. }) => Command::StatusLine,
         Some(Commands::Herd { .. }) => Command::Herd,
         Some(Commands::Theme { .. }) => Command::Theme,
+        Some(Commands::Demo) => Command::Demo,
     };
 
     let max_len = match &cli.command {

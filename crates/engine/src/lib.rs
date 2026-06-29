@@ -14,6 +14,7 @@ pub mod config;
 pub mod control_socket;
 pub mod cow;
 pub mod daemon;
+pub mod demo;
 pub mod dna;
 pub mod easing;
 pub mod effects;

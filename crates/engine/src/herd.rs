@@ -222,6 +222,26 @@ pub fn herd_quiet() -> Result<usize, String> {
     Ok(count)
 }
 
+pub fn herd_follow(pane: Option<&str>) -> Result<usize, String> {
+    let entries = discover_daemons();
+    let target_session = pane.map(|p| p.to_string());
+    let mut count = 0;
+
+    for entry in &entries {
+        if !entry.alive {
+            continue;
+        }
+        let is_target = target_session.as_ref() == Some(&entry.session_id);
+        let speed = if is_target { 1.0 } else { 0.1 };
+        let cmd = format!(r#"{{"cmd":"SPEED","arg":"{}"}}"#, speed);
+        let resp = send_command(&entry.socket_path, &cmd)?;
+        if resp.ok {
+            count += 1;
+        }
+    }
+    Ok(count)
+}
+
 pub fn format_table(entries: &[HerdEntry]) -> String {
     if entries.is_empty() {
         return String::from("No daemons found.\n");
