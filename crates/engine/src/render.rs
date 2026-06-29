@@ -29,6 +29,7 @@ use crate::effects;
 use crate::framebuffer::FrameBuffer;
 use crate::dna::CowDna;
 use crate::protocol::SceneConfig;
+use crate::renderer;
 use crate::scheduler::Scheduler;
 
 /// Maximum time we'll sleep in one go.
@@ -96,6 +97,7 @@ pub fn render_loop_foreground(
 
     // Create the animation effect from DNA
     let mut effect = effects::create_effect(cow_dna.base, cow_text.clone(), cow_dna, instance_id);
+    let mut rend = renderer::create_renderer();
 
     let mut frame_count: u64 = 0;
     let mut elapsed: f32 = 0.0;
@@ -122,7 +124,8 @@ pub fn render_loop_foreground(
         let dmg = fb.compute_damage();
         scheduler.observe(dmg.len());
         if !dmg.is_empty() {
-            render_damage(&mut out, &fb, &dmg)?;
+            let dmg_vec: Vec<_> = dmg.into_iter().collect();
+            rend.render_damage(&mut out, &fb, &dmg_vec)?;
         }
         fb.swap();
         frame_count = frame_count.saturating_add(1);
@@ -182,6 +185,7 @@ pub fn render_loop_background(
 
     // Create the animation effect from DNA
     let mut effect = effects::create_effect(cow_dna.base, cow_text.clone(), cow_dna, instance_id);
+    let mut rend = renderer::create_renderer();
 
     let mut frame_count: u64 = 0;
     let mut elapsed: f32 = 0.0;
@@ -208,7 +212,8 @@ pub fn render_loop_background(
         let dmg = fb.compute_damage();
         scheduler.observe(dmg.len());
         if !dmg.is_empty() {
-            render_damage(&mut out, &fb, &dmg)?;
+            let dmg_vec: Vec<_> = dmg.into_iter().collect();
+            rend.render_damage(&mut out, &fb, &dmg_vec)?;
         }
         fb.swap();
         frame_count = frame_count.saturating_add(1);
@@ -240,26 +245,6 @@ fn sleep_interruptible(period: Duration, shutdown: &ShutdownFlag) {
         std::thread::sleep(chunk);
         remaining = remaining.saturating_sub(chunk);
     }
-}
-
-fn render_damage(
-    out: &mut OutputHandle,
-    fb: &FrameBuffer,
-    damage: &std::collections::HashSet<(usize, usize)>,
-) -> std::io::Result<()> {
-    if damage.is_empty() {
-        return Ok(());
-    }
-    let mut buf = Vec::with_capacity(damage.len() * 4);
-    for &(x, y) in damage {
-        let cell = fb.get(x, y);
-        // Move to (x, y), write the char.
-        buf.extend_from_slice(format!("\x1b[{};{}H", y + 1, x + 1).as_bytes());
-        let mut ch_buf = [0u8; 4];
-        let s = cell.ch.encode_utf8(&mut ch_buf);
-        buf.extend_from_slice(s.as_bytes());
-    }
-    out.write_all(&buf)
 }
 
 #[cfg(test)]

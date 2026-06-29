@@ -24,6 +24,7 @@ pub mod particles;
 pub mod protocol;
 pub mod protocol_io;
 pub mod render;
+pub mod renderer;
 pub mod scheduler;
 pub mod verlet;
 
