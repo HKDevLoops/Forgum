@@ -7,7 +7,7 @@ use std::io;
 use std::path::Path;
 
 #[cfg(unix)]
-use std::io::{BufRead, Write};
+use std::io::{BufRead, BufReader, Write};
 
 use crate::error::PlatformError;
 
@@ -26,6 +26,7 @@ enum SocketInner {
     #[cfg(windows)]
     Windows {
         handle: windows_sys::Win32::Foundation::HANDLE,
+        pipe_name: Vec<u16>,
     },
 }
 
@@ -117,7 +118,7 @@ impl DaemonSocket {
             }
 
             Ok(Self {
-                inner: SocketInner::Windows { handle },
+                inner: SocketInner::Windows { handle, pipe_name },
             })
         }
     }
@@ -131,13 +132,54 @@ impl DaemonSocket {
         match &self.inner {
             #[cfg(unix)]
             SocketInner::Unix { listener, .. } => match listener.accept() {
-                Ok((stream, _addr)) => Ok(Some(SocketConnection::Unix(stream))),
+                Ok((stream, _addr)) => Ok(Some(SocketConnection::Unix(BufReader::new(stream)))),
                 Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => Ok(None),
                 Err(e) => Err(PlatformError::Io(e)),
             },
             #[cfg(windows)]
-            SocketInner::Windows { handle, .. } => {
-                Ok(Some(SocketConnection::Windows(*handle)))
+            SocketInner::Windows { pipe_name, .. } => {
+                // Create a new pipe instance for this connection to avoid
+                // handle aliasing. The original server handle stays valid
+                // for future accept() calls.
+                #[allow(unsafe_code)]
+                let new_handle = unsafe {
+                    windows_sys::Win32::System::Pipes::CreateNamedPipeW(
+                        pipe_name.as_ptr(),
+                        windows_sys::Win32::Storage::FileSystem::PIPE_ACCESS_DUPLEX,
+                        windows_sys::Win32::System::Pipes::PIPE_TYPE_BYTE
+                            | windows_sys::Win32::System::Pipes::PIPE_READMODE_BYTE
+                            | windows_sys::Win32::System::Pipes::PIPE_WAIT,
+                        1,          // max instances
+                        4096,       // out buffer size
+                        4096,       // in buffer size
+                        0,          // default timeout
+                        std::ptr::null(),
+                    )
+                };
+
+                if new_handle == windows_sys::Win32::Foundation::INVALID_HANDLE_VALUE {
+                    return Err(PlatformError::Io(io::Error::last_os_error()));
+                }
+
+                // Wait for a client to connect to this new instance.
+                #[allow(unsafe_code)]
+                let ok = unsafe {
+                    windows_sys::Win32::System::Pipes::ConnectNamedPipe(
+                        new_handle,
+                        std::ptr::null_mut(),
+                    )
+                };
+
+                if ok == 0 {
+                    let err = io::Error::last_os_error();
+                    #[allow(unsafe_code)]
+                    unsafe {
+                        windows_sys::Win32::Foundation::CloseHandle(new_handle);
+                    }
+                    return Err(PlatformError::Io(err));
+                }
+
+                Ok(Some(SocketConnection::Windows(new_handle)))
             }
         }
     }
@@ -155,11 +197,24 @@ impl DaemonSocket {
     }
 }
 
+#[cfg(windows)]
+impl Drop for DaemonSocket {
+    fn drop(&mut self) {
+        let SocketInner::Windows { handle, .. } = &self.inner;
+        // SAFETY: The handle is a valid server pipe handle created by
+        // CreateNamedPipeW.
+        #[allow(unsafe_code)]
+        unsafe {
+            windows_sys::Win32::Foundation::CloseHandle(*handle);
+        }
+    }
+}
+
 /// A single accepted IPC connection.
 #[allow(missing_debug_implementations)]
 pub enum SocketConnection {
     #[cfg(unix)]
-    Unix(std::os::unix::net::UnixStream),
+    Unix(BufReader<std::os::unix::net::UnixStream>),
     #[cfg(windows)]
     Windows(windows_sys::Win32::Foundation::HANDLE),
 }
@@ -171,8 +226,7 @@ impl SocketConnection {
     pub fn read_line(&mut self) -> Result<Option<String>, PlatformError> {
         match self {
             #[cfg(unix)]
-            Self::Unix(stream) => {
-                let mut reader = BufReader::new(stream);
+            Self::Unix(reader) => {
                 let mut line = String::new();
                 match reader.read_line(&mut line) {
                     Ok(0) => Ok(None),
@@ -240,7 +294,8 @@ impl SocketConnection {
     pub fn write_response(&mut self, data: &str) -> Result<(), PlatformError> {
         match self {
             #[cfg(unix)]
-            Self::Unix(stream) => {
+            Self::Unix(reader) => {
+                let stream = reader.get_mut();
                 stream.write_all(data.as_bytes()).map_err(PlatformError::Io)?;
                 stream.flush().map_err(PlatformError::Io)?;
                 Ok(())
