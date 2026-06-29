@@ -93,6 +93,23 @@ pub enum Commands {
     },
     /// Print 'ok' and exit (for daemon health checks).
     Status,
+    /// tmux integration subcommands.
+    Tmux {
+        #[command(subcommand)]
+        sub: TmuxSub,
+    },
+    /// One-shot status line for tmux status-right.
+    StatusLine {
+        /// Maximum visible length in characters.
+        #[arg(long, default_value = "70")]
+        max_len: usize,
+    },
+}
+
+#[derive(Debug, Subcommand)]
+pub enum TmuxSub {
+    /// Print tmux config block to stdout.
+    Install,
 }
 
 #[derive(Debug, Clone, Copy, ValueEnum)]
@@ -123,6 +140,8 @@ pub enum Command {
     Fortune,
     Init,
     Completions,
+    Tmux,
+    StatusLine,
     Unknown(String),
 }
 
@@ -142,6 +161,7 @@ pub struct Args {
     pub tongue: Option<String>,
     pub daemon: bool,
     pub control_socket: Option<PathBuf>,
+    pub max_len: Option<usize>,
 }
 
 /// Parse CLI args (backward-compatible wrapper around clap).
@@ -154,6 +174,13 @@ pub fn parse_args(argv: Vec<String>) -> Result<(Args, Option<Commands>), String>
         Some(Commands::Init { .. }) => Command::Init,
         Some(Commands::Completions { .. }) => Command::Completions,
         Some(Commands::Status) => Command::Status,
+        Some(Commands::Tmux { .. }) => Command::Tmux,
+        Some(Commands::StatusLine { .. }) => Command::StatusLine,
+    };
+
+    let max_len = match &cli.command {
+        Some(Commands::StatusLine { max_len }) => Some(*max_len),
+        _ => None,
     };
 
     let args = Args {
@@ -170,6 +197,7 @@ pub fn parse_args(argv: Vec<String>) -> Result<(Args, Option<Commands>), String>
         tongue: cli.tongue,
         daemon: cli.daemon,
         control_socket: cli.control_socket,
+        max_len,
     };
 
     Ok((args, cli.command))
@@ -315,5 +343,33 @@ mod tests {
         let cfg = build_scene_config(&a).unwrap();
         assert_eq!(cfg.cow, "cli"); // CLI wins
         assert_eq!(cfg.fps, 15); // config file value
+    }
+
+    #[test]
+    fn tmux_install_subcommand() {
+        let (a, cmd) = parse(&["forgum-engine", "tmux", "install"]);
+        assert_eq!(a.command, Command::Tmux);
+        assert!(matches!(
+            cmd,
+            Some(Commands::Tmux {
+                sub: TmuxSub::Install
+            })
+        ));
+    }
+
+    #[test]
+    fn status_line_default_max_len() {
+        let (a, cmd) = parse(&["forgum-engine", "status-line"]);
+        assert_eq!(a.command, Command::StatusLine);
+        assert_eq!(a.max_len, Some(70));
+        assert!(matches!(cmd, Some(Commands::StatusLine { max_len: 70 })));
+    }
+
+    #[test]
+    fn status_line_custom_max_len() {
+        let (a, cmd) = parse(&["forgum-engine", "status-line", "--max-len", "40"]);
+        assert_eq!(a.command, Command::StatusLine);
+        assert_eq!(a.max_len, Some(40));
+        assert!(matches!(cmd, Some(Commands::StatusLine { max_len: 40 })));
     }
 }

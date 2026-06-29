@@ -80,6 +80,28 @@ fn main() -> ExitCode {
             ExitCode::SUCCESS
         }
 
+        // ── tmux install ───────────────────────────────────────────
+        Some(cli::Commands::Tmux {
+            sub: cli::TmuxSub::Install,
+        }) => {
+            let engine_path = std::env::current_exe()
+                .ok()
+                .and_then(|p| p.to_str().map(String::from))
+                .unwrap_or_else(|| "forgum-engine".to_string());
+            print!(
+                "{}",
+                forgum_engine::init::generate_tmux_config(&engine_path)
+            );
+            ExitCode::SUCCESS
+        }
+
+        // ── status-line ────────────────────────────────────────────
+        Some(cli::Commands::StatusLine { max_len }) => {
+            let line = forgum_engine::status_line::render_status_line(max_len);
+            print!("{line}");
+            ExitCode::SUCCESS
+        }
+
         // ── render (default) ────────────────────────────────────────
         _ => render_subcommand(args),
     }

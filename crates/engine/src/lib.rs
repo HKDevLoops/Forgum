@@ -26,6 +26,7 @@ pub mod protocol_io;
 pub mod render;
 pub mod renderer;
 pub mod scheduler;
+pub mod status_line;
 pub mod verlet;
 
 /// The current engine version, derived from `Cargo.toml`.

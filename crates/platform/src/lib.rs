@@ -36,6 +36,7 @@
 pub mod daemon_socket;
 pub mod error;
 pub mod guards;
+pub mod mux;
 pub mod output;
 pub mod paths;
 pub mod signal;
@@ -52,6 +53,7 @@ pub mod platform_windows;
 pub use daemon_socket::{DaemonSocket, SocketConnection};
 pub use error::PlatformError;
 pub use guards::{AltScreenGuard, CursorShowGuard, RawModeGuard};
+pub use mux::{detect_mux, Mux};
 pub use output::{open_output, OutputHandle, OutputTarget};
 pub use paths::{
     config_path, control_socket_path, daemon_state_path, data_dir, detect_session_id, log_dir,
