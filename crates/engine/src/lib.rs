@@ -19,6 +19,7 @@ pub mod easing;
 pub mod effects;
 pub mod fortune;
 pub mod framebuffer;
+pub mod herd;
 pub mod init;
 pub mod particles;
 pub mod protocol;
@@ -27,6 +28,7 @@ pub mod render;
 pub mod renderer;
 pub mod scheduler;
 pub mod status_line;
+pub mod theme;
 pub mod verlet;
 
 /// The current engine version, derived from `Cargo.toml`.

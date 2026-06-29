@@ -145,6 +145,55 @@ impl DaemonSocket {
             let _ = std::fs::remove_file(_path);
         }
     }
+
+    /// Connect to an existing socket as a client.
+    ///
+    /// On Unix, connects to the Unix domain socket at `path`.
+    /// On Windows, opens the named pipe derived from `path`.
+    ///
+    /// Returns a [`SocketConnection`] that can be used to send commands and
+    /// read responses.
+    pub fn connect(path: &Path) -> Result<SocketConnection, PlatformError> {
+        #[cfg(unix)]
+        {
+            use std::os::unix::net::UnixStream;
+            let stream = UnixStream::connect(path).map_err(PlatformError::Io)?;
+            stream.set_read_timeout(None).map_err(PlatformError::Io)?;
+            Ok(SocketConnection::Unix(BufReader::new(stream)))
+        }
+        #[cfg(windows)]
+        {
+            use std::os::windows::ffi::OsStrExt;
+            use windows_sys::Win32::Storage::FileSystem::{CreateFileW, OPEN_EXISTING};
+
+            const GENERIC_READ_U32: u32 = 0x80000000;
+            const GENERIC_WRITE_U32: u32 = 0x40000000;
+
+            let pipe_name: Vec<u16> = std::ffi::OsStr::new(&path_to_pipe_name(path))
+                .encode_wide()
+                .chain(std::iter::once(0))
+                .collect();
+
+            #[allow(unsafe_code)]
+            let handle = unsafe {
+                CreateFileW(
+                    pipe_name.as_ptr(),
+                    GENERIC_READ_U32 | GENERIC_WRITE_U32,
+                    0,
+                    std::ptr::null(),
+                    OPEN_EXISTING,
+                    0,
+                    std::ptr::null_mut(),
+                )
+            };
+
+            if handle == windows_sys::Win32::Foundation::INVALID_HANDLE_VALUE {
+                return Err(PlatformError::Io(io::Error::last_os_error()));
+            }
+
+            Ok(SocketConnection::Windows(handle))
+        }
+    }
 }
 
 /// A single accepted IPC connection.

@@ -3,6 +3,7 @@
 //! Phase 2: clap CLI, native cow renderer, fortune, shell hooks, completions.
 //! Phase 0: RAII guards, signal handlers, no keystroke reads, `duration=0` semantics.
 
+use std::path::PathBuf;
 use std::process::ExitCode;
 
 use clap::CommandFactory;
@@ -100,6 +101,170 @@ fn main() -> ExitCode {
             let line = forgum_engine::status_line::render_status_line(max_len);
             print!("{line}");
             ExitCode::SUCCESS
+        }
+
+        // ── herd list ──────────────────────────────────────────────
+        Some(cli::Commands::Herd {
+            sub: cli::HerdSub::List,
+        }) => {
+            let entries = forgum_engine::herd::discover_daemons();
+            print!("{}", forgum_engine::herd::format_table(&entries));
+            ExitCode::SUCCESS
+        }
+
+        // ── herd stop ──────────────────────────────────────────────
+        Some(cli::Commands::Herd {
+            sub: cli::HerdSub::Stop { session, all },
+        }) => {
+            let filter = forgum_engine::herd::HerdFilter { session, all };
+            match forgum_engine::herd::herd_stop(&filter) {
+                Ok(n) => {
+                    println!("Stopped {n} daemon(s).");
+                    ExitCode::SUCCESS
+                }
+                Err(e) => {
+                    eprintln!("{PROGRAM}: herd stop: {e}");
+                    ExitCode::from(1)
+                }
+            }
+        }
+
+        // ── herd effect ────────────────────────────────────────────
+        Some(cli::Commands::Herd {
+            sub: cli::HerdSub::Effect { name, session, all },
+        }) => {
+            let filter = forgum_engine::herd::HerdFilter { session, all };
+            match forgum_engine::herd::herd_effect(&name, &filter) {
+                Ok(n) => {
+                    println!("Set effect on {n} daemon(s).");
+                    ExitCode::SUCCESS
+                }
+                Err(e) => {
+                    eprintln!("{PROGRAM}: herd effect: {e}");
+                    ExitCode::from(1)
+                }
+            }
+        }
+
+        // ── herd speed ─────────────────────────────────────────────
+        Some(cli::Commands::Herd {
+            sub:
+                cli::HerdSub::Speed {
+                    value,
+                    session,
+                    all,
+                },
+        }) => {
+            let filter = forgum_engine::herd::HerdFilter { session, all };
+            match forgum_engine::herd::herd_speed(value, &filter) {
+                Ok(n) => {
+                    println!("Set speed on {n} daemon(s).");
+                    ExitCode::SUCCESS
+                }
+                Err(e) => {
+                    eprintln!("{PROGRAM}: herd speed: {e}");
+                    ExitCode::from(1)
+                }
+            }
+        }
+
+        // ── herd pause ─────────────────────────────────────────────
+        Some(cli::Commands::Herd {
+            sub: cli::HerdSub::Pause { session, all },
+        }) => {
+            let filter = forgum_engine::herd::HerdFilter { session, all };
+            match forgum_engine::herd::herd_pause(&filter) {
+                Ok(n) => {
+                    println!("Paused {n} daemon(s).");
+                    ExitCode::SUCCESS
+                }
+                Err(e) => {
+                    eprintln!("{PROGRAM}: herd pause: {e}");
+                    ExitCode::from(1)
+                }
+            }
+        }
+
+        // ── herd resume ────────────────────────────────────────────
+        Some(cli::Commands::Herd {
+            sub: cli::HerdSub::Resume { session, all },
+        }) => {
+            let filter = forgum_engine::herd::HerdFilter { session, all };
+            match forgum_engine::herd::herd_resume(&filter) {
+                Ok(n) => {
+                    println!("Resumed {n} daemon(s).");
+                    ExitCode::SUCCESS
+                }
+                Err(e) => {
+                    eprintln!("{PROGRAM}: herd resume: {e}");
+                    ExitCode::from(1)
+                }
+            }
+        }
+
+        // ── herd quiet ─────────────────────────────────────────────
+        Some(cli::Commands::Herd {
+            sub: cli::HerdSub::Quiet,
+        }) => match forgum_engine::herd::herd_quiet() {
+            Ok(n) => {
+                println!("Quieted {n} daemon(s).");
+                ExitCode::SUCCESS
+            }
+            Err(e) => {
+                eprintln!("{PROGRAM}: herd quiet: {e}");
+                ExitCode::from(1)
+            }
+        },
+
+        // ── theme list ─────────────────────────────────────────────
+        Some(cli::Commands::Theme {
+            sub: cli::ThemeSub::List,
+        }) => {
+            let config_dir = forgum_platform::config_path()
+                .ok()
+                .and_then(|p| p.parent().map(|p| p.to_path_buf()))
+                .unwrap_or_else(|| PathBuf::from("."));
+            let themes = forgum_engine::theme::list_themes(&config_dir);
+            if themes.is_empty() {
+                println!("No themes found.");
+            } else {
+                for name in &themes {
+                    println!("{name}");
+                }
+            }
+            ExitCode::SUCCESS
+        }
+
+        // ── theme apply ────────────────────────────────────────────
+        Some(cli::Commands::Theme {
+            sub: cli::ThemeSub::Apply { name },
+        }) => {
+            let config_dir = forgum_platform::config_path()
+                .ok()
+                .and_then(|p| p.parent().map(|p| p.to_path_buf()))
+                .unwrap_or_else(|| PathBuf::from("."));
+            match forgum_engine::theme::load_theme(&config_dir, &name) {
+                Ok(theme) => {
+                    let filter = forgum_engine::herd::HerdFilter {
+                        session: None,
+                        all: true,
+                    };
+                    match theme.apply(&filter) {
+                        Ok(n) => {
+                            println!("Applied theme '{name}' to {n} daemon(s).");
+                            ExitCode::SUCCESS
+                        }
+                        Err(e) => {
+                            eprintln!("{PROGRAM}: theme apply: {e}");
+                            ExitCode::from(1)
+                        }
+                    }
+                }
+                Err(e) => {
+                    eprintln!("{PROGRAM}: theme apply: {e}");
+                    ExitCode::from(1)
+                }
+            }
         }
 
         // ── render (default) ────────────────────────────────────────
