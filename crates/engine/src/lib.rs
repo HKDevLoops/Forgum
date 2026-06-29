@@ -27,9 +27,13 @@ pub mod protocol;
 pub mod protocol_io;
 pub mod render;
 pub mod renderer;
+pub mod say;
 pub mod scheduler;
 pub mod status_line;
+pub mod metrics;
+pub mod shader;
 pub mod theme;
+pub mod timer;
 pub mod verlet;
 
 /// The current engine version, derived from `Cargo.toml`.

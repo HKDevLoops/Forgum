@@ -28,6 +28,14 @@ pub struct Cli {
     #[arg(long, global = true, env = "FORGUM_CONFIG")]
     pub config: Option<PathBuf>,
 
+    /// Disable animated effects (gentle fades only).
+    #[arg(long, global = true)]
+    pub reduce_motion: bool,
+
+    /// Print just the fortune text (no cow art).
+    #[arg(long, global = true)]
+    pub text_only: bool,
+
     /// Path to scene JSON file (alternative to stdin).
     #[arg(long, short = 'f', global = true)]
     pub file: Option<PathBuf>,
@@ -116,6 +124,18 @@ pub enum Commands {
     },
     /// Run the showcase demo.
     Demo,
+    /// Run a command and render its output in a cow speech bubble.
+    Say {
+        /// The command to execute.
+        #[arg(required = true, num_args = 1..)]
+        cmd: Vec<String>,
+    },
+    /// Time a command and show duration in a cow popup.
+    Timer {
+        /// The command to time.
+        #[arg(required = true, num_args = 1..)]
+        cmd: Vec<String>,
+    },
 }
 
 #[derive(Debug, Subcommand)]
@@ -210,6 +230,8 @@ pub enum ThemeSub {
         #[arg(long, default_value = "5")]
         interval: u32,
     },
+    /// Show and apply the current seasonal theme.
+    Seasonal,
 }
 
 #[derive(Debug, Clone, Copy, ValueEnum)]
@@ -245,6 +267,8 @@ pub enum Command {
     Herd,
     Theme,
     Demo,
+    Say,
+    Timer,
     Unknown(String),
 }
 
@@ -265,6 +289,8 @@ pub struct Args {
     pub daemon: bool,
     pub control_socket: Option<PathBuf>,
     pub max_len: Option<usize>,
+    pub reduce_motion: bool,
+    pub text_only: bool,
 }
 
 /// Parse CLI args (backward-compatible wrapper around clap).
@@ -290,6 +316,8 @@ pub fn parse_args(argv: Vec<String>) -> Result<(Args, Option<Commands>), String>
         },
         Some(Commands::Theme { .. }) => Command::Theme,
         Some(Commands::Demo) => Command::Demo,
+        Some(Commands::Say { .. }) => Command::Say,
+        Some(Commands::Timer { .. }) => Command::Timer,
     };
 
     let max_len = match &cli.command {
@@ -312,6 +340,8 @@ pub fn parse_args(argv: Vec<String>) -> Result<(Args, Option<Commands>), String>
         daemon: cli.daemon,
         control_socket: cli.control_socket,
         max_len,
+        reduce_motion: cli.reduce_motion,
+        text_only: cli.text_only,
     };
 
     Ok((args, cli.command))

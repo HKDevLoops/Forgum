@@ -332,6 +332,21 @@ fn main() -> ExitCode {
             ExitCode::SUCCESS
         }
 
+        // ── theme seasonal ──────────────────────────────────────────
+        Some(cli::Commands::Theme {
+            sub: cli::ThemeSub::Seasonal,
+        }) => {
+            let theme = forgum_engine::theme::seasonal_theme();
+            println!(
+                "Seasonal theme: {} effect, {} cow, eyes={}, tongue={}",
+                theme.effect.as_deref().unwrap_or("default"),
+                theme.cow.as_deref().unwrap_or("default"),
+                theme.eyes.as_deref().unwrap_or("oo"),
+                theme.tongue.as_deref().unwrap_or("U")
+            );
+            ExitCode::SUCCESS
+        }
+
         // ── herd follow ────────────────────────────────────────────
         Some(cli::Commands::Herd {
             sub: cli::HerdSub::Follow { pane },
@@ -357,6 +372,27 @@ fn main() -> ExitCode {
                 ExitCode::from(1)
             }
         },
+
+        // ── say ─────────────────────────────────────────────────────
+        Some(cli::Commands::Say { cmd }) => {
+            let output = forgum_engine::say::run_say(&cmd);
+            print!("{output}");
+            ExitCode::SUCCESS
+        }
+
+        // ── timer ───────────────────────────────────────────────────
+        Some(cli::Commands::Timer { cmd }) => {
+            let result = forgum_engine::timer::run_timer(&cmd);
+            let cow = forgum_engine::timer::render_timer_cow(&result);
+            println!("{cow}");
+            if !result.stdout.is_empty() {
+                println!("{}", result.stdout);
+            }
+            if !result.stderr.is_empty() {
+                eprintln!("{}", result.stderr);
+            }
+            ExitCode::from(result.exit_code as u8)
+        }
 
         // ── render (default) ────────────────────────────────────────
         _ => render_subcommand(args),

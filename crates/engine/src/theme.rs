@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use super::herd::{discover_daemons, herd_effect, send_command, HerdFilter};
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Default, Serialize, Deserialize, Clone)]
 pub struct Theme {
     pub effect: Option<String>,
     pub cow: Option<String>,
@@ -84,6 +84,59 @@ pub fn load_theme(config_dir: &Path, name: &str) -> Result<Theme, String> {
     Theme::load(&path)
 }
 
+pub fn seasonal_theme() -> Theme {
+    use chrono::Datelike;
+    let now = chrono::Local::now();
+    let month = now.month();
+    let day = now.day();
+
+    match (month, day) {
+        (1, 1..=2) => Theme {
+            effect: Some("ember".to_string()),
+            cow: Some("default".to_string()),
+            eyes: Some("oo".to_string()),
+            tongue: Some("U".to_string()),
+        },
+        (2, 14) => Theme {
+            effect: Some("glitch".to_string()),
+            cow: Some("default".to_string()),
+            eyes: Some("@@".to_string()),
+            tongue: Some("U".to_string()),
+        },
+        (10, 25..=31) => Theme {
+            effect: Some("portal".to_string()),
+            cow: Some("ghost".to_string()),
+            eyes: Some("xx".to_string()),
+            tongue: Some("U".to_string()),
+        },
+        (12, 24..=26) => Theme {
+            effect: Some("ember".to_string()),
+            cow: Some("default".to_string()),
+            eyes: Some("oo".to_string()),
+            tongue: Some("*".to_string()),
+        },
+        (3..=5, _) => Theme {
+            effect: Some("aurora".to_string()),
+            cow: Some("default".to_string()),
+            eyes: Some("oo".to_string()),
+            tongue: Some("U".to_string()),
+        },
+        (6..=8, _) => Theme {
+            effect: Some("ember".to_string()),
+            cow: Some("default".to_string()),
+            eyes: Some("oo".to_string()),
+            tongue: Some("U".to_string()),
+        },
+        (9..=11, _) => Theme {
+            effect: Some("aurora".to_string()),
+            cow: Some("default".to_string()),
+            eyes: Some("..".to_string()),
+            tongue: Some("U".to_string()),
+        },
+        _ => Theme::default(),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -147,5 +200,14 @@ mod tests {
         let dir = TempDir::new().unwrap();
         let result = load_theme(dir.path(), "nonexistent");
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn seasonal_theme_returns_valid_theme() {
+        let theme = seasonal_theme();
+        assert!(theme.effect.is_some());
+        assert!(!theme.effect.unwrap().is_empty());
+        assert!(theme.cow.is_some());
+        assert!(!theme.cow.unwrap().is_empty());
     }
 }
