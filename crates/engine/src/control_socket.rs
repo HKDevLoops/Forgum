@@ -114,10 +114,7 @@ impl ControlServer {
         ))
     }
 
-    fn accept_loop(
-        socket: forgum_platform::DaemonSocket,
-        tx: mpsc::Sender<ControlCmd>,
-    ) {
+    fn accept_loop(socket: forgum_platform::DaemonSocket, tx: mpsc::Sender<ControlCmd>) {
         loop {
             match socket.accept() {
                 Ok(Some(mut conn)) => {

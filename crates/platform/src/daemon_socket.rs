@@ -29,9 +29,7 @@ enum SocketInner {
         _path: std::path::PathBuf,
     },
     #[cfg(windows)]
-    Windows {
-        pipe_name: Vec<u16>,
-    },
+    Windows { pipe_name: Vec<u16> },
 }
 
 impl DaemonSocket {
@@ -49,11 +47,9 @@ impl DaemonSocket {
             // Remove stale socket file from a previous unclean shutdown.
             let _ = std::fs::remove_file(path);
 
-            let listener = std::os::unix::net::UnixListener::bind(path)
-                .map_err(PlatformError::Io)?;
-            listener
-                .set_nonblocking(true)
-                .map_err(PlatformError::Io)?;
+            let listener =
+                std::os::unix::net::UnixListener::bind(path).map_err(PlatformError::Io)?;
+            listener.set_nonblocking(true).map_err(PlatformError::Io)?;
 
             Ok(Self {
                 inner: SocketInner::Unix {
@@ -103,10 +99,10 @@ impl DaemonSocket {
                         windows_sys::Win32::System::Pipes::PIPE_TYPE_BYTE
                             | windows_sys::Win32::System::Pipes::PIPE_READMODE_BYTE
                             | windows_sys::Win32::System::Pipes::PIPE_WAIT,
-                        1,          // max instances
-                        4096,       // out buffer size
-                        4096,       // in buffer size
-                        0,          // default timeout
+                        1,    // max instances
+                        4096, // out buffer size
+                        4096, // in buffer size
+                        0,    // default timeout
                         std::ptr::null(),
                     )
                 };
@@ -150,8 +146,6 @@ impl DaemonSocket {
         }
     }
 }
-
-
 
 /// A single accepted IPC connection.
 #[allow(missing_debug_implementations)]
@@ -239,7 +233,9 @@ impl SocketConnection {
             #[cfg(unix)]
             Self::Unix(reader) => {
                 let stream = reader.get_mut();
-                stream.write_all(data.as_bytes()).map_err(PlatformError::Io)?;
+                stream
+                    .write_all(data.as_bytes())
+                    .map_err(PlatformError::Io)?;
                 stream.flush().map_err(PlatformError::Io)?;
                 Ok(())
             }

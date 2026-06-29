@@ -26,6 +26,12 @@ The cloned source under review lives in `repo/` (Forgum v1.1.2, engine v0.3.0).
 | **11** | `11-ENGINE-INTERNALS-V2.md` | The deep dive: 3-thread model (sim/render/control), DCL singletons (`OnceLock`/`LazyLock`), `bumpalo` arena (zero-alloc hot loop), `slotmap` particle pool, `rayon` parallel integration, `Renderer` trait with 4 backends (Ansi/SyncAnsi/KittyAnim/WgpuHybrid), fixed-timestep accumulator, signal handling, daemon lifecycle. |
 | **12** | `12-PER-ANIMAL-ANIMATION-DESIGN.md` | The 7-axis DNA profile that makes all 109 cows animate uniquely: base/particles/speed/amplitude/palette/easing/phase_seed. Per-base easing defaults, OKLCH color, Verlet tails, golden-ratio desync, the full 109-cow DNA table, the JSON schema. |
 | **13** | `13-TEST-COVERAGE-MATRIX.md` | The 6-tier test pyramid (unit → E2E → bench → fuzz → golden-visual → perceptual), 20 E2E scenarios, 15 CI gates, per-phase definition-of-done checklist, coverage targets. |
+| **14** | `14-AI-INTEGRATION-PLAN.md` | **The v3 horizon.** AI for cow classification (9-axis mood DNA), command-aware cow selection, contextual thought generation, sentiment-adaptive animation, voice (TTS/STT), error explanation, commit/review assistance, conversational cow REPL. Local-first, non-blocking, opt-in cloud, 8-tier test pyramid with eval-golden + perceptual checks. 25 features across 7 phases (~8 weeks). |
+| **15** | `15-INSTALLATION-AND-PACKAGING.md` | **The "it just installs" blueprint.** Single-canonical-path principle; the full install matrix (winget/scoop/MSI/EXE on Windows; .deb/apt/.rpm/dnf/AUR/pacman/Nix on Linux; Homebrew/.pkg + `install.sh` on macOS; `cargo install` + source everywhere). Interactive `install.sh`/`install.ps1` that delegate to `forgum init --first-run`. Shell-hook injection. `forgum doctor` integrity. Version-resilient upgrade matrix (mix methods / cross-version, one binary wins). Package-manager PRs (winget/apt/dnf/brew/pacman/nixpkgs). Phased P0→P3. |
+| **16** | `16-CLI-DESIGN-SUBCOMMANDS-AND-ARGS.md` | **The dual interface.** Subcommands for humans (`forgum render --cow dragon`), flags for scripts (`forgum --cow dragon`), both resolving to one `clap` struct. `forgum init` == `forgum-init` (shim + shell function). Full subcommand tree + full flag surface. Config-as-single-source-of-truth (flags > toml > env > defaults; `--save` persists). The no-orphan-config mirror invariant (every key has a flag + a `config set` path). Shell-startup `eval` pattern per shell. Semver + deprecation policy. |
+| **17** | `17-TUI-CONFIG-MENU.md` | **The flagship interactive surface.** `forgum` (no args) launches a `ratatui` TUI: 3-zone 3D-feel layout (drop shadows, bevels, parallax, glow), lolcat-rainbow accents, and a **hero cow whose eyes track the focused widget + terminal cursor**, blink on select, morph per section. Every setting is a toggle/select/slider (no free-text unless validating); every config key has a widget (CI-enforced). Atomic writes, diff-before-apply, undo/redo. Keyboard-first, screen-reader-friendly, reduced-motion. Expert escape hatch (`e`→`$EDITOR`). |
+| **18** | `18-README-AND-WIKI-STRUCTURE.md` | **The docs architecture.** README (install one-liners per platform, quickstart, CLI cheat-sheet). ~35-page GitHub Wiki, each page following a strict 6-part skeleton (what it is / how to use / what powers it / how to configure / sample config + output / troubleshooting). The Sample-Configs library (10+ annotated configs with outputs). Expert configuration corner. Doc-CI: skeleton check, config validation, render snapshots, link check, help-sync. |
+| **19** | `19-CONTRIBUTING-GUIDE.md` | **The "understand it in one go" contributor manual.** 15-minute tour: quick start, 13-crate layout (the no-`#[cfg]`-outside-platform rule), the 10 principles restated, the 8 test tiers + `just` commands, 6 task guides (add cow/effect/shell-hook/CLI-flag/config-key+TUI-toggle/AI-feature), PR checklist, Conventional Commits, the one-tag release process that builds 6 targets + 8 packages + opens winget/brew/nixpkgs PRs. |
 
 ---
 
@@ -43,6 +49,38 @@ Documents `10`–`13` are the **fine-tuned, professional-grade** plan that eleva
 - **Verlet physics** for tails/capes (unconditionally stable, natural whip/lag/overshoot).
 - **Golden-ratio phase randomization** so herds never sync.
 - **6-tier test pyramid** with 20 E2E scenarios, 15 CI gates, golden-blake3 visual regression, perceptual-hash weekly check.
+
+---
+
+## v3 AI horizon (the "make it think" upgrade)
+
+Document `14` is the **v3 horizon**, layered on top of v2. It turns Forgum from "a cowsay clone that looks alive" into **a terminal companion that acts aware**. It adds:
+
+- **9-axis cow mood DNA** (energy/menace/whimsy/majesty/chaos/warmth/focus/archetype/domain_tags) — every cow gets auto-classified offline by a VLM, cached to `cow_dna.json`, content-addressed by `.cow` hash.
+- **Command-aware cow selection** — the shell hook gathers context (command, exit code, git state, time, rhythm), classifies intent (24 clusters), and picks the cow whose mood embedding is nearest — in ≤5 ms, cache-first.
+- **Contextual thought generation** — an LLM writes the cow's speech-bubble thought in-character, in the user's language, in a chosen tone (default/sarcastic/zen/hype/doom/pirate). Async, lands on the next render cycle, cached by hash.
+- **Sentiment-adaptive animation** — exit code + intent override the v2 palette/speed for *this render only* (victory gold on success, ember on failure).
+- **Local-first privacy** — shell history is radioactive; the `Redactor` is the only path to cloud; `secret`-cluster commands are never sent to any model; intent log stores vectors, never raw commands.
+- **`AiEngine` trait** with a backend chain (Heuristic → LocalFull → Hybrid → CloudFull), DCL singleton via `OnceLock`, lazy model download with SHA-256 verification.
+- **25 features** across 5 tiers (T0 critical-path cache → T4 offline batch): classification, selection, thoughts, tone modes, NL cow search, error explanation, suggest-next, commit/review generation, predictive pre-render, voice moos (TTS), voice commands (STT), custom cow generation (text→ASCII), VLM frame audit, multi-language, personalized tone learning, smart herd composition, mood-adaptive coloring, daily digest, fortune feed, pair-programming cow, accessibility narrator, conversational REPL.
+- **8-tier test pyramid** adds eval-golden (classification/selection/thought/redaction/latency) and perceptual (VLM-judged "does this cow fit the moment?") on top of v2's six.
+- **7 phases (A–G)** over ~8 weeks, each independently releasable and test-gated.
+
+The flagship user experience: type `git push`, watch it succeed, see a triumphant dragon exhaling ember particles with the thought *"the kingdom ships tonight"* — same command fails, see a confused turtle muttering *"the gate refused us, traveler."* The cow is no longer random. It is contextual.
+
+---
+
+## v3.5 Delivery & UX layer (install, CLI, TUI, docs, contributing)
+
+Documents `15`–`19` are the **user-facing delivery layer** that turns the v2/v3 engine into a product people can actually install, configure, and contribute to. They add:
+
+- **Single-canonical-path packaging** (`15-…`) — every install method (winget/scoop/MSI/EXE on Windows; deb/rpm/AUR/pacman/Nix on Linux; Homebrew on macOS; cargo + source everywhere) converges on the same binary path + shared config/data/cache, so mixing methods or upgrading across versions never breaks. Interactive `install.sh`/`install.ps1` delegate to `forgum init --first-run`. `forgum doctor` verifies integrity. Package-manager PRs (winget/apt/dnf/brew/pacman/nixpkgs) are CI-driven.
+- **Dual CLI interface** (`16-…`) — subcommands for humans, flags for scripts, both one `clap` struct. `forgum init` == `forgum-init`. Config is single-source-of-truth (flags > toml > env > defaults). The no-orphan-config mirror invariant: every config key has a flag + a `config set` path.
+- **The eye-tracking-cow TUI** (`17-…`) — `forgum` (no args) opens a `ratatui` config menu with a 3D feel (shadows, bevels, parallax, glow), lolcat rainbow accents, and a **hero cow whose eyes follow the focused widget and the cursor**, blink on select, and morph per section. Every setting is a toggle; every config key has a widget. Atomic writes, diff-before-apply, undo/redo. The cow is the host and the feedback channel.
+- **README + Wiki architecture** (`18-…`) — a short README front door + a ~35-page wiki where every page follows a 6-part skeleton (what/how/powers-it/configure/sample+output/troubleshoot). 10+ annotated sample configs with their terminal outputs. Doc-CI validates every page, runs every sample config, snapshots every render, and diffs `--help` against the CLI reference.
+- **Contributing guide** (`19-…`) — a 15-minute, one-go read: quick start, the 13-crate layout, the 10 principles, the 8 test tiers, 6 task guides (add cow/effect/shell-hook/flag/config-key/AI-feature), PR checklist, Conventional Commits, and the one-tag release that builds 6 targets + 8 packages + opens the package-manager PRs.
+
+The north star across all five: **the interactive menu is the sanctioned way to configure Forgum** — users run `forgum` and toggle, they don't write config — but every byte of the config, every API, every mechanism is exhaustively documented for the experts who want depth, and every contributor can get from clone to merged PR in one read of `CONTRIBUTING.md`.
 
 ---
 
