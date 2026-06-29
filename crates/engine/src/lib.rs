@@ -28,6 +28,8 @@ pub mod protocol_io;
 pub mod render;
 pub mod renderer;
 pub mod say;
+pub mod battle;
+pub mod showcase;
 pub mod scheduler;
 pub mod status_line;
 pub mod metrics;

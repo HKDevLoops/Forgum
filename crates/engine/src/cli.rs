@@ -124,6 +124,8 @@ pub enum Commands {
     },
     /// Run the showcase demo.
     Demo,
+    /// Run the 60-second showcase demo reel.
+    Showcase,
     /// Run a command and render its output in a cow speech bubble.
     Say {
         /// The command to execute.
@@ -135,6 +137,15 @@ pub enum Commands {
         /// The command to time.
         #[arg(required = true, num_args = 1..)]
         cmd: Vec<String>,
+    },
+    /// ASCII cow jousting battle.
+    Battle {
+        /// Name of the first cow.
+        #[arg(long, default_value = "Alice")]
+        name1: String,
+        /// Name of the second cow.
+        #[arg(long, default_value = "Bob")]
+        name2: String,
     },
 }
 
@@ -267,8 +278,10 @@ pub enum Command {
     Herd,
     Theme,
     Demo,
+    Showcase,
     Say,
     Timer,
+    Battle,
     Unknown(String),
 }
 
@@ -316,8 +329,10 @@ pub fn parse_args(argv: Vec<String>) -> Result<(Args, Option<Commands>), String>
         },
         Some(Commands::Theme { .. }) => Command::Theme,
         Some(Commands::Demo) => Command::Demo,
+        Some(Commands::Showcase) => Command::Showcase,
         Some(Commands::Say { .. }) => Command::Say,
         Some(Commands::Timer { .. }) => Command::Timer,
+        Some(Commands::Battle { .. }) => Command::Battle,
     };
 
     let max_len = match &cli.command {
