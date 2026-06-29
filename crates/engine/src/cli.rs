@@ -104,12 +104,90 @@ pub enum Commands {
         #[arg(long, default_value = "70")]
         max_len: usize,
     },
+    /// Fleet manager: control all running daemons.
+    Herd {
+        #[command(subcommand)]
+        sub: HerdSub,
+    },
+    /// Theme management.
+    Theme {
+        #[command(subcommand)]
+        sub: ThemeSub,
+    },
 }
 
 #[derive(Debug, Subcommand)]
 pub enum TmuxSub {
     /// Print tmux config block to stdout.
     Install,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum HerdSub {
+    /// List all running daemons.
+    List,
+    /// Stop all (or filtered) daemons.
+    Stop {
+        /// Filter by session ID.
+        #[arg(long)]
+        session: Option<String>,
+        /// Apply to all daemons.
+        #[arg(long)]
+        all: bool,
+    },
+    /// Set effect on all (or filtered) daemons.
+    Effect {
+        /// Effect name.
+        name: String,
+        /// Filter by session ID.
+        #[arg(long)]
+        session: Option<String>,
+        /// Apply to all daemons.
+        #[arg(long)]
+        all: bool,
+    },
+    /// Set speed on all (or filtered) daemons.
+    Speed {
+        /// Speed multiplier.
+        value: f32,
+        /// Filter by session ID.
+        #[arg(long)]
+        session: Option<String>,
+        /// Apply to all daemons.
+        #[arg(long)]
+        all: bool,
+    },
+    /// Pause all (or filtered) daemons.
+    Pause {
+        /// Filter by session ID.
+        #[arg(long)]
+        session: Option<String>,
+        /// Apply to all daemons.
+        #[arg(long)]
+        all: bool,
+    },
+    /// Resume all (or filtered) daemons.
+    Resume {
+        /// Filter by session ID.
+        #[arg(long)]
+        session: Option<String>,
+        /// Apply to all daemons.
+        #[arg(long)]
+        all: bool,
+    },
+    /// Drop all daemons to idle (low FPS).
+    Quiet,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum ThemeSub {
+    /// List available themes.
+    List,
+    /// Apply a theme to all daemons.
+    Apply {
+        /// Theme name.
+        name: String,
+    },
 }
 
 #[derive(Debug, Clone, Copy, ValueEnum)]
@@ -142,6 +220,8 @@ pub enum Command {
     Completions,
     Tmux,
     StatusLine,
+    Herd,
+    Theme,
     Unknown(String),
 }
 
@@ -176,6 +256,8 @@ pub fn parse_args(argv: Vec<String>) -> Result<(Args, Option<Commands>), String>
         Some(Commands::Status) => Command::Status,
         Some(Commands::Tmux { .. }) => Command::Tmux,
         Some(Commands::StatusLine { .. }) => Command::StatusLine,
+        Some(Commands::Herd { .. }) => Command::Herd,
+        Some(Commands::Theme { .. }) => Command::Theme,
     };
 
     let max_len = match &cli.command {

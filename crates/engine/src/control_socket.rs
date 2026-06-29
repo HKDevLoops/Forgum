@@ -24,7 +24,7 @@ pub enum ControlCmd {
 }
 
 /// Response to send back over the socket.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct ControlResponse {
     pub ok: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -33,7 +33,7 @@ pub struct ControlResponse {
     pub status: Option<StatusInfo>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct StatusInfo {
     pub running: bool,
     pub paused: bool,
