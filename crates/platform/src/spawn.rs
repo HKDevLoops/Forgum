@@ -34,7 +34,8 @@ use crate::error::PlatformError;
 /// `DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP`. Parent prints child PID
 /// and exits with code 0. Child returns `Ok(false)`.
 ///
-/// Returns `Ok(true)` in parent (before exit), `Ok(false)` in child.
+/// The parent process prints the child PID and exits (never returns).
+/// The child process returns `Ok(false)`.
 #[cfg(unix)]
 pub fn daemonize() -> Result<bool, PlatformError> {
     use nix::unistd::{fork, ForkResult, setsid};
@@ -45,7 +46,7 @@ pub fn daemonize() -> Result<bool, PlatformError> {
             std::process::exit(0);
         }
         Ok(ForkResult::Child) => {
-            setsid().map_err(|e| PlatformError::Io(io::Error::new(io::ErrorKind::Other, e)))?;
+            setsid().map_err(PlatformError::Io)?;
             Ok(false)
         }
         Err(e) => Err(PlatformError::Io(io::Error::new(
@@ -61,16 +62,18 @@ pub fn daemonize() -> Result<bool, PlatformError> {
 /// CREATE_NEW_PROCESS_GROUP`. Parent prints child PID and exits with code 0.
 /// Child returns `Ok(false)`.
 #[cfg(windows)]
-#[allow(unsafe_code)]
 pub fn daemonize() -> Result<bool, PlatformError> {
     use std::os::windows::process::CommandExt;
     use windows_sys::Win32::System::Threading::{CREATE_NEW_PROCESS_GROUP, DETACHED_PROCESS};
 
     let current_exe = std::env::current_exe().map_err(PlatformError::Io)?;
-    let args: Vec<String> = std::env::args().skip(1).collect();
+    let args: Vec<String> = std::env::args().skip(1).filter(|a| a != "--daemon").collect();
 
     let mut cmd = Command::new(current_exe);
     cmd.args(&args);
+    cmd.stdin(Stdio::null());
+    cmd.stdout(Stdio::null());
+    cmd.stderr(Stdio::null());
     cmd.creation_flags(DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP);
 
     let child = cmd.spawn().map_err(PlatformError::Io)?;
