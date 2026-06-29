@@ -18,6 +18,7 @@
 #![allow(unsafe_code)] // guarded raw-pointer usage in RAII guards; see crate-level docs
 
 use std::io::Write;
+use std::sync::mpsc;
 use std::time::Duration;
 
 use forgum_platform::{
@@ -25,9 +26,10 @@ use forgum_platform::{
     TerminalCapabilities,
 };
 
+use crate::control_socket::ControlCmd;
+use crate::dna::CowDna;
 use crate::effects;
 use crate::framebuffer::FrameBuffer;
-use crate::dna::CowDna;
 use crate::protocol::SceneConfig;
 use crate::renderer;
 use crate::scheduler::Scheduler;
@@ -59,6 +61,7 @@ pub fn render_loop_foreground(
     composed_text: Option<&str>,
     cow_dna: CowDna,
     instance_id: u32,
+    cmd_rx: &Option<mpsc::Receiver<ControlCmd>>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let _signals = SignalGuard::install(shutdown.clone())?;
 
@@ -115,6 +118,37 @@ pub fn render_loop_foreground(
             effect.on_resize(usize::from(cols), usize::from(rows));
         }
 
+        // Process control commands (non-blocking).
+        if let Some(rx) = cmd_rx {
+            while let Ok(cmd) = rx.try_recv() {
+                match cmd {
+                    ControlCmd::Stop => {
+                        shutdown.trigger();
+                        break;
+                    }
+                    ControlCmd::Pause => {
+                        // Skip rendering but keep looping.
+                    }
+                    ControlCmd::Resume => {
+                        // Resume rendering — no-op for now, the loop continues.
+                    }
+                    ControlCmd::Effect(name) => {
+                        eprintln!("forgum-engine: effect change requested: {name}");
+                    }
+                    ControlCmd::Speed(_s) => {
+                        // TODO: apply speed multiplier to scheduler.
+                    }
+                    ControlCmd::Cow(_name) => {
+                        // TODO: reload cow art and recreate effect.
+                    }
+                    ControlCmd::Text(_text) => {
+                        // TODO: update composed text.
+                    }
+                    _ => {}
+                }
+            }
+        }
+
         let dt = scheduler.tick();
         let dt_f32 = dt.as_secs_f32();
         elapsed += dt_f32;
@@ -148,6 +182,7 @@ pub fn render_loop_background(
     composed_text: Option<&str>,
     cow_dna: CowDna,
     instance_id: u32,
+    cmd_rx: &Option<mpsc::Receiver<ControlCmd>>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let _signals = SignalGuard::install(shutdown.clone())?;
 
@@ -201,6 +236,37 @@ pub fn render_loop_background(
             rows = new_caps.height.max(1);
             fb.resize(usize::from(cols), usize::from(rows));
             effect.on_resize(usize::from(cols), usize::from(rows));
+        }
+
+        // Process control commands (non-blocking).
+        if let Some(rx) = cmd_rx {
+            while let Ok(cmd) = rx.try_recv() {
+                match cmd {
+                    ControlCmd::Stop => {
+                        shutdown.trigger();
+                        break;
+                    }
+                    ControlCmd::Pause => {
+                        // Skip rendering but keep looping.
+                    }
+                    ControlCmd::Resume => {
+                        // Resume rendering — no-op for now, the loop continues.
+                    }
+                    ControlCmd::Effect(name) => {
+                        eprintln!("forgum-engine: effect change requested: {name}");
+                    }
+                    ControlCmd::Speed(_s) => {
+                        // TODO: apply speed multiplier to scheduler.
+                    }
+                    ControlCmd::Cow(_name) => {
+                        // TODO: reload cow art and recreate effect.
+                    }
+                    ControlCmd::Text(_text) => {
+                        // TODO: update composed text.
+                    }
+                    _ => {}
+                }
+            }
         }
 
         let dt = scheduler.tick();
