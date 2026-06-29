@@ -394,6 +394,20 @@ fn main() -> ExitCode {
             ExitCode::from(result.exit_code as u8)
         }
 
+        // ── battle ──────────────────────────────────────────────────
+        Some(cli::Commands::Battle { name1, name2 }) => {
+            let output = forgum_engine::battle::run_battle(&name1, &name2);
+            print!("{output}");
+            ExitCode::SUCCESS
+        }
+
+        // ── showcase ────────────────────────────────────────────────
+        Some(cli::Commands::Showcase) => {
+            let output = forgum_engine::showcase::run_showcase();
+            print!("{output}");
+            ExitCode::SUCCESS
+        }
+
         // ── render (default) ────────────────────────────────────────
         _ => render_subcommand(args),
     }
