@@ -13,7 +13,8 @@
         'Invoke-ForgumEngine',
         'Initialize-ForgumConfig',
         'Set-ForgumConfig',
-        'Get-ForgumConfig'
+        'Get-ForgumConfig',
+        'Stop-ForgumDaemon'
     )
     CmdletsToExport   = @()
     AliasesToExport   = @()
