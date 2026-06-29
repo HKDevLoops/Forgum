@@ -9,6 +9,7 @@ use clap::CommandFactory;
 use forgum_engine::cli;
 use forgum_engine::cli::{build_scene_config, parse_args};
 use forgum_engine::cow;
+use forgum_engine::daemon;
 use forgum_engine::dna;
 use forgum_engine::fortune;
 use forgum_engine::init::Shell;
@@ -109,52 +110,145 @@ fn render_subcommand(args: cli::Args) -> ExitCode {
         let _ = std::fs::remove_file(path);
     }
 
-    // Phase 1 stubs.
-    if args.daemon {
-        eprintln!("{PROGRAM}: --daemon is a Phase 1 feature; running foreground instead.");
-    }
-    if args.control_socket.is_some() {
-        eprintln!("{PROGRAM}: --control-socket is a Phase 1 feature; ignoring.");
-    }
-
     let shutdown = ShutdownFlag::new();
 
-    // Open the output handle (stdout, /dev/tty, or CONOUT$).
-    let out = match OutputHandle::open() {
-        Ok(o) => o,
-        Err(e) => {
-            eprintln!("{PROGRAM}: cannot open output: {e}");
-            return ExitCode::from(e.exit_code() as u8);
+    if args.daemon {
+        // ── DAEMON MODE ──
+        let session_id = forgum_platform::detect_session_id();
+        let socket_path = forgum_platform::control_socket_path(&session_id);
+
+        // Start control socket server before forking.
+        let (server, cmd_rx) =
+            match forgum_engine::control_socket::ControlServer::start(socket_path.clone()) {
+                Ok(v) => v,
+                Err(e) => {
+                    eprintln!("{PROGRAM}: control socket: {e}");
+                    return ExitCode::from(74);
+                }
+            };
+
+        // Daemonize: parent exits, child continues.
+        match forgum_platform::daemonize() {
+            Ok(true) => {
+                unreachable!();
+            }
+            Ok(false) => {
+                // Child: write daemon state.
+                let pid = std::process::id();
+                let _ = daemon::write_daemon_state(pid, 0, 80, &socket_path);
+            }
+            Err(e) => {
+                eprintln!("{PROGRAM}: daemonize: {e}");
+                return ExitCode::from(74);
+            }
         }
-    };
 
-    // Load and compose cow art with speech bubble.
-    let data = match data_dir() {
-        Ok(d) => d,
-        Err(e) => {
-            eprintln!("{PROGRAM}: cannot find data directory: {e}");
-            return ExitCode::from(78);
+        // Open output and render (same as foreground, but with cmd_rx).
+        let out = match OutputHandle::open() {
+            Ok(o) => o,
+            Err(e) => {
+                eprintln!("{PROGRAM}: cannot open output: {e}");
+                return ExitCode::from(e.exit_code() as u8);
+            }
+        };
+
+        let data = match data_dir() {
+            Ok(d) => d,
+            Err(e) => {
+                eprintln!("{PROGRAM}: cannot find data directory: {e}");
+                return ExitCode::from(78);
+            }
+        };
+        let cow_text = cow::load_cow(&scene.cow, &data, &scene.eyes, &scene.tongue, "\\\\");
+        let composed = cow::compose_scene(&cow_text, &scene.text);
+        let animations = dna::load_animations(&data);
+        let cow_dna = dna::get_dna(&animations, &scene.cow);
+        let instance_id = std::process::id();
+
+        let result = if scene.background {
+            render::render_loop_background(
+                out,
+                scene,
+                shutdown,
+                Some(&composed),
+                cow_dna,
+                instance_id,
+                &Some(cmd_rx),
+            )
+        } else {
+            render::render_loop_foreground(
+                out,
+                scene,
+                shutdown,
+                Some(&composed),
+                cow_dna,
+                instance_id,
+                &Some(cmd_rx),
+            )
+        };
+
+        // Cleanup on exit.
+        drop(server);
+
+        match result {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(e) => {
+                eprintln!("{PROGRAM}: {e}");
+                ExitCode::from(71)
+            }
         }
-    };
-    let cow_text = cow::load_cow(&scene.cow, &data, &scene.eyes, &scene.tongue, "\\\\");
-    let composed = cow::compose_scene(&cow_text, &scene.text);
-
-    // Load animation DNA for this cow
-    let animations = dna::load_animations(&data);
-    let cow_dna = dna::get_dna(&animations, &scene.cow);
-    let instance_id = std::process::id();
-
-    let result = if scene.background {
-        render::render_loop_background(out, scene, shutdown, Some(&composed), cow_dna, instance_id, &None)
     } else {
-        render::render_loop_foreground(out, scene, shutdown, Some(&composed), cow_dna, instance_id, &None)
-    };
+        // ── FOREGROUND MODE ──
+        let out = match OutputHandle::open() {
+            Ok(o) => o,
+            Err(e) => {
+                eprintln!("{PROGRAM}: cannot open output: {e}");
+                return ExitCode::from(e.exit_code() as u8);
+            }
+        };
 
-    match result {
-        Ok(()) => ExitCode::SUCCESS,
-        Err(e) => {
-            eprintln!("{PROGRAM}: {e}");
-            ExitCode::from(71)
+        let data = match data_dir() {
+            Ok(d) => d,
+            Err(e) => {
+                eprintln!("{PROGRAM}: cannot find data directory: {e}");
+                return ExitCode::from(78);
+            }
+        };
+        let cow_text = cow::load_cow(&scene.cow, &data, &scene.eyes, &scene.tongue, "\\\\");
+        let composed = cow::compose_scene(&cow_text, &scene.text);
+
+        let animations = dna::load_animations(&data);
+        let cow_dna = dna::get_dna(&animations, &scene.cow);
+        let instance_id = std::process::id();
+
+        let result = if scene.background {
+            render::render_loop_background(
+                out,
+                scene,
+                shutdown,
+                Some(&composed),
+                cow_dna,
+                instance_id,
+                &None,
+            )
+        } else {
+            render::render_loop_foreground(
+                out,
+                scene,
+                shutdown,
+                Some(&composed),
+                cow_dna,
+                instance_id,
+                &None,
+            )
+        };
+
+        match result {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(e) => {
+                eprintln!("{PROGRAM}: {e}");
+                ExitCode::from(71)
+            }
         }
     }
 }
