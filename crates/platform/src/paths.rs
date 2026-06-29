@@ -322,13 +322,17 @@ mod tests {
     fn override_precedes_default() {
         // We can't test the default without mutating env, but we *can* test
         // that the override path is honored without writing any files.
+        let saved = std::env::var("FORGUM_CONFIG").ok();
         unsafe {
             std::env::set_var("FORGUM_CONFIG", "/tmp/forgum-override/config.json");
         }
         let p = config_path().unwrap();
         assert_eq!(p, PathBuf::from("/tmp/forgum-override/config.json"));
         unsafe {
-            std::env::remove_var("FORGUM_CONFIG");
+            match saved {
+                Some(v) => std::env::set_var("FORGUM_CONFIG", v),
+                None => std::env::remove_var("FORGUM_CONFIG"),
+            }
         }
     }
 
@@ -336,13 +340,17 @@ mod tests {
     #[allow(unsafe_code)]
     fn override_paths_accepted_even_when_missing() {
         // Override should not require the parent dir to exist.
+        let saved = std::env::var("FORGUM_CONFIG").ok();
         unsafe {
             std::env::set_var("FORGUM_CONFIG", "/nonexistent/forgum-test/config.json");
         }
         let p = config_path().unwrap();
         assert!(p.ends_with("config.json"));
         unsafe {
-            std::env::remove_var("FORGUM_CONFIG");
+            match saved {
+                Some(v) => std::env::set_var("FORGUM_CONFIG", v),
+                None => std::env::remove_var("FORGUM_CONFIG"),
+            }
         }
     }
 
@@ -354,6 +362,11 @@ mod tests {
         let data_dir = tmp.path().join("data").join("Forgum");
         let rt_dir = tmp.path().join("rt").join("Forgum");
         let log_dir = tmp.path().join("log").join("Forgum");
+
+        let saved_cfg = std::env::var("FORGUM_CONFIG").ok();
+        let saved_data = std::env::var("FORGUM_DATA").ok();
+        let saved_rt = std::env::var("FORGUM_RUNTIME").ok();
+        let saved_log = std::env::var("FORGUM_LOG").ok();
 
         unsafe {
             std::env::set_var("FORGUM_CONFIG", cfg_dir.join("config.json"));
@@ -376,10 +389,20 @@ mod tests {
         assert!(!cfg_dir.join("config.json").exists());
 
         unsafe {
-            std::env::remove_var("FORGUM_CONFIG");
-            std::env::remove_var("FORGUM_DATA");
-            std::env::remove_var("FORGUM_RUNTIME");
-            std::env::remove_var("FORGUM_LOG");
+            restore_env("FORGUM_CONFIG", saved_cfg);
+            restore_env("FORGUM_DATA", saved_data);
+            restore_env("FORGUM_RUNTIME", saved_rt);
+            restore_env("FORGUM_LOG", saved_log);
+        }
+    }
+
+    #[allow(unsafe_code)]
+    fn restore_env(key: &str, val: Option<String>) {
+        unsafe {
+            match val {
+                Some(v) => std::env::set_var(key, v),
+                None => std::env::remove_var(key),
+            }
         }
     }
 }
