@@ -17,7 +17,7 @@ pub struct DaemonSocket {
     inner: SocketInner,
 }
 
-// SAFETY: On Windows, the contained HANDLE is a kernel object safe to send
+// SAFETY: On Windows, the contained pipe_name is a Vec<u16> safe to send
 // between threads. On Unix, UnixListener is already Send.
 #[allow(unsafe_code)]
 unsafe impl Send for DaemonSocket {}
@@ -30,7 +30,6 @@ enum SocketInner {
     },
     #[cfg(windows)]
     Windows {
-        handle: windows_sys::Win32::Foundation::HANDLE,
         pipe_name: Vec<u16>,
     },
 }
@@ -42,9 +41,8 @@ impl DaemonSocket {
     /// `EADDRINUSE`. Sets the listener to non-blocking mode so
     /// [`accept`](Self::accept) never blocks the caller.
     ///
-    /// On Windows, creates a named pipe server instance and waits for a
-    /// client connection. The `path` parameter is used only to derive the
-    /// pipe name; the file system path itself is not created.
+    /// On Windows, stores the pipe name derived from `path`. The actual
+    /// pipe instance is created on each [`accept`](Self::accept) call.
     pub fn bind(path: &Path) -> Result<Self, PlatformError> {
         #[cfg(unix)]
         {
@@ -73,57 +71,8 @@ impl DaemonSocket {
                 .chain(std::iter::once(0))
                 .collect();
 
-            // SAFETY: CreateNamedPipeW creates a named pipe server instance.
-            // Parameters are validated:
-            // - pipe_name is a null-terminated wide string
-            // - PIPE_ACCESS_DUPLEX allows bidirectional communication
-            // - PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT for
-            //   stream-oriented, blocking byte-mode I/O
-            // - 1 max instance, 4096 byte buffers, infinite timeout
-            // - No security attributes (default)
-            #[allow(unsafe_code)]
-            let handle = unsafe {
-                windows_sys::Win32::System::Pipes::CreateNamedPipeW(
-                    pipe_name.as_ptr(),
-                    windows_sys::Win32::Storage::FileSystem::PIPE_ACCESS_DUPLEX,
-                    windows_sys::Win32::System::Pipes::PIPE_TYPE_BYTE
-                        | windows_sys::Win32::System::Pipes::PIPE_READMODE_BYTE
-                        | windows_sys::Win32::System::Pipes::PIPE_WAIT,
-                    1,          // max instances
-                    4096,       // out buffer size
-                    4096,       // in buffer size
-                    0,          // default timeout
-                    std::ptr::null(),
-                )
-            };
-
-            if handle == windows_sys::Win32::Foundation::INVALID_HANDLE_VALUE {
-                return Err(PlatformError::Io(io::Error::last_os_error()));
-            }
-
-            // SAFETY: ConnectNamedPipe blocks until a client connects.
-            // The handle is valid and was just created by CreateNamedPipeW.
-            // We pass null for OVERLAPPED since this is a blocking pipe.
-            #[allow(unsafe_code)]
-            let ok = unsafe {
-                windows_sys::Win32::System::Pipes::ConnectNamedPipe(
-                    handle,
-                    std::ptr::null_mut(),
-                )
-            };
-
-            if ok == 0 {
-                let err = io::Error::last_os_error();
-                // SAFETY: handle is valid; we must clean up on failure.
-                #[allow(unsafe_code)]
-                unsafe {
-                    windows_sys::Win32::Foundation::CloseHandle(handle);
-                }
-                return Err(PlatformError::Io(err));
-            }
-
             Ok(Self {
-                inner: SocketInner::Windows { handle, pipe_name },
+                inner: SocketInner::Windows { pipe_name },
             })
         }
     }
@@ -131,8 +80,8 @@ impl DaemonSocket {
     /// Accept a new connection.
     ///
     /// On Unix this is non-blocking (returns `Ok(None)` immediately if no
-    /// client is waiting). On Windows the pipe was already connected during
-    /// [`bind`](Self::bind), so the server handle is returned directly.
+    /// client is waiting). On Windows, creates a new named pipe instance and
+    /// blocks until a client connects.
     pub fn accept(&self) -> Result<Option<SocketConnection>, PlatformError> {
         match &self.inner {
             #[cfg(unix)]
@@ -143,9 +92,9 @@ impl DaemonSocket {
             },
             #[cfg(windows)]
             SocketInner::Windows { pipe_name, .. } => {
-                // Create a new pipe instance for this connection to avoid
-                // handle aliasing. The original server handle stays valid
-                // for future accept() calls.
+                // Create a new pipe instance and wait for a client to connect.
+                // Each call creates a fresh instance so multiple clients can be
+                // served sequentially.
                 #[allow(unsafe_code)]
                 let new_handle = unsafe {
                     windows_sys::Win32::System::Pipes::CreateNamedPipeW(
@@ -202,18 +151,7 @@ impl DaemonSocket {
     }
 }
 
-#[cfg(windows)]
-impl Drop for DaemonSocket {
-    fn drop(&mut self) {
-        let SocketInner::Windows { handle, .. } = &self.inner;
-        // SAFETY: The handle is a valid server pipe handle created by
-        // CreateNamedPipeW.
-        #[allow(unsafe_code)]
-        unsafe {
-            windows_sys::Win32::Foundation::CloseHandle(*handle);
-        }
-    }
-}
+
 
 /// A single accepted IPC connection.
 #[allow(missing_debug_implementations)]
