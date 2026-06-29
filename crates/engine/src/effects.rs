@@ -53,7 +53,6 @@ impl Effect for StaticEffect {
 
 /// Subtle chest/belly expansion and contraction.
 #[derive(Debug)]
-#[allow(dead_code)]
 pub struct BreatheEffect {
     cow_text: String,
     amp: Amplitude,
@@ -79,9 +78,10 @@ impl Effect for BreatheEffect {
     fn update(&mut self, _dt: f32, _cols: usize, _rows: usize) {}
 
     fn render(&self, fb: &mut FrameBuffer, time: f32) {
-        let _t = (time * self.speed + self.phase) % 1.0;
-        let _eased = (self.easing_fn)(_t);
-        render_text(fb, &self.cow_text, Color::WHITE);
+        let t = (time * self.speed + self.phase) % 1.0;
+        let eased = (self.easing_fn)(t);
+        let y_offset = (eased * self.amp.breath * 3.0) as i32;
+        render_text_offset(fb, &self.cow_text, Color::WHITE, 0, y_offset);
     }
 }
 
@@ -89,7 +89,6 @@ impl Effect for BreatheEffect {
 
 /// Whole-art vertical/horizontal drift.
 #[derive(Debug)]
-#[allow(dead_code)]
 pub struct FloatEffect {
     cow_text: String,
     amp: Amplitude,
@@ -115,10 +114,11 @@ impl Effect for FloatEffect {
     fn update(&mut self, _dt: f32, _cols: usize, _rows: usize) {}
 
     fn render(&self, fb: &mut FrameBuffer, time: f32) {
-        let _t = (time * self.speed + self.phase) % 1.0;
-        let _intensity = (self.easing_fn)(_t);
-        // TODO: apply _intensity to vertical shift via self.amp.float
-        render_text(fb, &self.cow_text, Color::WHITE);
+        let t = (time * self.speed + self.phase) % 1.0;
+        let intensity = (self.easing_fn)(t);
+        let x_off = ((intensity * self.amp.sway * 4.0) as i32) - 2;
+        let y_off = ((intensity * self.amp.float * 3.0) as i32) - 1;
+        render_text_offset(fb, &self.cow_text, Color::WHITE, x_off, y_off);
     }
 }
 
@@ -126,10 +126,9 @@ impl Effect for FloatEffect {
 
 /// Bottom-row leg character swap.
 #[derive(Debug)]
-#[allow(dead_code)]
 pub struct WalkEffect {
     cow_text: String,
-    amp: Amplitude,
+    _amp: Amplitude,
     easing_fn: fn(f32) -> f32,
     phase: f32,
     speed: f32,
@@ -140,7 +139,7 @@ impl WalkEffect {
         let phase = instance_phase(dna.phase_seed, instance_id);
         Self {
             cow_text,
-            amp: dna.amplitude.clone(),
+            _amp: dna.amplitude.clone(),
             easing_fn: easing::by_name(&dna.easing.base),
             phase,
             speed: dna.speed,
@@ -152,9 +151,27 @@ impl Effect for WalkEffect {
     fn update(&mut self, _dt: f32, _cols: usize, _rows: usize) {}
 
     fn render(&self, fb: &mut FrameBuffer, time: f32) {
-        let _t = (time * self.speed + self.phase) % 1.0;
-        let _eased = (self.easing_fn)(_t);
-        render_text(fb, &self.cow_text, Color::WHITE);
+        let t = (time * self.speed + self.phase) % 1.0;
+        let eased = (self.easing_fn)(t);
+        // Alternate between two leg states
+        let (leg_l, leg_r) = if eased > 0.5 { ('╱', '╲') } else { ('╲', '╱') };
+        let lines: Vec<&str> = self.cow_text.lines().collect();
+        let last_idx = lines.len().saturating_sub(1);
+        for (i, line) in lines.iter().enumerate() {
+            let mut x = 0usize;
+            for ch in line.chars() {
+                let display_ch = if i == last_idx && ch == ' ' {
+                    if x % 2 == 0 { leg_l } else { leg_r }
+                } else {
+                    ch
+                };
+                if i < fb.height && x < fb.width {
+                    let _ = fb.set(x, i, Cell::new(display_ch, Color::WHITE));
+                }
+                x = x.saturating_add(1);
+            }
+            let _ = last_idx; // suppress unused warning
+        }
     }
 }
 
@@ -331,7 +348,6 @@ impl Effect for GlitchEffect {
 
 /// Fast erratic float + wing flap.
 #[derive(Debug)]
-#[allow(dead_code)]
 pub struct FlyEffect {
     cow_text: String,
     amp: Amplitude,
@@ -357,9 +373,18 @@ impl Effect for FlyEffect {
     fn update(&mut self, _dt: f32, _cols: usize, _rows: usize) {}
 
     fn render(&self, fb: &mut FrameBuffer, time: f32) {
-        let _t = (time * self.speed + self.phase) % 1.0;
-        let _eased = (self.easing_fn)(_t);
-        render_text(fb, &self.cow_text, Color::WHITE);
+        let t = (time * self.speed + self.phase) % 1.0;
+        let intensity = (self.easing_fn)(t);
+        // Erratic movement: combine sine waves at different frequencies
+        let x_off = ((t * 6.28 * 3.0).sin() * self.amp.sway * 5.0) as i32;
+        let y_off = ((t * 6.28 * 2.0).cos() * self.amp.float * 3.0
+            + (intensity * 2.0 - 1.0)) as i32;
+        render_text_offset(fb, &self.cow_text, Color::WHITE, x_off, y_off);
+        // Wing flap indicator near top
+        let flap_ch = if (time * 12.0) as i32 % 2 == 0 { '~' } else { '^' };
+        if fb.height > 0 && fb.width > 2 {
+            let _ = fb.set(1, 0, Cell::new(flap_ch, Color::WHITE));
+        }
     }
 }
 
@@ -367,10 +392,9 @@ impl Effect for FlyEffect {
 
 /// Mouth + eye region animation.
 #[derive(Debug)]
-#[allow(dead_code)]
 pub struct TalkEffect {
     cow_text: String,
-    amp: Amplitude,
+    _amp: Amplitude,
     easing_fn: fn(f32) -> f32,
     phase: f32,
     speed: f32,
@@ -381,7 +405,7 @@ impl TalkEffect {
         let phase = instance_phase(dna.phase_seed, instance_id);
         Self {
             cow_text,
-            amp: dna.amplitude.clone(),
+            _amp: dna.amplitude.clone(),
             easing_fn: easing::by_name(&dna.easing.base),
             phase,
             speed: dna.speed,
@@ -393,9 +417,28 @@ impl Effect for TalkEffect {
     fn update(&mut self, _dt: f32, _cols: usize, _rows: usize) {}
 
     fn render(&self, fb: &mut FrameBuffer, time: f32) {
-        let _t = (time * self.speed + self.phase) % 1.0;
-        let _eased = (self.easing_fn)(_t);
-        render_text(fb, &self.cow_text, Color::WHITE);
+        let t = (time * self.speed + self.phase) % 1.0;
+        let eased = (self.easing_fn)(t);
+        let mouth_chars = ['o', 'O', '0', 'o'];
+        let mouth_idx = (eased * mouth_chars.len() as f32) as usize % mouth_chars.len();
+        let mouth_ch = mouth_chars[mouth_idx];
+
+        let lines: Vec<&str> = self.cow_text.lines().collect();
+        for (y, line) in lines.iter().enumerate() {
+            if y >= fb.height {
+                break;
+            }
+            for (x, ch) in line.chars().enumerate() {
+                if x >= fb.width {
+                    break;
+                }
+                let display_ch = match ch {
+                    'o' | 'O' | '0' | '@' => mouth_ch,
+                    _ => ch,
+                };
+                let _ = fb.set(x, y, Cell::new(display_ch, Color::WHITE));
+            }
+        }
     }
 }
 
@@ -403,7 +446,6 @@ impl Effect for TalkEffect {
 
 /// Top-half skew, bottom anchored.
 #[derive(Debug)]
-#[allow(dead_code)]
 pub struct SwayEffect {
     cow_text: String,
     amp: Amplitude,
@@ -429,9 +471,26 @@ impl Effect for SwayEffect {
     fn update(&mut self, _dt: f32, _cols: usize, _rows: usize) {}
 
     fn render(&self, fb: &mut FrameBuffer, time: f32) {
-        let _t = (time * self.speed + self.phase) % 1.0;
-        let _eased = (self.easing_fn)(_t);
-        render_text(fb, &self.cow_text, Color::WHITE);
+        let t = (time * self.speed + self.phase) % 1.0;
+        let eased = (self.easing_fn)(t);
+        let lines: Vec<&str> = self.cow_text.lines().collect();
+        let total_lines = lines.len().max(1);
+        for (i, line) in lines.iter().enumerate() {
+            // Progressive skew: top = max, bottom = 0
+            let skew_factor = 1.0 - (i as f32 / total_lines as f32);
+            let x_off = ((eased * self.amp.sway * 4.0 - 2.0) * skew_factor) as i32;
+            let mut x = 0usize;
+            for ch in line.chars() {
+                let xi = x as i32 + x_off;
+                if i < fb.height && xi >= 0 {
+                    let xi = xi as usize;
+                    if xi < fb.width {
+                        let _ = fb.set(xi, i, Cell::new(ch, Color::WHITE));
+                    }
+                }
+                x = x.saturating_add(1);
+            }
+        }
     }
 }
 
@@ -439,13 +498,12 @@ impl Effect for SwayEffect {
 
 /// Break art into falling chars, reassemble.
 #[derive(Debug)]
-#[allow(dead_code)]
 pub struct DissolveEffect {
     cow_text: String,
-    easing_fn: fn(f32) -> f32,
+    _easing_fn: fn(f32) -> f32,
     phase: f32,
     speed: f32,
-    done: bool,
+    _done: bool,
 }
 
 impl DissolveEffect {
@@ -453,10 +511,10 @@ impl DissolveEffect {
         let phase = instance_phase(dna.phase_seed, instance_id);
         Self {
             cow_text,
-            easing_fn: easing::by_name(&dna.easing.base),
+            _easing_fn: easing::by_name(&dna.easing.base),
             phase,
             speed: dna.speed,
-            done: false,
+            _done: false,
         }
     }
 }
@@ -465,14 +523,40 @@ impl Effect for DissolveEffect {
     fn update(&mut self, _dt: f32, _cols: usize, _rows: usize) {}
 
     fn render(&self, fb: &mut FrameBuffer, time: f32) {
-        let _t = ((time * self.speed + self.phase) % 1.0).min(1.0);
-        let _eased = (self.easing_fn)(_t);
-        // TODO: apply dissolve effect (scatter chars when _t < 0.5)
-        render_text(fb, &self.cow_text, Color::WHITE);
+        let cycle = (time * self.speed + self.phase) % 2.0;
+        let t = if cycle < 1.0 { cycle } else { 2.0 - cycle }; // 0→1→0
+        let scatter = 1.0 - t; // 1.0 = scattered, 0.0 = assembled
+
+        let lines: Vec<&str> = self.cow_text.lines().collect();
+        for (y, line) in lines.iter().enumerate() {
+            for (x, ch) in line.chars().enumerate() {
+                if ch == ' ' {
+                    continue;
+                }
+                let seed = ((x as f32 * 0.618 + y as f32 * 0.382 + time * 0.1) * 1000.0) as u32;
+                let dx = ((seed.wrapping_mul(7) % 20) as i32 - 10) as f32;
+                let dy = ((seed.wrapping_mul(13) % 10) as i32 - 5) as f32;
+                let final_x = (x as f32 + dx * scatter) as i32;
+                let final_y = (y as f32 + dy * scatter) as i32;
+                if final_x >= 0 && final_y >= 0 {
+                    let fx = final_x as usize;
+                    let fy = final_y as usize;
+                    if fy < fb.height && fx < fb.width {
+                        let alpha = (t * 255.0) as u8;
+                        let _ = fb.set(fx, fy, Cell {
+                            ch,
+                            fg: Color::WHITE,
+                            bg: Color::TRANSPARENT,
+                            alpha,
+                        });
+                    }
+                }
+            }
+        }
     }
 
     fn is_done(&self) -> bool {
-        self.done
+        false
     }
 }
 
@@ -480,6 +564,11 @@ impl Effect for DissolveEffect {
 
 /// Render text into the framebuffer at row 0.
 fn render_text(fb: &mut FrameBuffer, text: &str, fg: Color) {
+    render_text_offset(fb, text, fg, 0, 0);
+}
+
+/// Render text with x/y offset into the framebuffer.
+fn render_text_offset(fb: &mut FrameBuffer, text: &str, fg: Color, x_off: i32, y_off: i32) {
     let mut x = 0usize;
     let mut y = 0usize;
     for ch in text.chars() {
@@ -488,11 +577,14 @@ fn render_text(fb: &mut FrameBuffer, text: &str, fg: Color) {
             y = y.saturating_add(1);
             continue;
         }
-        if y >= fb.height {
-            break;
-        }
-        if x < fb.width {
-            let _ = fb.set(x, y, Cell::new(ch, fg));
+        let xi = x as i32 + x_off;
+        let yi = y as i32 + y_off;
+        if yi >= 0 && xi >= 0 {
+            let xi = xi as usize;
+            let yi = yi as usize;
+            if yi < fb.height && xi < fb.width {
+                let _ = fb.set(xi, yi, Cell::new(ch, fg));
+            }
         }
         x = x.saturating_add(1);
     }
