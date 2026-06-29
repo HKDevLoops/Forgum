@@ -56,7 +56,7 @@ pub use paths::{
     runtime_dir, ConfigPaths, ShellKind,
 };
 pub use signal::{ShutdownFlag, SignalGuard};
-pub use spawn::{process_is_alive, spawn_detached, DetachedChild};
+pub use spawn::{daemonize, process_is_alive, spawn_detached, DetachedChild};
 pub use terminal::{detect_capabilities, ColorLevel, TerminalCapabilities};
 
 /// Expand to the contained code only when compiling on a Unix-like target.

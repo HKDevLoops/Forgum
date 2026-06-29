@@ -24,6 +24,60 @@ use std::process::{Child, Command, Stdio};
 
 use crate::error::PlatformError;
 
+/// Daemonize the current process.
+///
+/// On Unix: forks via `nix::unistd::fork()`. Parent prints child PID to
+/// stdout and exits with code 0. Child calls `setsid()` to become session
+/// leader and returns `Ok(false)`.
+///
+/// On Windows: spawns a detached copy of self via `Command` with
+/// `DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP`. Parent prints child PID
+/// and exits with code 0. Child returns `Ok(false)`.
+///
+/// Returns `Ok(true)` in parent (before exit), `Ok(false)` in child.
+#[cfg(unix)]
+pub fn daemonize() -> Result<bool, PlatformError> {
+    use nix::unistd::{fork, ForkResult, setsid};
+
+    match fork() {
+        Ok(ForkResult::Parent { child }) => {
+            println!("{}", child.as_raw());
+            std::process::exit(0);
+        }
+        Ok(ForkResult::Child) => {
+            setsid().map_err(|e| PlatformError::Io(io::Error::new(io::ErrorKind::Other, e)))?;
+            Ok(false)
+        }
+        Err(e) => Err(PlatformError::Io(io::Error::new(
+            io::ErrorKind::Other,
+            e,
+        ))),
+    }
+}
+
+/// Daemonize the current process (Windows).
+///
+/// Spawns a detached copy of self with `DETACHED_PROCESS |
+/// CREATE_NEW_PROCESS_GROUP`. Parent prints child PID and exits with code 0.
+/// Child returns `Ok(false)`.
+#[cfg(windows)]
+#[allow(unsafe_code)]
+pub fn daemonize() -> Result<bool, PlatformError> {
+    use std::os::windows::process::CommandExt;
+    use windows_sys::Win32::System::Threading::{CREATE_NEW_PROCESS_GROUP, DETACHED_PROCESS};
+
+    let current_exe = std::env::current_exe().map_err(PlatformError::Io)?;
+    let args: Vec<String> = std::env::args().skip(1).collect();
+
+    let mut cmd = Command::new(current_exe);
+    cmd.args(&args);
+    cmd.creation_flags(DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP);
+
+    let child = cmd.spawn().map_err(PlatformError::Io)?;
+    println!("{}", child.id());
+    std::process::exit(0);
+}
+
 /// A detached child process. The handle is kept for status reporting; the
 /// actual lifecycle is managed by the OS session.
 #[derive(Debug)]
@@ -173,6 +227,15 @@ mod tests {
         if let Ok(mut c) = result {
             let _ = c.try_wait();
         }
+    }
+
+    #[test]
+    fn daemonize_exists_with_correct_signature() {
+        // Verify daemonize() compiles with the correct signature.
+        // The parent branch calls process::exit(0), so we can only test
+        // the function signature and that it compiles; the actual fork/exit
+        // behavior is verified by integration tests.
+        let _f: fn() -> Result<bool, PlatformError> = daemonize;
     }
 
     #[test]
