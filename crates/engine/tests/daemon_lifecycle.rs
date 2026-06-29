@@ -1,11 +1,12 @@
 //! Integration test: spawn engine with --daemon, send STOP, verify exit.
 
-use std::process::Command;
-use std::time::Duration;
-
 #[cfg(unix)]
 #[test]
 fn daemon_lifecycle_ping_stop() {
+    use std::io::Write;
+    use std::os::unix::net::UnixStream;
+    use std::process::Command;
+    use std::time::Duration;
     let exe = env!("CARGO_BIN_EXE_forgum-engine");
 
     // Start daemon in background.
@@ -38,8 +39,6 @@ fn daemon_lifecycle_ping_stop() {
     }
 
     // Send STOP via socket.
-    use std::io::Write;
-    use std::os::unix::net::UnixStream;
     if let Ok(mut stream) = UnixStream::connect(&socket_path) {
         let _ = stream.write_all(b"{\"cmd\":\"STOP\"}\n");
         let _ = stream.flush();

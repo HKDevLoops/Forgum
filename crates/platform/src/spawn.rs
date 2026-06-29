@@ -38,7 +38,7 @@ use crate::error::PlatformError;
 /// The child process returns `Ok(false)`.
 #[cfg(unix)]
 pub fn daemonize() -> Result<bool, PlatformError> {
-    use nix::unistd::{fork, ForkResult, setsid};
+    use nix::unistd::{fork, setsid, ForkResult};
 
     match fork() {
         Ok(ForkResult::Parent { child }) => {
@@ -49,10 +49,7 @@ pub fn daemonize() -> Result<bool, PlatformError> {
             setsid().map_err(PlatformError::Io)?;
             Ok(false)
         }
-        Err(e) => Err(PlatformError::Io(io::Error::new(
-            io::ErrorKind::Other,
-            e,
-        ))),
+        Err(e) => Err(PlatformError::Io(io::Error::new(io::ErrorKind::Other, e))),
     }
 }
 
@@ -67,7 +64,10 @@ pub fn daemonize() -> Result<bool, PlatformError> {
     use windows_sys::Win32::System::Threading::{CREATE_NEW_PROCESS_GROUP, DETACHED_PROCESS};
 
     let current_exe = std::env::current_exe().map_err(PlatformError::Io)?;
-    let args: Vec<String> = std::env::args().skip(1).filter(|a| a != "--daemon").collect();
+    let args: Vec<String> = std::env::args()
+        .skip(1)
+        .filter(|a| a != "--daemon")
+        .collect();
 
     let mut cmd = Command::new(current_exe);
     cmd.args(&args);

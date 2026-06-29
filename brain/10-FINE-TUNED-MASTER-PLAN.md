@@ -59,35 +59,35 @@ These ten principles are the constitution. Every PR is reviewed against them; ev
 │       │           │  │  chunks_mut │ │           │  ├ KittyAnimRen │  │   │
 │       │           │  │ 60Hz fixed  │ │           │  └ WgpuHybrid   │  │   │
 │       │           │  │  timestep   │ │           │    (opt-in)     │  │   │
-│       │           │  └──────┬──────┘ │           └────────┬───────┘   │   │
-│       │           │         │        │                    │           │   │
+│       │           │  └──────┬──────┘ │           └────────┬───────┘  │   │
+│       │           │         │        │                    │          │   │
 │       │           │  ┌──────▼──────┐  │           ┌────────▼───────┐  │   │
 │       │           │  │CONTROL THRD │──┘           │ Renderer picks │  │   │
 │       │           │  │ SIGWINCH +  │  ControlMsg  │ backend via    │  │   │
 │       │           │  │ control sock│ ├───────────►│ OnceLock<Caps> │  │   │
-│       │           │  │ NO tty reads│              │ probe atstartup│  │   │
+│       │           │  │ NO tty reads│              │ probe at startup│  │   │
 │       │           │  └─────────────┘              └────────────────┘  │   │
-│       │           └────────────────────────────────────────────────────   │
-│       │                                                                   │
+│       │           └────────────────────────────────────────────────────┘   │
+│       │                                                                    │
 │       │     ┌──────────────────────────────────────────────────────────┐  │
-│       │     │  Scheduler: fixed-timestep accumulator (i64 ns)          │  │
-│       │     │  tiers: heartbeat=1fps / idle=5fps / active=60fps        │  │
-│       │     │  spiral clamp: 250ms · park_timeout on idle (battery)    │  │
+│       │     │  Scheduler: fixed-timestep accumulator (i64 ns)           │  │
+│       │     │  tiers: heartbeat=1fps / idle=5fps / active=60fps         │  │
+│       │     │  spiral clamp: 250ms · park_timeout on idle (battery)     │  │
 │       │     └──────────────────────────────────────────────────────────┘  │
-│       │                                                                   │
+│       │                                                                    │
 │       │     ┌──────────────────────────────────────────────────────────┐  │
 │       │     │  Memory: bumpalo::Bump per-frame arena (reset, no Drop)  │  │
-│       │     │  Particles: slotmap::SlotMap (O(1) spawn/kill, ABA-safe) │  │
-│       │     │  Singletons: OnceLock/LazyLock, never static mut         │  │
+│       │     │  Particles: slotmap::SlotMap (O(1) spawn/kill, ABA-safe)  │  │
+│       │     │  Singletons: OnceLock/LazyLock, never static mut          │  │
 │       │     └──────────────────────────────────────────────────────────┘  │
-│       │                                                                   │
+│       │                                                                    │
 │       │     ┌──────────────────────────────────────────────────────────┐  │
 │       │     │  Daemon: setsid/DETACHED + daemon.json + per-session     │  │
 │       │     │  control socket (STOP/PAUSE/RESUME/EFFECT/SPEED/COW/...) │  │
 │       │     │  Herder: scans daemon.json, parallel fan-out             │  │
 │       │     │  Remote: SSH RemoteForward + deterministic-effect sync   │  │
 │       │     └──────────────────────────────────────────────────────────┘  │
-└───────┼───────────────────────────────────────────────────────────────────┘
+└───────┼────────────────────────────────────────────────────────────────────┘
         │ bundled via include_dir!
         ▼
    Data/Cows/*.cow · Data/Fortunes/*.txt · Data/Templates/ · animations.json

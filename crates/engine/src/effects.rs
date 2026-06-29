@@ -154,14 +154,22 @@ impl Effect for WalkEffect {
         let t = (time * self.speed + self.phase) % 1.0;
         let eased = (self.easing_fn)(t);
         // Alternate between two leg states
-        let (leg_l, leg_r) = if eased > 0.5 { ('╱', '╲') } else { ('╲', '╱') };
+        let (leg_l, leg_r) = if eased > 0.5 {
+            ('╱', '╲')
+        } else {
+            ('╲', '╱')
+        };
         let lines: Vec<&str> = self.cow_text.lines().collect();
         let last_idx = lines.len().saturating_sub(1);
         for (i, line) in lines.iter().enumerate() {
             let mut x = 0usize;
             for ch in line.chars() {
                 let display_ch = if i == last_idx && ch == ' ' {
-                    if x % 2 == 0 { leg_l } else { leg_r }
+                    if x % 2 == 0 {
+                        leg_l
+                    } else {
+                        leg_r
+                    }
                 } else {
                     ch
                 };
@@ -376,12 +384,16 @@ impl Effect for FlyEffect {
         let t = (time * self.speed + self.phase) % 1.0;
         let intensity = (self.easing_fn)(t);
         // Erratic movement: combine sine waves at different frequencies
-        let x_off = ((t * 6.28 * 3.0).sin() * self.amp.sway * 5.0) as i32;
-        let y_off = ((t * 6.28 * 2.0).cos() * self.amp.float * 3.0
+        let x_off = ((t * std::f32::consts::TAU * 3.0).sin() * self.amp.sway * 5.0) as i32;
+        let y_off = ((t * std::f32::consts::TAU * 2.0).cos() * self.amp.float * 3.0
             + (intensity * 2.0 - 1.0)) as i32;
         render_text_offset(fb, &self.cow_text, Color::WHITE, x_off, y_off);
         // Wing flap indicator near top
-        let flap_ch = if (time * 12.0) as i32 % 2 == 0 { '~' } else { '^' };
+        let flap_ch = if (time * 12.0) as i32 % 2 == 0 {
+            '~'
+        } else {
+            '^'
+        };
         if fb.height > 0 && fb.width > 2 {
             let _ = fb.set(1, 0, Cell::new(flap_ch, Color::WHITE));
         }
@@ -543,12 +555,16 @@ impl Effect for DissolveEffect {
                     let fy = final_y as usize;
                     if fy < fb.height && fx < fb.width {
                         let alpha = (t * 255.0) as u8;
-                        let _ = fb.set(fx, fy, Cell {
-                            ch,
-                            fg: Color::WHITE,
-                            bg: Color::TRANSPARENT,
-                            alpha,
-                        });
+                        let _ = fb.set(
+                            fx,
+                            fy,
+                            Cell {
+                                ch,
+                                fg: Color::WHITE,
+                                bg: Color::TRANSPARENT,
+                                alpha,
+                            },
+                        );
                     }
                 }
             }

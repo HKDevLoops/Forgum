@@ -127,7 +127,11 @@ mod tests {
     #[test]
     fn ansi_renderer_writes_move_sequence() {
         let mut fb = FrameBuffer::new(10, 5);
-        let _ = fb.set(3, 2, crate::framebuffer::Cell::new('X', crate::framebuffer::Color::WHITE));
+        let _ = fb.set(
+            3,
+            2,
+            crate::framebuffer::Cell::new('X', crate::framebuffer::Color::WHITE),
+        );
         fb.swap();
 
         let mut out = Vec::new();
@@ -135,7 +139,10 @@ mod tests {
         let damage = vec![(3, 2)];
         renderer.render_damage(&mut out, &fb, &damage).unwrap();
         let s = String::from_utf8(out).unwrap();
-        assert!(s.contains("\x1b[3;4H"), "Expected cursor move to row 3 col 4: {s}");
+        assert!(
+            s.contains("\x1b[3;4H"),
+            "Expected cursor move to row 3 col 4: {s}"
+        );
         assert!(s.contains("X"), "Expected character X: {s}");
     }
 
