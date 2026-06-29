@@ -346,12 +346,7 @@ mod tests {
         }
         let p = config_path().unwrap();
         assert!(p.ends_with("config.json"));
-        unsafe {
-            match saved {
-                Some(v) => std::env::set_var("FORGUM_CONFIG", v),
-                None => std::env::remove_var("FORGUM_CONFIG"),
-            }
-        }
+        restore_env("FORGUM_CONFIG", saved);
     }
 
     #[test]
@@ -388,12 +383,10 @@ mod tests {
         // The config file itself should NOT have been created.
         assert!(!cfg_dir.join("config.json").exists());
 
-        unsafe {
-            restore_env("FORGUM_CONFIG", saved_cfg);
-            restore_env("FORGUM_DATA", saved_data);
-            restore_env("FORGUM_RUNTIME", saved_rt);
-            restore_env("FORGUM_LOG", saved_log);
-        }
+        restore_env("FORGUM_CONFIG", saved_cfg);
+        restore_env("FORGUM_DATA", saved_data);
+        restore_env("FORGUM_RUNTIME", saved_rt);
+        restore_env("FORGUM_LOG", saved_log);
     }
 
     #[allow(unsafe_code)]

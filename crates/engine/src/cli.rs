@@ -122,6 +122,12 @@ pub enum Commands {
 pub enum TmuxSub {
     /// Print tmux config block to stdout.
     Install,
+    /// Print zellij config block to stdout.
+    Zellij,
+    /// Print wezterm config block to stdout.
+    WezTerm,
+    /// Print screen config block to stdout.
+    Screen,
 }
 
 #[derive(Debug, Subcommand)]
@@ -185,6 +191,8 @@ pub enum HerdSub {
         #[arg(long)]
         pane: Option<String>,
     },
+    /// Health check: list all daemons and their status.
+    Census,
 }
 
 #[derive(Debug, Subcommand)]
@@ -269,9 +277,17 @@ pub fn parse_args(argv: Vec<String>) -> Result<(Args, Option<Commands>), String>
         Some(Commands::Init { .. }) => Command::Init,
         Some(Commands::Completions { .. }) => Command::Completions,
         Some(Commands::Status) => Command::Status,
-        Some(Commands::Tmux { .. }) => Command::Tmux,
+        Some(Commands::Tmux { sub }) => match sub {
+            TmuxSub::Install => Command::Tmux,
+            TmuxSub::Zellij => Command::Tmux,
+            TmuxSub::WezTerm => Command::Tmux,
+            TmuxSub::Screen => Command::Tmux,
+        },
         Some(Commands::StatusLine { .. }) => Command::StatusLine,
-        Some(Commands::Herd { .. }) => Command::Herd,
+        Some(Commands::Herd { sub }) => match sub {
+            HerdSub::Census => Command::Herd,
+            _ => Command::Herd,
+        },
         Some(Commands::Theme { .. }) => Command::Theme,
         Some(Commands::Demo) => Command::Demo,
     };

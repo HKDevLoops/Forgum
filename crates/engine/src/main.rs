@@ -96,6 +96,51 @@ fn main() -> ExitCode {
             ExitCode::SUCCESS
         }
 
+        // ── tmux zellij ─────────────────────────────────────────
+        Some(cli::Commands::Tmux {
+            sub: cli::TmuxSub::Zellij,
+        }) => {
+            let engine_path = std::env::current_exe()
+                .ok()
+                .and_then(|p| p.to_str().map(String::from))
+                .unwrap_or_else(|| "forgum-engine".to_string());
+            print!(
+                "{}",
+                forgum_engine::init::generate_zellij_config(&engine_path)
+            );
+            ExitCode::SUCCESS
+        }
+
+        // ── tmux wezterm ────────────────────────────────────────
+        Some(cli::Commands::Tmux {
+            sub: cli::TmuxSub::WezTerm,
+        }) => {
+            let engine_path = std::env::current_exe()
+                .ok()
+                .and_then(|p| p.to_str().map(String::from))
+                .unwrap_or_else(|| "forgum-engine".to_string());
+            print!(
+                "{}",
+                forgum_engine::init::generate_wezterm_config(&engine_path)
+            );
+            ExitCode::SUCCESS
+        }
+
+        // ── tmux screen ─────────────────────────────────────────
+        Some(cli::Commands::Tmux {
+            sub: cli::TmuxSub::Screen,
+        }) => {
+            let engine_path = std::env::current_exe()
+                .ok()
+                .and_then(|p| p.to_str().map(String::from))
+                .unwrap_or_else(|| "forgum-engine".to_string());
+            print!(
+                "{}",
+                forgum_engine::init::generate_screen_config(&engine_path)
+            );
+            ExitCode::SUCCESS
+        }
+
         // ── status-line ────────────────────────────────────────────
         Some(cli::Commands::StatusLine { max_len }) => {
             let line = forgum_engine::status_line::render_status_line(max_len);
@@ -215,6 +260,15 @@ fn main() -> ExitCode {
                 ExitCode::from(1)
             }
         },
+
+        // ── herd census ───────────────────────────────────────────
+        Some(cli::Commands::Herd {
+            sub: cli::HerdSub::Census,
+        }) => {
+            let entries = forgum_engine::herd::herd_census();
+            print!("{}", forgum_engine::herd::format_table(&entries));
+            ExitCode::SUCCESS
+        }
 
         // ── theme list ─────────────────────────────────────────────
         Some(cli::Commands::Theme {

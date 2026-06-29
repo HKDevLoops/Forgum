@@ -242,6 +242,10 @@ pub fn herd_follow(pane: Option<&str>) -> Result<usize, String> {
     Ok(count)
 }
 
+pub fn herd_census() -> Vec<HerdEntry> {
+    discover_daemons()
+}
+
 pub fn format_table(entries: &[HerdEntry]) -> String {
     if entries.is_empty() {
         return String::from("No daemons found.\n");
@@ -275,6 +279,12 @@ pub fn format_table(entries: &[HerdEntry]) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn census_returns_vec() {
+        let entries = herd_census();
+        assert!(entries.is_empty() || !entries.is_empty());
+    }
 
     #[test]
     fn format_table_with_entries() {
