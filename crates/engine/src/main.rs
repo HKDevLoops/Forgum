@@ -145,9 +145,9 @@ fn render_subcommand(args: cli::Args) -> ExitCode {
     let instance_id = std::process::id();
 
     let result = if scene.background {
-        render::render_loop_background(out, scene, shutdown, Some(&composed), cow_dna, instance_id)
+        render::render_loop_background(out, scene, shutdown, Some(&composed), cow_dna, instance_id, &None)
     } else {
-        render::render_loop_foreground(out, scene, shutdown, Some(&composed), cow_dna, instance_id)
+        render::render_loop_foreground(out, scene, shutdown, Some(&composed), cow_dna, instance_id, &None)
     };
 
     match result {
