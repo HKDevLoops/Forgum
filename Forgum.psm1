@@ -7,6 +7,7 @@
 $privateFiles = @(
     'Private\GetEngineBinary.ps1',
     'Private\GetConfigPath.ps1',
+    'Private\GetDaemonStatePath.ps1',
     'Private\Animation\InvokeEngine.ps1'
 )
 
