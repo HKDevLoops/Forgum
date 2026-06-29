@@ -5,7 +5,7 @@
 //! `Stop-ForgumDaemon` use for cleanup.
 
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
@@ -46,6 +46,39 @@ impl DaemonState {
     pub fn is_alive(&self) -> bool {
         forgum_platform::process_is_alive(self.pid)
     }
+}
+
+/// Write daemon state to the platform's daemon state path.
+pub fn write_daemon_state(
+    pid: u32,
+    ob_y1: u16,
+    cols: u16,
+    socket_path: &Path,
+) -> Result<PathBuf, std::io::Error> {
+    let session_id = forgum_platform::detect_session_id();
+    let state_path = forgum_platform::daemon_state_path(&session_id);
+    let state = DaemonState {
+        pid,
+        ob_y1,
+        cols,
+        socket_path: socket_path.to_string_lossy().to_string(),
+        started_at: chrono_free_timestamp(),
+    };
+    state.write(&state_path)?;
+    Ok(state_path)
+}
+
+fn chrono_free_timestamp() -> String {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| format!("{}Z", d.as_secs()))
+        .unwrap_or_else(|_| "unknown".into())
+}
+
+/// Remove daemon state file.
+pub fn cleanup_daemon_state(session_id: &str) {
+    let path = forgum_platform::daemon_state_path(session_id);
+    let _ = std::fs::remove_file(path);
 }
 
 #[cfg(test)]
