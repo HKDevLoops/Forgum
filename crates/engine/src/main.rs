@@ -267,6 +267,43 @@ fn main() -> ExitCode {
             }
         }
 
+        // ── theme rotate ────────────────────────────────────────────
+        Some(cli::Commands::Theme {
+            sub: cli::ThemeSub::Rotate { interval },
+        }) => {
+            if let Err(e) = forgum_engine::demo::run_theme_rotate(interval) {
+                eprintln!("{PROGRAM}: theme rotate: {e}");
+                return ExitCode::from(1);
+            }
+            ExitCode::SUCCESS
+        }
+
+        // ── herd follow ────────────────────────────────────────────
+        Some(cli::Commands::Herd {
+            sub: cli::HerdSub::Follow { pane },
+        }) => match forgum_engine::herd::herd_follow(pane.as_deref()) {
+            Ok(n) => {
+                println!("Follow mode set on {n} daemon(s).");
+                ExitCode::SUCCESS
+            }
+            Err(e) => {
+                eprintln!("{PROGRAM}: herd follow: {e}");
+                ExitCode::from(1)
+            }
+        },
+
+        // ── demo ───────────────────────────────────────────────────
+        Some(cli::Commands::Demo) => match forgum_engine::demo::run_demo() {
+            Ok(output) => {
+                print!("{output}");
+                ExitCode::SUCCESS
+            }
+            Err(e) => {
+                eprintln!("{PROGRAM}: demo: {e}");
+                ExitCode::from(1)
+            }
+        },
+
         // ── render (default) ────────────────────────────────────────
         _ => render_subcommand(args),
     }
