@@ -17,6 +17,11 @@ pub struct DaemonSocket {
     inner: SocketInner,
 }
 
+// SAFETY: On Windows, the contained HANDLE is a kernel object safe to send
+// between threads. On Unix, UnixListener is already Send.
+#[allow(unsafe_code)]
+unsafe impl Send for DaemonSocket {}
+
 enum SocketInner {
     #[cfg(unix)]
     Unix {

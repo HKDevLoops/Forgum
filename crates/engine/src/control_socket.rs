@@ -4,6 +4,9 @@
 //! newline-delimited JSON commands for controlling a running daemon.
 
 use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
+use std::sync::mpsc;
+use std::thread;
 
 /// A command received over the control socket.
 #[derive(Debug, Clone)]
@@ -78,6 +81,126 @@ pub fn encode_response(resp: &ControlResponse) -> String {
     let mut json = serde_json::to_string(resp).unwrap_or_else(|_| r#"{"ok":false}"#.into());
     json.push('\n');
     json
+}
+
+/// A control socket server that accepts connections and dispatches commands.
+#[derive(Debug)]
+pub struct ControlServer {
+    socket_path: PathBuf,
+    _thread: thread::JoinHandle<()>,
+}
+
+impl ControlServer {
+    /// Bind the control socket and start listening.
+    ///
+    /// Returns the receiver end of the command channel. The render loop
+    /// reads commands from this receiver.
+    pub fn start(
+        socket_path: PathBuf,
+    ) -> Result<(Self, mpsc::Receiver<ControlCmd>), Box<dyn std::error::Error>> {
+        let (tx, rx) = mpsc::channel();
+        let socket = forgum_platform::DaemonSocket::bind(&socket_path)?;
+
+        let thread = thread::spawn(move || {
+            Self::accept_loop(socket, tx);
+        });
+
+        Ok((
+            Self {
+                socket_path,
+                _thread: thread,
+            },
+            rx,
+        ))
+    }
+
+    fn accept_loop(
+        socket: forgum_platform::DaemonSocket,
+        tx: mpsc::Sender<ControlCmd>,
+    ) {
+        loop {
+            match socket.accept() {
+                Ok(Some(mut conn)) => {
+                    // Read commands from this connection.
+                    loop {
+                        match conn.read_line() {
+                            Ok(Some(line)) => {
+                                let cmd = parse_cmd(&line);
+                                let is_stop = matches!(cmd, ControlCmd::Stop);
+                                let is_status = matches!(cmd, ControlCmd::Status);
+                                let is_ping = matches!(cmd, ControlCmd::Ping);
+
+                                if is_status {
+                                    let resp = ControlResponse {
+                                        ok: true,
+                                        error: None,
+                                        status: Some(StatusInfo {
+                                            running: true,
+                                            paused: false,
+                                            effect: "unknown".into(),
+                                            fps: 30,
+                                            speed: 1.0,
+                                        }),
+                                    };
+                                    let _ = conn.write_response(&encode_response(&resp));
+                                    continue;
+                                }
+
+                                if is_ping {
+                                    let resp = ControlResponse {
+                                        ok: true,
+                                        error: None,
+                                        status: None,
+                                    };
+                                    let _ = conn.write_response(&encode_response(&resp));
+                                    continue;
+                                }
+
+                                // Send command to render loop.
+                                if tx.send(cmd).is_err() {
+                                    return; // render loop dropped
+                                }
+
+                                // Send generic OK response.
+                                let resp = ControlResponse {
+                                    ok: true,
+                                    error: None,
+                                    status: None,
+                                };
+                                let _ = conn.write_response(&encode_response(&resp));
+
+                                if is_stop {
+                                    return; // stop accept loop
+                                }
+                            }
+                            Ok(None) => break, // client disconnected
+                            Err(_) => break,   // read error
+                        }
+                    }
+                }
+                Ok(None) => {
+                    // No connection pending (non-blocking).
+                    thread::sleep(std::time::Duration::from_millis(10));
+                }
+                Err(_) => {
+                    // Accept error — keep trying.
+                    thread::sleep(std::time::Duration::from_millis(100));
+                }
+            }
+        }
+    }
+
+    /// Path to the socket file.
+    pub fn socket_path(&self) -> &std::path::Path {
+        &self.socket_path
+    }
+}
+
+impl Drop for ControlServer {
+    fn drop(&mut self) {
+        // Clean up the socket file.
+        let _ = std::fs::remove_file(&self.socket_path);
+    }
 }
 
 #[cfg(test)]
