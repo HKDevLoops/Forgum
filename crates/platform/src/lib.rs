@@ -33,6 +33,7 @@
 
 #![doc(html_root_url = "https://docs.rs/forgum-platform/0.4.0")]
 
+pub mod daemon_socket;
 pub mod error;
 pub mod guards;
 pub mod output;
@@ -48,6 +49,7 @@ pub mod platform_unix;
 pub mod platform_windows;
 
 // Re-exports for ergonomic callers.
+pub use daemon_socket::{DaemonSocket, SocketConnection};
 pub use error::PlatformError;
 pub use guards::{AltScreenGuard, CursorShowGuard, RawModeGuard};
 pub use output::{open_output, OutputHandle, OutputTarget};
