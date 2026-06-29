@@ -9,6 +9,7 @@ use clap::CommandFactory;
 use forgum_engine::cli;
 use forgum_engine::cli::{build_scene_config, parse_args};
 use forgum_engine::cow;
+use forgum_engine::dna;
 use forgum_engine::fortune;
 use forgum_engine::init::Shell;
 use forgum_engine::protocol_io::read_scene;
@@ -138,10 +139,15 @@ fn render_subcommand(args: cli::Args) -> ExitCode {
     let cow_text = cow::load_cow(&scene.cow, &data, &scene.eyes, &scene.tongue, "\\\\");
     let composed = cow::compose_scene(&cow_text, &scene.text);
 
+    // Load animation DNA for this cow
+    let animations = dna::load_animations(&data);
+    let cow_dna = dna::get_dna(&animations, &scene.cow);
+    let instance_id = std::process::id();
+
     let result = if scene.background {
-        render::render_loop_background(out, scene, shutdown, Some(&composed))
+        render::render_loop_background(out, scene, shutdown, Some(&composed), cow_dna, instance_id)
     } else {
-        render::render_loop_foreground(out, scene, shutdown, Some(&composed))
+        render::render_loop_foreground(out, scene, shutdown, Some(&composed), cow_dna, instance_id)
     };
 
     match result {

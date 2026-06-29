@@ -27,6 +27,7 @@ use forgum_platform::{
 
 use crate::effects;
 use crate::framebuffer::FrameBuffer;
+use crate::dna::CowDna;
 use crate::protocol::SceneConfig;
 use crate::scheduler::Scheduler;
 
@@ -55,6 +56,8 @@ pub fn render_loop_foreground(
     config: SceneConfig,
     shutdown: ShutdownFlag,
     composed_text: Option<&str>,
+    cow_dna: CowDna,
+    instance_id: u32,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let _signals = SignalGuard::install(shutdown.clone())?;
 
@@ -91,7 +94,11 @@ pub fn render_loop_foreground(
         cow_display.to_string()
     };
 
+    // Create the animation effect from DNA
+    let mut effect = effects::create_effect(cow_dna.base, cow_text.clone(), cow_dna, instance_id);
+
     let mut frame_count: u64 = 0;
+    let mut elapsed: f32 = 0.0;
     while !shutdown.is_shutdown() {
         if max_frames > 0 && frame_count >= max_frames {
             break;
@@ -103,11 +110,15 @@ pub fn render_loop_foreground(
             cols = new_caps.width.max(1);
             rows = new_caps.height.max(1);
             fb.resize(usize::from(cols), usize::from(rows));
+            effect.on_resize(usize::from(cols), usize::from(rows));
         }
 
-        let _dt = scheduler.tick();
+        let dt = scheduler.tick();
+        let dt_f32 = dt.as_secs_f32();
+        elapsed += dt_f32;
         fb.clear();
-        effects::render_static_cow(&mut fb, &cow_text);
+        effect.update(dt_f32, usize::from(cols), usize::from(rows));
+        effect.render(&mut fb, elapsed);
         let dmg = fb.compute_damage();
         scheduler.observe(dmg.len());
         if !dmg.is_empty() {
@@ -132,6 +143,8 @@ pub fn render_loop_background(
     config: SceneConfig,
     shutdown: ShutdownFlag,
     composed_text: Option<&str>,
+    cow_dna: CowDna,
+    instance_id: u32,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let _signals = SignalGuard::install(shutdown.clone())?;
 
@@ -167,7 +180,11 @@ pub fn render_loop_background(
         cow_display.to_string()
     };
 
+    // Create the animation effect from DNA
+    let mut effect = effects::create_effect(cow_dna.base, cow_text.clone(), cow_dna, instance_id);
+
     let mut frame_count: u64 = 0;
+    let mut elapsed: f32 = 0.0;
     while !shutdown.is_shutdown() {
         if max_frames > 0 && frame_count >= max_frames {
             break;
@@ -179,11 +196,15 @@ pub fn render_loop_background(
             cols = new_caps.width.max(1);
             rows = new_caps.height.max(1);
             fb.resize(usize::from(cols), usize::from(rows));
+            effect.on_resize(usize::from(cols), usize::from(rows));
         }
 
-        let _dt = scheduler.tick();
+        let dt = scheduler.tick();
+        let dt_f32 = dt.as_secs_f32();
+        elapsed += dt_f32;
         fb.clear();
-        effects::render_static_cow(&mut fb, &cow_text);
+        effect.update(dt_f32, usize::from(cols), usize::from(rows));
+        effect.render(&mut fb, elapsed);
         let dmg = fb.compute_damage();
         scheduler.observe(dmg.len());
         if !dmg.is_empty() {
