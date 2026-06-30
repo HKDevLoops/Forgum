@@ -49,8 +49,8 @@ impl SystemMetrics {
     /// Network bytes/sec (delta since last refresh)
     pub fn network_bytes_per_sec(&self) -> u64 {
         self.networks
-            .iter()
-            .map(|(_, data)| data.total_transmitted() + data.total_received())
+            .values()
+            .map(|data| data.total_transmitted() + data.total_received())
             .sum()
     }
 
@@ -107,7 +107,7 @@ mod tests {
     fn ember_intensity_range() {
         let m = SystemMetrics::new();
         let i = m.ember_intensity();
-        assert!(i >= 0.0 && i <= 1.0);
+        assert!((0.0..=1.0).contains(&i));
     }
 
     #[test]

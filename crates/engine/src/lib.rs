@@ -7,6 +7,7 @@
 //! **Zero `#[cfg]` lives in this crate.** All platform branching is
 //! delegated to `forgum-platform`. CI greps `engine/src/` and fails on hits.
 
+pub mod battle;
 pub mod cli;
 pub mod color;
 pub mod completions;
@@ -22,18 +23,17 @@ pub mod fortune;
 pub mod framebuffer;
 pub mod herd;
 pub mod init;
+pub mod metrics;
 pub mod particles;
 pub mod protocol;
 pub mod protocol_io;
 pub mod render;
 pub mod renderer;
 pub mod say;
-pub mod battle;
-pub mod showcase;
 pub mod scheduler;
-pub mod status_line;
-pub mod metrics;
 pub mod shader;
+pub mod showcase;
+pub mod status_line;
 pub mod theme;
 pub mod timer;
 pub mod verlet;
