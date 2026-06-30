@@ -101,7 +101,11 @@ impl Battle {
         };
 
         for (i, ch) in status.chars().enumerate() {
-            fb.set(i, 0, crate::framebuffer::Cell::new(ch, Color::rgb(255, 255, 0)));
+            fb.set(
+                i,
+                0,
+                crate::framebuffer::Cell::new(ch, Color::rgb(255, 255, 0)),
+            );
         }
 
         self.render_cow_art(&mut fb, &self.cow1);
@@ -147,7 +151,11 @@ impl Battle {
             let y = cow.y + line_idx;
             for (ch_idx, ch) in line.chars().enumerate() {
                 let x = (cow.x as usize + ch_idx) % BATTLE_WIDTH;
-                fb.set(x, y, crate::framebuffer::Cell::new(ch, Color::rgb(255, 255, 255)));
+                fb.set(
+                    x,
+                    y,
+                    crate::framebuffer::Cell::new(ch, Color::rgb(255, 255, 255)),
+                );
             }
         }
     }

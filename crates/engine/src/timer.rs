@@ -51,11 +51,7 @@ pub fn format_duration(secs: f64) -> String {
 
 pub fn render_timer_cow(result: &TimerResult) -> String {
     let duration_str = format_duration(result.duration_secs);
-    let status = if result.exit_code == 0 {
-        "✓"
-    } else {
-        "✗"
-    };
+    let status = if result.exit_code == 0 { "✓" } else { "✗" };
 
     format!(
         "  ┌──────────────────────────────┐\n  │  {} {} {:>8}  │\n  │  cmd: {:<22}  │\n  └──────────────────────────────┘",
@@ -96,7 +92,12 @@ mod tests {
 
     #[test]
     fn timer_runs_command() {
-        let result = run_timer(&["cmd".to_string(), "/c".to_string(), "echo".to_string(), "test".to_string()]);
+        let result = run_timer(&[
+            "cmd".to_string(),
+            "/c".to_string(),
+            "echo".to_string(),
+            "test".to_string(),
+        ]);
         assert!(result.duration_secs >= 0.0);
         assert_eq!(result.exit_code, 0);
     }

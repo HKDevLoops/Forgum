@@ -40,9 +40,7 @@ pub fn wrap_text(text: &str, max_width: usize) -> Vec<String> {
         } else {
             let mut remaining = line.to_string();
             while remaining.len() > max_width {
-                let break_at = remaining[..max_width]
-                    .rfind(' ')
-                    .unwrap_or(max_width);
+                let break_at = remaining[..max_width].rfind(' ').unwrap_or(max_width);
                 result.push(remaining[..break_at].to_string());
                 remaining = remaining[break_at..].trim_start().to_string();
             }
