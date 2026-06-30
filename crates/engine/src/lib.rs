@@ -27,6 +27,7 @@ pub mod metrics;
 pub mod particles;
 pub mod protocol;
 pub mod protocol_io;
+pub mod remote;
 pub mod render;
 pub mod renderer;
 pub mod say;

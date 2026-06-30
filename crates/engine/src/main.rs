@@ -408,6 +408,48 @@ fn main() -> ExitCode {
             ExitCode::SUCCESS
         }
 
+        // ── remote ─────────────────────────────────────────────────
+        Some(cli::Commands::Remote { sub }) => match sub {
+            cli::RemoteSub::Attach { host } => {
+                println!("Attaching to remote daemon on {}...", host);
+                let peers = forgum_engine::remote::discover_remote_peers(&[host]);
+                if peers.is_empty() {
+                    eprintln!("No remote daemons found. Is forgum running on the remote host?");
+                    return ExitCode::from(1);
+                }
+                let leader = forgum_engine::remote::elect_leader(&peers);
+                if let Some(leader) = leader {
+                    println!("Connected to {} (leader: PID {})", leader.host, leader.pid);
+                    println!("Effect: {}, Speed: {:.1}", leader.effect, leader.speed);
+                }
+                ExitCode::SUCCESS
+            }
+            cli::RemoteSub::Sync { session_id } => {
+                let sid = session_id.unwrap_or_else(|| {
+                    let user = forgum_engine::remote::local_user();
+                    let host = std::env::var("HOSTNAME")
+                        .or_else(|_| std::env::var("COMPUTERNAME"))
+                        .unwrap_or_else(|_| "localhost".to_string());
+                    forgum_engine::remote::sync_session_id(&user, &host)
+                });
+                println!("Sync session: {}", sid);
+                let peers = forgum_engine::remote::discover_remote_peers(&[]);
+                let table = forgum_engine::remote::format_peer_table(&peers);
+                print!("{}", table);
+                ExitCode::SUCCESS
+            }
+            cli::RemoteSub::Who => {
+                let peers = forgum_engine::remote::discover_remote_peers(&[]);
+                if peers.is_empty() {
+                    println!("No peers found.");
+                } else {
+                    let table = forgum_engine::remote::format_peer_table(&peers);
+                    print!("{}", table);
+                }
+                ExitCode::SUCCESS
+            }
+        },
+
         // ── render (default) ────────────────────────────────────────
         _ => render_subcommand(args),
     }
