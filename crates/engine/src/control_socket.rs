@@ -20,7 +20,28 @@ pub enum ControlCmd {
     Text(String),
     Status,
     Ping,
+    /// Register as a peer in a sync session.
+    PeerJoin {
+        session_id: String,
+    },
+    /// Leave a sync session.
+    PeerLeave,
+    /// List peers in a sync session.
+    PeerList,
+    /// Request leadership (lowest PID wins).
+    ClaimLeader,
     Unknown(String),
+}
+
+/// Peer information for sync protocol.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PeerInfo {
+    pub pid: u32,
+    pub host: String,
+    pub session_id: String,
+    pub effect: String,
+    pub speed: f32,
+    pub is_leader: bool,
 }
 
 /// Response to send back over the socket.
@@ -31,6 +52,16 @@ pub struct ControlResponse {
     pub error: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub status: Option<StatusInfo>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub peers: Option<Vec<PeerInfo>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub claim_leader: Option<ClaimLeaderResult>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ClaimLeaderResult {
+    pub is_leader: bool,
+    pub pid: u32,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -70,6 +101,13 @@ pub fn parse_cmd(line: &str) -> ControlCmd {
             "TEXT" => ControlCmd::Text(req.arg.unwrap_or_default()),
             "STATUS" => ControlCmd::Status,
             "PING" => ControlCmd::Ping,
+            "PEER-JOIN" => {
+                let session_id = req.arg.unwrap_or_default();
+                ControlCmd::PeerJoin { session_id }
+            }
+            "PEER-LEAVE" => ControlCmd::PeerLeave,
+            "PEER-LIST" => ControlCmd::PeerList,
+            "CLAIM-LEADER" => ControlCmd::ClaimLeader,
             other => ControlCmd::Unknown(other.to_string()),
         },
         Err(_) => ControlCmd::Unknown(trimmed.to_string()),
@@ -138,6 +176,8 @@ impl ControlServer {
                                             fps: 30,
                                             speed: 1.0,
                                         }),
+                                        peers: None,
+                                        claim_leader: None,
                                     };
                                     let _ = conn.write_response(&encode_response(&resp));
                                     continue;
@@ -148,6 +188,8 @@ impl ControlServer {
                                         ok: true,
                                         error: None,
                                         status: None,
+                                        peers: None,
+                                        claim_leader: None,
                                     };
                                     let _ = conn.write_response(&encode_response(&resp));
                                     continue;
@@ -163,6 +205,8 @@ impl ControlServer {
                                     ok: true,
                                     error: None,
                                     status: None,
+                                    peers: None,
+                                    claim_leader: None,
                                 };
                                 let _ = conn.write_response(&encode_response(&resp));
 
@@ -237,6 +281,8 @@ mod tests {
             ok: true,
             error: None,
             status: None,
+            peers: None,
+            claim_leader: None,
         };
         let s = encode_response(&resp);
         assert!(s.contains(r#""ok":true"#));

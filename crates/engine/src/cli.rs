@@ -126,6 +126,11 @@ pub enum Commands {
     Demo,
     /// Run the 60-second showcase demo reel.
     Showcase,
+    /// Remote sync — follow your cow across SSH sessions.
+    Remote {
+        #[command(subcommand)]
+        sub: RemoteSub,
+    },
     /// Run a command and render its output in a cow speech bubble.
     Say {
         /// The command to execute.
@@ -226,6 +231,23 @@ pub enum HerdSub {
     Census,
 }
 
+#[derive(Debug, Clone, Subcommand)]
+pub enum RemoteSub {
+    /// Attach this terminal to a remote daemon via SSH.
+    Attach {
+        /// Remote host to attach to.
+        host: String,
+    },
+    /// Broadcast effect changes to all peers in a sync session.
+    Sync {
+        /// Sync session ID (auto-detected if not provided).
+        #[arg(long)]
+        session_id: Option<String>,
+    },
+    /// List active remote peers.
+    Who,
+}
+
 #[derive(Debug, Subcommand)]
 pub enum ThemeSub {
     /// List available themes.
@@ -279,6 +301,7 @@ pub enum Command {
     Theme,
     Demo,
     Showcase,
+    Remote,
     Say,
     Timer,
     Battle,
@@ -330,6 +353,7 @@ pub fn parse_args(argv: Vec<String>) -> Result<(Args, Option<Commands>), String>
         Some(Commands::Theme { .. }) => Command::Theme,
         Some(Commands::Demo) => Command::Demo,
         Some(Commands::Showcase) => Command::Showcase,
+        Some(Commands::Remote { .. }) => Command::Remote,
         Some(Commands::Say { .. }) => Command::Say,
         Some(Commands::Timer { .. }) => Command::Timer,
         Some(Commands::Battle { .. }) => Command::Battle,
@@ -421,6 +445,18 @@ mod tests {
     fn parse(argv: &[&str]) -> (Args, Option<Commands>) {
         let argv_str: Vec<String> = argv.iter().map(|s| s.to_string()).collect();
         parse_args(argv_str).unwrap()
+    }
+
+    #[test]
+    fn remote_attach_subcommand() {
+        let (a, cmd) = parse(&["forgum-engine", "remote", "attach", "user@host"]);
+        assert_eq!(a.command, Command::Remote);
+        assert!(matches!(
+            cmd,
+            Some(Commands::Remote {
+                sub: RemoteSub::Attach { .. }
+            })
+        ));
     }
 
     #[test]
