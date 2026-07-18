@@ -241,12 +241,81 @@ mod tests {
 
     #[test]
     fn oklab_roundtrip() {
+        // OKLCH roundtrip introduces quantization error from sRGB↔linear conversion.
+        // Grayscale colors roundtrip accurately; chromatic colors have larger error
+        // but preserve hue direction.
+        for (r, g, b, desc) in [
+            (128, 128, 128, "gray"),
+            (192, 192, 192, "light gray"),
+            (64, 64, 64, "dark gray"),
+            (0, 0, 0, "black"),
+            (255, 255, 255, "white"),
+        ] {
+            let ok = rgb_to_oklab(r, g, b);
+            let (r2, g2, b2) = oklab_to_rgb(ok);
+            assert!(
+                (r as i32 - r2 as i32).abs() <= 10,
+                "{desc} R roundtrip: {r} → {r2}"
+            );
+            assert!(
+                (g as i32 - g2 as i32).abs() <= 10,
+                "{desc} G roundtrip: {g} → {g2}"
+            );
+            assert!(
+                (b as i32 - b2 as i32).abs() <= 10,
+                "{desc} B roundtrip: {b} → {b2}"
+            );
+        }
+        // Saturated primaries: verify hue direction is preserved even if
+        // exact values drift due to gamma roundtrip.
+        let ok = rgb_to_oklab(255, 0, 0);
+        let (r2, g2, b2) = oklab_to_rgb(ok);
+        assert!(
+            r2 > g2 && r2 > b2,
+            "red should stay red-dominant: ({r2},{g2},{b2})"
+        );
+        let ok = rgb_to_oklab(0, 255, 0);
+        let (r2, g2, b2) = oklab_to_rgb(ok);
+        assert!(
+            g2 > r2 && g2 > b2,
+            "green should stay green-dominant: ({r2},{g2},{b2})"
+        );
+        let ok = rgb_to_oklab(0, 0, 255);
+        let (r2, g2, b2) = oklab_to_rgb(ok);
+        assert!(
+            b2 > r2 && b2 > g2,
+            "blue should stay blue-dominant: ({r2},{g2},{b2})"
+        );
+    }
+
+    #[test]
+    fn oklab_roundtrip_warm_stays_warm() {
         let ok = rgb_to_oklab(128, 64, 32);
         let (r, _g, b) = oklab_to_rgb(ok);
-        // Warm color should stay warm after roundtrip
+        assert!(r >= b, "red ({r}) should be >= blue ({b}) for warm input");
+    }
+
+    #[test]
+    fn lerp_palette_boundary_t0() {
+        // OKLCH interpolation introduces quantization at endpoints.
+        // Verify the result is close to red (255,0,0) in hue space.
+        let palette = vec![(255, 0, 0), (0, 0, 255)];
+        let (r, g, b) = lerp_palette(&palette, 0.0);
+        // Red component should dominate
         assert!(
-            r >= b,
-            "red channel ({r}) should be >= blue ({b}) for warm input"
+            r > g && r > b,
+            "t=0 should be red-dominant, got ({r},{g},{b})"
+        );
+    }
+
+    #[test]
+    fn lerp_palette_boundary_t1() {
+        let palette = vec![(255, 0, 0), (0, 0, 255)];
+        let (r, g, b) = lerp_palette(&palette, 1.0);
+        // Blue component should dominate
+        assert!(
+            b > r && b > g,
+            "t=1 should be blue-dominant, got ({r},{g},{b})"
         );
     }
 
@@ -257,6 +326,19 @@ mod tests {
         // Midpoint of red-blue in OKLCH should be roughly purple
         assert!(r > 50 && r < 200);
         assert!(b > 50 && b < 200);
+    }
+
+    #[test]
+    fn lerp_palette_three_colors() {
+        let palette = vec![(255, 0, 0), (0, 255, 0), (0, 0, 255)];
+        let (r1, g1, b1) = lerp_palette(&palette, 0.0);
+        // t=0 should be red-dominant
+        assert!(r1 > g1 && r1 > b1, "t=0: ({r1},{g1},{b1})");
+        let (r3, g3, b3) = lerp_palette(&palette, 1.0);
+        // t=1 should be blue-dominant
+        assert!(b3 > r3 && b3 > g3, "t=1: ({r3},{g3},{b3})");
+        // Verify the gradient endpoints differ
+        assert_ne!((r1, g1, b1), (r3, g3, b3));
     }
 
     #[test]
@@ -335,5 +417,145 @@ mod tests {
     fn dithered_quantize_returns_valid_index() {
         let idx = dithered_quantize(128, 64, 32, 5, 3);
         assert!((16..=231).contains(&idx));
+    }
+
+    #[test]
+    fn dithered_quantize_bayer_matrix_varies_by_position() {
+        // Bayer dithering adds position-dependent bias (±8 range). To see
+        // an index change, we need a color near a quantization boundary.
+        // rgb_to_xterm256 divides by 51, so boundaries are at 0,51,102,153,204,255.
+        // Use 102 (exact boundary) so ±8 bias crosses into different buckets.
+        let idx00 = dithered_quantize(102, 102, 102, 0, 0);
+        let idx01 = dithered_quantize(102, 102, 102, 0, 1);
+        // Bayer matrix values at these positions: [0,0]=-0.5, [0,1]=0.0, [1,0]=0.25, [2,2]=-0.5
+        // Bias = value * 16, so [0,0]=-8, [0,1]=0, [1,0]=+4
+        // 102-8=94→94/51=1, 102+0=102→102/51=2, 102+4=106→106/51=2
+        assert_ne!(
+            idx00, idx01,
+            "Bayer positions (0,0) and (0,1) should differ"
+        );
+    }
+
+    #[test]
+    fn dithered_quantize_black_and_white() {
+        let black = dithered_quantize(0, 0, 0, 0, 0);
+        let white = dithered_quantize(255, 255, 255, 0, 0);
+        assert!(
+            black < white,
+            "black index ({black}) should be < white ({white})"
+        );
+    }
+
+    #[test]
+    fn hsv_to_rgb_blue() {
+        let (r, g, b) = hsv_to_rgb(240.0, 1.0, 1.0);
+        assert_eq!(r, 0);
+        assert_eq!(g, 0);
+        assert_eq!(b, 255);
+    }
+
+    #[test]
+    fn hsv_to_rgb_grayscale() {
+        let (r, g, b) = hsv_to_rgb(0.0, 0.0, 0.5);
+        assert_eq!(r, 128);
+        assert_eq!(g, 128);
+        assert_eq!(b, 128);
+    }
+
+    #[test]
+    fn hsv_to_rgb_black() {
+        let (r, g, b) = hsv_to_rgb(0.0, 0.0, 0.0);
+        assert_eq!(r, 0);
+        assert_eq!(g, 0);
+        assert_eq!(b, 0);
+    }
+
+    #[test]
+    fn gaussian_glow_at_radius_boundary() {
+        // At distance == radius, Gaussian glow should be low (decaying).
+        // sigma = radius / 2.5, so at d=radius: exp(-r²/(2*sigma²)) = exp(-2.5²/2) ≈ 0.044
+        let v = gaussian_glow(5.0, 0.0, 5.0);
+        assert!(
+            v > 0.01 && v < 0.15,
+            "at radius boundary expected low intensity (0.01..0.15), got {v}"
+        );
+    }
+
+    #[test]
+    fn parse_hex_uppercase() {
+        let (r, g, b) = parse_hex("#FF8800").unwrap();
+        assert_eq!(r, 0xff);
+        assert_eq!(g, 0x88);
+        assert_eq!(b, 0x00);
+    }
+
+    #[test]
+    fn gaussian_glow_radius_zero() {
+        let v = gaussian_glow(0.0, 0.0, 0.0);
+        assert!(
+            v.is_finite() || v.is_nan(),
+            "should return an f32 without panicking"
+        );
+    }
+
+    #[test]
+    fn gaussian_glow_symmetry() {
+        let right = gaussian_glow(1.0, 0.0, 5.0);
+        let left = gaussian_glow(-1.0, 0.0, 5.0);
+        assert_eq!(right, left, "glow should be symmetric across x-axis");
+
+        let down = gaussian_glow(0.0, 1.0, 5.0);
+        let up = gaussian_glow(0.0, -1.0, 5.0);
+        assert_eq!(down, up, "glow should be symmetric across y-axis");
+    }
+
+    #[test]
+    fn hsv_to_rgb_60_degrees() {
+        let (r, g, b) = hsv_to_rgb(60.0, 1.0, 1.0);
+        assert_eq!((r, g, b), (255, 255, 0), "HSV(60,1,1) should be yellow");
+    }
+
+    #[test]
+    fn hsv_to_rgb_180_degrees() {
+        let (r, g, b) = hsv_to_rgb(180.0, 1.0, 1.0);
+        assert_eq!((r, g, b), (0, 255, 255), "HSV(180,1,1) should be cyan");
+    }
+
+    #[test]
+    fn hsv_to_rgb_300_degrees() {
+        let (r, g, b) = hsv_to_rgb(300.0, 1.0, 1.0);
+        assert_eq!((r, g, b), (255, 0, 255), "HSV(300,1,1) should be magenta");
+    }
+
+    #[test]
+    fn hsv_to_rgb_zero_saturation() {
+        let (r, g, b) = hsv_to_rgb(120.0, 0.0, 1.0);
+        assert_eq!(
+            (r, g, b),
+            (255, 255, 255),
+            "zero saturation should be white"
+        );
+    }
+
+    #[test]
+    fn lerp_palette_clamps_t() {
+        let palette = [(0, 0, 0), (255, 255, 255)];
+        let (r0, g0, b0) = lerp_palette(&palette, -0.5);
+        let dr = (r0 as i32).unsigned_abs();
+        let dg = (g0 as i32).unsigned_abs();
+        let db = (b0 as i32).unsigned_abs();
+        assert!(
+            dr < 10 && dg < 10 && db < 10,
+            "t=-0.5 should clamp to near-black, got ({r0},{g0},{b0})"
+        );
+
+        let (r1, g1, b1) = lerp_palette(&palette, 1.5);
+        let dr = (r1 as i32 - 255).unsigned_abs();
+        let dg = (g1 as i32 - 255).unsigned_abs();
+        let db = (b1 as i32 - 255).unsigned_abs();
+        assert!(
+            dr < 10 && dg < 10 && db < 10,
+            "t=1.5 should clamp to near-white, got ({r1},{g1},{b1})"
+        );
     }
 }

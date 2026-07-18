@@ -1,0 +1,15 @@
+##
+## Elephant (well-defined)
+##
+$the_cow = <<EOC;
+  $thoughts     /\\  ___  /\\
+   $thoughts   // \\/   \\/ \\\\
+      ((    $eye $eye    ))
+       \\ /     \\ //
+        \\  | |  \\/
+         | | | | |
+         | | | | |
+         |  o o  |
+         | |   | |
+         |m|   |m|
+EOC

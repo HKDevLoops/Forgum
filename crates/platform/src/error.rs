@@ -59,3 +59,73 @@ impl PlatformError {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn exit_code_config_class_is_78() {
+        assert_eq!(
+            PlatformError::Io(std::io::Error::other("x")).exit_code(),
+            78
+        );
+        assert_eq!(PlatformError::NoTerminal.exit_code(), 78);
+        assert_eq!(
+            PlatformError::PathEscape(PathBuf::from("/tmp/x")).exit_code(),
+            78
+        );
+    }
+
+    #[test]
+    fn exit_code_data_class_is_65() {
+        assert_eq!(
+            PlatformError::ConfigEncoding(PathBuf::from("e")).exit_code(),
+            65
+        );
+        assert_eq!(
+            PlatformError::ConfigParse {
+                path: PathBuf::from("e"),
+                message: "bad".into(),
+            }
+            .exit_code(),
+            65
+        );
+    }
+
+    #[test]
+    fn exit_code_os_class_is_71() {
+        assert_eq!(
+            PlatformError::SignalRegistration {
+                signal: "SIGINT",
+                source: std::io::Error::other("x"),
+            }
+            .exit_code(),
+            71
+        );
+        assert_eq!(PlatformError::Detach("x".into()).exit_code(), 71);
+    }
+
+    #[test]
+    fn exit_code_usage_class_is_64() {
+        assert_eq!(PlatformError::Unsupported("x").exit_code(), 64);
+        assert_eq!(
+            PlatformError::InvalidArgument("x".into()).exit_code(),
+            64
+        );
+    }
+
+    #[test]
+    fn display_messages_are_descriptive() {
+        assert!(format!("{}", PlatformError::InvalidArgument("bad".into()))
+            .contains("invalid argument"));
+        assert!(format!("{}", PlatformError::NoTerminal).contains("TTY"));
+    }
+
+    #[test]
+    fn from_io_error_produces_io_variant() {
+        let io = std::io::Error::other("boom");
+        let e: PlatformError = io.into();
+        assert!(matches!(e, PlatformError::Io(_)));
+    }
+}

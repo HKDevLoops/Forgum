@@ -337,6 +337,9 @@ impl Effect for GlitchEffect {
         let t = time * self.speed + self.phase;
         let intensity = (t * 3.0).sin() * 0.5 + 0.5;
         let count = (intensity * 10.0) as usize;
+        if fb.width == 0 || fb.height == 0 {
+            return;
+        }
         for i in 0..count {
             let seed = (t * 100.0 + i as f32) as u32;
             let x = ((seed.wrapping_mul(7)) as usize) % fb.width;
@@ -696,47 +699,649 @@ pub fn default_cow_text() -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::dna::GlowDna;
+
+    const COW: &str = "  ^__^  \n (oo)   \n(__)    ";
+
+    /// Count non-space cells in the framebuffer.
+    fn count_non_space(fb: &FrameBuffer) -> usize {
+        let mut n = 0;
+        for y in 0..fb.height {
+            for x in 0..fb.width {
+                if fb.get(x, y).ch != ' ' {
+                    n += 1;
+                }
+            }
+        }
+        n
+    }
+
+    /// Count cells matching a predicate.
+    #[allow(dead_code)]
+    fn count_cells(fb: &FrameBuffer, pred: impl Fn(char) -> bool) -> usize {
+        let mut n = 0;
+        for y in 0..fb.height {
+            for x in 0..fb.width {
+                if pred(fb.get(x, y).ch) {
+                    n += 1;
+                }
+            }
+        }
+        n
+    }
+
+    // ── StaticEffect ──────────────────────────────────────────────
 
     #[test]
-    fn static_cow_does_not_overflow() {
-        let mut fb = FrameBuffer::new(40, 10);
+    fn static_cow_renders_exact_art() {
+        let mut fb = FrameBuffer::new(80, 24);
         render_static_cow(&mut fb, default_cow_text());
         fb.swap();
-        assert_eq!(fb.get(8, 0).ch, '\\');
+        // default_cow_text() starts with "        \   ^__^"
+        // Row 0: 8 spaces, \, 3 spaces, ^__^ → ^ at column 12
+        assert_eq!(fb.get(12, 0).ch, '^', "caret (^) must be at (12,0)");
+        assert_eq!(fb.get(13, 0).ch, '_');
+        assert_eq!(fb.get(14, 0).ch, '_');
+        assert_eq!(fb.get(15, 0).ch, '^');
+        // Row 1: "         \\  (oo)\\_______" → 9 spaces, \, 2 spaces, (oo) → ( at column 12
+        assert_eq!(fb.get(12, 1).ch, '(');
+        assert_eq!(fb.get(13, 1).ch, 'o');
+        assert_eq!(fb.get(14, 1).ch, 'o');
+        assert_eq!(fb.get(15, 1).ch, ')');
+        // Row 3: must contain || for the legs
+        let row3: String = (0..30).map(|x| fb.get(x, 3).ch).collect();
+        assert!(
+            row3.contains("||"),
+            "row 3 must contain || for the legs: got {row3:?}"
+        );
     }
 
     #[test]
-    fn empty_text_is_safe() {
+    fn static_cow_all_chars_white() {
+        let mut fb = FrameBuffer::new(80, 24);
+        render_static_cow(&mut fb, default_cow_text());
+        fb.swap();
+        for y in 0..5 {
+            for x in 0..20 {
+                let cell = fb.get(x, y);
+                if cell.ch != ' ' && cell.ch != '\0' {
+                    assert_eq!(
+                        cell.fg,
+                        Color::WHITE,
+                        "non-space cell at ({x},{y}) ch={:?} must be WHITE",
+                        cell.ch
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn empty_text_produces_no_damage() {
         let mut fb = FrameBuffer::new(10, 10);
         render_static_cow(&mut fb, "");
-        assert!(fb.compute_damage().is_empty());
+        assert!(
+            fb.compute_damage().is_empty(),
+            "rendering empty text should produce zero damage"
+        );
     }
 
     #[test]
-    fn create_breathe_effect() {
+    fn render_cow_text_fits_in_framebuffer() {
+        // A 1x1 framebuffer should only show the first character
+        let mut fb = FrameBuffer::new(1, 1);
+        render_static_cow(&mut fb, "ABC\nDEF");
+        fb.swap();
+        assert_eq!(fb.get(0, 0).ch, 'A');
+        // Second row is out of bounds for height=1
+    }
+
+    // ── BreatheEffect ─────────────────────────────────────────────
+
+    #[test]
+    fn breathe_at_different_times_produces_different_offsets() {
+        let mut dna = CowDna::default();
+        dna.amplitude.breath = 5.0;
+        dna.speed = 1.0;
+        let effect = BreatheEffect::new(COW.to_string(), &dna, 0);
+
+        let mut fb0 = FrameBuffer::new(80, 24);
+        let mut fb1 = FrameBuffer::new(80, 24);
+        effect.render(&mut fb0, 0.0);
+        fb0.swap();
+        effect.render(&mut fb1, 0.75);
+        fb1.swap();
+
+        // Find the first non-space cell in each frame
+        let find_first_char = |fb: &FrameBuffer| -> Option<(usize, usize, char)> {
+            for y in 0..fb.height {
+                for x in 0..fb.width {
+                    let ch = fb.get(x, y).ch;
+                    if ch != ' ' {
+                        return Some((x, y, ch));
+                    }
+                }
+            }
+            None
+        };
+
+        let pos0 = find_first_char(&fb0);
+        let pos1 = find_first_char(&fb1);
+        assert!(pos0.is_some(), "breathe at t=0 must render something");
+        assert!(pos1.is_some(), "breathe at t=0.75 must render something");
+
+        // The Y position should differ due to breath amplitude
+        let (_, y0, _) = pos0.unwrap();
+        let (_, y1, _) = pos1.unwrap();
+        assert_ne!(
+            y0, y1,
+            "breathe Y offset should differ between t=0 and t=0.75 (amplitude=5.0)"
+        );
+    }
+
+    #[test]
+    fn zero_amplitude_produces_no_offset() {
+        let find_first = |fb: &FrameBuffer| -> Option<(usize, usize)> {
+            for y in 0..fb.height {
+                for x in 0..fb.width {
+                    if fb.get(x, y).ch != ' ' {
+                        return Some((x, y));
+                    }
+                }
+            }
+            None
+        };
+
+        // Breathe: zero amplitude → no Y drift
+        let mut dna = CowDna::default();
+        dna.amplitude.breath = 0.0;
+        dna.speed = 1.0;
+        let effect = BreatheEffect::new(COW.to_string(), &dna, 0);
+        let mut fb0 = FrameBuffer::new(80, 24);
+        let mut fb1 = FrameBuffer::new(80, 24);
+        effect.render(&mut fb0, 0.0);
+        fb0.swap();
+        effect.render(&mut fb1, 0.5);
+        fb1.swap();
+        assert_eq!(
+            find_first(&fb0),
+            find_first(&fb1),
+            "breathe zero amplitude = no Y drift"
+        );
+
+        // Float: zero amplitude → no drift
+        let mut dna = CowDna::default();
+        dna.amplitude.sway = 0.0;
+        dna.amplitude.float = 0.0;
+        dna.speed = 1.0;
+        let effect = FloatEffect::new(COW.to_string(), &dna, 0);
+        let mut fb0 = FrameBuffer::new(80, 24);
+        let mut fb1 = FrameBuffer::new(80, 24);
+        effect.render(&mut fb0, 0.0);
+        fb0.swap();
+        effect.render(&mut fb1, 0.5);
+        fb1.swap();
+        assert_eq!(
+            find_first(&fb0),
+            find_first(&fb1),
+            "float zero amplitude = no drift"
+        );
+    }
+
+    #[test]
+    fn breathe_instance_phase_offsets_multiple_instances() {
         let dna = CowDna::default();
-        let effect = create_effect(BaseAnim::Breathe, "test".to_string(), dna, 0);
-        assert!(!effect.is_done());
+        let e0 = BreatheEffect::new(COW.to_string(), &dna, 0);
+        let e1 = BreatheEffect::new(COW.to_string(), &dna, 1);
+
+        let mut fb0 = FrameBuffer::new(80, 24);
+        let mut fb1 = FrameBuffer::new(80, 24);
+        e0.render(&mut fb0, 0.3);
+        fb0.swap();
+        e1.render(&mut fb1, 0.3);
+        fb1.swap();
+
+        // Two instances with different IDs should render at different offsets
+        let find_y = |fb: &FrameBuffer| -> usize {
+            for y in 0..fb.height {
+                for x in 0..fb.width {
+                    if fb.get(x, y).ch != ' ' {
+                        return y;
+                    }
+                }
+            }
+            fb.height
+        };
+        assert_ne!(
+            find_y(&fb0),
+            find_y(&fb1),
+            "different instance_ids should produce different Y offsets"
+        );
     }
 
+    // ── FloatEffect ───────────────────────────────────────────────
+
     #[test]
-    fn create_particles_effect() {
+    fn float_produces_horizontal_and_vertical_drift() {
+        let mut dna = CowDna::default();
+        dna.amplitude.sway = 3.0;
+        dna.amplitude.float = 3.0;
+        dna.speed = 1.0;
+        let effect = FloatEffect::new(COW.to_string(), &dna, 0);
+
+        let mut fb0 = FrameBuffer::new(80, 24);
+        let mut fb1 = FrameBuffer::new(80, 24);
+        effect.render(&mut fb0, 0.0);
+        fb0.swap();
+        effect.render(&mut fb1, 0.75);
+        fb1.swap();
+
+        let find_first = |fb: &FrameBuffer| -> Option<(usize, usize)> {
+            for y in 0..fb.height {
+                for x in 0..fb.width {
+                    if fb.get(x, y).ch != ' ' {
+                        return Some((x, y));
+                    }
+                }
+            }
+            None
+        };
+
+        let p0 = find_first(&fb0).expect("float t=0 must render");
+        let p1 = find_first(&fb1).expect("float t=0.75 must render");
+        // Position should differ in at least one axis
+        assert!(
+            p0.0 != p1.0 || p0.1 != p1.1,
+            "float position should differ: t=0 at {:?}, t=0.75 at {:?}",
+            p0,
+            p1
+        );
+    }
+
+    // ── WalkEffect ────────────────────────────────────────────────
+
+    #[test]
+    fn walk_legs_alternate_between_frames() {
         let dna = CowDna::default();
-        let mut effect = create_effect(BaseAnim::Particles, "test".to_string(), dna, 0);
-        effect.update(0.1, 80, 24);
-        assert!(!effect.is_done());
+        let effect_a = WalkEffect::new(COW.to_string(), &dna, 0);
+        let effect_b = WalkEffect::new(COW.to_string(), &dna, 0);
+        let mut fb_a = FrameBuffer::new(80, 24);
+        let mut fb_b = FrameBuffer::new(80, 24);
+        effect_a.render(&mut fb_a, 0.25);
+        fb_a.swap();
+        effect_b.render(&mut fb_b, 0.75);
+        fb_b.swap();
+
+        // Last row of the COW string is row 2 (3 lines: "  ^__^  ", " (oo)   ", "(__)    ")
+        let last_row = 2;
+        let legs_a: Vec<char> = (0..fb_a.width).map(|x| fb_a.get(x, last_row).ch).collect();
+        let legs_b: Vec<char> = (0..fb_b.width).map(|x| fb_b.get(x, last_row).ch).collect();
+
+        // At least one leg char must be present
+        let has_slash = |v: &[char]| v.iter().any(|c| *c == '╱' || *c == '╲');
+        assert!(
+            has_slash(&legs_a),
+            "walk t=0.25 must have leg chars: {legs_a:?}"
+        );
+        assert!(
+            has_slash(&legs_b),
+            "walk t=0.75 must have leg chars: {legs_b:?}"
+        );
+
+        // The legs must differ between the two frames
+        assert_ne!(
+            legs_a, legs_b,
+            "walk legs must alternate between t=0.25 and t=0.75"
+        );
     }
 
     #[test]
-    fn create_glitch_effect() {
+    fn walk_only_modifies_last_row() {
         let dna = CowDna::default();
-        let mut effect = create_effect(BaseAnim::Glitch, "test".to_string(), dna, 0);
-        effect.update(0.1, 80, 24);
-        assert!(!effect.is_done());
+        let effect = WalkEffect::new(COW.to_string(), &dna, 0);
+        let mut fb = FrameBuffer::new(80, 24);
+        effect.render(&mut fb, 0.25);
+        fb.swap();
+
+        // COW = "  ^__^  \n (oo)   \n(__)    " → ^ at x=2, _ at x=3
+        assert_eq!(fb.get(2, 0).ch, '^', "walk should not modify row 0");
+        assert_eq!(fb.get(3, 0).ch, '_', "walk should not modify row 0");
+        // Row 1 should also be unchanged
+        assert_eq!(fb.get(1, 1).ch, '(', "walk should not modify row 1");
+    }
+
+    // ── GlitchEffect ──────────────────────────────────────────────
+
+    #[test]
+    fn glitch_intensity_varies_with_time() {
+        let dna = CowDna::default();
+        let glitch_chars = ['0', '1', '#', '@', '█', '▓'];
+
+        let count_glitch = |fb: &FrameBuffer| -> usize {
+            let mut n = 0;
+            for y in 0..fb.height {
+                for x in 0..fb.width {
+                    if glitch_chars.contains(&fb.get(x, y).ch) {
+                        n += 1;
+                    }
+                }
+            }
+            n
+        };
+
+        // peak: sin(t*3) ≈ 1 → intensity ≈ 1 → many glitch chars
+        let effect_peak = GlitchEffect::new(COW.to_string(), &dna, 0);
+        let mut fb_peak = FrameBuffer::new(80, 24);
+        effect_peak.render(&mut fb_peak, std::f32::consts::FRAC_PI_6);
+        fb_peak.swap();
+        let peak_count = count_glitch(&fb_peak);
+        assert!(
+            peak_count > 0,
+            "glitch at peak intensity should produce glitch characters"
+        );
+
+        // trough: sin(t*3) ≈ -1 → intensity ≈ 0 → fewer or zero
+        let effect_trough = GlitchEffect::new(COW.to_string(), &dna, 0);
+        let mut fb_trough = FrameBuffer::new(80, 24);
+        effect_trough.render(&mut fb_trough, std::f32::consts::FRAC_PI_3);
+        fb_trough.swap();
+        let trough_count = count_glitch(&fb_trough);
+
+        assert!(
+            peak_count >= trough_count,
+            "peak intensity ({peak_count}) should have >= trough ({trough_count})"
+        );
+    }
+
+    // ── FlyEffect ─────────────────────────────────────────────────
+
+    #[test]
+    fn fly_renders_wing_flap_indicator() {
+        let dna = CowDna::default();
+        let effect = FlyEffect::new(COW.to_string(), &dna, 0);
+        let mut fb = FrameBuffer::new(80, 24);
+        effect.render(&mut fb, 0.0);
+        fb.swap();
+
+        // FlyEffect sets (1,0) to '~' or '^' as wing flap
+        let ch = fb.get(1, 0).ch;
+        assert!(
+            ch == '~' || ch == '^',
+            "fly wing flap at (1,0) must be '~' or '^', got '{ch}'"
+        );
     }
 
     #[test]
-    fn all_base_types_create_effects() {
+    fn fly_wing_flap_toggles() {
+        let dna = CowDna::default();
+        let e1 = FlyEffect::new(COW.to_string(), &dna, 0);
+        let e2 = FlyEffect::new(COW.to_string(), &dna, 0);
+        let mut fb1 = FrameBuffer::new(80, 24);
+        let mut fb2 = FrameBuffer::new(80, 24);
+        e1.render(&mut fb1, 0.0);
+        fb1.swap();
+        e2.render(&mut fb2, 0.05);
+        fb2.swap();
+        // (time * 12.0) as i32 % 2 toggles between 0 and 1
+        // at t=0: 0 % 2 = 0 => '~'; at t=0.05: (0.6) as i32 = 0 => '~' still
+        // need enough time delta to toggle: t=0.1 => (1.2) as i32 = 1 => '^'
+        let e3 = FlyEffect::new(COW.to_string(), &dna, 0);
+        let mut fb3 = FrameBuffer::new(80, 24);
+        e3.render(&mut fb3, 0.1);
+        fb3.swap();
+        assert_ne!(
+            fb1.get(1, 0).ch,
+            fb3.get(1, 0).ch,
+            "wing flap should toggle between frames"
+        );
+    }
+
+    // ── TalkEffect ────────────────────────────────────────────────
+
+    #[test]
+    fn talk_replaces_and_cycles_mouth_chars() {
+        let dna = CowDna::default();
+        let mouth_chars = ['o', 'O', '0', 'o'];
+
+        // Render at 4 different times: verify mouth chars are replaced AND cycle
+        let mut seen = std::collections::HashSet::new();
+        for i in 0..4 {
+            let effect = TalkEffect::new(COW.to_string(), &dna, 0);
+            let mut fb = FrameBuffer::new(80, 24);
+            let t = i as f32 / 4.0;
+            effect.render(&mut fb, t);
+            fb.swap();
+
+            // COW = "  ^__^  \n (oo)   \n(__)    " → first 'o' at (2,1)
+            let ch = fb.get(2, 1).ch;
+            assert!(
+                mouth_chars.contains(&ch),
+                "talk must replace 'o' with mouth char, got '{ch}' at t={t}"
+            );
+            seen.insert(ch);
+        }
+        assert!(
+            seen.len() >= 2,
+            "talk mouth should cycle through multiple chars, saw: {:?}",
+            seen
+        );
+    }
+
+    // ── SwayEffect ────────────────────────────────────────────────
+
+    #[test]
+    fn sway_top_rows_shift_more_than_bottom() {
+        let mut dna = CowDna::default();
+        dna.amplitude.sway = 4.0;
+        dna.speed = 1.0;
+        let effect = SwayEffect::new(COW.to_string(), &dna, 0);
+
+        let mut fb_t0 = FrameBuffer::new(80, 24);
+        let mut fb_t1 = FrameBuffer::new(80, 24);
+        effect.render(&mut fb_t0, 0.0);
+        fb_t0.swap();
+        effect.render(&mut fb_t1, 0.25);
+        fb_t1.swap();
+
+        // Top row should shift more than bottom row
+        let find_x_at_row = |fb: &FrameBuffer, row: usize| -> Option<usize> {
+            (0..fb.width).find(|&x| fb.get(x, row).ch != ' ')
+        };
+
+        // Row 0 is the top of the cow (highest skew), row 2 is bottom (zero skew)
+        if let (Some(x0_top), Some(x1_top)) = (find_x_at_row(&fb_t0, 0), find_x_at_row(&fb_t1, 0)) {
+            if let (Some(x0_bot), Some(x1_bot)) =
+                (find_x_at_row(&fb_t0, 2), find_x_at_row(&fb_t1, 2))
+            {
+                let top_shift = (x0_top as i32 - x1_top as i32).unsigned_abs();
+                let bot_shift = (x0_bot as i32 - x1_bot as i32).unsigned_abs();
+                // Top should shift at least as much as bottom
+                assert!(
+                    top_shift >= bot_shift,
+                    "sway top shift ({top_shift}) should be >= bottom shift ({bot_shift})"
+                );
+            }
+        }
+    }
+
+    // ── DissolveEffect ────────────────────────────────────────────
+
+    #[test]
+    fn dissolve_at_assembled_has_low_scatter() {
+        let dna = CowDna::default();
+        let effect = DissolveEffect::new(COW.to_string(), &dna, 0);
+        let mut fb = FrameBuffer::new(80, 24);
+        // At cycle midpoint (t=1.0 in 0→1→0 cycle), scatter is 0 (assembled)
+        effect.render(&mut fb, 1.0);
+        fb.swap();
+
+        // When assembled, the cow art should be close to original positions
+        // Count non-space cells — should be similar to cow character count
+        let count = count_non_space(&fb);
+        assert!(
+            count > 10,
+            "dissolve assembled (t=1.0) should render visible cow art, got {count} cells"
+        );
+    }
+
+    #[test]
+    fn dissolve_at_scattered_has_different_positions() {
+        let dna = CowDna::default();
+        let effect_assembled = DissolveEffect::new(COW.to_string(), &dna, 0);
+        let effect_scattered = DissolveEffect::new(COW.to_string(), &dna, 0);
+
+        let mut fb_assembled = FrameBuffer::new(80, 24);
+        let mut fb_scattered = FrameBuffer::new(80, 24);
+
+        // assembled: cycle=1.0 → t=1.0, scatter=0
+        effect_assembled.render(&mut fb_assembled, 1.0);
+        fb_assembled.swap();
+
+        // scattered: cycle=0.0 → t=0.0, scatter=1.0
+        effect_scattered.render(&mut fb_scattered, 0.0);
+        fb_scattered.swap();
+
+        // The cell positions should differ
+        let mut differ = false;
+        for y in 0..fb_assembled.height {
+            for x in 0..fb_assembled.width {
+                if fb_assembled.get(x, y).ch != fb_scattered.get(x, y).ch {
+                    differ = true;
+                    break;
+                }
+            }
+            if differ {
+                break;
+            }
+        }
+        assert!(
+            differ,
+            "dissolve assembled vs scattered should produce different cell positions"
+        );
+    }
+
+    // ── PulseEffect ───────────────────────────────────────────────
+
+    #[test]
+    fn pulse_with_palette_produces_colored_cells() {
+        let dna = CowDna {
+            palette: vec!["#ff0000".to_string(), "#0000ff".to_string()],
+            ..CowDna::default()
+        };
+        let effect = PulseEffect::new(COW.to_string(), &dna, 0);
+        let mut fb = FrameBuffer::new(80, 24);
+        effect.render(&mut fb, 0.5);
+        fb.swap();
+
+        let mut has_non_white = false;
+        for y in 0..fb.height {
+            for x in 0..fb.width {
+                let c = fb.get(x, y);
+                if c.ch != ' ' && (c.fg.r != 255 || c.fg.g != 255 || c.fg.b != 255) {
+                    has_non_white = true;
+                    break;
+                }
+            }
+            if has_non_white {
+                break;
+            }
+        }
+        assert!(
+            has_non_white,
+            "pulse with palette should produce non-white colored cells"
+        );
+    }
+
+    #[test]
+    fn pulse_without_palette_is_white() {
+        let dna = CowDna::default();
+        let effect = PulseEffect::new(COW.to_string(), &dna, 0);
+        let mut fb = FrameBuffer::new(80, 24);
+        effect.render(&mut fb, 0.5);
+        fb.swap();
+
+        // Without palette, pulse uses Color::WHITE
+        for y in 0..5 {
+            for x in 0..20 {
+                let c = fb.get(x, y);
+                if c.ch != ' ' {
+                    assert_eq!(
+                        c.fg,
+                        Color::WHITE,
+                        "pulse without palette should use WHITE at ({x},{y})"
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn pulse_applies_glow_to_empty_cells() {
+        let dna = CowDna {
+            palette: vec!["#ff0000".to_string()],
+            glow: GlowDna {
+                radius: 10.0,
+                color: "#ff0000".to_string(),
+                ..GlowDna::default()
+            },
+            ..CowDna::default()
+        };
+        let effect = PulseEffect::new(COW.to_string(), &dna, 0);
+        let mut fb = FrameBuffer::new(80, 24);
+        effect.render(&mut fb, 0.5);
+        fb.swap();
+
+        // Glow should fill some empty cells with '·' character
+        let mut glow_count = 0;
+        for y in 0..fb.height {
+            for x in 0..fb.width {
+                if fb.get(x, y).ch == '·' {
+                    glow_count += 1;
+                }
+            }
+        }
+        assert!(
+            glow_count > 0,
+            "pulse glow should fill empty cells with '·' characters"
+        );
+    }
+
+    // ── ParticlesEffect ───────────────────────────────────────────
+
+    #[test]
+    fn particles_renders_cow_always() {
+        // Cow text must be rendered regardless of particle rate
+        let find_char = |fb: &FrameBuffer, ch: char| -> bool {
+            for y in 0..fb.height {
+                for x in 0..fb.width {
+                    if fb.get(x, y).ch == ch {
+                        return true;
+                    }
+                }
+            }
+            false
+        };
+
+        for rate in [0u32, 5, 20] {
+            let mut dna = CowDna::default();
+            dna.particles.rate = rate;
+            let mut effect = ParticlesEffect::new(COW.to_string(), dna, 0);
+            effect.update(1.0, 80, 24);
+            let mut fb = FrameBuffer::new(80, 24);
+            effect.render(&mut fb, 1.0);
+            fb.swap();
+            // COW = "  ^__^  \n (oo)   \n(__)    " → ^ at (2,0)
+            assert!(
+                find_char(&fb, '^'),
+                "particles with rate={rate} must render cow '^'"
+            );
+        }
+    }
+
+    // ── create_effect dispatch ─────────────────────────────────────
+
+    #[test]
+    fn create_effect_dispatches_correct_types() {
         let dna = CowDna::default();
         let bases = [
             BaseAnim::Breathe,
@@ -751,8 +1356,256 @@ mod tests {
             BaseAnim::Dissolve,
         ];
         for base in &bases {
-            let effect = create_effect(*base, "test".to_string(), dna.clone(), 0);
-            assert!(!effect.is_done());
+            let mut effect = create_effect(*base, COW.to_string(), dna.clone(), 0);
+            effect.update(0.1, 40, 10);
+            let mut fb = FrameBuffer::new(40, 10);
+            effect.render(&mut fb, 0.5);
+            fb.swap();
+            assert!(
+                count_non_space(&fb) > 0,
+                "{base:?} should render non-empty output"
+            );
         }
+    }
+
+    #[test]
+    fn create_effect_with_different_dna_produces_different_output() {
+        let dna_fast = CowDna {
+            speed: 10.0,
+            amplitude: Amplitude {
+                breath: 5.0,
+                ..Amplitude::default()
+            },
+            ..CowDna::default()
+        };
+
+        let dna_slow = CowDna {
+            speed: 0.1,
+            amplitude: Amplitude {
+                breath: 0.1,
+                ..Amplitude::default()
+            },
+            ..CowDna::default()
+        };
+
+        let e_fast = BreatheEffect::new(COW.to_string(), &dna_fast, 0);
+        let e_slow = BreatheEffect::new(COW.to_string(), &dna_slow, 0);
+
+        let mut fb_fast = FrameBuffer::new(80, 24);
+        let mut fb_slow = FrameBuffer::new(80, 24);
+        // Use t=0.25 so fast (speed=10) has t*10=2.5→0.5→eased≠0,
+        // while slow (speed=0.1) has t*0.1=0.025→eased≈0
+        e_fast.render(&mut fb_fast, 0.25);
+        fb_fast.swap();
+        e_slow.render(&mut fb_slow, 0.25);
+        fb_slow.swap();
+
+        // Different DNA should produce different visual output
+        let find_y = |fb: &FrameBuffer| -> usize {
+            for y in 0..fb.height {
+                for x in 0..fb.width {
+                    if fb.get(x, y).ch != ' ' {
+                        return y;
+                    }
+                }
+            }
+            fb.height
+        };
+        assert_ne!(
+            find_y(&fb_fast),
+            find_y(&fb_slow),
+            "different DNA (speed/amplitude) should produce different Y offsets"
+        );
+    }
+
+    // ── Edge cases: tiny terminal ──────────────────────────────────
+
+    #[test]
+    fn all_effects_survive_1x1_terminal() {
+        let dna = CowDna::default();
+        let bases = [
+            BaseAnim::Breathe,
+            BaseAnim::Float,
+            BaseAnim::Walk,
+            BaseAnim::Particles,
+            BaseAnim::Pulse,
+            BaseAnim::Glitch,
+            BaseAnim::Fly,
+            BaseAnim::Talk,
+            BaseAnim::Sway,
+            BaseAnim::Dissolve,
+        ];
+        for base in &bases {
+            let mut effect = create_effect(*base, COW.to_string(), dna.clone(), 0);
+            effect.update(0.1, 1, 1);
+            let mut fb = FrameBuffer::new(1, 1);
+            effect.render(&mut fb, 0.5);
+            fb.swap();
+            let cell = fb.get(0, 0);
+            assert!(
+                !cell.ch.is_control(),
+                "{base:?} should not write control chars to (0,0)"
+            );
+        }
+    }
+
+    #[test]
+    fn all_effects_survive_zero_size_terminal() {
+        let dna = CowDna::default();
+        let bases = [
+            BaseAnim::Breathe,
+            BaseAnim::Float,
+            BaseAnim::Walk,
+            BaseAnim::Particles,
+            BaseAnim::Pulse,
+            BaseAnim::Glitch,
+            BaseAnim::Fly,
+            BaseAnim::Talk,
+            BaseAnim::Sway,
+            BaseAnim::Dissolve,
+        ];
+        for base in &bases {
+            let mut effect = create_effect(*base, COW.to_string(), dna.clone(), 0);
+            effect.update(0.1, 0, 0);
+            let mut fb = FrameBuffer::new(0, 0);
+            effect.render(&mut fb, 0.5);
+            fb.swap();
+            assert_eq!(
+                fb.compute_damage().len(),
+                0,
+                "{base:?} zero-size framebuffer should produce empty damage"
+            );
+        }
+    }
+
+    #[test]
+    fn all_effects_on_resize_no_panic() {
+        let dna = CowDna::default();
+        let bases = [
+            BaseAnim::Breathe,
+            BaseAnim::Float,
+            BaseAnim::Walk,
+            BaseAnim::Particles,
+            BaseAnim::Pulse,
+            BaseAnim::Glitch,
+            BaseAnim::Fly,
+            BaseAnim::Talk,
+            BaseAnim::Sway,
+            BaseAnim::Dissolve,
+        ];
+        for base in &bases {
+            let mut effect = create_effect(*base, COW.to_string(), dna.clone(), 0);
+            effect.on_resize(1, 1);
+            let mut fb = FrameBuffer::new(1, 1);
+            effect.render(&mut fb, 0.5);
+            fb.swap();
+            assert_eq!(fb.width, 1, "{base:?} width should remain 1 after render");
+
+            effect.on_resize(100, 50);
+            let mut fb = FrameBuffer::new(100, 50);
+            effect.render(&mut fb, 0.5);
+            fb.swap();
+            assert_eq!(fb.width, 100, "{base:?} width should be 100 after resize");
+
+            effect.on_resize(0, 0);
+            let mut fb = FrameBuffer::new(0, 0);
+            effect.render(&mut fb, 0.5);
+            fb.swap();
+            assert_eq!(
+                fb.compute_damage().len(),
+                0,
+                "{base:?} zero-size should produce empty damage"
+            );
+        }
+    }
+
+    // ── Edge cases: extreme speed/amplitude ────────────────────────
+
+    #[test]
+    fn extreme_inputs_no_panic() {
+        let dna = CowDna {
+            speed: 1000.0,
+            amplitude: Amplitude {
+                breath: 1000.0,
+                sway: 100.0,
+                float: 100.0,
+            },
+            ..CowDna::default()
+        };
+
+        let mut fb = FrameBuffer::new(40, 10);
+        let effect = BreatheEffect::new(COW.to_string(), &dna, 0);
+        effect.render(&mut fb, 999.0);
+        fb.swap();
+        assert!(
+            !fb.compute_damage().is_empty(),
+            "breathe at extreme time should still produce damage (non-space cells)"
+        );
+
+        let effect = FloatEffect::new(COW.to_string(), &dna, 0);
+        effect.render(&mut fb, 999.0);
+        fb.swap();
+        assert!(
+            !fb.compute_damage().is_empty(),
+            "float at extreme time should still produce damage (non-space cells)"
+        );
+    }
+
+    // ── Invariants: render count ───────────────────────────────────
+
+    #[test]
+    fn char_count_invariant_across_effects() {
+        let dna = CowDna::default();
+
+        // Effects that only reposition (no add/remove chars) must preserve char count
+        let effects_and_times: Vec<(&str, Vec<f32>)> = vec![
+            ("breathe", vec![0.0, 0.25, 0.5]),
+            ("walk", vec![0.25, 0.5, 0.75]),
+        ];
+
+        for (name, times) in &effects_and_times {
+            let first_count = {
+                let effect = match *name {
+                    "breathe" => {
+                        Box::new(BreatheEffect::new(COW.to_string(), &dna, 0)) as Box<dyn Effect>
+                    }
+                    "walk" => Box::new(WalkEffect::new(COW.to_string(), &dna, 0)),
+                    _ => unreachable!(),
+                };
+                let mut fb = FrameBuffer::new(80, 24);
+                effect.render(&mut fb, times[0]);
+                fb.swap();
+                count_non_space(&fb)
+            };
+
+            for &t in &times[1..] {
+                let effect = match *name {
+                    "breathe" => {
+                        Box::new(BreatheEffect::new(COW.to_string(), &dna, 0)) as Box<dyn Effect>
+                    }
+                    "walk" => Box::new(WalkEffect::new(COW.to_string(), &dna, 0)),
+                    _ => unreachable!(),
+                };
+                let mut fb = FrameBuffer::new(80, 24);
+                effect.render(&mut fb, t);
+                fb.swap();
+                let c = count_non_space(&fb);
+                assert_eq!(
+                    first_count, c,
+                    "{name} char count should be constant at t={t}"
+                );
+            }
+        }
+    }
+
+    // ── Effect::is_done returns false for non-one-shot effects ────
+
+    #[test]
+    fn non_one_shot_effects_return_is_done_false() {
+        let dna = CowDna::default();
+        let breathe = BreatheEffect::new(COW.to_string(), &dna, 0);
+        assert!(!breathe.is_done());
+        let dissolve = DissolveEffect::new(COW.to_string(), &dna, 0);
+        assert!(!dissolve.is_done());
     }
 }

@@ -1,0 +1,155 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: "-D warnings"
+
+permissions:
+  contents: write
+
+jobs:
+  version-check:
+    name: Version check
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.extract.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: extract
+        name: Extract and verify version
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          VERSION=$(grep -m1 '^version' Cargo.toml | sed 's/.*"\(.*\)"/\1/')
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
+          if [ "${TAG}" != "v${VERSION}" ]; then
+            echo "::error::Tag ${TAG} does not match Cargo.toml version v${VERSION}"
+            exit 1
+          fi
+
+          echo "Tag ${TAG} matches Cargo.toml version ${VERSION}"
+
+  build:
+    name: Build ${{ matrix.target }}
+    needs: version-check
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+          - target: aarch64-unknown-linux-gnu
+            os: ubuntu-latest
+            cross: true
+          - target: x86_64-apple-darwin
+            os: macos-latest
+          - target: aarch64-apple-darwin
+            os: macos-latest
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+          - target: aarch64-pc-windows-msvc
+            os: windows-latest
+          - target: x86_64-unknown-freebsd
+            os: ubuntu-latest
+            cross: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
+
+      - name: Install cross
+        if: matrix.cross
+        run: cargo install cross --locked
+
+      - name: Build (cross)
+        if: matrix.cross
+        run: cross build --release --locked --target ${{ matrix.target }} -p forgum-engine
+
+      - name: Build (native)
+        if: ${{ !matrix.cross }}
+        run: cargo build --release --locked --target ${{ matrix.target }} -p forgum-engine
+
+      - name: Package (unix)
+        if: ${{ runner.os != 'Windows' }}
+        run: |
+          cd target/${{ matrix.target }}/release
+          tar czf ../../forgum-engine-${{ matrix.target }}.tar.gz forgum-engine ../../../README.md
+          sha256sum ../../forgum-engine-${{ matrix.target }}.tar.gz > ../../forgum-engine-${{ matrix.target }}.sha256
+          cd ../../..
+
+      - name: Package (windows)
+        if: ${{ runner.os == 'Windows' }}
+        shell: bash
+        run: |
+          cd target/${{ matrix.target }}/release
+          tar czf ../../forgum-engine-${{ matrix.target }}.tar.gz forgum-engine.exe ../../../README.md
+          sha256sum ../../forgum-engine-${{ matrix.target }}.tar.gz > ../../forgum-engine-${{ matrix.target }}.sha256
+          cd ../../..
+
+      # Windows zip artifacts consumed by the winget + scoop manifests.
+      - name: Package (windows zip)
+        if: ${{ runner.os == 'Windows' }}
+        shell: bash
+        run: |
+          VERSION="${{ needs.version-check.outputs.version }}"
+          SRC_DIR="$GITHUB_WORKSPACE/target/${{ matrix.target }}/release"
+          ROOT_DIR="$GITHUB_WORKSPACE"
+
+          ZIP_NAME=""
+          case "${{ matrix.target }}" in
+            x86_64-pc-windows-msvc)   ZIP_NAME="forgum-${VERSION}-windows-x64.zip" ;;
+            aarch64-pc-windows-msvc)  ZIP_NAME="forgum-${VERSION}-windows-arm64.zip" ;;
+            *) echo "::error::Unknown windows target ${{ matrix.target }}"; exit 1 ;;
+          esac
+
+          TMPDIR=$(mktemp -d)
+          cp "$SRC_DIR/forgum-engine.exe" "$TMPDIR/forgum-engine.exe"
+          cp "$ROOT_DIR/README.md" "$TMPDIR/README.md"
+          cd "$TMPDIR"
+          zip -r "$ROOT_DIR/$ZIP_NAME" . >/dev/null
+          sha256sum "$ROOT_DIR/$ZIP_NAME" > "$ROOT_DIR/$ZIP_NAME.sha256"
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.target }}
+          path: |
+            forgum-engine-${{ matrix.target }}.tar.gz
+            forgum-engine-${{ matrix.target }}.sha256
+            forgum-*-windows-*.zip
+            forgum-*-windows-*.sha256
+
+  release:
+    name: Create GitHub Release
+    needs: [version-check, build]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          merge-multiple: true
+          path: artifacts
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: "Forgum ${{ needs.version-check.outputs.version }}"
+          generate_release_notes: true
+          files: artifacts/*

@@ -329,9 +329,29 @@ pub struct Args {
     pub text_only: bool,
 }
 
+/// Error type returned by `parse_args`, carrying the intended process exit code.
+#[derive(Debug)]
+pub struct CliError {
+    pub exit_code: u8,
+    pub message: String,
+}
+
 /// Parse CLI args (backward-compatible wrapper around clap).
-pub fn parse_args(argv: Vec<String>) -> Result<(Args, Option<Commands>), String> {
-    let cli = Cli::try_parse_from(&argv).map_err(|e| e.to_string())?;
+pub fn parse_args(argv: Vec<String>) -> Result<(Args, Option<Commands>), CliError> {
+    let cli = Cli::try_parse_from(&argv).map_err(|e| {
+        // clap prints help/version itself and wants to exit 0; real parse
+        // errors (UnknownArgument, etc.) should exit 64 (EX_USAGE).
+        let exit_code = match e.kind() {
+            clap::error::ErrorKind::DisplayHelp
+            | clap::error::ErrorKind::DisplayVersion
+            | clap::error::ErrorKind::DisplayHelpOnMissingArgumentOrSubcommand => 0,
+            _ => 64,
+        };
+        CliError {
+            exit_code,
+            message: e.to_string(),
+        }
+    })?;
 
     let command = match &cli.command {
         Some(Commands::Render) | None => Command::Render,

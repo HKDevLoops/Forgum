@@ -97,7 +97,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Check Cargo.toml version exists
+      - name: Check version parity across all manifests
         run: |
           VERSION=$(grep -m1 '^version' Cargo.toml | sed 's/.*"\(.*\)".*/\1/')
           if [ -z "$VERSION" ]; then
@@ -105,3 +105,38 @@ jobs:
             exit 1
           fi
           echo "Cargo.toml version: $VERSION"
+          ERRORS=0
+
+          # Check Homebrew formula
+          HB_VER=$(grep -m1 'version' packaging/homebrew/forgum.rb | sed 's/.*"\(.*\)".*/\1/')
+          if [ "$HB_VER" != "$VERSION" ]; then
+            echo "ERROR: Homebrew formula version ($HB_VER) != Cargo.toml ($VERSION)"
+            ERRORS=$((ERRORS + 1))
+          fi
+
+          # Check winget manifest
+          WINGET_VER=$(grep 'PackageVersion:' packaging/winget/HKDEVS.Forgum.yaml | head -1 | awk '{print $2}')
+          if [ "$WINGET_VER" != "$VERSION" ]; then
+            echo "ERROR: winget manifest version ($WINGET_VER) != Cargo.toml ($VERSION)"
+            ERRORS=$((ERRORS + 1))
+          fi
+
+          # Check RPM spec
+          RPM_VER=$(grep '^Version:' packaging/rpm/forgum.spec | awk '{print $2}')
+          if [ "$RPM_VER" != "$VERSION" ]; then
+            echo "ERROR: RPM spec version ($RPM_VER) != Cargo.toml ($VERSION)"
+            ERRORS=$((ERRORS + 1))
+          fi
+
+          # Check DEB control
+          DEB_VER=$(grep '^Version:' packaging/deb/DEBIAN/control | awk '{print $2}')
+          if [ "$DEB_VER" != "$VERSION" ]; then
+            echo "ERROR: DEB control version ($DEB_VER) != Cargo.toml ($VERSION)"
+            ERRORS=$((ERRORS + 1))
+          fi
+
+          if [ "$ERRORS" -gt 0 ]; then
+            echo "Version parity check failed with $ERRORS error(s)."
+            exit 1
+          fi
+          echo "All manifests have version $VERSION ✓"

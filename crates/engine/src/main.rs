@@ -25,8 +25,8 @@ fn main() -> ExitCode {
     let (args, command) = match parse_args(argv) {
         Ok(v) => v,
         Err(e) => {
-            eprintln!("{PROGRAM}: {e}");
-            return ExitCode::from(64);
+            eprintln!("{PROGRAM}: {}", e.message);
+            return ExitCode::from(e.exit_code);
         }
     };
 
@@ -543,6 +543,7 @@ fn render_subcommand(args: cli::Args) -> ExitCode {
                 Some(&composed),
                 cow_dna,
                 instance_id,
+                data,
                 &Some(cmd_rx),
             )
         } else {
@@ -553,6 +554,7 @@ fn render_subcommand(args: cli::Args) -> ExitCode {
                 Some(&composed),
                 cow_dna,
                 instance_id,
+                data,
                 &Some(cmd_rx),
             )
         };
@@ -599,6 +601,7 @@ fn render_subcommand(args: cli::Args) -> ExitCode {
                 Some(&composed),
                 cow_dna,
                 instance_id,
+                data,
                 &None,
             )
         } else {
@@ -609,6 +612,7 @@ fn render_subcommand(args: cli::Args) -> ExitCode {
                 Some(&composed),
                 cow_dna,
                 instance_id,
+                data,
                 &None,
             )
         };

@@ -18,6 +18,7 @@
 #![allow(unsafe_code)] // guarded raw-pointer usage in RAII guards; see crate-level docs
 
 use std::io::Write;
+use std::path::PathBuf;
 use std::sync::mpsc;
 use std::time::Duration;
 
@@ -27,6 +28,7 @@ use forgum_platform::{
 };
 
 use crate::control_socket::ControlCmd;
+use crate::cow;
 use crate::dna::CowDna;
 use crate::effects;
 use crate::framebuffer::FrameBuffer;
@@ -54,13 +56,15 @@ const _PROMPT_GUARD: u16 = PROMPT_GUARD; // keep for Phase 2 overlay region math
 /// If `composed_text` is provided, it's used directly as the cow art
 /// (pre-composed with speech bubble by the cow module). Otherwise falls
 /// back to the Phase 0 static cow rendering.
+#[allow(clippy::too_many_arguments)]
 pub fn render_loop_foreground(
     mut out: OutputHandle,
-    config: SceneConfig,
+    mut config: SceneConfig,
     shutdown: ShutdownFlag,
     composed_text: Option<&str>,
     cow_dna: CowDna,
     instance_id: u32,
+    data_dir: PathBuf,
     cmd_rx: &Option<mpsc::Receiver<ControlCmd>>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let _signals = SignalGuard::install(shutdown.clone())?;
@@ -99,7 +103,8 @@ pub fn render_loop_foreground(
     };
 
     // Create the animation effect from DNA
-    let mut effect = effects::create_effect(cow_dna.base, cow_text.clone(), cow_dna, instance_id);
+    let mut effect =
+        effects::create_effect(cow_dna.base, cow_text.clone(), cow_dna.clone(), instance_id);
     let mut rend = renderer::create_renderer();
 
     let mut frame_count: u64 = 0;
@@ -135,14 +140,47 @@ pub fn render_loop_foreground(
                     ControlCmd::Effect(name) => {
                         eprintln!("forgum-engine: effect change requested: {name}");
                     }
-                    ControlCmd::Speed(_s) => {
-                        // TODO: apply speed multiplier to scheduler.
+                    ControlCmd::Speed(s) => {
+                        // Scale the scheduler's target FPS from the base rate.
+                        scheduler.set_speed(s);
                     }
-                    ControlCmd::Cow(_name) => {
-                        // TODO: reload cow art and recreate effect.
+                    ControlCmd::Cow(name) => {
+                        // Reload the cow art (preserving current eyes/tongue)
+                        // and recreate the live effect with the same text.
+                        config.cow = name.clone();
+                        let cow_text = cow::load_cow(
+                            &config.cow,
+                            &data_dir,
+                            &config.eyes,
+                            &config.tongue,
+                            "\\\\",
+                        );
+                        let new_composed = cow::compose_scene(&cow_text, &config.text);
+                        effect = effects::create_effect(
+                            cow_dna.base,
+                            new_composed,
+                            cow_dna.clone(),
+                            instance_id,
+                        );
                     }
-                    ControlCmd::Text(_text) => {
-                        // TODO: update composed text.
+                    ControlCmd::Text(text) => {
+                        // Recompute the composed scene text (bubble + cow) with
+                        // the new bubble text and recreate the live effect.
+                        config.text = text.clone();
+                        let cow_text = cow::load_cow(
+                            &config.cow,
+                            &data_dir,
+                            &config.eyes,
+                            &config.tongue,
+                            "\\\\",
+                        );
+                        let new_composed = cow::compose_scene(&cow_text, &config.text);
+                        effect = effects::create_effect(
+                            cow_dna.base,
+                            new_composed,
+                            cow_dna.clone(),
+                            instance_id,
+                        );
                     }
                     _ => {}
                 }
@@ -175,13 +213,15 @@ pub fn render_loop_foreground(
 /// Run the background render loop. Does **not** own the alternate screen or
 /// raw mode. Does **not** read input. Exits on signal or when `duration`
 /// elapses. With `duration=0`, runs forever.
+#[allow(clippy::too_many_arguments)]
 pub fn render_loop_background(
     mut out: OutputHandle,
-    config: SceneConfig,
+    mut config: SceneConfig,
     shutdown: ShutdownFlag,
     composed_text: Option<&str>,
     cow_dna: CowDna,
     instance_id: u32,
+    data_dir: PathBuf,
     cmd_rx: &Option<mpsc::Receiver<ControlCmd>>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let _signals = SignalGuard::install(shutdown.clone())?;
@@ -219,7 +259,8 @@ pub fn render_loop_background(
     };
 
     // Create the animation effect from DNA
-    let mut effect = effects::create_effect(cow_dna.base, cow_text.clone(), cow_dna, instance_id);
+    let mut effect =
+        effects::create_effect(cow_dna.base, cow_text.clone(), cow_dna.clone(), instance_id);
     let mut rend = renderer::create_renderer();
 
     let mut frame_count: u64 = 0;
@@ -255,14 +296,47 @@ pub fn render_loop_background(
                     ControlCmd::Effect(name) => {
                         eprintln!("forgum-engine: effect change requested: {name}");
                     }
-                    ControlCmd::Speed(_s) => {
-                        // TODO: apply speed multiplier to scheduler.
+                    ControlCmd::Speed(s) => {
+                        // Scale the scheduler's target FPS from the base rate.
+                        scheduler.set_speed(s);
                     }
-                    ControlCmd::Cow(_name) => {
-                        // TODO: reload cow art and recreate effect.
+                    ControlCmd::Cow(name) => {
+                        // Reload the cow art (preserving current eyes/tongue)
+                        // and recreate the live effect with the same text.
+                        config.cow = name.clone();
+                        let cow_text = cow::load_cow(
+                            &config.cow,
+                            &data_dir,
+                            &config.eyes,
+                            &config.tongue,
+                            "\\\\",
+                        );
+                        let new_composed = cow::compose_scene(&cow_text, &config.text);
+                        effect = effects::create_effect(
+                            cow_dna.base,
+                            new_composed,
+                            cow_dna.clone(),
+                            instance_id,
+                        );
                     }
-                    ControlCmd::Text(_text) => {
-                        // TODO: update composed text.
+                    ControlCmd::Text(text) => {
+                        // Recompute the composed scene text (bubble + cow) with
+                        // the new bubble text and recreate the live effect.
+                        config.text = text.clone();
+                        let cow_text = cow::load_cow(
+                            &config.cow,
+                            &data_dir,
+                            &config.eyes,
+                            &config.tongue,
+                            "\\\\",
+                        );
+                        let new_composed = cow::compose_scene(&cow_text, &config.text);
+                        effect = effects::create_effect(
+                            cow_dna.base,
+                            new_composed,
+                            cow_dna.clone(),
+                            instance_id,
+                        );
                     }
                     _ => {}
                 }

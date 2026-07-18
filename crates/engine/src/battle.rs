@@ -223,15 +223,52 @@ mod tests {
     }
 
     #[test]
-    fn battle_render_frame_returns_string() {
+    fn battle_render_frame_has_structure() {
         let b = Battle::new("X", "Y");
         let frame = b.render_frame();
-        assert!(frame.contains("X") || frame.contains("Y"));
+        assert!(frame.contains('\n'));
+        assert!(frame.len() > 50);
     }
 
     #[test]
-    fn run_battle_returns_output() {
-        let output = run_battle("Alpha", "Beta");
-        assert!(output.contains("Alpha") || output.contains("Beta"));
+    fn battle_phase_transitions_correctly() {
+        let mut b = Battle::new("A", "B");
+        assert_eq!(b.phase, BattlePhase::Charging);
+
+        loop {
+            b.tick();
+            if b.phase == BattlePhase::Collision {
+                break;
+            }
+        }
+        assert_eq!(b.phase, BattlePhase::Collision);
+
+        loop {
+            b.tick();
+            if b.phase == BattlePhase::Aftermath {
+                break;
+            }
+        }
+        assert_eq!(b.phase, BattlePhase::Aftermath);
+        assert!(!b.cow1.alive);
+        assert_eq!(b.cow1.eyes, "xx");
+        assert_eq!(b.cow2.eyes, "@@");
+
+        loop {
+            b.tick();
+            if b.phase == BattlePhase::Done {
+                break;
+            }
+        }
+        assert_eq!(b.phase, BattlePhase::Done);
+    }
+
+    #[test]
+    fn battle_same_names_works() {
+        let mut b = Battle::new("X", "X");
+        for _ in 0..200 {
+            b.tick();
+        }
+        assert!(b.is_done());
     }
 }

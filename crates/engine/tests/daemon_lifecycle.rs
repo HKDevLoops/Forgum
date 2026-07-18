@@ -17,13 +17,10 @@ fn daemon_lifecycle_ping_stop() {
 
     // The parent prints PID and exits. Capture it.
     let stdout = String::from_utf8_lossy(&child.stdout);
-    let pid: u32 = match stdout.trim().parse() {
-        Ok(p) => p,
-        Err(_) => {
-            eprintln!("could not parse PID from stdout: {stdout:?}, skipping");
-            return;
-        }
-    };
+    let pid: u32 = stdout
+        .trim()
+        .parse()
+        .unwrap_or_else(|_| panic!("could not parse PID from stdout: {stdout:?}"));
 
     // Give daemon time to bind socket.
     std::thread::sleep(Duration::from_millis(1000));
@@ -32,11 +29,10 @@ fn daemon_lifecycle_ping_stop() {
     let session = forgum_platform::detect_session_id();
     let socket_path = forgum_platform::control_socket_path(&session);
 
-    if !socket_path.exists() {
-        eprintln!("socket not found at {socket_path:?}, skipping");
-        let _ = Command::new("kill").arg(pid.to_string()).output();
-        return;
-    }
+    assert!(
+        socket_path.exists(),
+        "socket not found at {socket_path:?} after daemon start"
+    );
 
     // Send STOP via socket.
     if let Ok(mut stream) = UnixStream::connect(&socket_path) {

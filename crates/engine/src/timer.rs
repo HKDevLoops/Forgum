@@ -91,6 +91,26 @@ mod tests {
     }
 
     #[test]
+    fn format_duration_zero() {
+        assert_eq!(format_duration(0.0), "0μs");
+    }
+
+    #[test]
+    fn format_duration_boundary_1ms() {
+        assert_eq!(format_duration(0.001), "1.0ms");
+    }
+
+    #[test]
+    fn format_duration_boundary_1s() {
+        assert_eq!(format_duration(1.0), "1.00s");
+    }
+
+    #[test]
+    fn format_duration_boundary_60s() {
+        assert_eq!(format_duration(60.0), "1m 0.0s");
+    }
+
+    #[test]
     fn timer_runs_command() {
         let result = run_timer(&[
             "cmd".to_string(),
@@ -98,8 +118,9 @@ mod tests {
             "echo".to_string(),
             "test".to_string(),
         ]);
-        assert!(result.duration_secs >= 0.0);
+        assert_eq!(result.command, "cmd /c echo test");
         assert_eq!(result.exit_code, 0);
+        assert!(result.stdout.contains("test"));
     }
 
     #[test]
@@ -114,5 +135,18 @@ mod tests {
         let cow = render_timer_cow(&result);
         assert!(cow.contains("1.50s"));
         assert!(cow.contains("✓"));
+    }
+
+    #[test]
+    fn timer_cow_failure_shows叉() {
+        let result = TimerResult {
+            command: "cargo test".to_string(),
+            duration_secs: 0.5,
+            exit_code: 1,
+            stdout: String::new(),
+            stderr: String::new(),
+        };
+        let cow = render_timer_cow(&result);
+        assert!(cow.contains("✗"));
     }
 }

@@ -72,6 +72,48 @@ mod tests {
     }
 
     #[test]
+    fn wrap_text_empty_string() {
+        let result = wrap_text("", 10);
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn wrap_text_exact_width() {
+        let result = wrap_text("12345", 5);
+        assert_eq!(result, vec!["12345"]);
+    }
+
+    #[test]
+    fn wrap_text_no_spaces() {
+        let result = wrap_text("abcdefghij", 5);
+        assert_eq!(result, vec!["abcde", "fghij"]);
+    }
+
+    #[test]
+    fn wrap_text_single_word_no_wrap() {
+        let result = wrap_text("hello", 80);
+        assert_eq!(result, vec!["hello"]);
+    }
+
+    #[test]
+    fn wrap_text_one_over_width() {
+        let result = wrap_text("hello", 4);
+        assert_eq!(result.len(), 2, "should wrap into two lines");
+        assert_eq!(result[0], "hell");
+        assert_eq!(result[1], "o");
+    }
+
+    #[test]
+    fn wrap_text_long_word() {
+        let long = "a".repeat(100);
+        let result = wrap_text(&long, 10);
+        assert!(!result.is_empty());
+        for line in &result {
+            assert!(line.len() <= 10);
+        }
+    }
+
+    #[test]
     fn run_say_returns_string() {
         let output = run_say(&[
             "cmd".to_string(),
@@ -79,6 +121,6 @@ mod tests {
             "echo".to_string(),
             "hello".to_string(),
         ]);
-        assert!(output.contains("hello") || output.contains("Error"));
+        assert!(output.contains("hello"));
     }
 }

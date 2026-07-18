@@ -358,35 +358,62 @@ mod tests {
     fn spawn_fire_adds_particles() {
         let mut pool = ParticlePool::new();
         spawn_fire(&mut pool, 10.0, 5.0, &[], 0.0);
-        assert!(pool.active_count() > 0);
+        assert_eq!(pool.active_count(), 3);
+
+        for p in &pool.particles {
+            if p.active {
+                assert!(
+                    ['*', '^', '.', '~'].contains(&p.ch),
+                    "unexpected char: {:?}",
+                    p.ch
+                );
+                assert!(p.life > 0.0);
+                assert!(p.color.r > 0);
+            }
+        }
     }
 
     #[test]
     fn spawn_bubbles_adds_particles() {
         let mut pool = ParticlePool::new();
         spawn_bubbles(&mut pool, 10.0, 5.0, &[], 0.0);
-        assert!(pool.active_count() > 0);
+        assert_eq!(pool.active_count(), 1);
+
+        let p = pool.particles.iter().find(|p| p.active).unwrap();
+        assert!(['o', 'O', '°', '.'].contains(&p.ch));
+        assert!(p.life > 0.0);
     }
 
     #[test]
     fn spawn_stars_adds_particles() {
         let mut pool = ParticlePool::new();
         spawn_stars(&mut pool, 10.0, 5.0, 0.0);
-        assert!(pool.active_count() > 0);
+        assert_eq!(pool.active_count(), 1);
+
+        let p = pool.particles.iter().find(|p| p.active).unwrap();
+        assert!(['*', '+', '✦', '✧'].contains(&p.ch));
+        assert!(p.life > 0.0);
     }
 
     #[test]
     fn spawn_zzz_adds_particles() {
         let mut pool = ParticlePool::new();
         spawn_zzz(&mut pool, 10.0, 5.0, 0.0);
-        assert!(pool.active_count() > 0);
+        assert_eq!(pool.active_count(), 1);
+
+        let p = pool.particles.iter().find(|p| p.active).unwrap();
+        assert!(['Z', 'z'].contains(&p.ch));
+        assert!(p.vy < 0.0);
     }
 
     #[test]
     fn spawn_glitch_adds_particles() {
         let mut pool = ParticlePool::new();
         spawn_glitch(&mut pool, 10.0, 5.0, 80, 24);
-        assert!(pool.active_count() > 0);
+        assert_eq!(pool.active_count(), 1);
+
+        let p = pool.particles.iter().find(|p| p.active).unwrap();
+        assert!(['0', '1', '#', '@', '█', '▓', '░'].contains(&p.ch));
     }
 
     #[test]
@@ -396,5 +423,127 @@ mod tests {
         seed_frame_rng(42);
         let b = rand_01();
         assert_eq!(a, b);
+    }
+
+    #[test]
+    fn update_moves_particles_by_velocity() {
+        let mut pool = ParticlePool::new();
+        let _ = pool.spawn(Particle {
+            x: 0.0,
+            y: 0.0,
+            vx: 10.0,
+            vy: 0.0,
+            life: 2.0,
+            max_life: 2.0,
+            ch: '*',
+            color: Color::WHITE,
+            active: true,
+        });
+        pool.update(0.5);
+        let p = pool.particles.iter().find(|p| p.active).unwrap();
+        assert!((p.x - 5.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn update_kills_expired_particles() {
+        let mut pool = ParticlePool::new();
+        let _ = pool.spawn(Particle {
+            x: 0.0,
+            y: 0.0,
+            vx: 0.0,
+            vy: 0.0,
+            life: 0.1,
+            max_life: 0.1,
+            ch: 'X',
+            color: Color::WHITE,
+            active: true,
+        });
+        assert_eq!(pool.active_count(), 1);
+        pool.update(0.2);
+        assert_eq!(pool.active_count(), 0);
+    }
+
+    #[test]
+    fn render_writes_to_framebuffer() {
+        let mut pool = ParticlePool::new();
+        let _ = pool.spawn(Particle {
+            x: 5.0,
+            y: 3.0,
+            vx: 0.0,
+            vy: 0.0,
+            life: 1.0,
+            max_life: 1.0,
+            ch: 'Z',
+            color: Color::WHITE,
+            active: true,
+        });
+        let mut fb = FrameBuffer::new(80, 24);
+        pool.render(&mut fb, 0.0, |v| v);
+        fb.swap();
+        let cell = fb.get(5, 3);
+        assert_eq!(cell.ch, 'Z');
+    }
+
+    #[test]
+    fn spawn_pulse_type_adds_no_particles() {
+        let mut pool = ParticlePool::new();
+        spawn_for_type(&mut pool, ParticleType::Pulse, 10.0, 5.0, &[], 0.0, 80, 24);
+        assert_eq!(
+            pool.active_count(),
+            0,
+            "Pulse type should not spawn particles"
+        );
+    }
+
+    #[test]
+    fn clear_deactivates_all_particles() {
+        let mut pool = ParticlePool::new();
+        for _ in 0..5 {
+            let _ = pool.spawn(Particle {
+                active: true,
+                life: 10.0,
+                ..Default::default()
+            });
+        }
+        assert_eq!(pool.active_count(), 5);
+        pool.clear();
+        assert_eq!(pool.active_count(), 0);
+    }
+
+    #[test]
+    fn seed_frame_rng_deterministic_sequence() {
+        seed_frame_rng(42);
+        let seq_a: Vec<f32> = (0..5).map(|_| rand_01()).collect();
+
+        seed_frame_rng(42);
+        let seq_b: Vec<f32> = (0..5).map(|_| rand_01()).collect();
+
+        assert_eq!(
+            seq_a, seq_b,
+            "same seed must produce identical PRNG sequence"
+        );
+    }
+
+    #[test]
+    fn particle_velocity_zero_stays_put() {
+        let mut pool = ParticlePool::new();
+        let _ = pool.spawn(Particle {
+            x: 10.0,
+            y: 5.0,
+            vx: 0.0,
+            vy: 0.0,
+            life: 10.0,
+            max_life: 10.0,
+            ch: '*',
+            color: Color::WHITE,
+            active: true,
+        });
+        pool.update(1.0);
+        let p = pool.particles.iter().find(|p| p.active).unwrap();
+        assert!(
+            (p.y - 5.0).abs() < 0.01,
+            "particle with zero vy should stay at spawn Y, got y={}",
+            p.y
+        );
     }
 }

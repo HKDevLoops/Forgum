@@ -1,0 +1,14 @@
+##
+## Whale (well-defined)
+##
+$the_cow = <<EOC;
+    $thoughts
+     $thoughts
+      $thoughts
+                 '-.
+       .---._     \\ \\.--'
+     /       `-..__)  ,-'
+    |    0           /
+     \\--.__,   .__.,`
+      `-.___'._\\_.'
+EOC

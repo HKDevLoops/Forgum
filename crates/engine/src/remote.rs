@@ -273,8 +273,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn is_ssh_detects_env() {
-        // Without SSH env vars, should return false
+    fn is_ssh_detects_env_false() {
         std::env::remove_var("SSH_CONNECTION");
         std::env::remove_var("SSH_CLIENT");
         std::env::remove_var("SSH_TTY");
@@ -282,9 +281,19 @@ mod tests {
     }
 
     #[test]
+    fn is_ssh_detects_env_true() {
+        std::env::set_var("SSH_CONNECTION", "1.2.3.4 1234 5.6.7.8 22");
+        assert!(is_ssh_session());
+        std::env::remove_var("SSH_CONNECTION");
+    }
+
+    #[test]
     fn local_user_returns_string() {
         let user = local_user();
         assert!(!user.is_empty());
+        if let Ok(env_user) = std::env::var("USER") {
+            assert_eq!(user, env_user);
+        }
     }
 
     #[test]
@@ -298,6 +307,13 @@ mod tests {
     fn sync_session_id_varies_by_host() {
         let id1 = sync_session_id("alice", "laptop");
         let id2 = sync_session_id("alice", "server");
+        assert_ne!(id1, id2);
+    }
+
+    #[test]
+    fn sync_session_id_varies_by_user() {
+        let id1 = sync_session_id("alice", "host");
+        let id2 = sync_session_id("bob", "host");
         assert_ne!(id1, id2);
     }
 
@@ -382,14 +398,93 @@ mod tests {
             is_leader: false,
         }];
         let table = format_peer_table(&peers);
+        assert!(table.contains("PID"));
+        assert!(table.contains("HOST"));
+        assert!(table.contains("SESSION"));
+        assert!(table.contains("EFFECT"));
+        assert!(table.contains("SPEED"));
+        assert!(table.contains("AGE"));
         assert!(table.contains("1234"));
+        assert!(table.contains("localhost"));
+        assert!(table.contains("main"));
         assert!(table.contains("aurora"));
+        assert!(table.contains("1.5"));
+        assert!(table.contains("120s"));
     }
 
     #[test]
-    fn discover_remote_peers_returns_vec() {
-        let peers = discover_remote_peers(&[]);
-        assert!(peers.is_empty() || !peers.is_empty());
+    fn format_peer_table_leader_marked() {
+        let peers = vec![RemoteDaemon {
+            pid: 100,
+            host: "h".into(),
+            session_id: "s".into(),
+            socket_path: PathBuf::from("/tmp/s"),
+            effect: "aurora".into(),
+            speed: 1.0,
+            age: Duration::from_secs(5),
+            is_leader: true,
+        }];
+        let table = format_peer_table(&peers);
+        assert!(table.contains("*"));
+    }
+
+    #[test]
+    fn control_cmd_to_json_pause() {
+        let json = control_cmd_to_json(&ControlCmd::Pause);
+        let val: serde_json::Value = serde_json::from_str(&json).unwrap();
+        assert_eq!(val["cmd"], "PAUSE");
+    }
+
+    #[test]
+    fn control_cmd_to_json_resume() {
+        let json = control_cmd_to_json(&ControlCmd::Resume);
+        let val: serde_json::Value = serde_json::from_str(&json).unwrap();
+        assert_eq!(val["cmd"], "RESUME");
+    }
+
+    #[test]
+    fn control_cmd_to_json_status() {
+        let json = control_cmd_to_json(&ControlCmd::Status);
+        let val: serde_json::Value = serde_json::from_str(&json).unwrap();
+        assert_eq!(val["cmd"], "STATUS");
+    }
+
+    #[test]
+    fn control_cmd_to_json_peer_join() {
+        let json = control_cmd_to_json(&ControlCmd::PeerJoin {
+            session_id: "s1".into(),
+        });
+        let val: serde_json::Value = serde_json::from_str(&json).unwrap();
+        assert_eq!(val["cmd"], "PEER_JOIN");
+        assert_eq!(val["session_id"], "s1");
+    }
+
+    #[test]
+    fn control_cmd_to_json_peer_leave() {
+        let json = control_cmd_to_json(&ControlCmd::PeerLeave);
+        let val: serde_json::Value = serde_json::from_str(&json).unwrap();
+        assert_eq!(val["cmd"], "PEER_LEAVE");
+    }
+
+    #[test]
+    fn control_cmd_to_json_peer_list() {
+        let json = control_cmd_to_json(&ControlCmd::PeerList);
+        let val: serde_json::Value = serde_json::from_str(&json).unwrap();
+        assert_eq!(val["cmd"], "PEER_LIST");
+    }
+
+    #[test]
+    fn control_cmd_to_json_claim_leader() {
+        let json = control_cmd_to_json(&ControlCmd::ClaimLeader);
+        let val: serde_json::Value = serde_json::from_str(&json).unwrap();
+        assert_eq!(val["cmd"], "CLAIM_LEADER");
+    }
+
+    #[test]
+    fn control_cmd_to_json_unknown() {
+        let json = control_cmd_to_json(&ControlCmd::Unknown("BOGUS".into()));
+        let val: serde_json::Value = serde_json::from_str(&json).unwrap();
+        assert_eq!(val["cmd"], "BOGUS");
     }
 
     #[test]
@@ -408,28 +503,53 @@ mod tests {
     }
 
     #[test]
-    fn control_cmd_to_json_effect() {
+    fn parse_age_str_invalid() {
+        assert_eq!(parse_age_str("5x"), Duration::from_secs(0));
+    }
+
+    #[test]
+    fn control_cmd_to_json_effect_roundtrip() {
         let json = control_cmd_to_json(&ControlCmd::Effect("aurora".into()));
-        assert!(json.contains("EFFECT"));
-        assert!(json.contains("aurora"));
+        let val: serde_json::Value = serde_json::from_str(&json).unwrap();
+        assert_eq!(val["cmd"], "EFFECT");
+        assert_eq!(val["arg"], "aurora");
     }
 
     #[test]
-    fn control_cmd_to_json_speed() {
+    fn control_cmd_to_json_speed_roundtrip() {
         let json = control_cmd_to_json(&ControlCmd::Speed(2.5));
-        assert!(json.contains("SPEED"));
-        assert!(json.contains("2.5"));
+        let val: serde_json::Value = serde_json::from_str(&json).unwrap();
+        assert_eq!(val["cmd"], "SPEED");
+        assert_eq!(val["arg"], "2.5");
     }
 
     #[test]
-    fn control_cmd_to_json_stop() {
+    fn control_cmd_to_json_stop_roundtrip() {
         let json = control_cmd_to_json(&ControlCmd::Stop);
-        assert!(json.contains("STOP"));
+        let val: serde_json::Value = serde_json::from_str(&json).unwrap();
+        assert_eq!(val["cmd"], "STOP");
     }
 
     #[test]
-    fn control_cmd_to_json_ping() {
+    fn control_cmd_to_json_ping_roundtrip() {
         let json = control_cmd_to_json(&ControlCmd::Ping);
-        assert!(json.contains("PING"));
+        let val: serde_json::Value = serde_json::from_str(&json).unwrap();
+        assert_eq!(val["cmd"], "PING");
+    }
+
+    #[test]
+    fn control_cmd_to_json_cow_roundtrip() {
+        let json = control_cmd_to_json(&ControlCmd::Cow("tux".into()));
+        let val: serde_json::Value = serde_json::from_str(&json).unwrap();
+        assert_eq!(val["cmd"], "COW");
+        assert_eq!(val["arg"], "tux");
+    }
+
+    #[test]
+    fn control_cmd_to_json_text_roundtrip() {
+        let json = control_cmd_to_json(&ControlCmd::Text("hello".into()));
+        let val: serde_json::Value = serde_json::from_str(&json).unwrap();
+        assert_eq!(val["cmd"], "TEXT");
+        assert_eq!(val["arg"], "hello");
     }
 }
