@@ -56,8 +56,8 @@ pub use guards::{AltScreenGuard, CursorShowGuard, RawModeGuard};
 pub use mux::{detect_mux, Mux};
 pub use output::{open_output, OutputHandle, OutputTarget};
 pub use paths::{
-    config_path, control_socket_path, daemon_state_path, data_dir, detect_session_id, log_dir,
-    runtime_dir, ConfigPaths, ShellKind,
+    config_path, control_socket_path, daemon_state_path, data_dir, detect_session_id, is_canonical,
+    log_dir, runtime_dir, ConfigPaths, ShellKind,
 };
 pub use signal::{ShutdownFlag, SignalGuard};
 pub use spawn::{daemonize, process_is_alive, spawn_detached, DetachedChild};

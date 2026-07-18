@@ -73,9 +73,7 @@ fn shell_display_and_config_path() {
     assert_eq!(Shell::Zsh.to_string(), "zsh");
     assert_eq!(Shell::Fish.to_string(), "fish");
     assert_eq!(Shell::Pwsh.to_string(), "pwsh");
-    assert!(Shell::Pwsh
-        .default_config_path()
-        .contains("APPDATA"));
+    assert!(Shell::Pwsh.default_config_path().contains("APPDATA"));
 }
 
 #[test]
