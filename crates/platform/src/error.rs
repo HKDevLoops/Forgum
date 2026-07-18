@@ -109,10 +109,7 @@ mod tests {
     #[test]
     fn exit_code_usage_class_is_64() {
         assert_eq!(PlatformError::Unsupported("x").exit_code(), 64);
-        assert_eq!(
-            PlatformError::InvalidArgument("x".into()).exit_code(),
-            64
-        );
+        assert_eq!(PlatformError::InvalidArgument("x".into()).exit_code(), 64);
     }
 
     #[test]

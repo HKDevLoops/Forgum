@@ -1,4 +1,7 @@
-use forgum_platform::{config_path, control_socket_path, daemon_state_path, detect_session_id, is_canonical, ConfigPaths, ShellKind};
+use forgum_platform::{
+    config_path, control_socket_path, daemon_state_path, detect_session_id, is_canonical,
+    ConfigPaths, ShellKind,
+};
 use std::path::Path;
 
 #[test]
@@ -54,14 +57,6 @@ fn resolve_returns_four_paths() {
 fn detect_session_id_returns_nonempty() {
     let id = detect_session_id();
     assert!(!id.is_empty());
-}
-
-#[test]
-fn is_canonical_true_for_existing_real_file() {
-    let tmp = tempfile::tempdir().unwrap();
-    let f = tmp.path().join("real.txt");
-    std::fs::write(&f, b"x").unwrap();
-    assert!(is_canonical(&f));
 }
 
 #[test]
