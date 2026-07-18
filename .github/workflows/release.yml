@@ -55,6 +55,13 @@ jobs:
             os: windows-latest
           - target: aarch64-pc-windows-msvc
             os: windows-latest
+          # i686 (x86-32) is a BEST-EFFORT / COMMUNITY / UNTESTED artifact (T6 / G5).
+          # There is no free i686 runner to runtime-test it, so it is build-only and must
+          # NEVER block the x86-64/arm64 release. The build step uses continue-on-error and
+          # packaging is skipped, so a compile failure here cannot fail the release job.
+          - target: i686-pc-windows-msvc
+            os: windows-latest
+            build_only: true
           - target: x86_64-unknown-freebsd
             os: ubuntu-latest
             cross: true
@@ -80,6 +87,10 @@ jobs:
 
       - name: Build (native)
         if: ${{ !matrix.cross }}
+        # i686 is best-effort/community (T6 / G5): do NOT fail the release if it cannot
+        # compile against windows-sys / crossterm on x86-32. Only the build step is
+        # continue-on-error; packaging + upload below still skip build_only targets.
+        continue-on-error: ${{ matrix.build_only || false }}
         run: cargo build --release --locked --target ${{ matrix.target }} -p forgum-engine
 
       - name: Package (unix)
@@ -90,8 +101,11 @@ jobs:
           sha256sum ../../forgum-engine-${{ matrix.target }}.tar.gz > ../../forgum-engine-${{ matrix.target }}.sha256
           cd ../../..
 
+      # Windows packaging is restricted to the rigorously-tested x86-64 / arm64 targets.
+      # i686 (build_only) is skipped entirely — it is not runtime-tested and does not
+      # produce a supported archive.
       - name: Package (windows)
-        if: ${{ runner.os == 'Windows' }}
+        if: ${{ runner.os == 'Windows' && !matrix.build_only }}
         shell: bash
         run: |
           cd target/${{ matrix.target }}/release
@@ -101,7 +115,7 @@ jobs:
 
       # Windows zip artifacts consumed by the winget + scoop manifests.
       - name: Package (windows zip)
-        if: ${{ runner.os == 'Windows' }}
+        if: ${{ runner.os == 'Windows' && !matrix.build_only }}
         shell: bash
         run: |
           VERSION="${{ needs.version-check.outputs.version }}"
@@ -123,6 +137,9 @@ jobs:
           sha256sum "$ROOT_DIR/$ZIP_NAME" > "$ROOT_DIR/$ZIP_NAME.sha256"
 
       - name: Upload artifacts
+        # Skip upload for the build_only i686 lane: it produces no packaged archive and
+        # is not a supported release artifact.
+        if: ${{ !matrix.build_only }}
         uses: actions/upload-artifact@v4
         with:
           name: release-${{ matrix.target }}
