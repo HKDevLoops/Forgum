@@ -81,7 +81,7 @@ fn ansi_renderer_writes_move_and_char() {
     fb.swap();
 
     let mut out = Vec::new();
-    let mut renderer = AnsiRenderer;
+    let mut renderer = AnsiRenderer::default();
     let damage = vec![(3, 2)];
     renderer.render_damage(&mut out, &fb, &damage).unwrap();
     let s = String::from_utf8(out).unwrap();
@@ -93,7 +93,7 @@ fn ansi_renderer_writes_move_and_char() {
 fn ansi_renderer_empty_damage_is_noop() {
     let fb = FrameBuffer::new(10, 5);
     let mut out = Vec::new();
-    let mut renderer = AnsiRenderer;
+    let mut renderer = AnsiRenderer::default();
     renderer.render_damage(&mut out, &fb, &[]).unwrap();
     assert!(out.is_empty());
 }

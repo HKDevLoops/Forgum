@@ -196,8 +196,19 @@ pub fn render_loop_foreground(
         let dmg = fb.compute_damage();
         scheduler.observe(dmg.len());
         if !dmg.is_empty() {
-            let dmg_vec: Vec<_> = dmg.into_iter().collect();
-            rend.render_damage(&mut out, &fb, &dmg_vec)?;
+            // G3/T4: wrap per-frame damage in DEC 2026 synchronized update, but
+            // ONLY when the `synchronized-update` feature is enabled. `cfg!` is a
+            // macro (not a `#[cfg]` attribute) so `crates/engine/src` stays
+            // cfg-free for the CI grep. `SyncGuard` ensures `end_sync` runs on
+            // drop — even on panic/error — so the terminal is never left in
+            // sync mode. When the feature is off (default) the output is
+            // byte-identical to before.
+            if cfg!(feature = "synchronized-update") {
+                let mut guard = SyncGuard::begin(&mut out, rend.as_ref());
+                rend.render_damage(guard.out_mut(), &fb, &dmg)?;
+            } else {
+                rend.render_damage(&mut out, &fb, &dmg)?;
+            }
         }
         fb.swap();
         frame_count = frame_count.saturating_add(1);
@@ -352,8 +363,12 @@ pub fn render_loop_background(
         let dmg = fb.compute_damage();
         scheduler.observe(dmg.len());
         if !dmg.is_empty() {
-            let dmg_vec: Vec<_> = dmg.into_iter().collect();
-            rend.render_damage(&mut out, &fb, &dmg_vec)?;
+            if cfg!(feature = "synchronized-update") {
+                let mut guard = SyncGuard::begin(&mut out, rend.as_ref());
+                rend.render_damage(guard.out_mut(), &fb, &dmg)?;
+            } else {
+                rend.render_damage(&mut out, &fb, &dmg)?;
+            }
         }
         fb.swap();
         frame_count = frame_count.saturating_add(1);
@@ -372,6 +387,37 @@ fn compute_max_frames(duration_secs: u32, fps: u16) -> u64 {
         0 // 0 means "infinite"
     } else {
         (u64::from(duration_secs)).saturating_mul(u64::from(fps.max(1)))
+    }
+}
+
+/// RAII guard that emits `begin_sync()` immediately and `end_sync()` on drop,
+/// so a DEC 2026 synchronized-update block is always closed — even if rendering
+/// panics or returns an error — and the terminal is never left in sync mode.
+///
+/// The guard owns the `out` borrow for its lifetime; [`SyncGuard::out_mut`]
+/// reborrows it for the inner `render_damage` call, which ends before the drop.
+struct SyncGuard<'a, W: Write> {
+    out: &'a mut W,
+    end: &'static str,
+}
+
+impl<'a, W: Write> SyncGuard<'a, W> {
+    fn begin(out: &'a mut W, rend: &dyn crate::renderer::Renderer) -> Self {
+        let _ = out.write_all(rend.begin_sync().as_bytes());
+        Self {
+            out,
+            end: rend.end_sync(),
+        }
+    }
+
+    fn out_mut(&mut self) -> &mut W {
+        self.out
+    }
+}
+
+impl<'a, W: Write> Drop for SyncGuard<'a, W> {
+    fn drop(&mut self) {
+        let _ = self.out.write_all(self.end.as_bytes());
     }
 }
 
