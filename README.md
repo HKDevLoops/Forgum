@@ -37,6 +37,20 @@ cargo clippy --workspace --all-targets -- -D warnings
 cargo fmt --check
 ```
 
+## Platform support / Cross-platform
+
+Forgum is **rigorously tested** (CI build + test) on both **arm64 (aarch64)** and
+**x86-64 (x86_64)** across all supported OSes: Linux, macOS (Apple Silicon + Intel),
+Windows, and FreeBSD (x86-64). Linux arm64 and FreeBSD are validated via `cross`
+cross-compilation; Apple arm64 is validated natively on `macos-14`.
+
+**i686 (x86-32, `i686-pc-windows-msvc`)** is a **build-only, community, best-effort
+artifact**. It is compiled (where possible) as a release lane but is **NOT
+runtime-tested** — there is no free i686 runner to validate it. It carries **NO
+runtime-compatibility guarantee** and, if it fails to compile against the Windows
+IPC/named-pipe APIs or `crossterm`, the lane is allowed to fail without blocking the
+supported x86-64 / arm64 release. Treat i686 builds as experimental.
+
 ## Cross-platform paths
 
 Honored environment variables:

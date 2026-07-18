@@ -27,7 +27,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: [ubuntu-latest, windows-latest, macos-14]
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -42,6 +42,21 @@ jobs:
         run: cargo clippy --workspace --all-targets -- -D warnings
       - name: Format check
         run: cargo fmt --check
+
+  arm64-linux-test:
+    name: Rust (arm64-linux, cross)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-unknown-linux-gnu
+      - name: Install cross
+        run: cargo install cross --locked
+      - name: Build (cross, arm64)
+        run: cross build --workspace --locked --target aarch64-unknown-linux-gnu -p forgum-engine
+      - name: Test (cross, arm64)
+        run: cross test --locked --target aarch64-unknown-linux-gnu -p forgum-engine
 
   cfg-grep:
     name: Platform cfg isolation
