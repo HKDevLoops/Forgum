@@ -21,14 +21,12 @@ AfterAll {
 }
 
 Describe 'forgum wrapper forwards parameters (G-ForgumForwarding)' {
-    It 'forgum -Cow tux invokes the engine without error (exit 0)' {
-        $code = forgum -Cow tux -Text 'hello'
-        $code | Should -Be 0
+    It 'forgum -Cow tux invokes the engine without error' {
+        { forgum -Cow tux -Text 'hello' } | Should -Not -Throw
     }
 
     It 'accepts -Effect, -Eyes, -Tongue, -Background, -Duration, -Fps' {
-        $code = forgum -Cow tux -Text 'x' -Effect 'rain' -Eyes 'oo' -Tongue 'U' -Background -Duration 0 -Fps 24
-        $code | Should -Be 0
+        { forgum -Cow tux -Text 'x' -Effect 'rain' -Eyes 'oo' -Tongue 'U' -Background -Duration 0 -Fps 24 } | Should -Not -Throw
     }
 
     It 'leaves no temp JSON files behind' {

@@ -38,7 +38,6 @@ Describe 'Config round-trip (G-ConfigRoundTrip)' {
         '{"cow":"default","bogus_field":42}' | Set-Content -LiteralPath $stray -Encoding utf8
         $code = Invoke-ForgumEngine -EnginePath (Get-ForgumEnginePath) `
                                      -JsonFile $stray `
-                                     -Command status `
                                      -TimeoutSeconds 5
         $code | Should -Be 65
     }

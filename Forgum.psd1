@@ -14,7 +14,9 @@
         'Initialize-ForgumConfig',
         'Set-ForgumConfig',
         'Get-ForgumConfig',
-        'Stop-ForgumDaemon'
+        'Stop-ForgumDaemon',
+        'Get-ForgumSessionId',
+        'Get-ForgumDaemonStatePath'
     )
     CmdletsToExport   = @()
     AliasesToExport   = @()
