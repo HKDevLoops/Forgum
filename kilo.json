@@ -1,0 +1,26 @@
+{
+  "$schema": "https://app.kilo.ai/config.json",
+  "permission": {
+    "lsp": "allow",
+    "read": "allow",
+    "edit": {
+      "src/**": "allow",
+      "crates/**": "allow",
+      "Tests/**": "allow",
+      "*.lock": "deny",
+      "*": "ask"
+    },
+    "bash": "allow",
+    "task": "allow",
+    "glob": "allow",
+    "grep": "allow",
+    "skill": "allow",
+    "semantic_search": "allow"
+  },
+  "compaction": {
+    "auto": true,
+    "prune": true
+  },
+  "snapshot": true,
+  "instructions": ["AGENTS.md", "CLAUDE.md"]
+}
