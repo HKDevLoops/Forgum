@@ -88,7 +88,7 @@ impl Default for Cell {
 
 /// Double-buffered framebuffer. The front buffer is what we last *drew*;
 /// the back buffer is what we're building for the *next* frame.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct FrameBuffer {
     pub width: usize,
     pub height: usize,
@@ -170,55 +170,419 @@ impl FrameBuffer {
 mod tests {
     use super::*;
 
+    // ── Cell ──────────────────────────────────────────────────────
+
     #[test]
-    fn cell_partial_eq_ignores_dirty() {
-        // The fix for BUG-E1: two cells with the same ch/fg/bg/alpha compare
-        // equal, regardless of any internal bookkeeping.
+    fn cell_partial_eq_compares_content_not_identity() {
         let a = Cell::new('x', Color::WHITE);
         let b = Cell::new('x', Color::WHITE);
-        assert_eq!(a, b);
+        assert_eq!(a, b, "identical cells must be equal");
+        // Different character
         let c = Cell::new('y', Color::WHITE);
-        assert_ne!(a, c);
+        assert_ne!(a, c, "different chars must not be equal");
+        // Different color
+        let d = Cell::new('x', Color::BLACK);
+        assert_ne!(a, d, "different colors must not be equal");
+        // Different alpha
+        let e = Cell {
+            ch: 'x',
+            fg: Color::WHITE,
+            bg: Color::TRANSPARENT,
+            alpha: 128,
+        };
+        assert_ne!(a, e, "different alpha must not be equal");
     }
 
     #[test]
-    fn framebuffer_damage_is_empty_when_buffers_match() {
+    fn cell_empty_is_transparent() {
+        let cell = Cell::empty();
+        assert_eq!(cell.ch, ' ');
+        assert_eq!(cell.fg, Color::WHITE);
+        assert_eq!(cell.bg, Color::TRANSPARENT);
+        assert_eq!(cell.alpha, 0);
+    }
+
+    #[test]
+    fn cell_new_is_opaque() {
+        let cell = Cell::new('X', Color::rgb(10, 20, 30));
+        assert_eq!(cell.ch, 'X');
+        assert_eq!(cell.fg, Color::rgb(10, 20, 30));
+        assert_eq!(cell.bg, Color::TRANSPARENT);
+        assert_eq!(cell.alpha, 255);
+    }
+
+    // ── Color ─────────────────────────────────────────────────────
+
+    #[test]
+    fn color_constants_values() {
+        assert_eq!(
+            Color::BLACK,
+            Color {
+                r: 0,
+                g: 0,
+                b: 0,
+                a: 255
+            }
+        );
+        assert_eq!(
+            Color::WHITE,
+            Color {
+                r: 255,
+                g: 255,
+                b: 255,
+                a: 255
+            }
+        );
+        assert_eq!(
+            Color::TRANSPARENT,
+            Color {
+                r: 0,
+                g: 0,
+                b: 0,
+                a: 0
+            }
+        );
+    }
+
+    #[test]
+    fn color_rgb_sets_alpha_255() {
+        let c = Color::rgb(100, 150, 200);
+        assert_eq!(c.r, 100);
+        assert_eq!(c.g, 150);
+        assert_eq!(c.b, 200);
+        assert_eq!(c.a, 255);
+    }
+
+    #[test]
+    fn color_rgba_preserves_alpha() {
+        let c = Color::rgba(100, 150, 200, 42);
+        assert_eq!(c.a, 42);
+    }
+
+    // ── FrameBuffer construction ──────────────────────────────────
+
+    #[test]
+    fn framebuffer_zero_size() {
+        let fb = FrameBuffer::new(0, 0);
+        assert_eq!(fb.width, 0);
+        assert_eq!(fb.height, 0);
+        assert!(fb.back.is_empty());
+        assert!(fb.front.is_empty());
+    }
+
+    #[test]
+    fn framebuffer_normal_size() {
+        let fb = FrameBuffer::new(80, 24);
+        assert_eq!(fb.width, 80);
+        assert_eq!(fb.height, 24);
+        assert_eq!(fb.back.len(), 80 * 24);
+        assert_eq!(fb.front.len(), 80 * 24);
+        // All cells should be empty
+        for cell in &fb.back {
+            assert_eq!(*cell, Cell::empty());
+        }
+    }
+
+    #[test]
+    fn framebuffer_1x1() {
+        let mut fb = FrameBuffer::new(1, 1);
+        assert!(fb.set(0, 0, Cell::new('x', Color::WHITE)));
+        assert!(!fb.set(1, 0, Cell::new('x', Color::WHITE)));
+        assert!(!fb.set(0, 1, Cell::new('x', Color::WHITE)));
+        assert!(!fb.set(1, 1, Cell::new('x', Color::WHITE)));
+    }
+
+    // ── set/get ───────────────────────────────────────────────────
+
+    #[test]
+    fn set_writes_to_back_buffer() {
         let mut fb = FrameBuffer::new(4, 4);
-        fb.set(1, 1, Cell::new('a', Color::WHITE));
-        fb.swap(); // commit
-        fb.clear(); // back is now empty; front has the 'a'
-        assert!(!fb.compute_damage().is_empty());
-        fb.set(1, 1, Cell::new('a', Color::WHITE)); // restore
-        assert!(fb.compute_damage().is_empty());
+        fb.set(2, 1, Cell::new('A', Color::WHITE));
+        // Before swap: front is empty, back has the cell
+        assert_eq!(fb.get(2, 1).ch, ' ', "front should be empty before swap");
+        // After swap: front gets the cell
+        fb.swap();
+        assert_eq!(
+            fb.get(2, 1).ch,
+            'A',
+            "after swap, front should have the cell"
+        );
     }
 
     #[test]
-    fn framebuffer_damage_correctness() {
+    fn get_reads_from_front_buffer() {
+        let mut fb = FrameBuffer::new(4, 4);
+        fb.set(2, 1, Cell::new('A', Color::WHITE));
+        fb.swap();
+        // After swap, front has the cell
+        assert_eq!(fb.get(2, 1).ch, 'A');
+    }
+
+    #[test]
+    fn out_of_bounds_set_returns_false() {
+        let mut fb = FrameBuffer::new(2, 2);
+        assert!(!fb.set(2, 0, Cell::new('x', Color::WHITE)));
+        assert!(!fb.set(0, 2, Cell::new('x', Color::WHITE)));
+        assert!(!fb.set(99, 99, Cell::new('x', Color::WHITE)));
+        // In bounds
+        assert!(fb.set(0, 0, Cell::new('x', Color::WHITE)));
+        assert!(fb.set(1, 1, Cell::new('x', Color::WHITE)));
+    }
+
+    #[test]
+    fn out_of_bounds_get_returns_empty() {
+        let fb = FrameBuffer::new(2, 2);
+        assert_eq!(fb.get(2, 0), Cell::empty());
+        assert_eq!(fb.get(0, 2), Cell::empty());
+        assert_eq!(fb.get(99, 99), Cell::empty());
+    }
+
+    // ── swap ──────────────────────────────────────────────────────
+
+    #[test]
+    fn swap_exchanges_buffers() {
+        let mut fb = FrameBuffer::new(2, 1);
+        fb.set(0, 0, Cell::new('A', Color::WHITE));
+        fb.swap();
+        assert_eq!(
+            fb.get(0, 0).ch,
+            'A',
+            "after swap, front should have the cell"
+        );
+        assert_eq!(fb.back[0].ch, ' ', "after swap, back should be empty");
+    }
+
+    #[test]
+    fn double_swap_restores() {
+        let mut fb = FrameBuffer::new(2, 1);
+        fb.set(0, 0, Cell::new('A', Color::WHITE));
+        fb.swap();
+        fb.swap();
+        // After two swaps, back should have original content
+        assert_eq!(fb.back[0].ch, 'A');
+    }
+
+    // ── clear ─────────────────────────────────────────────────────
+
+    #[test]
+    fn clear_empties_back_buffer() {
+        let mut fb = FrameBuffer::new(4, 4);
+        fb.set(0, 0, Cell::new('a', Color::WHITE));
+        fb.set(3, 3, Cell::new('b', Color::BLACK));
+        fb.clear();
+        for cell in &fb.back {
+            assert_eq!(*cell, Cell::empty(), "cleared cell must be empty");
+        }
+    }
+
+    #[test]
+    fn clear_does_not_affect_front() {
         let mut fb = FrameBuffer::new(4, 4);
         fb.set(0, 0, Cell::new('a', Color::WHITE));
         fb.swap();
         fb.clear();
-        fb.set(0, 0, Cell::new('b', Color::WHITE));
-        let dmg = fb.compute_damage();
-        assert!(dmg.contains(&(0, 0)));
-        assert_eq!(dmg.len(), 1);
+        // Front still has 'a'
+        assert_eq!(fb.get(0, 0).ch, 'a');
+    }
+
+    // ── resize ────────────────────────────────────────────────────
+
+    #[test]
+    fn resize_resets_both_buffers() {
+        let mut fb = FrameBuffer::new(2, 2);
+        fb.set(0, 0, Cell::new('a', Color::WHITE));
+        fb.set(1, 1, Cell::new('b', Color::WHITE));
+        fb.swap();
+        fb.resize(4, 4);
+        assert_eq!(fb.width, 4);
+        assert_eq!(fb.height, 4);
+        assert_eq!(fb.back.len(), 16);
+        assert_eq!(fb.front.len(), 16);
+        // Both buffers should be empty
+        for cell in &fb.back {
+            assert_eq!(*cell, Cell::empty());
+        }
+        for cell in &fb.front {
+            assert_eq!(*cell, Cell::empty());
+        }
     }
 
     #[test]
-    fn out_of_bounds_set_is_safe() {
-        let mut fb = FrameBuffer::new(2, 2);
-        assert!(!fb.set(99, 99, Cell::new('x', Color::WHITE)));
-        assert!(!fb.set(2, 0, Cell::new('x', Color::WHITE)));
-        assert!(fb.set(0, 0, Cell::new('x', Color::WHITE)));
+    fn resize_to_smaller_invalidates_old_positions() {
+        let mut fb = FrameBuffer::new(4, 4);
+        fb.set(3, 3, Cell::new('x', Color::WHITE));
+        fb.swap();
+        fb.resize(2, 2);
+        // Old position (3,3) is now out of bounds
+        assert_eq!(fb.get(3, 3), Cell::empty());
+        assert!(!fb.set(3, 3, Cell::new('y', Color::WHITE)));
     }
 
     #[test]
-    fn resize_resets_buffers() {
-        let mut fb = FrameBuffer::new(2, 2);
+    fn resize_to_same_size_works() {
+        let mut fb = FrameBuffer::new(4, 4);
         fb.set(0, 0, Cell::new('a', Color::WHITE));
         fb.resize(4, 4);
         assert_eq!(fb.width, 4);
         assert_eq!(fb.height, 4);
+        // After resize, buffers are reset
+        assert_eq!(fb.get(0, 0), Cell::empty());
+    }
+
+    // ── compute_damage ────────────────────────────────────────────
+
+    #[test]
+    fn damage_empty_buffers() {
+        let fb = FrameBuffer::new(3, 3);
         assert!(fb.compute_damage().is_empty());
+    }
+
+    #[test]
+    fn damage_after_set_and_swap() {
+        let mut fb = FrameBuffer::new(4, 4);
+        fb.set(1, 1, Cell::new('a', Color::WHITE));
+        fb.swap();
+        fb.clear();
+        // Now back is empty, front has 'a' — damage at (1,1)
+        let dmg = fb.compute_damage();
+        assert!(dmg.contains(&(1, 1)));
+        assert_eq!(dmg.len(), 1);
+    }
+
+    #[test]
+    fn damage_same_content_no_damage() {
+        let mut fb = FrameBuffer::new(4, 4);
+        fb.set(1, 1, Cell::new('a', Color::WHITE));
+        fb.swap();
+        fb.clear();
+        fb.set(1, 1, Cell::new('a', Color::WHITE));
+        let dmg = fb.compute_damage();
+        assert!(
+            dmg.is_empty(),
+            "same content should produce no damage, got {dmg:?}"
+        );
+    }
+
+    #[test]
+    fn damage_different_color_detected() {
+        let mut fb = FrameBuffer::new(4, 4);
+        fb.set(0, 0, Cell::new('a', Color::WHITE));
+        fb.swap();
+        fb.clear();
+        fb.set(0, 0, Cell::new('a', Color::BLACK));
+        let dmg = fb.compute_damage();
+        assert!(dmg.contains(&(0, 0)));
+    }
+
+    #[test]
+    fn damage_all_cells_changed() {
+        let mut fb = FrameBuffer::new(2, 2);
+        fb.set(0, 0, Cell::new('a', Color::WHITE));
+        fb.set(1, 0, Cell::new('b', Color::WHITE));
+        fb.set(0, 1, Cell::new('c', Color::WHITE));
+        fb.set(1, 1, Cell::new('d', Color::WHITE));
+        fb.swap();
+        fb.clear();
+        fb.set(0, 0, Cell::new('w', Color::BLACK));
+        fb.set(1, 0, Cell::new('x', Color::BLACK));
+        fb.set(0, 1, Cell::new('y', Color::BLACK));
+        fb.set(1, 1, Cell::new('z', Color::BLACK));
+        let dmg = fb.compute_damage();
+        assert_eq!(dmg.len(), 4, "all 4 cells should be damaged");
+        assert!(dmg.contains(&(0, 0)));
+        assert!(dmg.contains(&(1, 0)));
+        assert!(dmg.contains(&(0, 1)));
+        assert!(dmg.contains(&(1, 1)));
+    }
+
+    #[test]
+    fn damage_partial_change() {
+        let mut fb = FrameBuffer::new(3, 3);
+        // Fill all 9 cells in back, then swap so front = all 'a'
+        for y in 0..3 {
+            for x in 0..3 {
+                fb.set(x, y, Cell::new('a', Color::WHITE));
+            }
+        }
+        fb.swap();
+        // Now back is empty (old front), front has all 'a'
+        // Re-fill back with all 'a' (matching front), then change only (1,1)
+        for y in 0..3 {
+            for x in 0..3 {
+                fb.set(x, y, Cell::new('a', Color::WHITE));
+            }
+        }
+        fb.set(1, 1, Cell::new('b', Color::WHITE));
+        let dmg = fb.compute_damage();
+        assert_eq!(dmg.len(), 1, "only one cell changed, got {}", dmg.len());
+        assert!(dmg.contains(&(1, 1)));
+    }
+
+    // ── BUG-E1 invariant: identical cells → 0 damage ──────────────
+
+    #[test]
+    fn bug_e1_regression_identical_cells_zero_damage() {
+        let mut fb = FrameBuffer::new(80, 24);
+        // Fill back with a pattern
+        for y in 0..24 {
+            for x in 0..80 {
+                let ch = ((x + y) % 26) as u8 + b'a';
+                fb.set(x, y, Cell::new(ch as char, Color::WHITE));
+            }
+        }
+        fb.swap();
+        fb.clear();
+        // Re-fill with the exact same pattern
+        for y in 0..24 {
+            for x in 0..80 {
+                let ch = ((x + y) % 26) as u8 + b'a';
+                fb.set(x, y, Cell::new(ch as char, Color::WHITE));
+            }
+        }
+        let dmg = fb.compute_damage();
+        assert!(
+            dmg.is_empty(),
+            "BUG-E1 regression: identical content should produce 0 damage, got {}",
+            dmg.len()
+        );
+    }
+
+    #[test]
+    fn bug_e1_regression_single_cell_change() {
+        let mut fb = FrameBuffer::new(80, 24);
+        for y in 0..24 {
+            for x in 0..80 {
+                fb.set(x, y, Cell::new('x', Color::WHITE));
+            }
+        }
+        fb.swap();
+        fb.clear();
+        for y in 0..24 {
+            for x in 0..80 {
+                fb.set(x, y, Cell::new('x', Color::WHITE));
+            }
+        }
+        // Change one cell
+        fb.set(40, 12, Cell::new('y', Color::WHITE));
+        let dmg = fb.compute_damage();
+        assert_eq!(dmg.len(), 1, "only one cell changed");
+        assert!(dmg.contains(&(40, 12)));
+    }
+
+    // ── Clone ─────────────────────────────────────────────────────
+
+    #[test]
+    fn framebuffer_clone_independent() {
+        let mut fb = FrameBuffer::new(4, 4);
+        fb.set(0, 0, Cell::new('A', Color::WHITE));
+        fb.swap();
+        let mut clone = fb.clone();
+        clone.set(0, 0, Cell::new('B', Color::BLACK));
+        // Original unchanged — front still has 'A'
+        assert_eq!(fb.get(0, 0).ch, 'A');
+        // Clone's front also has 'A' (set writes to back, get reads front)
+        assert_eq!(clone.get(0, 0).ch, 'A');
+        // But clone's back has 'B'
+        assert_eq!(clone.back[0].ch, 'B');
     }
 }

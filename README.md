@@ -20,28 +20,7 @@ shells out to the engine.
 
 ## Status
 
-This is **Phase 0** of the stabilization plan. It implements the contract
-described in [`docs/superpowers/specs/2026-06-28-phase0-stop-the-bleeding-design.md`](docs/superpowers/specs/2026-06-28-phase0-stop-the-bleeding-design.md).
-
-Fixed bug IDs from `brain/01-BUGS-AND-ISSUES.md`:
-
-- **BUG-T1** — signal handlers (`signal-hook` on Unix, `SetConsoleCtrlHandler` on Windows)
-- **BUG-T2** — RAII guards (`RawModeGuard`, `AltScreenGuard`, `CursorShowGuard`)
-- **BUG-B1** — background loop never reads input
-- **BUG-B2** — `duration=0` is infinite
-- **BUG-E1** — `Cell::dirty` no longer participates in `PartialEq`
-- **BUG-D4** — stdin bounded to 4 MB
-- **BUG-D5** — malformed JSON exits non-zero
-- **BUG-D7** — `saturating_mul` math, no `u32` overflow
-- **BUG-B9** / **BUG-C1** — `open_output()` falls back to `/dev/tty` (Unix) / `CONOUT$` (Windows)
-
-Plus:
-
-- **BUG-T3** — `Invoke-ForgumEngine` does SIGTERM-first kill + force-restore escape
-- **BUG-P30** — `Get-ForgumEngineBinary` resolves without auto-rebuild
-- **BUG-C3** — `$env:FORGUM_CONFIG` honored
-- Architecture invariant — zero `#[cfg(unix/windows)]` in `engine/src/`
-  (CI-grep enforced)
+**v0.4.0** — all stabilization phases (Phase 0–9) are complete. Cross-platform cowsay/fortune/lolcat with a Rust ANSI animation engine, daemonized overlay rendering above the prompt, tmux/zellij/wezterm/screen integration, a herd fleet manager, remote (rmux) sync across SSH, and packaged builds (deb/rpm/homebrew/winget/scoop). See `docs/superpowers/` for the full planning kit.
 
 ## Build
 

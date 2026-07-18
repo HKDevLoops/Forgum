@@ -28,6 +28,8 @@ pub enum SchedulerTier {
 
 #[derive(Debug)]
 pub struct Scheduler {
+    /// Base fps the scheduler was constructed with — the anchor for `set_speed`.
+    base_fps: u16,
     target_fps: u16,
     tier: SchedulerTier,
     consecutive_idle_frames: u32,
@@ -40,6 +42,7 @@ impl Scheduler {
     pub fn new(target_fps: u16) -> Self {
         let fps = if target_fps == 0 { 30 } else { target_fps };
         Self {
+            base_fps: fps,
             target_fps: fps,
             tier: SchedulerTier::Active,
             consecutive_idle_frames: 0,
@@ -56,6 +59,26 @@ impl Scheduler {
     #[must_use]
     pub fn target_fps(&self) -> u16 {
         self.target_fps
+    }
+
+    /// Multiply the target frame rate by `mult` so subsequent frames animate
+    /// faster (`mult > 1.0`) or slower (`mult < 1.0`). The base is the fps the
+    /// scheduler was constructed with, so repeated calls scale from the original
+    /// rate rather than compounding on the current one.
+    ///
+    /// A `mult` of `0.0` or less keeps the previous speed (a dead cow can't
+    /// speed up). The result is clamped to `[1, 240]` fps to stay sane.
+    pub fn set_speed(&mut self, mult: f32) {
+        if mult <= 0.0 {
+            return;
+        }
+        let base = if self.base_fps == 0 {
+            30
+        } else {
+            self.base_fps
+        };
+        let next = (f32::from(base) * mult).round() as i32;
+        self.target_fps = next.clamp(1, 240) as u16;
     }
 
     /// Time since last tick, clamped to 0.1 s (so a stalled frame doesn't

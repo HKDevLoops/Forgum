@@ -1,11 +1,10 @@
-$the_cow = <<EOC;
-        $eyes
-   ─────$thoughts─────
-  / $tongue            \\
-  |                     |
-  \\____   U    ____/
-       \\_______/
-           (   )
-           (   )
-           U U
-EOC;
+##
+## Default Cow - Well-defined, detailed ASCII art
+##
+$the_cow = <<"EOC";
+         $thoughts   ^__^
+          $thoughts  ($eyes)\\_______
+             (__)\\       )\\/\\
+              || ||----w |
+              || ||     ||
+EOC

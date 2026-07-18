@@ -90,29 +90,23 @@ mod tests {
     use super::*;
 
     #[test]
-    fn metrics_initializes() {
+    fn metrics_all_ranges_valid() {
         let m = SystemMetrics::new();
-        assert!(m.cpu_usage() >= 0.0);
-        assert!(m.cpu_usage() <= 1.0);
+        assert!((0.0..=1.0).contains(&m.cpu_usage()));
+        assert!((0.0..=1.0).contains(&m.memory_usage()));
+        assert!((0.0..=1.0).contains(&m.ember_intensity()));
+        assert!((0.0..=1.0).contains(&m.wave_amplitude()));
+        assert!((1.0..=5.0).contains(&m.network_speed_multiplier()));
+        let _ = m.network_bytes_per_sec();
+        let _ = m.temperatures();
     }
 
     #[test]
-    fn refresh_does_not_panic() {
+    fn refresh_multiple_times_without_error() {
         let mut m = SystemMetrics::new();
-        m.refresh();
-        assert!(m.memory_usage() >= 0.0);
-    }
-
-    #[test]
-    fn ember_intensity_range() {
-        let m = SystemMetrics::new();
-        let i = m.ember_intensity();
-        assert!((0.0..=1.0).contains(&i));
-    }
-
-    #[test]
-    fn network_speed_multiplier_minimum() {
-        let m = SystemMetrics::new();
-        assert!(m.network_speed_multiplier() >= 1.0);
+        for _ in 0..5 {
+            m.refresh();
+            assert!((0.0..=1.0).contains(&m.cpu_usage()));
+        }
     }
 }

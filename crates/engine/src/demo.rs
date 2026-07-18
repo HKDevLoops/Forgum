@@ -62,11 +62,20 @@ mod tests {
 
     #[test]
     fn run_demo_returns_string() {
-        let _ = run_demo();
+        let result = run_demo();
+        assert!(result.is_ok());
+        let output = result.unwrap();
+        assert!(output.contains("Forgum, online."));
+        assert!(output.contains("tmux integration"));
+        assert!(output.contains("aurora"));
+        assert!(output.contains("daemon(s)"));
     }
 
     #[test]
     fn run_theme_rotate_empty_themes() {
         let _dir = tempfile::tempdir().unwrap();
+        let result = run_theme_rotate(5);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("No themes"));
     }
 }

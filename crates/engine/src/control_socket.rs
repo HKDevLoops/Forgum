@@ -254,9 +254,28 @@ mod tests {
     }
 
     #[test]
+    fn parse_pause() {
+        assert!(matches!(parse_cmd(r#"{"cmd":"PAUSE"}"#), ControlCmd::Pause));
+    }
+
+    #[test]
+    fn parse_resume() {
+        assert!(matches!(
+            parse_cmd(r#"{"cmd":"RESUME"}"#),
+            ControlCmd::Resume
+        ));
+    }
+
+    #[test]
     fn parse_effect_with_arg() {
         let cmd = parse_cmd(r#"{"cmd":"EFFECT","arg":"aurora"}"#);
         assert!(matches!(cmd, ControlCmd::Effect(ref s) if s == "aurora"));
+    }
+
+    #[test]
+    fn parse_effect_no_arg() {
+        let cmd = parse_cmd(r#"{"cmd":"EFFECT"}"#);
+        assert!(matches!(cmd, ControlCmd::Effect(ref s) if s.is_empty()));
     }
 
     #[test]
@@ -266,13 +285,87 @@ mod tests {
     }
 
     #[test]
+    fn parse_speed_invalid() {
+        let cmd = parse_cmd(r#"{"cmd":"SPEED","arg":"abc"}"#);
+        assert!(matches!(cmd, ControlCmd::Speed(1.0)));
+    }
+
+    #[test]
+    fn parse_speed_missing() {
+        let cmd = parse_cmd(r#"{"cmd":"SPEED"}"#);
+        assert!(matches!(cmd, ControlCmd::Speed(1.0)));
+    }
+
+    #[test]
+    fn parse_cow_with_arg() {
+        let cmd = parse_cmd(r#"{"cmd":"COW","arg":"tux"}"#);
+        assert!(matches!(cmd, ControlCmd::Cow(ref s) if s == "tux"));
+    }
+
+    #[test]
+    fn parse_text_with_arg() {
+        let cmd = parse_cmd(r#"{"cmd":"TEXT","arg":"hello"}"#);
+        assert!(matches!(cmd, ControlCmd::Text(ref s) if s == "hello"));
+    }
+
+    #[test]
+    fn parse_status() {
+        assert!(matches!(
+            parse_cmd(r#"{"cmd":"STATUS"}"#),
+            ControlCmd::Status
+        ));
+    }
+
+    #[test]
     fn parse_ping() {
         assert!(matches!(parse_cmd(r#"{"cmd":"PING"}"#), ControlCmd::Ping));
     }
 
     #[test]
+    fn parse_peer_join() {
+        let cmd = parse_cmd(r#"{"cmd":"PEER-JOIN","arg":"abc"}"#);
+        assert!(matches!(cmd, ControlCmd::PeerJoin { ref session_id } if session_id == "abc"));
+    }
+
+    #[test]
+    fn parse_peer_leave() {
+        assert!(matches!(
+            parse_cmd(r#"{"cmd":"PEER-LEAVE"}"#),
+            ControlCmd::PeerLeave
+        ));
+    }
+
+    #[test]
+    fn parse_peer_list() {
+        assert!(matches!(
+            parse_cmd(r#"{"cmd":"PEER-LIST"}"#),
+            ControlCmd::PeerList
+        ));
+    }
+
+    #[test]
+    fn parse_claim_leader() {
+        assert!(matches!(
+            parse_cmd(r#"{"cmd":"CLAIM-LEADER"}"#),
+            ControlCmd::ClaimLeader
+        ));
+    }
+
+    #[test]
     fn parse_empty_is_unknown() {
         assert!(matches!(parse_cmd(""), ControlCmd::Unknown(_)));
+    }
+
+    #[test]
+    fn parse_invalid_json() {
+        let cmd = parse_cmd("not json");
+        assert!(matches!(cmd, ControlCmd::Unknown(ref s) if s == "not json"));
+    }
+
+    #[test]
+    fn parse_unknown_command() {
+        let cmd = parse_cmd(r#"{"cmd":"FOOBAR"}"#);
+        assert!(matches!(cmd, ControlCmd::Unknown(ref s) if s == "FOOBAR"));
     }
 
     #[test]
@@ -286,6 +379,32 @@ mod tests {
         };
         let s = encode_response(&resp);
         assert!(s.contains(r#""ok":true"#));
+    }
+
+    #[test]
+    fn encode_error_response() {
+        let resp = ControlResponse {
+            ok: false,
+            error: Some("something broke".into()),
+            status: None,
+            peers: None,
+            claim_leader: None,
+        };
+        let s = encode_response(&resp);
+        assert!(s.contains(r#""ok":false"#));
+        assert!(s.contains("something broke"));
+    }
+
+    #[test]
+    fn encode_response_ends_with_newline() {
+        let resp = ControlResponse {
+            ok: true,
+            error: None,
+            status: None,
+            peers: None,
+            claim_leader: None,
+        };
+        let s = encode_response(&resp);
         assert!(s.ends_with('\n'));
     }
 }

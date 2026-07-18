@@ -252,11 +252,26 @@ mod tests {
     use super::*;
 
     #[test]
-    fn default_dna_is_valid() {
+    fn default_dna_all_fields() {
         let dna = CowDna::default();
         assert_eq!(dna.base, BaseAnim::Breathe);
         assert_eq!(dna.speed, 1.0);
-        assert!(dna.amplitude.breath > 0.0);
+        assert_eq!(dna.particles.rate, 10);
+        assert_eq!(dna.particles.r#type, ParticleType::Fire);
+        assert_eq!(dna.particles.life, [0.5, 1.5]);
+        assert_eq!(dna.particles.speed, [0.3, 0.8]);
+        assert!(dna.particles.palette.is_empty());
+        assert_eq!(dna.amplitude.breath, 0.5);
+        assert_eq!(dna.amplitude.sway, 0.2);
+        assert_eq!(dna.amplitude.float, 0.1);
+        assert_eq!(dna.easing.base, "sine_inout");
+        assert_eq!(dna.easing.particle_alpha, "expo_out");
+        assert_eq!(dna.easing.particle_velocity, "cubic_out");
+        assert_eq!(dna.phase_seed, 0);
+        assert_eq!(dna.glow.radius, 4.0);
+        assert_eq!(dna.glow.color, "#ffffff");
+        assert_eq!(dna.glow.falloff, "gaussian");
+        assert!(dna.palette.is_empty());
     }
 
     #[test]
@@ -265,6 +280,14 @@ mod tests {
         let dna: CowDna = serde_json::from_str(json).unwrap();
         assert_eq!(dna.base, BaseAnim::Particles);
         assert_eq!(dna.particles.r#type, ParticleType::Fire);
+        assert_eq!(dna.speed, 1.0);
+        assert_eq!(dna.amplitude.breath, 0.5);
+        assert_eq!(dna.amplitude.sway, 0.2);
+        assert_eq!(dna.amplitude.float, 0.1);
+        assert_eq!(dna.easing.base, "sine_inout");
+        assert_eq!(dna.phase_seed, 0);
+        assert_eq!(dna.glow.color, "#ffffff");
+        assert_eq!(dna.glow.radius, 4.0);
     }
 
     #[test]
@@ -280,8 +303,18 @@ mod tests {
             "glow": { "color": "#ff6600", "radius": 6.0 }
         }"##;
         let dna: CowDna = serde_json::from_str(json).unwrap();
+        assert_eq!(dna.base, BaseAnim::Breathe);
         assert_eq!(dna.particles.rate, 18);
+        assert_eq!(dna.particles.r#type, ParticleType::Fire);
+        assert_eq!(dna.particles.life, [0.6, 1.4]);
+        assert_eq!(dna.speed, 1.0);
+        assert_eq!(dna.amplitude.breath, 0.6);
+        assert_eq!(dna.amplitude.sway, 0.2);
+        assert_eq!(dna.amplitude.float, 0.1);
+        assert_eq!(dna.palette, vec!["#ff8800", "#ff2200"]);
+        assert_eq!(dna.easing.base, "sine_inout");
         assert_eq!(dna.phase_seed, 4242);
+        assert_eq!(dna.glow.color, "#ff6600");
         assert_eq!(dna.glow.radius, 6.0);
     }
 
@@ -299,6 +332,23 @@ mod tests {
         let p3 = instance_phase(42, 2);
         assert_ne!(p1, p2);
         assert_ne!(p2, p3);
+        assert_ne!(p1, p3);
+    }
+
+    #[test]
+    fn instance_phase_formula_correct() {
+        // (42 ^ 1) = 43, 43 * 0.618033988749895 ≈ 26.575461...
+        let p = instance_phase(42, 1);
+        // (42 ^ 1) = 43, 43 * 0.618 ≈ 26.574
+        let expected = 43.0_f32 * 0.618_034;
+        assert!((p - expected).abs() < 0.001);
+    }
+
+    #[test]
+    fn instance_phase_zero_seed_zero_id() {
+        // (0 ^ 0) = 0, 0 * golden = 0.0
+        let p = instance_phase(0, 0);
+        assert_eq!(p, 0.0);
     }
 
     #[test]
@@ -315,10 +365,17 @@ mod tests {
     }
 
     #[test]
-    fn get_dna_falls_back_to_default() {
-        let map = HashMap::new();
-        let dna = get_dna(&map, "nonexistent.cow");
-        assert_eq!(dna, CowDna::default());
+    fn get_dna_exact_match() {
+        let mut map = HashMap::new();
+        map.insert(
+            "dragon".to_string(),
+            CowDna {
+                speed: 2.0,
+                ..CowDna::default()
+            },
+        );
+        let dna = get_dna(&map, "dragon");
+        assert_eq!(dna.speed, 2.0);
     }
 
     #[test]
@@ -333,5 +390,27 @@ mod tests {
         );
         let dna = get_dna(&map, "dragon.cow");
         assert_eq!(dna.speed, 2.0);
+    }
+
+    #[test]
+    fn get_dna_double_extension() {
+        let mut map = HashMap::new();
+        map.insert(
+            "dragon".to_string(),
+            CowDna {
+                speed: 2.0,
+                ..CowDna::default()
+            },
+        );
+        // "dragon.cow.cow" → strip_suffix strips ".cow" → "dragon.cow" → not in map → default
+        let dna = get_dna(&map, "dragon.cow.cow");
+        assert_eq!(dna, CowDna::default());
+    }
+
+    #[test]
+    fn get_dna_falls_back_to_default() {
+        let map = HashMap::new();
+        let dna = get_dna(&map, "nonexistent.cow");
+        assert_eq!(dna, CowDna::default());
     }
 }

@@ -10,7 +10,7 @@ pub struct HerdFilter {
     pub all: bool,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct HerdEntry {
     pub session_id: String,
     pub pid: u32,
@@ -283,7 +283,10 @@ mod tests {
     #[test]
     fn census_returns_vec() {
         let entries = herd_census();
-        assert!(entries.is_empty() || !entries.is_empty());
+        for entry in &entries {
+            assert!(!entry.session_id.is_empty());
+            assert!(entry.pid > 0);
+        }
     }
 
     #[test]
@@ -314,17 +317,41 @@ mod tests {
         ];
         let table = format_table(&entries);
         assert!(table.contains("PID"));
+        assert!(table.contains("SESSION"));
+        assert!(table.contains("EFFECT"));
+        assert!(table.contains("FPS"));
+        assert!(table.contains("SPEED"));
+        assert!(table.contains("STATUS"));
+        assert!(table.contains("AGE"));
         assert!(table.contains("1234"));
         assert!(table.contains("aurora"));
         assert!(table.contains("running"));
         assert!(table.contains("5678"));
         assert!(table.contains("paused"));
+        assert!(table.contains("---"));
     }
 
     #[test]
     fn format_table_empty() {
         let table = format_table(&[]);
         assert_eq!(table, "No daemons found.\n");
+    }
+
+    #[test]
+    fn format_table_dead_entry() {
+        let entries = vec![HerdEntry {
+            session_id: "dead1".into(),
+            pid: 9999,
+            alive: false,
+            effect: "aurora".into(),
+            fps: 0,
+            speed: 0.0,
+            paused: false,
+            age: "5s".into(),
+            socket_path: "/tmp/ctrl.sock".into(),
+        }];
+        let table = format_table(&entries);
+        assert!(table.contains("dead"));
     }
 
     #[test]

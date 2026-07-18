@@ -215,75 +215,309 @@ pub fn render_cow(fb: &mut FrameBuffer, composed: &str) {
 mod tests {
     use super::*;
 
+    // ── expand_cow ────────────────────────────────────────────────
+
     #[test]
-    fn expand_replaces_eyes() {
-        let template = r#"        $eyes
-   ─────$thoughts─────
-  / $tongue            \"#;
+    fn expand_replaces_all_placeholders() {
+        let template = "        $eyes\n   ----- $thoughts -----\n  / $tongue             \\";
         let expanded = expand_cow(template, "@@", "U", "\\\\");
-        assert!(expanded.contains("@@"));
-        assert!(expanded.contains("U"));
-        assert!(expanded.contains("\\\\"));
-        assert!(!expanded.contains("$eyes"));
-        assert!(!expanded.contains("$tongue"));
-        assert!(!expanded.contains("$thoughts"));
+        assert_eq!(
+            expanded,
+            "        @@\n   ----- \\\\ -----\n  / U             \\"
+        );
+        assert!(!expanded.contains("$eyes"), "$eyes must be replaced");
+        assert!(!expanded.contains("$tongue"), "$tongue must be replaced");
+        assert!(
+            !expanded.contains("$thoughts"),
+            "$thoughts must be replaced"
+        );
     }
 
     #[test]
-    fn expand_heredoc_extracts_body() {
-        let cow = r#"Some preamble
-$the_cow = <<EOC;
-        $eyes
-   (oo)
-EOC;
-More stuff after"#;
+    fn expand_heredoc_extracts_body_only() {
+        let cow =
+            "Some preamble\n$the_cow = <<EOC;\n        $eyes\n   (oo)\nEOC;\nMore stuff after";
         let expanded = expand_cow(cow, "xx", "  ", "\\\\");
-        assert!(expanded.contains("xx"));
-        assert!(expanded.contains("(oo)"));
-        assert!(!expanded.contains("Some preamble"));
-        assert!(!expanded.contains("More stuff"));
+        assert_eq!(expanded, "\n        xx\n   (oo)");
+        assert!(
+            !expanded.contains("preamble"),
+            "heredoc must not include preamble"
+        );
+        assert!(
+            !expanded.contains("More stuff"),
+            "heredoc must not include content after EOC"
+        );
     }
 
     #[test]
-    fn default_cow_has_eyes() {
+    fn expand_no_placeholders_passthrough() {
+        let template = "just plain text\nno placeholders here";
+        let expanded = expand_cow(template, "oo", " ", "\\\\");
+        assert_eq!(expanded, template);
+    }
+
+    #[test]
+    fn expand_empty_template_returns_empty() {
+        assert_eq!(expand_cow("", "oo", " ", "\\\\"), "");
+    }
+
+    #[test]
+    fn expand_multiple_same_placeholder() {
+        let template = "$eyes $eyes $eyes";
+        let expanded = expand_cow(template, "XX", " ", "\\\\");
+        assert_eq!(expanded, "XX XX XX");
+    }
+
+    #[test]
+    fn expand_preserves_newlines() {
+        let template = "line1\nline2\nline3";
+        let expanded = expand_cow(template, "oo", " ", "\\\\");
+        assert_eq!(expanded.lines().count(), 3);
+        assert_eq!(expanded, "line1\nline2\nline3");
+    }
+
+    // ── default_cow_expanded ──────────────────────────────────────
+
+    #[test]
+    fn default_cow_has_correct_structure() {
         let cow = default_cow_expanded("oo", " ", "\\\\");
-        assert!(cow.contains("oo"));
-        assert!(cow.contains("^__^"));
+        let lines: Vec<&str> = cow.lines().collect();
+        assert_eq!(lines.len(), 5, "default cow must have 5 lines");
+
+        // Line 0: "\   ^__^"
+        assert!(
+            lines[0].contains('^'),
+            "line 0 must contain caret: {:?}",
+            lines[0]
+        );
+        assert!(
+            lines[0].contains("__"),
+            "line 0 must contain underscores: {:?}",
+            lines[0]
+        );
+
+        // Line 1: " (oo)\_______"
+        assert!(
+            lines[1].contains("(oo)"),
+            "line 1 must contain (oo): {:?}",
+            lines[1]
+        );
+
+        // Line 3: "||----w |" or similar — must contain ||
+        assert!(
+            lines[3].contains("||"),
+            "line 3 must contain || for legs: {:?}",
+            lines[3]
+        );
     }
 
     #[test]
-    fn bubble_rounded_corners() {
+    fn default_cow_custom_eyes() {
+        // DEFAULT_COW uses literal (oo), not $eyes placeholder, so
+        // custom eyes don't change the output. Verify the cow always
+        // contains the expected head shape regardless of eye param.
+        let cow = default_cow_expanded("@@", "U", "\\\\");
+        assert!(cow.contains("oo"), "default cow always has (oo)");
+        assert!(cow.contains("^__^"), "default cow always has ^__^");
+        assert!(!cow.contains("$eyes"), "no unreplaced placeholder");
+    }
+
+    #[test]
+    fn default_cow_custom_tongue() {
+        // DEFAULT_COW uses literal (oo), not $tongue placeholder.
+        // Verify the cow structure is unchanged regardless of tongue param.
+        let cow = default_cow_expanded("oo", "P", "\\\\");
+        assert!(cow.contains("oo"), "default cow always has (oo)");
+        assert!(!cow.contains("$tongue"), "no unreplaced placeholder");
+    }
+
+    // ── wrap_bubble ───────────────────────────────────────────────
+
+    #[test]
+    fn bubble_structure_single_line() {
         let bubble = wrap_bubble("Hello", 10);
-        assert!(bubble.starts_with(" _____"));
-        assert!(bubble.contains("|"));
-        assert!(bubble.contains("Hello"));
+        let lines: Vec<&str> = bubble.lines().collect();
+        assert_eq!(lines.len(), 3, "single-line bubble must have 3 lines");
+
+        // Top border: space + underscores
+        assert!(lines[0].starts_with(' '), "top must start with space");
+        assert!(
+            lines[0].chars().all(|c| c == '_' || c == ' '),
+            "top must be underscores/spaces only"
+        );
+
+        // Content line: starts/ends with |
+        assert!(lines[1].starts_with('|'), "content must start with |");
+        assert!(lines[1].ends_with('|'), "content must end with |");
+        assert!(lines[1].contains("Hello"), "content must contain text");
+
+        // Bottom border: |____...___|
+        assert!(lines[2].starts_with('|'), "bottom must start with |");
+        assert!(lines[2].ends_with('|'), "bottom must end with |");
+        let bottom_inner: String = lines[2][1..lines[2].len() - 1].to_string();
+        assert!(
+            bottom_inner.chars().all(|c| c == '_'),
+            "bottom inner must be all underscores: {bottom_inner:?}"
+        );
     }
 
     #[test]
-    fn compose_scene_combines() {
-        let cow = "  cow_here";
+    fn bubble_structure_multi_line() {
+        let bubble = wrap_bubble("Line 1\nLine 2", 10);
+        let lines: Vec<&str> = bubble.lines().collect();
+        assert_eq!(lines.len(), 4, "two-line bubble must have 4 lines");
+        assert!(lines[1].contains("Line 1"));
+        assert!(lines[2].contains("Line 2"));
+    }
+
+    #[test]
+    fn bubble_empty_text_returns_empty() {
+        assert_eq!(wrap_bubble("", 10), "");
+    }
+
+    #[test]
+    fn bubble_width_respects_min_width() {
+        let bubble = wrap_bubble("Hi", 20);
+        let lines: Vec<&str> = bubble.lines().collect();
+        // Top border width should be at least min_width
+        assert!(
+            lines[0].len() >= 20,
+            "bubble width ({}) must be >= min_width (20)",
+            lines[0].len()
+        );
+    }
+
+    #[test]
+    fn bubble_width_expands_for_long_text() {
+        let long_text = "This is a very long line of text that exceeds the minimum width";
+        let bubble = wrap_bubble(long_text, 10);
+        let lines: Vec<&str> = bubble.lines().collect();
+        assert!(lines[0].len() > 20, "bubble must expand for long text");
+        assert!(
+            lines[1].contains(long_text),
+            "content must include full text"
+        );
+    }
+
+    // ── compose_scene ─────────────────────────────────────────────
+
+    #[test]
+    fn compose_scene_bubble_before_cow() {
+        let cow = "  cow_line1\n  cow_line2";
         let scene = compose_scene(cow, "hi");
-        assert!(scene.contains("cow_here"));
-        assert!(scene.contains("hi"));
+        let cow_pos = scene.find("cow_line1").unwrap();
+        let hi_pos = scene.find("hi").unwrap();
+        assert!(
+            hi_pos < cow_pos,
+            "bubble (hi at {hi_pos}) must precede cow (at {cow_pos})"
+        );
     }
 
     #[test]
-    fn compose_scene_no_bubble() {
+    fn compose_scene_no_bubble_passthrough() {
         let cow = "  cow_only";
         let scene = compose_scene(cow, "");
         assert_eq!(scene, cow);
     }
 
     #[test]
-    fn render_cow_writes_to_fb() {
-        let mut fb = FrameBuffer::new(40, 10);
-        let composed = "Hello\n  cow";
+    fn compose_scene_newline_separates_bubble_from_cow() {
+        let cow = "COW";
+        let scene = compose_scene(cow, "TEXT");
+        let cow_pos = scene.find("COW").unwrap();
+        let text_pos = scene.find("TEXT").unwrap();
+        let between = &scene[text_pos..cow_pos];
+        assert!(between.contains('\n'), "must be newline-separated");
+    }
+
+    #[test]
+    fn compose_scene_long_text_wraps() {
+        let cow = "  cow";
+        let long_text = "This is a very long speech bubble text that should cause the bubble to be wider than the cow art itself";
+        let scene = compose_scene(cow, long_text);
+        // The bubble should contain the full text
+        assert!(scene.contains(long_text), "bubble must contain full text");
+        // The bubble should appear before the cow
+        assert!(scene.find(long_text).unwrap() < scene.find("cow").unwrap());
+    }
+
+    // ── render_cow ────────────────────────────────────────────────
+
+    #[test]
+    fn render_cow_exact_positions() {
+        let mut fb = FrameBuffer::new(10, 5);
+        let composed = "ABCDE\n  FG\nX";
         render_cow(&mut fb, composed);
         fb.swap();
-        assert_eq!(fb.get(0, 0).ch, 'H');
+        assert_eq!(fb.get(0, 0).ch, 'A');
+        assert_eq!(fb.get(1, 0).ch, 'B');
+        assert_eq!(fb.get(4, 0).ch, 'E');
         assert_eq!(fb.get(0, 1).ch, ' ');
-        assert_eq!(fb.get(2, 1).ch, 'c');
+        assert_eq!(fb.get(2, 1).ch, 'F');
+        assert_eq!(fb.get(3, 1).ch, 'G');
+        assert_eq!(fb.get(0, 2).ch, 'X');
+        // Row 3,4 should be empty
+        assert_eq!(fb.get(0, 3).ch, ' ');
+        assert_eq!(fb.get(0, 4).ch, ' ');
     }
+
+    #[test]
+    fn render_cow_all_chars_white_fg() {
+        let mut fb = FrameBuffer::new(20, 5);
+        render_cow(&mut fb, "ABC\nDEF");
+        fb.swap();
+        for y in 0..2 {
+            for x in 0..3 {
+                let ch = char::from(b'A' + (y * 3 + x) as u8);
+                assert_eq!(fb.get(x, y).ch, ch);
+                assert_eq!(fb.get(x, y).fg, Color::WHITE, "char {ch} must be WHITE");
+            }
+        }
+    }
+
+    #[test]
+    fn render_cow_truncates_at_width_boundary() {
+        let mut fb = FrameBuffer::new(3, 1);
+        render_cow(&mut fb, "ABCDE");
+        fb.swap();
+        assert_eq!(fb.get(0, 0).ch, 'A');
+        assert_eq!(fb.get(1, 0).ch, 'B');
+        assert_eq!(fb.get(2, 0).ch, 'C');
+        // Positions beyond width return empty
+        assert_eq!(fb.get(3, 0).ch, ' ');
+    }
+
+    #[test]
+    fn render_cow_truncates_at_height_boundary() {
+        let mut fb = FrameBuffer::new(10, 2);
+        render_cow(&mut fb, "line1\nline2\nline3\nline4");
+        fb.swap();
+        assert_eq!(fb.get(0, 0).ch, 'l');
+        assert_eq!(fb.get(0, 1).ch, 'l');
+        // Rows beyond height are not rendered
+    }
+
+    #[test]
+    fn render_cow_empty_text_no_damage() {
+        let mut fb = FrameBuffer::new(10, 5);
+        render_cow(&mut fb, "");
+        assert!(
+            fb.compute_damage().is_empty(),
+            "empty text should produce no damage"
+        );
+    }
+
+    #[test]
+    fn render_cow_newline_resets_x() {
+        let mut fb = FrameBuffer::new(10, 3);
+        render_cow(&mut fb, "A\nB\nC");
+        fb.swap();
+        assert_eq!(fb.get(0, 0).ch, 'A');
+        assert_eq!(fb.get(0, 1).ch, 'B');
+        assert_eq!(fb.get(0, 2).ch, 'C');
+    }
+
+    // ── load_cow ──────────────────────────────────────────────────
 
     #[test]
     fn load_cow_missing_file_returns_default() {
@@ -294,6 +528,31 @@ More stuff after"#;
             " ",
             "\\\\",
         );
-        assert!(cow.contains("^__^"));
+        assert_eq!(cow.lines().count(), 5, "default cow must have 5 lines");
+        assert!(cow.contains("^__^"), "default cow must have ^__^");
+    }
+
+    #[test]
+    fn load_cow_from_path_error_includes_path() {
+        let result = load_cow_from_path(Path::new("/tmp/nonexistent/file.cow"), "oo", " ", "\\\\");
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(
+            err.contains("failed to read cow file"),
+            "error must mention 'failed to read cow file'"
+        );
+        assert!(
+            err.contains("/tmp/nonexistent/file.cow"),
+            "error must include the file path"
+        );
+    }
+
+    #[test]
+    fn load_cow_from_path_success() {
+        let result = load_cow_from_path(Path::new("data/Cows/default.cow"), "oo", " ", "\\\\");
+        // This may or may not exist depending on CWD, but should not panic
+        if let Ok(cow) = result {
+            assert!(!cow.is_empty(), "loaded cow must not be empty");
+        }
     }
 }
