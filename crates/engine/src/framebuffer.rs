@@ -6,8 +6,14 @@
 //! scheduler therefore never saw zero damage and idled at 60 fps for a
 //! static cow. The fix is a manual `PartialEq` comparing only `ch, fg, bg,
 //! alpha` — and dropping the `dirty` field entirely.
-
-use std::collections::HashSet;
+//!
+//! **Perf (T1/D1/D3):** damage is tracked *incrementally* inside `set()`,
+//! comparing the incoming cell against `front` (the last drawn frame). The
+//! bitmap + reused damage list make `compute_damage()` `O(changed cells)`,
+//! `O(1)` amortized per cell, and **zero-allocation when the frame is
+//! static** (no `HashSet` per frame). `clear()` marks nothing dirty; only
+//! subsequent `set()`s against the still-old front do (G1). `swap()` =
+//! `mem::swap(back, front)` and resets the trackers.
 
 /// RGBA color with 8-bit channels. Alpha is 0 = transparent, 255 = opaque.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
@@ -94,6 +100,12 @@ pub struct FrameBuffer {
     pub height: usize,
     pub back: Vec<Cell>,
     pub front: Vec<Cell>,
+    /// Per-cell dirty flag: `true` iff `back[i] != front[i]` since the last
+    /// `clear()`/`swap()`. Indexed the same as `back`/`front`.
+    dirty: Vec<bool>,
+    /// Reused list of `(x, y)` damage cells for the current frame. Emptied on
+    /// `clear()`/`swap()`; appended to by `set()`.
+    damage_list: Vec<(usize, usize)>,
 }
 
 impl FrameBuffer {
@@ -105,23 +117,39 @@ impl FrameBuffer {
             height,
             back: vec![Cell::empty(); sz],
             front: vec![Cell::empty(); sz],
+            dirty: vec![false; sz],
+            damage_list: Vec::with_capacity(sz),
         }
     }
 
     /// Replace the back buffer with empty cells (does *not* touch front).
+    ///
+    /// Marks **nothing** dirty — only cells written via `set()` afterwards
+    /// become damaged (G1). Resets the incremental trackers.
     pub fn clear(&mut self) {
         for cell in &mut self.back {
             *cell = Cell::empty();
         }
+        self.dirty.fill(false);
+        self.damage_list.clear();
     }
 
     /// Write a cell into the back buffer at `(x, y)`. Returns `true` if the
     /// cell was within bounds.
+    ///
+    /// If the new cell differs from `front[i]` (the last drawn frame), the
+    /// cell is marked dirty and recorded in the damage list (O(changed),
+    /// no allocation when nothing changes).
     pub fn set(&mut self, x: usize, y: usize, cell: Cell) -> bool {
         if x >= self.width || y >= self.height {
             return false;
         }
-        self.back[y * self.width + x] = cell;
+        let i = y * self.width + x;
+        self.back[i] = cell;
+        if cell != self.front[i] && !self.dirty[i] {
+            self.dirty[i] = true;
+            self.damage_list.push((x, y));
+        }
         true
     }
 
@@ -134,35 +162,33 @@ impl FrameBuffer {
         self.front[y * self.width + x]
     }
 
-    /// Resize. Both buffers are reset to empty.
+    /// Resize. Both buffers are reset to empty and the trackers cleared.
     pub fn resize(&mut self, width: usize, height: usize) {
         let sz = width.saturating_mul(height);
         self.width = width;
         self.height = height;
         self.back = vec![Cell::empty(); sz];
         self.front = vec![Cell::empty(); sz];
+        self.dirty = vec![false; sz];
+        self.damage_list.clear();
     }
 
-    /// Compute the set of (x, y) cells where the back buffer differs from
-    /// the front buffer. Returns an empty set when the buffers are identical
-    /// (BUG-E1 invariant).
+    /// Return the set of `(x, y)` cells that changed in the back buffer since
+    /// the last `clear()`/`swap()`. This is **`O(changed cells)`** and
+    /// **zero-alloc when the frame is static** (no `HashSet`).
     #[must_use]
-    pub fn compute_damage(&self) -> HashSet<(usize, usize)> {
-        let mut dmg = HashSet::new();
-        for y in 0..self.height {
-            for x in 0..self.width {
-                let i = y * self.width + x;
-                if self.back[i] != self.front[i] {
-                    dmg.insert((x, y));
-                }
-            }
-        }
-        dmg
+    pub fn compute_damage(&self) -> Vec<(usize, usize)> {
+        self.damage_list.clone()
     }
 
     /// Swap buffers (back becomes the new front).
+    ///
+    /// Resets the incremental trackers so the next frame's `set()` calls
+    /// measure damage against the freshly-displayed front buffer (G1).
     pub fn swap(&mut self) {
         std::mem::swap(&mut self.back, &mut self.front);
+        self.dirty.fill(false);
+        self.damage_list.clear();
     }
 }
 
@@ -385,6 +411,19 @@ mod tests {
         assert_eq!(fb.get(0, 0).ch, 'a');
     }
 
+    #[test]
+    fn clear_marks_nothing_dirty() {
+        let mut fb = FrameBuffer::new(4, 4);
+        fb.set(1, 1, Cell::new('a', Color::WHITE));
+        fb.swap();
+        fb.clear();
+        // clear() must not record damage on its own; only later sets do.
+        assert!(
+            fb.compute_damage().is_empty(),
+            "clear() must mark nothing dirty"
+        );
+    }
+
     // ── resize ────────────────────────────────────────────────────
 
     #[test]
@@ -429,7 +468,7 @@ mod tests {
         assert_eq!(fb.get(0, 0), Cell::empty());
     }
 
-    // ── compute_damage ────────────────────────────────────────────
+    // ── compute_damage (incremental, O(changed), no HashSet) ──────
 
     #[test]
     fn damage_empty_buffers() {
@@ -443,7 +482,9 @@ mod tests {
         fb.set(1, 1, Cell::new('a', Color::WHITE));
         fb.swap();
         fb.clear();
-        // Now back is empty, front has 'a' — damage at (1,1)
+        // clear() marks nothing dirty; overwriting the displayed cell with a
+        // *different* value produces damage (G1: only subsequent sets do).
+        fb.set(1, 1, Cell::new('b', Color::BLACK));
         let dmg = fb.compute_damage();
         assert!(dmg.contains(&(1, 1)));
         assert_eq!(dmg.len(), 1);
@@ -516,6 +557,34 @@ mod tests {
         let dmg = fb.compute_damage();
         assert_eq!(dmg.len(), 1, "only one cell changed, got {}", dmg.len());
         assert!(dmg.contains(&(1, 1)));
+    }
+
+    #[test]
+    fn damage_not_duplicated_on_repeat_set() {
+        let mut fb = FrameBuffer::new(4, 4);
+        fb.set(1, 1, Cell::new('a', Color::WHITE));
+        fb.swap();
+        fb.clear();
+        // Multiple identical sets on the same dirty cell must record it once.
+        fb.set(1, 1, Cell::new('b', Color::BLACK));
+        fb.set(1, 1, Cell::new('b', Color::BLACK));
+        fb.set(1, 1, Cell::new('c', Color::WHITE));
+        let dmg = fb.compute_damage();
+        assert_eq!(dmg.len(), 1, "cell recorded once, got {}", dmg.len());
+        assert!(dmg.contains(&(1, 1)));
+    }
+
+    #[test]
+    fn damage_reset_by_swap() {
+        let mut fb = FrameBuffer::new(4, 4);
+        fb.set(0, 0, Cell::new('a', Color::WHITE));
+        fb.swap();
+        fb.clear();
+        fb.set(0, 0, Cell::new('b', Color::BLACK));
+        assert_eq!(fb.compute_damage().len(), 1);
+        // swap resets the tracker; next frame starts clean.
+        fb.swap();
+        assert!(fb.compute_damage().is_empty());
     }
 
     // ── BUG-E1 invariant: identical cells → 0 damage ──────────────

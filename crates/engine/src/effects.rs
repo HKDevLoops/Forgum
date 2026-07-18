@@ -1536,19 +1536,19 @@ mod tests {
         let mut fb = FrameBuffer::new(40, 10);
         let effect = BreatheEffect::new(COW.to_string(), &dna, 0);
         effect.render(&mut fb, 999.0);
-        fb.swap();
         assert!(
             !fb.compute_damage().is_empty(),
             "breathe at extreme time should still produce damage (non-space cells)"
         );
+        fb.swap();
 
         let effect = FloatEffect::new(COW.to_string(), &dna, 0);
         effect.render(&mut fb, 999.0);
-        fb.swap();
         assert!(
             !fb.compute_damage().is_empty(),
             "float at extreme time should still produce damage (non-space cells)"
         );
+        fb.swap();
     }
 
     // ── Invariants: render count ───────────────────────────────────

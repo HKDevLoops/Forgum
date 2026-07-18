@@ -22,12 +22,15 @@ fn cell_partial_eq_ignores_dirty() {
 
 #[test]
 fn framebuffer_damage_is_empty_when_buffers_match() {
+    // G1: `clear()` marks nothing dirty; only a `set()` against the still-old
+    // front produces damage. Restoring the exact same cell must yield zero
+    // damage (BUG-E1 invariant — identical cells → 0 damage).
     let mut fb = FrameBuffer::new(4, 4);
     fb.set(1, 1, Cell::new('a', Color::WHITE));
-    fb.swap(); // commit
-    fb.clear(); // back is now empty; front has the 'a'
-    assert!(!fb.compute_damage().is_empty());
-    fb.set(1, 1, Cell::new('a', Color::WHITE)); // restore
+    fb.swap(); // commit: front now has 'a'
+    fb.clear(); // back is empty, marks nothing dirty
+    assert!(fb.compute_damage().is_empty());
+    fb.set(1, 1, Cell::new('a', Color::WHITE)); // restore identical cell
     assert!(fb.compute_damage().is_empty());
 }
 
