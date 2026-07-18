@@ -14,6 +14,13 @@ categories = ["command-line-interface", "games", "graphics"]
 name = "forgum_engine"
 path = "src/lib.rs"
 
+[features]
+# DEC 2026 Synchronized Update (G3/D4). OFF by default: misimplemented sync
+# can corrupt output, so it is only wired in when explicitly enabled. The
+# render loops branch on this at runtime via `cfg!` (a macro, NOT a `#[cfg]`
+# attribute) so `crates/engine/src` stays cfg-free for the CI grep.
+synchronized-update = []
+
 [[bin]]
 name = "forgum-engine"
 path = "src/main.rs"

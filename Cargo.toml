@@ -24,6 +24,7 @@ all = { level = "warn", priority = -1 }
 pedantic = { level = "allow", priority = -1 }   # opt-in per-module
 nursery = { level = "allow", priority = -1 }
 cargo = { level = "warn", priority = -1 }
+perf = { level = "warn", priority = -2 }        # T3: catch per-frame allocs / hot-loop inefficiencies
 correctness = { level = "warn", priority = -1 }
 suspicious = { level = "warn", priority = -1 }
 # crossterm pulls in windows-sys 0.61; we want 0.59. We can't avoid both

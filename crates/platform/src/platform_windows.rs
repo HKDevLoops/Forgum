@@ -5,6 +5,33 @@ pub fn current_pid() -> u32 {
     std::process::id()
 }
 
+/// Portable handle-count metric for leak soak tests (G2/D2).
+#[must_use]
+pub fn handle_count() -> Option<usize> {
+    process_handle_count()
+}
+
+/// Returns the current process's handle count via `GetProcessHandleCount`.
+/// Used by the daemon leak soak test as the authoritative "are handles
+/// leaking?" signal (G2/D2). Returns `None` if the call is unavailable.
+#[allow(unsafe_code)]
+#[must_use]
+pub fn process_handle_count() -> Option<usize> {
+    use windows_sys::Win32::Foundation::{CloseHandle, HANDLE};
+    use windows_sys::Win32::System::Threading::{GetCurrentProcess, GetProcessHandleCount};
+
+    unsafe {
+        let proc: HANDLE = GetCurrentProcess();
+        let mut count: u32 = 0;
+        if GetProcessHandleCount(proc, &mut count) != 0 {
+            Some(count as usize)
+        } else {
+            let _ = CloseHandle(proc);
+            None
+        }
+    }
+}
+
 /// Returns the parent process ID via the `Win32_Process` WMI class — but
 /// WMI requires COM init, which we want to avoid for a fast check. Instead,
 /// we use `Process32First`/`Process32Next` from `tlhelp32.h` (via the

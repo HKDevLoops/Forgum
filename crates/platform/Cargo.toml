@@ -36,3 +36,9 @@ windows-sys = { version = "0.59", features = [
 
 [dev-dependencies]
 tempfile = "3"
+
+[features]
+# Optional Sixel/Kitty terminal-graphics backend (D4/T4). OFF by default so the
+# default build stays lean and never pulls graphics code into the engine. All
+# platform/graphics `#[cfg]` lives here — never in `crates/engine/src`.
+sixel = []
