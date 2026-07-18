@@ -40,6 +40,7 @@ pub mod mux;
 pub mod output;
 pub mod paths;
 pub mod signal;
+pub mod sixel;
 pub mod spawn;
 pub mod terminal;
 
@@ -60,9 +61,30 @@ pub use paths::{
     log_dir, runtime_dir, ConfigPaths, ShellKind,
 };
 pub use signal::{ShutdownFlag, SignalGuard};
+pub use sixel::{
+    create_graphics_renderer, graphics_renderer_available, CellView, FrameBufferLike,
+    GraphicsRenderer,
+};
 pub use spawn::{daemonize, process_is_alive, spawn_detached, DetachedChild};
-pub use terminal::{detect_capabilities, ColorLevel, TerminalCapabilities};
 
+/// Returns the current process's open handle/fd count, or `None` if the OS
+/// doesn't expose a reliable signal. Used by the daemon soak test to assert
+/// fd/handle-count stability over a long run (G2/D2).
+///
+/// On Unix this counts open fds (`/proc/self/fd`); on Windows it uses
+/// `GetProcessHandleCount`.
+#[must_use]
+pub fn handle_count() -> Option<usize> {
+    #[cfg(unix)]
+    {
+        platform_unix::handle_count()
+    }
+    #[cfg(windows)]
+    {
+        platform_windows::handle_count()
+    }
+}
+pub use terminal::{detect_capabilities, ColorLevel, TerminalCapabilities};
 /// Expand to the contained code only when compiling on a Unix-like target.
 ///
 /// This macro emits a `#[cfg(unix)]` attribute that gates a block, so the

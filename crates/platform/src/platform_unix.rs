@@ -4,8 +4,44 @@
 //! `#[cfg(unix)]` is allowed to appear. Everything else uses the
 //! `cfg_unix!` / `cfg_windows!` macros re-exported from the crate root.
 
+/// Portable handle-count metric for leak soak tests (G2/D2).
+///
+/// On Linux this is the open fd count (`/proc/self/fd`); on other Unixes it
+/// degrades to `None` (callers fall back to a weaker signal).
+#[cfg(target_family = "unix")]
+#[must_use]
+pub fn handle_count() -> Option<usize> {
+    proc_self_fd_count()
+}
+
+/// Returns the number of currently open file descriptors for this process,
+/// by counting entries in `/proc/self/fd`. Used by the daemon leak soak test
+/// as the authoritative "are handles leaking?" signal (G2/D2).
+///
+/// Returns `None` when `/proc` is unavailable (non-Linux Unixes, or a sandbox
+/// that hides it). Callers fall back to a weaker metric in that case.
+#[cfg(target_family = "unix")]
+#[must_use]
+pub fn proc_self_fd_count() -> Option<usize> {
+    #[cfg(target_os = "linux")]
+    {
+        let mut count = 0usize;
+        let mut dir = std::fs::read_dir("/proc/self/fd").ok()?;
+        while dir.next().is_some() {
+            count += 1;
+        }
+        Some(count)
+    }
+    #[cfg(not(target_os = "linux"))]
+    {
+        let _ = std::process::id();
+        None
+    }
+}
+
 /// Returns the current process ID.
 #[cfg(target_family = "unix")]
+#[must_use]
 pub fn current_pid() -> u32 {
     std::process::id()
 }
