@@ -3,9 +3,10 @@
 //! These tests are gated behind `#[cfg(windows)]` because they exercise
 //! Windows-specific command execution (cmd.exe, taskkill).
 
+#![cfg(windows)]
+
 use std::process::Command;
 
-#[cfg(windows)]
 #[test]
 fn say_runs_cmd_echo() {
     let output = Command::new("cmd")
