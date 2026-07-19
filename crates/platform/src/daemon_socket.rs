@@ -346,7 +346,8 @@ fn path_to_pipe_name(path: &Path) -> String {
 
 #[cfg(windows)]
 mod tests {
-    use super::*;
+    use super::path_to_pipe_name;
+    use std::path::Path;
 
     #[test]
     fn path_to_pipe_name_extracts_filename() {
