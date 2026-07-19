@@ -39,10 +39,17 @@ pub mod guards;
 pub mod mux;
 pub mod output;
 pub mod paths;
+pub mod protocol;
+pub mod shell;
 pub mod signal;
 pub mod sixel;
 pub mod spawn;
 pub mod terminal;
+
+// Built-in 8×8 bitmap font, only needed by the (feature-gated) Sixel/Kitty
+// graphics backend. Gated here so the default build never compiles it.
+#[cfg(feature = "sixel")]
+pub mod font;
 
 // Platform-specific impls
 #[cfg(unix)]
@@ -60,6 +67,8 @@ pub use paths::{
     config_path, control_socket_path, daemon_state_path, data_dir, detect_session_id, is_canonical,
     log_dir, runtime_dir, ConfigPaths, ShellKind,
 };
+pub use protocol::SceneConfig;
+pub use shell::Shell;
 pub use signal::{ShutdownFlag, SignalGuard};
 pub use sixel::{
     create_graphics_renderer, graphics_renderer_available, CellView, FrameBufferLike,
@@ -84,7 +93,9 @@ pub fn handle_count() -> Option<usize> {
         platform_windows::handle_count()
     }
 }
-pub use terminal::{detect_capabilities, ColorLevel, TerminalCapabilities};
+pub use terminal::{
+    detect_capabilities, terminal_supports_sync, ColorLevel, GraphicsCaps, TerminalCapabilities,
+};
 /// Expand to the contained code only when compiling on a Unix-like target.
 ///
 /// This macro emits a `#[cfg(unix)]` attribute that gates a block, so the

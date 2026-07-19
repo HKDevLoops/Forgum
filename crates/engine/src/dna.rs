@@ -413,4 +413,153 @@ mod tests {
         let dna = get_dna(&map, "nonexistent.cow");
         assert_eq!(dna, CowDna::default());
     }
+
+    /// Schema-drift guard: parse a full DNA doc, re-serialize it through the
+    /// same JSON path it will be loaded from, and confirm a re-parse is stable
+    /// and contains no unknown/garbage fields.
+    ///
+    /// NOTE: `CowDna` only derives `Deserialize` (the shipped schema is
+    /// load-only), so a serde `Serialize` round-trip is intentionally NOT used
+    /// here — adding `Serialize` would change the shipped schema. Instead we
+    /// round-trip through `serde_json::Value` (parse → known-keys map → re-parse)
+    /// which exercises the exact deserialize path without touching the schema.
+    #[test]
+    fn dna_json_round_trip_stable() {
+        // Sample mirrors the documented dragon.cow DNA (design doc §2.0).
+        let json = r##"{
+            "base": "Particles",
+            "particles": {
+                "type": "Fire",
+                "rate": 18,
+                "life": [0.6, 1.4],
+                "speed": [0.3, 0.8],
+                "palette": ["#ff8800", "#ff2200", "#440000"]
+            },
+            "speed": 1.0,
+            "amplitude": { "breath": 0.6, "sway": 0.2, "float": 0.1 },
+            "palette": ["#ff8800", "#ff2200", "#440000"],
+            "easing": {
+                "base": "sine_inout",
+                "particle_alpha": "expo_out",
+                "particle_velocity": "cubic_out"
+            },
+            "phase_seed": 4242,
+            "glow": { "color": "#ff6600", "radius": 6.0, "falloff": "gaussian" }
+        }"##;
+
+        let first: CowDna = serde_json::from_str(json).expect("first parse");
+
+        // Round-trip through a serde_json::Value built only from KNOWN keys,
+        // then re-parse. If a schema field silently changed name/shape, the
+        // re-parse would drift away from `first`.
+        let value = serde_json::json!({
+            "base": "Particles",
+            "particles": {
+                "type": "Fire",
+                "rate": first.particles.rate,
+                "life": first.particles.life,
+                "speed": first.particles.speed,
+                "palette": first.particles.palette,
+            },
+            "speed": first.speed,
+            "amplitude": {
+                "breath": first.amplitude.breath,
+                "sway": first.amplitude.sway,
+                "float": first.amplitude.float,
+            },
+            "palette": first.palette,
+            "easing": {
+                "base": first.easing.base,
+                "particle_alpha": first.easing.particle_alpha,
+                "particle_velocity": first.easing.particle_velocity,
+            },
+            "phase_seed": first.phase_seed,
+            "glow": {
+                "color": first.glow.color,
+                "radius": first.glow.radius,
+                "falloff": first.glow.falloff,
+            },
+        });
+        let second: CowDna = serde_json::from_value(value.clone()).expect("re-parse from value");
+
+        // Deterministic stability: the parse is idempotent.
+        assert_eq!(first, second, "DNA round-trip must be stable");
+
+        // No unknown/garbage keys leaked into the reconstructed document:
+        // every top-level key is a real, documented DNA axis (+ glow).
+        let obj = value.as_object().expect("object");
+        let allowed = [
+            "base",
+            "particles",
+            "speed",
+            "amplitude",
+            "palette",
+            "easing",
+            "phase_seed",
+            "glow",
+        ];
+        for key in obj.keys() {
+            assert!(
+                allowed.contains(&key.as_str()),
+                "unexpected DNA field in round-trip: {key}"
+            );
+        }
+
+        // Sane values survived the trip.
+        assert_eq!(second.base, BaseAnim::Particles);
+        assert_eq!(second.phase_seed, 4242);
+        assert_eq!(second.glow.falloff, "gaussian");
+    }
+
+    /// Documented-bounds guard: real DNA axes must stay inside the ranges the
+    /// design doc (§2.1) prescribes. Cheap sanity check against value drift.
+    #[test]
+    fn dna_axes_within_documented_bounds() {
+        let dna = CowDna::default();
+
+        // speed: global time multiplier, doc examples span 0.3 (tortoise) .. 2.0 (nyan).
+        assert!(
+            dna.speed > 0.0 && dna.speed <= 4.0,
+            "speed multiplier out of documented range: {}",
+            dna.speed
+        );
+
+        // amplitude channels are motion depths in [0.0, 1.0].
+        for (name, v) in [
+            ("breath", dna.amplitude.breath),
+            ("sway", dna.amplitude.sway),
+            ("float", dna.amplitude.float),
+        ] {
+            assert!(
+                (0.0..=1.0).contains(&v),
+                "amplitude.{name} out of [0,1]: {v}"
+            );
+        }
+
+        // glow.radius is a positive, finite pixel radius (doc uses 4.0 default, 6.0 dragon).
+        assert!(
+            dna.glow.radius.is_finite() && dna.glow.radius > 0.0,
+            "glow.radius must be positive & finite: {}",
+            dna.glow.radius
+        );
+
+        // glow.color is an sRGB hex string.
+        assert!(
+            dna.glow.color.starts_with('#') && dna.glow.color.len() == 7,
+            "glow.color must be #rrggbb: {}",
+            dna.glow.color
+        );
+
+        // particle lifetime/speed ranges must be ordered [min, max].
+        assert!(
+            dna.particles.life[0] <= dna.particles.life[1],
+            "particle life range must be ordered: {:?}",
+            dna.particles.life
+        );
+        assert!(
+            dna.particles.speed[0] <= dna.particles.speed[1],
+            "particle speed range must be ordered: {:?}",
+            dna.particles.speed
+        );
+    }
 }

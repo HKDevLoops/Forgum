@@ -53,7 +53,10 @@ fn main() -> ExitCode {
         }
 
         // ── init <shell> ────────────────────────────────────────────
-        Some(cli::Commands::Init { shell }) => {
+        Some(cli::Commands::Init {
+            shell,
+            check: _check,
+        }) => {
             let shell: Shell = shell.into();
             let engine_path = std::env::current_exe()
                 .ok()
@@ -61,7 +64,125 @@ fn main() -> ExitCode {
                 .unwrap_or_else(|| "forgum-engine".to_string());
             let hook = forgum_engine::init::generate_hook(shell, &engine_path);
             print!("{hook}");
+            if cfg!(feature = "tui") {
+                println!("# run `forgum config --tui` to customize your cow");
+            }
             ExitCode::SUCCESS
+        }
+
+        // ── config ─────────────────────────────────────────────────
+        Some(cli::Commands::Config { tui, key, value }) => {
+            use forgum_engine::config::read_config_file;
+
+            let cfg_path = args
+                .config
+                .clone()
+                .or_else(|| forgum_platform::config_path().ok())
+                .unwrap_or_else(|| PathBuf::from("forgum.json"));
+
+            if let (Some(k), Some(v)) = (key.clone(), value.clone()) {
+                // Headless `config set <key> <value>`.
+                let printed = v.clone();
+                let mut cfg = read_config_file(&cfg_path).unwrap_or_default();
+                let parse_err: Option<String> = match k.as_str() {
+                    "cow" => {
+                        cfg.cow = v;
+                        None
+                    }
+                    "text" => {
+                        cfg.text = v;
+                        None
+                    }
+                    "effect" => {
+                        cfg.effect = v;
+                        None
+                    }
+                    "background" => match v.parse::<bool>() {
+                        Ok(b) => {
+                            cfg.background = b;
+                            None
+                        }
+                        Err(e) => Some(format!("{e}")),
+                    },
+                    "duration" => match v.parse::<u32>() {
+                        Ok(n) => {
+                            cfg.duration = n;
+                            None
+                        }
+                        Err(e) => Some(format!("{e}")),
+                    },
+                    "fps" => match v.parse::<u16>() {
+                        Ok(n) => {
+                            cfg.fps = n;
+                            None
+                        }
+                        Err(e) => Some(format!("{e}")),
+                    },
+                    "eyes" => {
+                        cfg.eyes = v;
+                        None
+                    }
+                    "tongue" => {
+                        cfg.tongue = v;
+                        None
+                    }
+                    "default_shell" => {
+                        cfg.default_shell = v;
+                        None
+                    }
+                    "auto_render_on_prompt" => match v.parse::<bool>() {
+                        Ok(b) => {
+                            cfg.auto_render_on_prompt = b;
+                            None
+                        }
+                        Err(e) => Some(format!("{e}")),
+                    },
+                    "color_mode" => {
+                        cfg.color_mode = v;
+                        None
+                    }
+                    other => {
+                        eprintln!("unknown config key: {other}");
+                        eprintln!(
+                            "supported keys: cow, text, effect, background, duration, \
+                             fps, eyes, tongue, default_shell, auto_render_on_prompt, color_mode"
+                        );
+                        return ExitCode::from(1);
+                    }
+                };
+                if let Some(e) = parse_err {
+                    eprintln!("invalid value for `{k}`: {e}");
+                    return ExitCode::from(1);
+                }
+                if let Some(parent) = cfg_path.parent() {
+                    if let Err(e) = std::fs::create_dir_all(parent) {
+                        eprintln!("{PROGRAM}: cannot create config dir: {e}");
+                        return ExitCode::from(74);
+                    }
+                }
+                let json = serde_json::to_string_pretty(&cfg).unwrap();
+                if let Err(e) = std::fs::write(&cfg_path, json) {
+                    eprintln!("{PROGRAM}: cannot write config: {e}");
+                    return ExitCode::from(74);
+                }
+                println!("set {k} = {printed} in {}", cfg_path.display());
+                ExitCode::SUCCESS
+            } else if tui {
+                // Interactive TUI (only available in tui-enabled builds).
+                let code = forgum_engine::config_tui::run(&cfg_path);
+                ExitCode::from(code as u8)
+            } else {
+                // Default: open the TUI when available, else print help.
+                if cfg!(feature = "tui") {
+                    let code = forgum_engine::config_tui::run(&cfg_path);
+                    return ExitCode::from(code as u8);
+                }
+                eprintln!(
+                    "usage: forgum config set <key> <value>  (or `forgum config --tui` \
+                     in a tui-enabled build)"
+                );
+                ExitCode::from(1)
+            }
         }
 
         // ── completions <shell> ──────────────────────────────────────

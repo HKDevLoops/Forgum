@@ -22,8 +22,11 @@ pub fn generate_completions(shell: Shell, cmd: &mut clap::Command) -> io::Result
         Shell::Fish => {
             generate(shells::Fish, cmd, bin_name, &mut io::stdout());
         }
-        Shell::Pwsh => {
+        Shell::Pwsh | Shell::PowerShell => {
             generate(shells::PowerShell, cmd, bin_name, &mut io::stdout());
+        }
+        Shell::Cmd => {
+            // cmd.exe has no clap_complete backend; emit nothing.
         }
     }
 

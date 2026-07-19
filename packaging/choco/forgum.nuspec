@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
+  <metadata>
+    <id>forgum</id>
+    <version>0.4.0</version>
+    <title>Forgum</title>
+    <authors>HKDEVS</authors>
+    <projectUrl>https://github.com/HKDevLoops/Forgum</projectUrl>
+    <licenseUrl>https://github.com/HKDevLoops/Forgum/blob/main/LICENSE</licenseUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>Cross-platform cowsay+fortune+lolcat with a Rust ANSI animation engine.</description>
+    <summary>Modern forum engine with an ANSI animation engine.</summary>
+    <tags>forgum cowsay fortune lolcat ansi terminal</tags>
+  </metadata>
+  <files>
+    <file src="tools\**" target="tools" />
+  </files>
+</package>

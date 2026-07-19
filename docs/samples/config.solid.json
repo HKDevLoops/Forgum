@@ -1,0 +1,13 @@
+{
+  "cow": "tux",
+  "text": "Penguin says hi.",
+  "effect": "static",
+  "background": true,
+  "duration": 0,
+  "fps": 12,
+  "eyes": "$$",
+  "tongue": " ",
+  "default_shell": "bash",
+  "auto_render_on_prompt": false,
+  "color_mode": "solid"
+}

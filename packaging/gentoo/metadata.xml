@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
+<pkgmetadata>
+  <maintainer type="person">
+    <email>hkdevs@example.com</email>
+    <name>HKDEVS</name>
+  </maintainer>
+  <longdescription>Cross-platform cowsay+fortune+lolcat with a Rust ANSI animation engine.</longdescription>
+</pkgmetadata>

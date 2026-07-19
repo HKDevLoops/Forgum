@@ -148,10 +148,98 @@ jobs:
             forgum-engine-${{ matrix.target }}.sha256
             forgum-*-windows-*.zip
             forgum-*-windows-*.sha256
+            # L3 packaging artifacts (built by the `packages` job below, which the
+            # `release` job depends on). upload-artifact ignores globs with no
+            # matches, but every one of these is expected to exist for a tag build.
+            packaging/windows/*.msi
+            packaging/choco/*.nupkg
+            forgum-*-linux-*.deb
+            forgum-*-linux-*.rpm
+
+  packages:
+    name: Build release packages (deb, rpm, nix, pacman)
+    needs: [build]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Build deb
+        run: |
+          sudo apt-get update && sudo apt-get install -y dpkg-dev
+          chmod +x packaging/deb/build-deb.sh
+          ./packaging/deb/build-deb.sh
+
+      - name: Build rpm
+        run: |
+          sudo apt-get update && sudo apt-get install -y rpm
+          chmod +x packaging/rpm/build-rpm.sh
+          ./packaging/rpm/build-rpm.sh
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v27
+
+      - name: Nix build
+        run: nix build
+
+      - name: Build pacman
+        uses: docker://archlinux:latest
+        with:
+          entrypoint: bash
+          args: >-
+            -c "pacman -Syu --noconfirm base-devel &&
+                chmod +x packaging/pacman/build-pacman.sh &&
+                ./packaging/pacman/build-pacman.sh"
+
+      - name: Upload package artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-packages
+          path: |
+            forgum-*-linux-*.deb
+            forgum-*-linux-*.rpm
+
+  packages-win:
+    name: Build release packages (msi, choco)
+    needs: [build]
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Build engine
+        run: cargo build --release -p forgum-engine
+
+      - name: Install WiX
+        continue-on-error: true
+        run: choco install wixtoolset -y
+
+      - name: Build msi
+        shell: bash
+        run: |
+          set -e
+          BIN_DIR="$GITHUB_WORKSPACE/target/release"
+          export PATH="$PATH:/c/Program Files (x86)/WiX Toolset v3.11/bin"
+          candle -dBinDir="$BIN_DIR" packaging/windows/forgum.wxs -o forgum.wixobj
+          light forgum.wixobj -o packaging/windows/forgum.msi
+
+      - name: Build choco nupkg
+        shell: bash
+        run: choco pack packaging/choco/forgum.nuspec --outputdirectory packaging/choco
+
+      - name: Upload Windows package artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-packages-win
+          path: |
+            packaging/windows/*.msi
+            packaging/choco/*.nupkg
 
   release:
     name: Create GitHub Release
-    needs: [version-check, build]
+    needs: [version-check, build, packages, packages-win]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

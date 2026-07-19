@@ -12,6 +12,7 @@ pub mod cli;
 pub mod color;
 pub mod completions;
 pub mod config;
+pub mod config_tui;
 pub mod control_socket;
 pub mod cow;
 pub mod daemon;

@@ -140,5 +140,795 @@
     "easing": { "base": "sine_inout" },
     "phase_seed": 4444,
     "glow": { "color": "#ff8800", "radius": 3.0, "falloff": "gaussian" }
+  },
+  "moofasa": {
+    "base": "Breathe",
+    "particles": { "type": "Stars", "rate": 6, "life": [1.0, 2.0], "speed": [0.2, 0.5], "palette": ["#ffd700", "#c0c0c0"] },
+    "speed": 0.7,
+    "amplitude": { "breath": 0.5, "sway": 0.2, "float": 0.1 },
+    "palette": ["#ffd700", "#c0c0c0", "#8b6914"],
+    "easing": { "base": "sine_inout" },
+    "phase_seed": 11001,
+    "glow": { "color": "#ffd700", "radius": 3.0, "falloff": "gaussian" }
+  },
+  "meow": {
+    "base": "Breathe",
+    "particles": { "type": "Fire", "rate": 0 },
+    "speed": 0.6,
+    "amplitude": { "breath": 0.4, "sway": 0.15, "float": 0.08 },
+    "palette": ["#ffaacc", "#ff6699"],
+    "easing": { "base": "sine_inout" },
+    "phase_seed": 11002,
+    "glow": { "color": "#ffaacc", "radius": 2.0, "falloff": "gaussian" }
+  },
+  "knight": {
+    "base": "Breathe",
+    "particles": { "type": "Glitch", "rate": 4, "life": [0.1, 0.3], "speed": [0.4, 0.9], "palette": ["#cccccc", "#888888"] },
+    "speed": 0.5,
+    "amplitude": { "breath": 0.3, "sway": 0.05, "float": 0.0 },
+    "palette": ["#c0c0c0", "#888888", "#ffffff"],
+    "easing": { "base": "sine_inout" },
+    "phase_seed": 11003,
+    "glow": { "color": "#c0c0c0", "radius": 2.0, "falloff": "gaussian" }
+  },
+  "king": {
+    "base": "Breathe",
+    "particles": { "type": "Stars", "rate": 8, "life": [1.0, 2.5], "speed": [0.2, 0.6], "palette": ["#ffd700", "#fff8dc"] },
+    "speed": 0.6,
+    "amplitude": { "breath": 0.4, "sway": 0.1, "float": 0.05 },
+    "palette": ["#ffd700", "#800080", "#ffffff"],
+    "easing": { "base": "sine_inout" },
+    "phase_seed": 11004,
+    "glow": { "color": "#ffd700", "radius": 3.0, "falloff": "gaussian" }
+  },
+  "queen": {
+    "base": "Breathe",
+    "particles": { "type": "Stars", "rate": 10, "life": [1.0, 2.5], "speed": [0.2, 0.6], "palette": ["#ff69b4", "#fff0f5"] },
+    "speed": 0.6,
+    "amplitude": { "breath": 0.4, "sway": 0.1, "float": 0.05 },
+    "palette": ["#ff69b4", "#4b0082", "#ffffff"],
+    "easing": { "base": "sine_inout" },
+    "phase_seed": 11005,
+    "glow": { "color": "#ff69b4", "radius": 3.0, "falloff": "gaussian" }
+  },
+  "sheep": {
+    "base": "Breathe",
+    "particles": { "type": "Zzz", "rate": 4, "life": [1.5, 3.0], "speed": [0.1, 0.3], "palette": ["#ffffff", "#dddddd"] },
+    "speed": 0.4,
+    "amplitude": { "breath": 0.5, "sway": 0.05, "float": 0.02 },
+    "palette": ["#ffffff", "#e0e0e0"],
+    "easing": { "base": "sine_inout" },
+    "phase_seed": 11006,
+    "glow": { "color": "#ffffff", "radius": 2.0, "falloff": "gaussian" }
+  },
+  "flaming-sheep": {
+    "base": "Breathe",
+    "particles": { "type": "Fire", "rate": 14, "life": [0.6, 1.2], "speed": [0.3, 0.8], "palette": ["#ff8800", "#ff2200", "#ffcc00"] },
+    "speed": 0.7,
+    "amplitude": { "breath": 0.5, "sway": 0.1, "float": 0.05 },
+    "palette": ["#ffffff", "#ff8800", "#ff2200"],
+    "easing": { "base": "sine_inout" },
+    "phase_seed": 11007,
+    "glow": { "color": "#ff6600", "radius": 4.0, "falloff": "gaussian" }
+  },
+  "octopus": {
+    "base": "Sway",
+    "particles": { "type": "Bubbles", "rate": 10, "life": [1.0, 2.0], "speed": [0.2, 0.6], "palette": ["#ff66cc", "#cc3399"] },
+    "speed": 0.6,
+    "amplitude": { "breath": 0.3, "sway": 0.4, "float": 0.2 },
+    "palette": ["#ff66cc", "#aa2288", "#ffaadd"],
+    "easing": { "base": "sine_inout" },
+    "phase_seed": 11008,
+    "glow": { "color": "#ff66cc", "radius": 3.0, "falloff": "gaussian" }
+  },
+  "owl": {
+    "base": "Breathe",
+    "particles": { "type": "Zzz", "rate": 4, "life": [1.5, 3.0], "speed": [0.1, 0.3], "palette": ["#a0522d", "#deb887"] },
+    "speed": 0.4,
+    "amplitude": { "breath": 0.4, "sway": 0.1, "float": 0.05 },
+    "palette": ["#a0522d", "#deb887", "#8b4513"],
+    "easing": { "base": "sine_inout" },
+    "phase_seed": 11009,
+    "glow": { "color": "#deb887", "radius": 2.0, "falloff": "gaussian" }
+  },
+  "fox": {
+    "base": "Breathe",
+    "particles": { "type": "Fire", "rate": 0 },
+    "speed": 0.7,
+    "amplitude": { "breath": 0.4, "sway": 0.2, "float": 0.1 },
+    "palette": ["#ff7700", "#ffffff", "#000000"],
+    "easing": { "base": "sine_inout" },
+    "phase_seed": 11010,
+    "glow": { "color": "#ff7700", "radius": 2.0, "falloff": "gaussian" }
+  },
+  "bearface": {
+    "base": "Breathe",
+    "particles": { "type": "Fire", "rate": 0 },
+    "speed": 0.5,
+    "amplitude": { "breath": 0.4, "sway": 0.1, "float": 0.05 },
+    "palette": ["#8b4513", "#a0522d"],
+    "easing": { "base": "sine_inout" },
+    "phase_seed": 11011,
+    "glow": { "color": "#8b4513", "radius": 2.0, "falloff": "gaussian" }
+  },
+  "bunny": {
+    "base": "Breathe",
+    "particles": { "type": "Stars", "rate": 6, "life": [1.0, 2.0], "speed": [0.2, 0.5], "palette": ["#ffc0cb", "#ffffff"] },
+    "speed": 0.8,
+    "amplitude": { "breath": 0.5, "sway": 0.2, "float": 0.15 },
+    "palette": ["#ffffff", "#ffc0cb"],
+    "easing": { "base": "sine_inout" },
+    "phase_seed": 11012,
+    "glow": { "color": "#ffc0cb", "radius": 2.0, "falloff": "gaussian" }
+  },
+  "hedgehog": {
+    "base": "Breathe",
+    "particles": { "type": "Fire", "rate": 0 },
+    "speed": 0.5,
+    "amplitude": { "breath": 0.3, "sway": 0.1, "float": 0.05 },
+    "palette": ["#8b6914", "#5c4033"],
+    "easing": { "base": "sine_inout" },
+    "phase_seed": 11013,
+    "glow": { "color": "#8b6914", "radius": 2.0, "falloff": "gaussian" }
+  },
+  "elephant": {
+    "base": "Breathe",
+    "particles": { "type": "Bubbles", "rate": 4, "life": [1.5, 3.0], "speed": [0.2, 0.5], "palette": ["#b0c4de", "#87a8c8"] },
+    "speed": 0.3,
+    "amplitude": { "breath": 0.4, "sway": 0.05, "float": 0.02 },
+    "palette": ["#b0c4de", "#87a8c8", "#ffffff"],
+    "easing": { "base": "sine_inout" },
+    "phase_seed": 11014,
+    "glow": { "color": "#b0c4de", "radius": 2.0, "falloff": "gaussian" }
+  },
+  "goat": {
+    "base": "Breathe",
+    "particles": { "type": "Fire", "rate": 0 },
+    "speed": 0.6,
+    "amplitude": { "breath": 0.4, "sway": 0.15, "float": 0.08 },
+    "palette": ["#ffffff", "#dddddd"],
+    "easing": { "base": "sine_inout" },
+    "phase_seed": 11015,
+    "glow": { "color": "#ffffff", "radius": 2.0, "falloff": "gaussian" }
+  },
+  "moose": {
+    "base": "Breathe",
+    "particles": { "type": "Fire", "rate": 0 },
+    "speed": 0.4,
+    "amplitude": { "breath": 0.4, "sway": 0.1, "float": 0.05 },
+    "palette": ["#8b4513", "#5c4033"],
+    "easing": { "base": "sine_inout" },
+    "phase_seed": 11016,
+    "glow": { "color": "#8b4513", "radius": 2.0, "falloff": "gaussian" }
+  },
+  "happy-whale": {
+    "base": "Float",
+    "particles": { "type": "Bubbles", "rate": 12, "life": [1.5, 3.0], "speed": [0.2, 0.6], "palette": ["#44aaff", "#88ddff"] },
+    "speed": 0.5,
+    "amplitude": { "breath": 0.2, "sway": 0.1, "float": 0.6 },
+    "palette": ["#4488cc", "#66aadd", "#88ddff"],
+    "easing": { "base": "sine_inout" },
+    "phase_seed": 11017,
+    "glow": { "color": "#44aaff", "radius": 3.0, "falloff": "gaussian" }
+  },
+  "daemon": {
+    "base": "Glitch",
+    "particles": { "type": "Glitch", "rate": 18, "life": [0.1, 0.2], "speed": [0.8, 1.5], "palette": ["#00ff00", "#ff0000", "#ff00ff"] },
+    "speed": 1.4,
+    "amplitude": { "breath": 0.0, "sway": 0.0, "float": 0.0 },
+    "palette": ["#00ff00", "#003300", "#ff0000"],
+    "easing": { "base": "linear" },
+    "phase_seed": 11018,
+    "glow": { "color": "#00ff00", "radius": 3.0, "falloff": "gaussian" }
+  },
+  "cthulhu-mini": {
+    "base": "Breathe",
+    "particles": { "type": "Glitch", "rate": 10, "life": [0.1, 0.4], "speed": [0.5, 1.2], "palette": ["#228b22", "#006400"] },
+    "speed": 0.7,
+    "amplitude": { "breath": 0.5, "sway": 0.3, "float": 0.2 },
+    "palette": ["#228b22", "#006400", "#003300"],
+    "easing": { "base": "sine_inout" },
+    "phase_seed": 11019,
+    "glow": { "color": "#228b22", "radius": 4.0, "falloff": "gaussian" }
+  },
+  "bill-the-cat": {
+    "base": "Glitch",
+    "particles": { "type": "Glitch", "rate": 8, "life": [0.1, 0.3], "speed": [0.6, 1.2], "palette": ["#ff0000", "#000000"] },
+    "speed": 1.0,
+    "amplitude": { "breath": 0.2, "sway": 0.2, "float": 0.1 },
+    "palette": ["#ffffff", "#000000", "#ff0000"],
+    "easing": { "base": "linear" },
+    "phase_seed": 11020,
+    "glow": { "color": "#ff0000", "radius": 2.0, "falloff": "gaussian" }
+  },
+  "charizardvice": {
+    "base": "Breathe",
+    "particles": { "type": "Fire", "rate": 20, "life": [0.6, 1.4], "speed": [0.3, 0.8], "palette": ["#ff8800", "#ff2200", "#ffcc00"] },
+    "speed": 1.2,
+    "amplitude": { "breath": 0.5, "sway": 0.2, "float": 0.1 },
+    "palette": ["#ff8800", "#ff2200", "#ffcc00"],
+    "easing": { "base": "sine_inout" },
+    "phase_seed": 11021,
+    "glow": { "color": "#ff6600", "radius": 5.0, "falloff": "gaussian" }
+  },
+  "hellokitty": {
+    "base": "Breathe",
+    "particles": { "type": "Stars", "rate": 8, "life": [1.0, 2.0], "speed": [0.2, 0.5], "palette": ["#ff69b4", "#ffffff"] },
+    "speed": 0.7,
+    "amplitude": { "breath": 0.4, "sway": 0.15, "float": 0.1 },
+    "palette": ["#ffffff", "#ff69b4", "#ff1493"],
+    "easing": { "base": "sine_inout" },
+    "phase_seed": 11022,
+    "glow": { "color": "#ff69b4", "radius": 3.0, "falloff": "gaussian" }
+  },
+  "kitty": {
+    "base": "Breathe",
+    "particles": { "type": "Fire", "rate": 0 },
+    "speed": 0.6,
+    "amplitude": { "breath": 0.4, "sway": 0.15, "float": 0.08 },
+    "palette": ["#ffaacc", "#ff6699", "#ffffff"],
+    "easing": { "base": "sine_inout" },
+    "phase_seed": 11023,
+    "glow": { "color": "#ffaacc", "radius": 2.0, "falloff": "gaussian" }
+  },
+  "kitten": {
+    "base": "Breathe",
+    "particles": { "type": "Stars", "rate": 6, "life": [1.0, 2.0], "speed": [0.2, 0.5], "palette": ["#ffc0cb", "#ffffff"] },
+    "speed": 0.9,
+    "amplitude": { "breath": 0.5, "sway": 0.2, "float": 0.12 },
+    "palette": ["#ffc0cb", "#ffffff"],
+    "easing": { "base": "sine_inout" },
+    "phase_seed": 11024,
+    "glow": { "color": "#ffc0cb", "radius": 2.0, "falloff": "gaussian" }
+  },
+  "hippie": {
+    "base": "Sway",
+    "particles": { "type": "Stars", "rate": 14, "life": [1.0, 2.0], "speed": [0.2, 0.6], "palette": ["#ff0000", "#00ff00", "#0000ff", "#ffff00"] },
+    "speed": 0.8,
+    "amplitude": { "breath": 0.3, "sway": 0.5, "float": 0.2 },
+    "palette": ["#ff0000", "#00ff00", "#0000ff", "#ffff00", "#ff00ff"],
+    "easing": { "base": "sine_inout" },
+    "phase_seed": 11025,
+    "glow": { "color": "#00ff00", "radius": 3.0, "falloff": "gaussian" }
+  },
+  "satanic": {
+    "base": "Glitch",
+    "particles": { "type": "Glitch", "rate": 16, "life": [0.1, 0.3], "speed": [0.7, 1.4], "palette": ["#ff0000", "#660000"] },
+    "speed": 1.3,
+    "amplitude": { "breath": 0.2, "sway": 0.3, "float": 0.1 },
+    "palette": ["#ff0000", "#660000", "#000000"],
+    "easing": { "base": "linear" },
+    "phase_seed": 11026,
+    "glow": { "color": "#ff0000", "radius": 4.0, "falloff": "gaussian" }
+  },
+  "minotaur": {
+    "base": "Breathe",
+    "particles": { "type": "Fire", "rate": 6, "life": [0.6, 1.2], "speed": [0.3, 0.7], "palette": ["#ff8800", "#aa4400"] },
+    "speed": 0.6,
+    "amplitude": { "breath": 0.4, "sway": 0.1, "float": 0.05 },
+    "palette": ["#8b4513", "#a0522d", "#ff8800"],
+    "easing": { "base": "sine_inout" },
+    "phase_seed": 11027,
+    "glow": { "color": "#ff8800", "radius": 3.0, "falloff": "gaussian" }
+  },
+  "pterodactyl": {
+    "base": "Fly",
+    "particles": { "type": "Stars", "rate": 5, "life": [1.0, 2.0], "speed": [0.2, 0.6], "palette": ["#a0522d", "#deb887"] },
+    "speed": 1.0,
+    "amplitude": { "breath": 0.2, "sway": 0.3, "float": 0.4 },
+    "palette": ["#a0522d", "#deb887", "#8b4513"],
+    "easing": { "base": "sine_inout" },
+    "phase_seed": 11028,
+    "glow": { "color": "#deb887", "radius": 2.0, "falloff": "gaussian" }
+  },
+  "stegosaurus": {
+    "base": "Walk",
+    "particles": { "type": "Fire", "rate": 0 },
+    "speed": 0.5,
+    "amplitude": { "breath": 0.3, "sway": 0.1, "float": 0.05 },
+    "palette": ["#228b22", "#006400"],
+    "easing": { "base": "sine_inout" },
+    "phase_seed": 11029,
+    "glow": { "color": "#228b22", "radius": 2.0, "falloff": "gaussian" }
+  },
+  "tortoise": {
+    "base": "Walk",
+    "particles": { "type": "Fire", "rate": 0 },
+    "speed": 0.3,
+    "amplitude": { "breath": 0.3, "sway": 0.05, "float": 0.02 },
+    "palette": ["#6b8e23", "#556b2f", "#8b6914"],
+    "easing": { "base": "sine_inout" },
+    "phase_seed": 11030,
+    "glow": { "color": "#6b8e23", "radius": 2.0, "falloff": "gaussian" }
+  },
+  "spidercow": {
+    "base": "Sway",
+    "particles": { "type": "Glitch", "rate": 8, "life": [0.1, 0.3], "speed": [0.5, 1.0], "palette": ["#000000", "#444444"] },
+    "speed": 0.6,
+    "amplitude": { "breath": 0.2, "sway": 0.5, "float": 0.3 },
+    "palette": ["#000000", "#444444", "#ffffff"],
+    "easing": { "base": "sine_inout" },
+    "phase_seed": 11031,
+    "glow": { "color": "#444444", "radius": 2.0, "falloff": "gaussian" }
+  },
+  "jellyfish": {
+    "base": "Float",
+    "particles": { "type": "Bubbles", "rate": 10, "life": [1.5, 3.0], "speed": [0.2, 0.5], "palette": ["#ff66cc", "#aa88ff"] },
+    "speed": 0.5,
+    "amplitude": { "breath": 0.3, "sway": 0.2, "float": 0.6 },
+    "palette": ["#ff66cc", "#aa88ff", "#88ddff"],
+    "easing": { "base": "sine_inout" },
+    "phase_seed": 11032,
+    "glow": { "color": "#ff66cc", "radius": 4.0, "falloff": "gaussian" }
+  },
+  "lobster": {
+    "base": "Breathe",
+    "particles": { "type": "Bubbles", "rate": 8, "life": [1.0, 2.0], "speed": [0.2, 0.5], "palette": ["#ff4500", "#ff6347"] },
+    "speed": 0.6,
+    "amplitude": { "breath": 0.4, "sway": 0.2, "float": 0.1 },
+    "palette": ["#ff4500", "#ff6347", "#cc0000"],
+    "easing": { "base": "sine_inout" },
+    "phase_seed": 11033,
+    "glow": { "color": "#ff4500", "radius": 3.0, "falloff": "gaussian" }
+  },
+  "seahorse": {
+    "base": "Sway",
+    "particles": { "type": "Bubbles", "rate": 8, "life": [1.0, 2.0], "speed": [0.2, 0.5], "palette": ["#ffd700", "#ff8c00"] },
+    "speed": 0.6,
+    "amplitude": { "breath": 0.2, "sway": 0.6, "float": 0.3 },
+    "palette": ["#ffd700", "#ff8c00", "#ffa500"],
+    "easing": { "base": "sine_inout" },
+    "phase_seed": 11034,
+    "glow": { "color": "#ffd700", "radius": 3.0, "falloff": "gaussian" }
+  },
+  "smiling-octopus": {
+    "base": "Sway",
+    "particles": { "type": "Bubbles", "rate": 10, "life": [1.0, 2.0], "speed": [0.2, 0.6], "palette": ["#ff66cc", "#cc3399"] },
+    "speed": 0.7,
+    "amplitude": { "breath": 0.3, "sway": 0.5, "float": 0.2 },
+    "palette": ["#ff66cc", "#cc3399", "#ffaadd"],
+    "easing": { "base": "sine_inout" },
+    "phase_seed": 11035,
+    "glow": { "color": "#ff66cc", "radius": 3.0, "falloff": "gaussian" }
+  },
+  "bees": {
+    "base": "Float",
+    "particles": { "type": "Stars", "rate": 12, "life": [0.8, 1.6], "speed": [0.4, 0.9], "palette": ["#ffd700", "#000000"] },
+    "speed": 1.2,
+    "amplitude": { "breath": 0.2, "sway": 0.3, "float": 0.5 },
+    "palette": ["#ffd700", "#000000", "#ffffff"],
+    "easing": { "base": "sine_inout" },
+    "phase_seed": 11036,
+    "glow": { "color": "#ffd700", "radius": 2.0, "falloff": "gaussian" }
+  },
+  "beavis.zen": {
+    "base": "Breathe",
+    "particles": { "type": "Fire", "rate": 4, "life": [0.6, 1.2], "speed": [0.3, 0.7], "palette": ["#ff8800", "#ffaa00"] },
+    "speed": 0.5,
+    "amplitude": { "breath": 0.4, "sway": 0.1, "float": 0.05 },
+    "palette": ["#ffffff", "#ff8800"],
+    "easing": { "base": "sine_inout" },
+    "phase_seed": 11037,
+    "glow": { "color": "#ff8800", "radius": 2.0, "falloff": "gaussian" }
+  },
+  "bud-frogs": {
+    "base": "Breathe",
+    "particles": { "type": "Bubbles", "rate": 6, "life": [1.0, 2.0], "speed": [0.2, 0.5], "palette": ["#32cd32", "#006400"] },
+    "speed": 0.6,
+    "amplitude": { "breath": 0.5, "sway": 0.2, "float": 0.1 },
+    "palette": ["#32cd32", "#006400", "#90ee90"],
+    "easing": { "base": "sine_inout" },
+    "phase_seed": 11038,
+    "glow": { "color": "#32cd32", "radius": 3.0, "falloff": "gaussian" }
+  },
+  "charlie": {
+    "base": "Breathe",
+    "particles": { "type": "Fire", "rate": 0 },
+    "speed": 0.6,
+    "amplitude": { "breath": 0.4, "sway": 0.15, "float": 0.08 },
+    "palette": ["#ffffff", "#cccccc"],
+    "easing": { "base": "sine_inout" },
+    "phase_seed": 11039,
+    "glow": { "color": "#ffffff", "radius": 2.0, "falloff": "gaussian" }
+  },
+  "claw-arm": {
+    "base": "Sway",
+    "particles": { "type": "Glitch", "rate": 6, "life": [0.1, 0.3], "speed": [0.5, 1.0], "palette": ["#888888", "#444444"] },
+    "speed": 0.6,
+    "amplitude": { "breath": 0.2, "sway": 0.5, "float": 0.2 },
+    "palette": ["#888888", "#444444", "#cccccc"],
+    "easing": { "base": "sine_inout" },
+    "phase_seed": 11040,
+    "glow": { "color": "#888888", "radius": 2.0, "falloff": "gaussian" }
+  },
+  "cowfee": {
+    "base": "Breathe",
+      "particles": { "type": "Bubbles", "rate": 0 },
+    "speed": 0.5,
+    "amplitude": { "breath": 0.4, "sway": 0.1, "float": 0.05 },
+    "palette": ["#8b4513", "#a0522d", "#deb887"],
+    "easing": { "base": "sine_inout" },
+    "phase_seed": 11041,
+    "glow": { "color": "#8b4513", "radius": 2.0, "falloff": "gaussian" }
+  },
+  "cower": {
+    "base": "Breathe",
+    "particles": { "type": "Fire", "rate": 0 },
+    "speed": 0.5,
+    "amplitude": { "breath": 0.3, "sway": 0.1, "float": 0.05 },
+    "palette": ["#ffffff", "#dddddd"],
+    "easing": { "base": "sine_inout" },
+    "phase_seed": 11042,
+    "glow": { "color": "#ffffff", "radius": 2.0, "falloff": "gaussian" }
+  },
+  "dragon-and-cow": {
+    "base": "Breathe",
+    "particles": { "type": "Fire", "rate": 18, "life": [0.6, 1.4], "speed": [0.3, 0.8], "palette": ["#ff8800", "#ff2200", "#440000"] },
+    "speed": 1.1,
+    "amplitude": { "breath": 0.6, "sway": 0.2, "float": 0.1 },
+    "palette": ["#ff8800", "#ff2200", "#440000"],
+    "easing": { "base": "sine_inout" },
+    "phase_seed": 11043,
+    "glow": { "color": "#ff6600", "radius": 6.0, "falloff": "gaussian" }
+  },
+  "ebi_furai": {
+    "base": "Breathe",
+    "particles": { "type": "Fire", "rate": 10, "life": [0.6, 1.2], "speed": [0.3, 0.7], "palette": ["#ff8800", "#ffaa00"] },
+    "speed": 0.7,
+    "amplitude": { "breath": 0.4, "sway": 0.2, "float": 0.1 },
+    "palette": ["#ff8800", "#ffaa00", "#ffcc00"],
+    "easing": { "base": "sine_inout" },
+    "phase_seed": 11044,
+    "glow": { "color": "#ff8800", "radius": 3.0, "falloff": "gaussian" }
+  },
+  "elephant-in-snake": {
+    "base": "Sway",
+    "particles": { "type": "Bubbles", "rate": 6, "life": [1.0, 2.0], "speed": [0.2, 0.5], "palette": ["#b0c4de", "#32cd32"] },
+    "speed": 0.4,
+    "amplitude": { "breath": 0.3, "sway": 0.4, "float": 0.2 },
+    "palette": ["#b0c4de", "#32cd32", "#228b22"],
+    "easing": { "base": "sine_inout" },
+    "phase_seed": 11045,
+    "glow": { "color": "#32cd32", "radius": 2.0, "falloff": "gaussian" }
+  },
+  "eyes": {
+    "base": "Pulse",
+    "particles": { "type": "Fire", "rate": 0 },
+    "speed": 0.8,
+    "amplitude": { "breath": 0.5, "sway": 0.0, "float": 0.0 },
+    "palette": ["#ffffff", "#ffff00"],
+    "easing": { "base": "sine_inout" },
+    "phase_seed": 11046,
+    "glow": { "color": "#ffff00", "radius": 3.0, "falloff": "gaussian" }
+  },
+  "fat-cow": {
+    "base": "Breathe",
+    "particles": { "type": "Fire", "rate": 0 },
+    "speed": 0.4,
+    "amplitude": { "breath": 0.5, "sway": 0.1, "float": 0.05 },
+    "palette": ["#ffffff", "#dddddd"],
+    "easing": { "base": "sine_inout" },
+    "phase_seed": 11047,
+    "glow": { "color": "#ffffff", "radius": 2.0, "falloff": "gaussian" }
+  },
+  "fence": {
+    "base": "Breathe",
+    "particles": { "type": "Fire", "rate": 0 },
+    "speed": 0.3,
+    "amplitude": { "breath": 0.2, "sway": 0.05, "float": 0.02 },
+    "palette": ["#8b4513", "#a0522d"],
+    "easing": { "base": "sine_inout" },
+    "phase_seed": 11048,
+    "glow": { "color": "#8b4513", "radius": 2.0, "falloff": "gaussian" }
+  },
+  "glados": {
+    "base": "Pulse",
+    "particles": { "type": "Glitch", "rate": 8, "life": [0.1, 0.3], "speed": [0.5, 1.0], "palette": ["#ff6600", "#ffffff"] },
+    "speed": 1.0,
+    "amplitude": { "breath": 0.5, "sway": 0.0, "float": 0.0 },
+    "palette": ["#ff6600", "#ffffff", "#ffa500"],
+    "easing": { "base": "sine_inout" },
+    "phase_seed": 11049,
+    "glow": { "color": "#ff6600", "radius": 3.0, "falloff": "gaussian" }
+  },
+  "goat2": {
+    "base": "Breathe",
+    "particles": { "type": "Fire", "rate": 0 },
+    "speed": 0.6,
+    "amplitude": { "breath": 0.4, "sway": 0.15, "float": 0.08 },
+    "palette": ["#cccccc", "#999999"],
+    "easing": { "base": "sine_inout" },
+    "phase_seed": 11050,
+    "glow": { "color": "#cccccc", "radius": 2.0, "falloff": "gaussian" }
+  },
+  "golden-eagle": {
+    "base": "Fly",
+    "particles": { "type": "Stars", "rate": 6, "life": [1.0, 2.0], "speed": [0.2, 0.6], "palette": ["#daa520", "#b8860b"] },
+    "speed": 1.1,
+    "amplitude": { "breath": 0.2, "sway": 0.3, "float": 0.4 },
+    "palette": ["#daa520", "#b8860b", "#ffd700"],
+    "easing": { "base": "sine_inout" },
+    "phase_seed": 11051,
+    "glow": { "color": "#daa520", "radius": 3.0, "falloff": "gaussian" }
+  },
+  "hiya": {
+    "base": "Breathe",
+    "particles": { "type": "Fire", "rate": 0 },
+    "speed": 0.7,
+    "amplitude": { "breath": 0.4, "sway": 0.15, "float": 0.08 },
+    "palette": ["#ffffff", "#ffcc00"],
+    "easing": { "base": "sine_inout" },
+    "phase_seed": 11052,
+    "glow": { "color": "#ffcc00", "radius": 2.0, "falloff": "gaussian" }
+  },
+  "hypno": {
+    "base": "Pulse",
+    "particles": { "type": "Glitch", "rate": 10, "life": [0.1, 0.4], "speed": [0.5, 1.0], "palette": ["#ff00ff", "#00ffff", "#ffff00"] },
+    "speed": 1.0,
+    "amplitude": { "breath": 0.6, "sway": 0.0, "float": 0.0 },
+    "palette": ["#ff00ff", "#00ffff", "#ffff00"],
+    "easing": { "base": "linear" },
+    "phase_seed": 11053,
+    "glow": { "color": "#ff00ff", "radius": 4.0, "falloff": "gaussian" }
+  },
+  "kiss": {
+    "base": "Breathe",
+    "particles": { "type": "Stars", "rate": 8, "life": [1.0, 2.0], "speed": [0.2, 0.5], "palette": ["#ff69b4", "#ff1493"] },
+    "speed": 0.6,
+    "amplitude": { "breath": 0.4, "sway": 0.15, "float": 0.1 },
+    "palette": ["#ff69b4", "#ff1493", "#ffffff"],
+    "easing": { "base": "sine_inout" },
+    "phase_seed": 11054,
+    "glow": { "color": "#ff69b4", "radius": 3.0, "falloff": "gaussian" }
+  },
+  "lamb": {
+    "base": "Breathe",
+    "particles": { "type": "Zzz", "rate": 4, "life": [1.5, 3.0], "speed": [0.1, 0.3], "palette": ["#ffffff", "#f5f5f5"] },
+    "speed": 0.4,
+    "amplitude": { "breath": 0.5, "sway": 0.05, "float": 0.02 },
+    "palette": ["#ffffff", "#f5f5f5"],
+    "easing": { "base": "sine_inout" },
+    "phase_seed": 11055,
+    "glow": { "color": "#ffffff", "radius": 2.0, "falloff": "gaussian" }
+  },
+  "lamb2": {
+    "base": "Breathe",
+    "particles": { "type": "Zzz", "rate": 5, "life": [1.5, 3.0], "speed": [0.1, 0.3], "palette": ["#ffffff", "#e8e8e8"] },
+    "speed": 0.4,
+    "amplitude": { "breath": 0.5, "sway": 0.05, "float": 0.02 },
+    "palette": ["#ffffff", "#e8e8e8"],
+    "easing": { "base": "sine_inout" },
+    "phase_seed": 11056,
+    "glow": { "color": "#ffffff", "radius": 2.0, "falloff": "gaussian" }
+  },
+  "lollerskates": {
+    "base": "Breathe",
+    "particles": { "type": "Stars", "rate": 12, "life": [1.0, 2.0], "speed": [0.2, 0.6], "palette": ["#ff00ff", "#00ffff", "#ffff00"] },
+    "speed": 0.9,
+    "amplitude": { "breath": 0.4, "sway": 0.3, "float": 0.2 },
+    "palette": ["#ff00ff", "#00ffff", "#ffff00"],
+    "easing": { "base": "sine_inout" },
+    "phase_seed": 11057,
+    "glow": { "color": "#ff00ff", "radius": 3.0, "falloff": "gaussian" }
+  },
+  "luke-koala": {
+    "base": "Breathe",
+    "particles": { "type": "Zzz", "rate": 5, "life": [2.0, 4.0], "speed": [0.1, 0.3], "palette": ["#b8a0d0", "#9070b0"] },
+    "speed": 0.3,
+    "amplitude": { "breath": 0.6, "sway": 0.05, "float": 0.02 },
+    "palette": ["#b8a0d0", "#9070b0", "#ffffff"],
+    "easing": { "base": "sine_inout" },
+    "phase_seed": 11058,
+    "glow": { "color": "#b8a0d0", "radius": 3.0, "falloff": "gaussian" }
+  },
+  "moojira": {
+    "base": "Float",
+    "particles": { "type": "Bubbles", "rate": 12, "life": [1.5, 3.0], "speed": [0.2, 0.6], "palette": ["#228b22", "#006400"] },
+    "speed": 0.5,
+    "amplitude": { "breath": 0.2, "sway": 0.2, "float": 0.6 },
+    "palette": ["#228b22", "#006400", "#32cd32"],
+    "easing": { "base": "sine_inout" },
+    "phase_seed": 11059,
+    "glow": { "color": "#228b22", "radius": 4.0, "falloff": "gaussian" }
+  },
+  "mule": {
+    "base": "Walk",
+    "particles": { "type": "Fire", "rate": 0 },
+    "speed": 0.5,
+    "amplitude": { "breath": 0.3, "sway": 0.1, "float": 0.05 },
+    "palette": ["#8b4513", "#a0522d"],
+    "easing": { "base": "sine_inout" },
+    "phase_seed": 11060,
+    "glow": { "color": "#8b4513", "radius": 2.0, "falloff": "gaussian" }
+  },
+  "mutilated": {
+    "base": "Glitch",
+    "particles": { "type": "Glitch", "rate": 14, "life": [0.1, 0.3], "speed": [0.6, 1.3], "palette": ["#ff0000", "#00ff00"] },
+    "speed": 1.1,
+    "amplitude": { "breath": 0.2, "sway": 0.2, "float": 0.1 },
+    "palette": ["#ff0000", "#00ff00", "#ffffff"],
+    "easing": { "base": "linear" },
+    "phase_seed": 11061,
+    "glow": { "color": "#ff0000", "radius": 3.0, "falloff": "gaussian" }
+  },
+  "pawn": {
+    "base": "Breathe",
+    "particles": { "type": "Stars", "rate": 6, "life": [1.0, 2.0], "speed": [0.2, 0.5], "palette": ["#ffffff", "#c0c0c0"] },
+    "speed": 0.4,
+    "amplitude": { "breath": 0.3, "sway": 0.05, "float": 0.02 },
+    "palette": ["#ffffff", "#c0c0c0", "#888888"],
+    "easing": { "base": "sine_inout" },
+    "phase_seed": 11062,
+    "glow": { "color": "#ffffff", "radius": 2.0, "falloff": "gaussian" }
+  },
+  "periodic-table": {
+    "base": "Pulse",
+    "particles": { "type": "Glitch", "rate": 6, "life": [0.1, 0.3], "speed": [0.4, 0.9], "palette": ["#00ff00", "#00aaff"] },
+    "speed": 0.8,
+    "amplitude": { "breath": 0.5, "sway": 0.0, "float": 0.0 },
+    "palette": ["#00ff00", "#00aaff", "#ffffff"],
+    "easing": { "base": "sine_inout" },
+    "phase_seed": 11063,
+    "glow": { "color": "#00ff00", "radius": 3.0, "falloff": "gaussian" }
+  },
+  "personality-sphere": {
+    "base": "Pulse",
+    "particles": { "type": "Glitch", "rate": 8, "life": [0.1, 0.3], "speed": [0.5, 1.0], "palette": ["#ff6600", "#ffffff"] },
+    "speed": 1.0,
+    "amplitude": { "breath": 0.5, "sway": 0.0, "float": 0.0 },
+    "palette": ["#ff6600", "#ffffff", "#ffa500"],
+    "easing": { "base": "sine_inout" },
+    "phase_seed": 11064,
+    "glow": { "color": "#ff6600", "radius": 3.0, "falloff": "gaussian" }
+  },
+  "ren": {
+    "base": "Breathe",
+    "particles": { "type": "Fire", "rate": 0 },
+    "speed": 0.6,
+    "amplitude": { "breath": 0.4, "sway": 0.15, "float": 0.08 },
+    "palette": ["#ffffff", "#ff8800"],
+    "easing": { "base": "sine_inout" },
+    "phase_seed": 11065,
+    "glow": { "color": "#ff8800", "radius": 2.0, "falloff": "gaussian" }
+  },
+  "rook": {
+    "base": "Breathe",
+    "particles": { "type": "Stars", "rate": 6, "life": [1.0, 2.0], "speed": [0.2, 0.5], "palette": ["#ffffff", "#c0c0c0"] },
+    "speed": 0.4,
+    "amplitude": { "breath": 0.3, "sway": 0.05, "float": 0.02 },
+    "palette": ["#ffffff", "#c0c0c0", "#888888"],
+    "easing": { "base": "sine_inout" },
+    "phase_seed": 11066,
+    "glow": { "color": "#ffffff", "radius": 2.0, "falloff": "gaussian" }
+  },
+  "seahorse-big": {
+    "base": "Sway",
+    "particles": { "type": "Bubbles", "rate": 10, "life": [1.0, 2.0], "speed": [0.2, 0.5], "palette": ["#ffd700", "#ff8c00"] },
+    "speed": 0.6,
+    "amplitude": { "breath": 0.2, "sway": 0.6, "float": 0.3 },
+    "palette": ["#ffd700", "#ff8c00", "#ffa500"],
+    "easing": { "base": "sine_inout" },
+    "phase_seed": 11067,
+    "glow": { "color": "#ffd700", "radius": 3.0, "falloff": "gaussian" }
+  },
+  "shikato": {
+    "base": "Breathe",
+    "particles": { "type": "Fire", "rate": 0 },
+    "speed": 0.5,
+    "amplitude": { "breath": 0.4, "sway": 0.1, "float": 0.05 },
+    "palette": ["#ffffff", "#dddddd"],
+    "easing": { "base": "sine_inout" },
+    "phase_seed": 11068,
+    "glow": { "color": "#ffffff", "radius": 2.0, "falloff": "gaussian" }
+  },
+  "shrug": {
+    "base": "Sway",
+    "particles": { "type": "Fire", "rate": 0 },
+    "speed": 0.6,
+    "amplitude": { "breath": 0.3, "sway": 0.4, "float": 0.2 },
+    "palette": ["#ffffff", "#cccccc"],
+    "easing": { "base": "sine_inout" },
+    "phase_seed": 11069,
+    "glow": { "color": "#ffffff", "radius": 2.0, "falloff": "gaussian" }
+  },
+  "snoopysleep": {
+    "base": "Breathe",
+    "particles": { "type": "Zzz", "rate": 6, "life": [2.0, 4.0], "speed": [0.1, 0.3], "palette": ["#ffffff", "#dddddd"] },
+    "speed": 0.3,
+    "amplitude": { "breath": 0.5, "sway": 0.05, "float": 0.02 },
+    "palette": ["#ffffff", "#dddddd"],
+    "easing": { "base": "sine_inout" },
+    "phase_seed": 11070,
+    "glow": { "color": "#ffffff", "radius": 2.0, "falloff": "gaussian" }
+  },
+  "snoopy": {
+    "base": "Breathe",
+    "particles": { "type": "Fire", "rate": 0 },
+    "speed": 0.6,
+    "amplitude": { "breath": 0.4, "sway": 0.15, "float": 0.08 },
+    "palette": ["#ffffff", "#000000"],
+    "easing": { "base": "sine_inout" },
+    "phase_seed": 11071,
+    "glow": { "color": "#ffffff", "radius": 2.0, "falloff": "gaussian" }
+  },
+  "snoopyhouse": {
+    "base": "Breathe",
+    "particles": { "type": "Fire", "rate": 0 },
+    "speed": 0.5,
+    "amplitude": { "breath": 0.4, "sway": 0.15, "float": 0.08 },
+    "palette": ["#ffffff", "#8b4513", "#a0522d"],
+    "easing": { "base": "sine_inout" },
+    "phase_seed": 11072,
+    "glow": { "color": "#ffffff", "radius": 2.0, "falloff": "gaussian" }
+  },
+  "squirrel": {
+    "base": "Breathe",
+    "particles": { "type": "Fire", "rate": 0 },
+    "speed": 0.8,
+    "amplitude": { "breath": 0.4, "sway": 0.2, "float": 0.15 },
+    "palette": ["#a0522d", "#8b4513"],
+    "easing": { "base": "sine_inout" },
+    "phase_seed": 11073,
+    "glow": { "color": "#a0522d", "radius": 2.0, "falloff": "gaussian" }
+  },
+  "stimpy": {
+    "base": "Breathe",
+    "particles": { "type": "Fire", "rate": 4, "life": [0.6, 1.2], "speed": [0.3, 0.7], "palette": ["#ff8800", "#ff2200"] },
+    "speed": 0.7,
+    "amplitude": { "breath": 0.4, "sway": 0.2, "float": 0.1 },
+    "palette": ["#ff8800", "#ff2200", "#ffffff"],
+    "easing": { "base": "sine_inout" },
+    "phase_seed": 11074,
+    "glow": { "color": "#ff8800", "radius": 3.0, "falloff": "gaussian" }
+  },
+  "supermilker": {
+    "base": "Breathe",
+    "particles": { "type": "Fire", "rate": 0 },
+    "speed": 0.5,
+    "amplitude": { "breath": 0.4, "sway": 0.1, "float": 0.05 },
+    "palette": ["#ffffff", "#dddddd"],
+    "easing": { "base": "sine_inout" },
+    "phase_seed": 11075,
+    "glow": { "color": "#ffffff", "radius": 2.0, "falloff": "gaussian" }
+  },
+  "surgery": {
+    "base": "Glitch",
+    "particles": { "type": "Glitch", "rate": 10, "life": [0.1, 0.3], "speed": [0.6, 1.2], "palette": ["#ff0000", "#ffffff"] },
+    "speed": 0.9,
+    "amplitude": { "breath": 0.2, "sway": 0.2, "float": 0.1 },
+    "palette": ["#ff0000", "#ffffff", "#dddddd"],
+    "easing": { "base": "linear" },
+    "phase_seed": 11076,
+    "glow": { "color": "#ff0000", "radius": 3.0, "falloff": "gaussian" }
+  },
+  "turkey": {
+    "base": "Breathe",
+    "particles": { "type": "Fire", "rate": 6, "life": [0.6, 1.2], "speed": [0.3, 0.7], "palette": ["#ff8800", "#ff2200", "#ffcc00"] },
+    "speed": 0.6,
+    "amplitude": { "breath": 0.4, "sway": 0.2, "float": 0.1 },
+    "palette": ["#ff8800", "#ff2200", "#ffcc00"],
+    "easing": { "base": "sine_inout" },
+    "phase_seed": 11077,
+    "glow": { "color": "#ff8800", "radius": 3.0, "falloff": "gaussian" }
+  },
+  "turtle": {
+    "base": "Walk",
+    "particles": { "type": "Bubbles", "rate": 6, "life": [1.5, 3.0], "speed": [0.2, 0.5], "palette": ["#32cd32", "#006400"] },
+    "speed": 0.3,
+    "amplitude": { "breath": 0.3, "sway": 0.05, "float": 0.02 },
+    "palette": ["#32cd32", "#006400", "#8b6914"],
+    "easing": { "base": "sine_inout" },
+    "phase_seed": 11078,
+    "glow": { "color": "#32cd32", "radius": 2.0, "falloff": "gaussian" }
+  },
+  "tweety-bird": {
+    "base": "Breathe",
+    "particles": { "type": "Stars", "rate": 8, "life": [1.0, 2.0], "speed": [0.2, 0.5], "palette": ["#ffff00", "#ffd700"] },
+    "speed": 0.7,
+    "amplitude": { "breath": 0.4, "sway": 0.2, "float": 0.15 },
+    "palette": ["#ffff00", "#ffd700", "#ffffff"],
+    "easing": { "base": "sine_inout" },
+    "phase_seed": 11079,
+    "glow": { "color": "#ffff00", "radius": 3.0, "falloff": "gaussian" }
   }
 }

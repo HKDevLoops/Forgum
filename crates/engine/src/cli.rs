@@ -92,6 +92,10 @@ pub enum Commands {
         /// Target shell.
         #[arg(value_enum)]
         shell: ShellArg,
+        /// Only print the generated hook (CI validation); identical output to a
+        /// normal `init` but explicit about the use-case.
+        #[arg(long)]
+        check: bool,
     },
     /// Generate shell completion scripts.
     Completions {
@@ -101,6 +105,18 @@ pub enum Commands {
     },
     /// Print 'ok' and exit (for daemon health checks).
     Status,
+    /// View or edit configuration.
+    Config {
+        /// Open the interactive config menu.
+        #[arg(long)]
+        tui: bool,
+        /// Set a key to a value (headless).
+        #[arg(value_name = "KEY")]
+        key: Option<String>,
+        /// Value for --key.
+        #[arg(value_name = "VALUE")]
+        value: Option<String>,
+    },
     /// tmux integration subcommands.
     Tmux {
         #[command(subcommand)]
@@ -273,6 +289,8 @@ pub enum ShellArg {
     Zsh,
     Fish,
     Pwsh,
+    Cmd,
+    PowerShell,
 }
 
 impl From<ShellArg> for Shell {
@@ -282,6 +300,8 @@ impl From<ShellArg> for Shell {
             ShellArg::Zsh => Shell::Zsh,
             ShellArg::Fish => Shell::Fish,
             ShellArg::Pwsh => Shell::Pwsh,
+            ShellArg::Cmd => Shell::Cmd,
+            ShellArg::PowerShell => Shell::PowerShell,
         }
     }
 }
@@ -292,6 +312,7 @@ pub enum Command {
     #[default]
     Render,
     Status,
+    Config,
     Fortune,
     Init,
     Completions,
@@ -359,6 +380,7 @@ pub fn parse_args(argv: Vec<String>) -> Result<(Args, Option<Commands>), CliErro
         Some(Commands::Init { .. }) => Command::Init,
         Some(Commands::Completions { .. }) => Command::Completions,
         Some(Commands::Status) => Command::Status,
+        Some(Commands::Config { .. }) => Command::Config,
         Some(Commands::Tmux { sub }) => match sub {
             TmuxSub::Install => Command::Tmux,
             TmuxSub::Zellij => Command::Tmux,
@@ -524,7 +546,8 @@ mod tests {
         assert!(matches!(
             cmd,
             Some(Commands::Init {
-                shell: ShellArg::Bash
+                shell: ShellArg::Bash,
+                ..
             })
         ));
     }

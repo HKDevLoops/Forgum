@@ -1,0 +1,27 @@
+# Build in CI via makepkg (archlinux action / container). AUR submission is a
+# maintainer tokenless PR — documented.
+
+# Maintainer: HKDEVS <hkdevs@example.com>
+pkgname=forgum
+pkgver=0.4.0
+pkgrel=1
+pkgdesc="Cross-platform cowsay+fortune+lolcat with a Rust ANSI animation engine"
+arch=('x86_64' 'aarch64')
+url="https://github.com/HKDevLoops/Forgum"
+license=('MIT')
+makedepends=('cargo')
+source=("$pkgname-$pkgver.tar.gz::https://github.com/HKDevLoops/Forgum/archive/refs/tags/v$pkgver.tar.gz")
+sha256sums=('PLACEHOLDER_SHA256')
+build() {
+  cd "$pkgname-$pkgver"
+  cargo build --release --locked -p forgum-engine
+}
+check() {
+  cd "$pkgname-$pkgver"
+  cargo test --release --locked -p forgum-engine
+}
+package() {
+  cd "$pkgname-$pkgver"
+  install -Dm755 "target/release/forgum-engine" "$pkgdir/usr/bin/forgum-engine"
+  install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}
