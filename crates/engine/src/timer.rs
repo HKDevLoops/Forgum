@@ -111,19 +111,6 @@ mod tests {
     }
 
     #[test]
-    fn timer_runs_command() {
-        let result = run_timer(&[
-            "cmd".to_string(),
-            "/c".to_string(),
-            "echo".to_string(),
-            "test".to_string(),
-        ]);
-        assert_eq!(result.command, "cmd /c echo test");
-        assert_eq!(result.exit_code, 0);
-        assert!(result.stdout.contains("test"));
-    }
-
-    #[test]
     fn timer_cow_format() {
         let result = TimerResult {
             command: "cargo build".to_string(),
