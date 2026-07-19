@@ -247,6 +247,7 @@ mod tests {
     #[test]
     #[cfg(unix)]
     fn detached_has_new_session() {
+        use std::os::unix::process::CommandExt;
         // Spawn `sh -c 'echo $PPID'` and check we can read its PID. We don't
         // actually verify session id (the child prints and exits), but we
         // verify the spawn path doesn't hang.

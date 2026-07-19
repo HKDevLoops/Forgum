@@ -344,7 +344,7 @@ fn path_to_pipe_name(path: &Path) -> String {
     format!("\\\\.\\pipe\\{}", file_name)
 }
 
-#[cfg(test)]
+#[cfg(windows)]
 mod tests {
     use super::*;
 
@@ -359,9 +359,14 @@ mod tests {
         let path = Path::new("/tmp/Forgum/ctrl-abc.sock");
         assert_eq!(path_to_pipe_name(path), r"\\.\pipe\ctrl-abc.sock");
     }
+}
+
+#[cfg(test)]
+#[cfg(unix)]
+mod unix_tests {
+    use super::*;
 
     #[test]
-    #[cfg(unix)]
     fn unix_bind_accept_cleanup_round_trip() {
         let tmp = tempfile::tempdir().unwrap();
         let sock_path = tmp.path().join("test.sock");
@@ -378,7 +383,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg(unix)]
     fn unix_stale_socket_removed_on_bind() {
         let tmp = tempfile::tempdir().unwrap();
         let sock_path = tmp.path().join("stale.sock");
