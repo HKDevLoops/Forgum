@@ -114,30 +114,38 @@ impl SignalGuard {
             let h_for_hup = Arc::clone(&shutdown_handle);
             let h_for_winch = Arc::clone(&resize_handle);
 
-            let int_id = register(SIGINT, move || {
-                h_for_int.store(true, Ordering::Relaxed);
-            })
+            let int_id = unsafe {
+                register(SIGINT, move || {
+                    h_for_int.store(true, Ordering::Relaxed);
+                })
+            }
             .map_err(|e| PlatformError::SignalRegistration {
                 signal: "SIGINT",
                 source: e,
             })?;
-            let term_id = register(SIGTERM, move || {
-                h_for_term.store(true, Ordering::Relaxed);
-            })
+            let term_id = unsafe {
+                register(SIGTERM, move || {
+                    h_for_term.store(true, Ordering::Relaxed);
+                })
+            }
             .map_err(|e| PlatformError::SignalRegistration {
                 signal: "SIGTERM",
                 source: e,
             })?;
-            let hup_id = register(SIGHUP, move || {
-                h_for_hup.store(true, Ordering::Relaxed);
-            })
+            let hup_id = unsafe {
+                register(SIGHUP, move || {
+                    h_for_hup.store(true, Ordering::Relaxed);
+                })
+            }
             .map_err(|e| PlatformError::SignalRegistration {
                 signal: "SIGHUP",
                 source: e,
             })?;
-            let winch_id = register(SIGWINCH, move || {
-                h_for_winch.store(true, Ordering::Relaxed);
-            })
+            let winch_id = unsafe {
+                register(SIGWINCH, move || {
+                    h_for_winch.store(true, Ordering::Relaxed);
+                })
+            }
             .map_err(|e| PlatformError::SignalRegistration {
                 signal: "SIGWINCH",
                 source: e,
