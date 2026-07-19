@@ -37,6 +37,7 @@ use crate::error::PlatformError;
 /// The parent process prints the child PID and exits (never returns).
 /// The child process returns `Ok(false)`.
 #[cfg(unix)]
+#[allow(unsafe_code)]
 pub fn daemonize() -> Result<bool, PlatformError> {
     use nix::unistd::{fork, setsid, ForkResult};
 
