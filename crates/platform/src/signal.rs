@@ -99,6 +99,7 @@ struct UnixSignalState {
 
 impl SignalGuard {
     /// Install handlers that flip `flag` on receipt.
+    #[allow(unsafe_code)]
     pub fn install(flag: ShutdownFlag) -> Result<Self, PlatformError> {
         #[cfg(unix)]
         {
