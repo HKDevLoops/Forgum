@@ -1,0 +1,13 @@
+{
+  "cow": "default",
+  "text": "Moo from the rainbow farm!",
+  "effect": "rainbow",
+  "background": false,
+  "duration": 0,
+  "fps": 30,
+  "eyes": "oo",
+  "tongue": " ",
+  "default_shell": "",
+  "auto_render_on_prompt": true,
+  "color_mode": "rainbow"
+}

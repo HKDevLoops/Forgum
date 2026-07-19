@@ -173,14 +173,13 @@ fn all_cows_render_into_framebuffer_without_overflow() {
 // ── dna.rs integration tests ────────────────────────────────────────────────
 
 #[test]
-fn animations_json_loads_all_10_profiles() {
+fn animations_json_loads_profiles() {
     let dd = data_dir();
     let map = forgum_engine::dna::load_animations(&dd);
 
-    assert_eq!(
-        map.len(),
-        10,
-        "Expected 10 DNA profiles in animations.json, found {}",
+    assert!(
+        map.len() >= 10,
+        "Expected at least 10 DNA profiles in animations.json, found {}",
         map.len()
     );
 

@@ -30,6 +30,8 @@ pub enum ShellKind {
     Zsh,
     Fish,
     Pwsh,
+    Cmd,
+    PowerShell,
     Unknown,
 }
 
@@ -41,6 +43,8 @@ impl ShellKind {
             Self::Zsh => "zsh",
             Self::Fish => "fish",
             Self::Pwsh => "pwsh",
+            Self::Cmd => "cmd",
+            Self::PowerShell => "powershell",
             Self::Unknown => "unknown",
         }
     }
@@ -53,7 +57,9 @@ impl std::str::FromStr for ShellKind {
             "bash" => Ok(Self::Bash),
             "zsh" => Ok(Self::Zsh),
             "fish" => Ok(Self::Fish),
-            "pwsh" | "powershell" => Ok(Self::Pwsh),
+            "pwsh" => Ok(Self::Pwsh),
+            "powershell" => Ok(Self::PowerShell),
+            "cmd" => Ok(Self::Cmd),
             other => Err(PlatformError::InvalidArgument(format!(
                 "unknown shell: {other}"
             ))),
@@ -305,7 +311,8 @@ mod tests {
             ("ZSH", ShellKind::Zsh),
             ("Fish", ShellKind::Fish),
             ("pwsh", ShellKind::Pwsh),
-            ("PowerShell", ShellKind::Pwsh), // legacy alias
+            ("PowerShell", ShellKind::PowerShell),
+            ("cmd", ShellKind::Cmd),
         ];
         for (input, expected) in cases {
             let parsed: ShellKind = input.parse().unwrap();

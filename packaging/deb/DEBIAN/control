@@ -2,6 +2,7 @@ Package: forgum
 Version: 0.4.0
 Architecture: amd64
 Maintainer: HKDEVS
+Homepage: https://github.com/HKDevLoops/Forgum
 Description: Cross-platform cowsay+fortune+lolcat with a Rust ANSI animation engine
 Depends: libc6
 Section: utils

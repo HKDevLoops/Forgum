@@ -10,7 +10,10 @@ mkdir -p "${DEB_DIR}/DEBIAN"
 mkdir -p "${DEB_DIR}/usr/bin"
 
 # Download linux binary from GitHub releases
-curl -L "https://github.com/harish2222/Forgum/releases/download/v${VERSION}/forgum-engine-linux-amd64" \
+curl -L "https://github.com/HKDevLoops/Forgum/releases/download/v${VERSION}/forgum-engine-x86_64-unknown-linux-gnu.tar.gz" -o /tmp/forgum-engine.tar.gz \
+  && tar -xzf /tmp/forgum-engine.tar.gz -C "${DEB_DIR}/usr/bin" forgum-engine && rm -f /tmp/forgum-engine.tar.gz \
+  || curl -L "https://github.com/HKDevLoops/Forgum/releases/download/v${VERSION}/forgum-engine-x86_64-unknown-linux-gnu.tar.gz" \
+   -o "${DEB_DIR}/usr/bin/forgum-engine"
   -o "${DEB_DIR}/usr/bin/forgum-engine"
 
 chmod 755 "${DEB_DIR}/usr/bin/forgum-engine"

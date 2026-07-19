@@ -35,6 +35,9 @@ pub fn read_config_file(path: &Path) -> Result<SceneConfig, PlatformError> {
 /// - `fps == 0` → keep base
 /// - `eyes == ""` → keep base
 /// - `tongue == ""` → keep base
+/// - `default_shell == ""` → keep base
+/// - `auto_render_on_prompt` → overlay value wins (simple bool override, NOT sticky — overlay replaces base)
+/// - `color_mode == ""` → keep base
 ///
 /// Because `0` is a meaningful value for `duration` (infinite), the
 /// `--config` JSON should explicitly set `"duration": N` for any non-zero
@@ -76,6 +79,17 @@ pub fn merge(base: SceneConfig, overlay: SceneConfig) -> SceneConfig {
             base.tongue
         } else {
             overlay.tongue
+        },
+        default_shell: if overlay.default_shell.is_empty() {
+            base.default_shell
+        } else {
+            overlay.default_shell
+        },
+        auto_render_on_prompt: overlay.auto_render_on_prompt,
+        color_mode: if overlay.color_mode.is_empty() {
+            base.color_mode
+        } else {
+            overlay.color_mode
         },
     }
 }

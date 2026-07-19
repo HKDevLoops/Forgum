@@ -14,7 +14,7 @@
     Cargo.toml at the current directory, then to the latest GitHub release.
 
 .PARAMETER Repo
-    owner/name of the GitHub repo. Defaults to HKDEVS/forgum.
+    owner/name of the GitHub repo. Defaults to HKDevLoops/Forgum.
 
 .PARAMETER FirstRun
     If set, prints first-run guidance after install.
@@ -26,7 +26,7 @@
 [CmdletBinding()]
 param(
     [string] $Version,
-    [string] $Repo = 'HKDEVS/forgum',
+    [string] $Repo = 'HKDevLoops/Forgum',
     [switch] $FirstRun
 )
 
@@ -121,9 +121,35 @@ if ($installDir -notin $userPath) {
     Write-Host ">> $installDir already on User PATH"
 }
 
+# --- fun: fortune + shell hook ---------------------------------------------
+Write-Host
+Write-Host "=============================================="
+Write-Host "  Moooo! Wrapping up your forgum install..."
+Write-Host "=============================================="
+
+Write-Host
+Write-Host "Here's a fortune to chew on while we finish up:"
+try {
+    & "$installDir\forgum-engine.exe" fortune 2>$null
+} catch {
+    # fortune subcommand is best-effort; never fail the install
+}
+
+Write-Host
+Write-Host ">> Injecting the shell hook so forgum runs on every prompt..."
+$initShell = if (Get-Command pwsh -ErrorAction SilentlyContinue) { 'pwsh' } else { 'powershell' }
+try {
+    & "$installDir\forgum-engine.exe" init $initShell 2>$null
+} catch {
+    # init is best-effort; never fail the install
+}
+
 # --- next steps -------------------------------------------------------------
 Write-Host
 Write-Host "Done. Reopen your terminal, then try: forgum-engine --help"
 if ($FirstRun) {
     Write-Host "First run: forgum-engine --daemon start"
 }
+
+Write-Host
+Write-Host "Customize your cow anytime:  forgum-engine config --tui"

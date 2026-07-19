@@ -23,8 +23,8 @@
     PrivateData       = @{
         PSData = @{
             Tags       = @('cowsay', 'fortune', 'lolcat', 'animation', 'terminal', 'fun')
-            ProjectUri = 'https://github.com/harish2222/Forgum'
-            LicenseUri = 'https://github.com/harish2222/Forgum/blob/main/LICENSE'
+            ProjectUri = 'https://github.com/HKDevLoops/Forgum'
+            LicenseUri = 'https://github.com/HKDevLoops/Forgum/blob/main/LICENSE'
         }
     }
 }

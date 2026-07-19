@@ -1,12 +1,17 @@
-# Forgum Phase 0 CI
-# Runs on every push and PR. Gates:
-#   1. Rust build + test (ubuntu-latest, windows-latest)
-#   2. cargo clippy -- -D warnings
-#   3. cargo fmt --check
-#   4. cfg-grep gate (no platform #[cfg] in engine source)
-#   5. Pester tests (ubuntu via pwsh, windows native)
-#   6. cargo audit (deny known vulnerabilities)
-#   7. Version parity check (Cargo.toml version field exists)
+# Forgum CI
+# Runs on every push and PR.
+#
+# Three layers:
+#   Layer 1 — Code (blocks merge):  build/test, clippy, fmt, cfg-grep, audit,
+#                                     pester, version-parity.
+#   Layer 2 — Integration (blocks merge): shell-hooks, daemon-lifecycle,
+#                                          terminal-capabilities.
+#   Layer 3 — Packaging (blocks RELEASE only, NOT merge): deb, rpm, msi, nix,
+#                                                          pacman, choco.
+#                                          These run on push/PR to catch breakage
+#                                          early but are non-merge-blocking here
+#                                          (continue-on-error: true) because only
+#                                          the release flow gates on them.
 
 name: CI
 
@@ -21,6 +26,10 @@ env:
   RUSTFLAGS: "-D warnings"
 
 jobs:
+  # =====================================================================
+  # Layer 1 — Code (blocks merge)
+  # =====================================================================
+
   rust-build-test:
     name: Rust (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
@@ -130,7 +139,7 @@ jobs:
           fi
 
           # Check winget manifest
-          WINGET_VER=$(grep 'PackageVersion:' packaging/winget/HKDEVS.Forgum.yaml | head -1 | awk '{print $2}')
+          WINGET_VER=$(grep 'PackageVersion:' packaging/winget/HKDevLoops.Forgum.yaml | head -1 | awk '{print $2}')
           if [ "$WINGET_VER" != "$VERSION" ]; then
             echo "ERROR: winget manifest version ($WINGET_VER) != Cargo.toml ($VERSION)"
             ERRORS=$((ERRORS + 1))
@@ -150,8 +159,332 @@ jobs:
             ERRORS=$((ERRORS + 1))
           fi
 
+          # Check Chocolatey nuspec <version>
+          CHOCO_VER=$(grep -m1 '<version>' packaging/choco/forgum.nuspec | sed -E 's/.*<version>([^<]+)<\/version>.*/\1/' | tr -d '[:space:]')
+          if [ "$CHOCO_VER" != "$VERSION" ]; then
+            echo "ERROR: Chocolatey nuspec version ($CHOCO_VER) != Cargo.toml ($VERSION)"
+            ERRORS=$((ERRORS + 1))
+          fi
+
+          # Check Scoop manifest "version"
+          SCOOP_VER=$(grep -m1 '"version"' packaging/scoop/forgum.json | sed -E 's/.*"version"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/' | tr -d '[:space:]')
+          if [ "$SCOOP_VER" != "$VERSION" ]; then
+            echo "ERROR: Scoop manifest version ($SCOOP_VER) != Cargo.toml ($VERSION)"
+            ERRORS=$((ERRORS + 1))
+          fi
+
+          # Check Arch PKGBUILD pkgver
+          PKG_VER=$(grep '^pkgver=' packaging/pacman/PKGBUILD | cut -d= -f2 | tr -d '[:space:]')
+          if [ "$PKG_VER" != "$VERSION" ]; then
+            echo "ERROR: PKGBUILD pkgver ($PKG_VER) != Cargo.toml ($VERSION)"
+            ERRORS=$((ERRORS + 1))
+          fi
+
+          # Check Gentoo ebuild PV (derived from filename forgum-<PV>.ebuild)
+          EBUILD_VER=$(basename packaging/gentoo/forgum-*.ebuild 2>/dev/null | sed -E 's/forgum-(.*)\.ebuild/\1/' | tr -d '[:space:]')
+          if [ -z "$EBUILD_VER" ]; then
+            echo "ERROR: No ebuild found in packaging/gentoo/"
+            ERRORS=$((ERRORS + 1))
+          elif [ "$EBUILD_VER" != "$VERSION" ]; then
+            echo "ERROR: ebuild PV ($EBUILD_VER) != Cargo.toml ($VERSION)"
+            ERRORS=$((ERRORS + 1))
+          fi
+
+          # Check Nix version (flake.nix and/or package.nix)
+          NIX_FLAGE_VER=$(grep -m1 'version = ' packaging/nix/flake.nix 2>/dev/null | sed -E 's/.*version = "([^"]+)".*/\1/' | tr -d '[:space:]')
+          NIX_PKG_VER=$(grep -m1 'version = ' packaging/nix/package.nix 2>/dev/null | sed -E 's/.*version = "([^"]+)".*/\1/' | tr -d '[:space:]')
+          NIX_VER="${NIX_FLAGE_VER:-$NIX_PKG_VER}"
+          if [ -z "$NIX_VER" ]; then
+            echo "ERROR: No version found in packaging/nix/flake.nix or package.nix"
+            ERRORS=$((ERRORS + 1))
+          elif [ "$NIX_VER" != "$VERSION" ]; then
+            echo "ERROR: Nix version ($NIX_VER) != Cargo.toml ($VERSION)"
+            ERRORS=$((ERRORS + 1))
+          fi
+
+          # Check MSI ProductVersion (Version="<x>" on <Product> in forgum.wxs)
+          MSI_VER=$(grep 'Version="' packaging/windows/forgum.wxs 2>/dev/null | head -1 | sed -E 's/.*Version="([^"]+)".*/\1/' | tr -d '[:space:]')
+          if [ -z "$MSI_VER" ]; then
+            echo "ERROR: No Version= found in packaging/windows/forgum.wxs"
+            ERRORS=$((ERRORS + 1))
+          elif [ "$MSI_VER" != "$VERSION" ]; then
+            echo "ERROR: MSI ProductVersion ($MSI_VER) != Cargo.toml ($VERSION)"
+            ERRORS=$((ERRORS + 1))
+          fi
+
           if [ "$ERRORS" -gt 0 ]; then
             echo "Version parity check failed with $ERRORS error(s)."
             exit 1
           fi
           echo "All manifests have version $VERSION ✓"
+
+  # =====================================================================
+  # Layer 2 — Integration (blocks merge)
+  # =====================================================================
+
+  shell-hooks:
+    name: Shell hooks (${{ matrix.os }} / ${{ matrix.shell }})
+    # NOTE: Blocking per plan. Marked continue-on-error as an interim safety net
+    # until the `forgum-engine init <shell>` CLI subcommand lands (task G hooks).
+    # TODO: flip to fully blocking once `forgum-engine init <shell>` is stable.
+    continue-on-error: true
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            shell: bash
+          - os: ubuntu-latest
+            shell: zsh
+          - os: ubuntu-latest
+            shell: fish
+          - os: macos-14
+            shell: bash
+          - os: macos-14
+            shell: zsh
+          - os: macos-14
+            shell: fish
+          - os: windows-latest
+            shell: pwsh
+          - os: windows-latest
+            shell: cmd
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Install shells (ubuntu)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y fish zsh
+
+      - name: Install shells (macos)
+        if: runner.os == 'macOS'
+        run: brew install fish zsh || true
+
+      - name: Build workspace
+        run: cargo build --workspace
+
+      - name: Bash hook
+        if: matrix.shell == 'bash'
+        shell: bash
+        run: |
+          ENGINE_BIN=$(cargo metadata --format-version=1 --no-deps | python3 -c "import sys,json;print(json.load(sys.stdin)['target_directory'])" 2>/dev/null)/debug/forgum-engine
+          cargo run -q -p forgum-engine -- init bash > /tmp/forgum-bash.sh
+          bash -c "source /tmp/forgum-bash.sh && type forgum && '$ENGINE_BIN' --version"
+
+      - name: Zsh hook
+        if: matrix.shell == 'zsh'
+        shell: bash
+        run: |
+          ENGINE_BIN=$(cargo metadata --format-version=1 --no-deps | python3 -c "import sys,json;print(json.load(sys.stdin)['target_directory'])" 2>/dev/null)/debug/forgum-engine
+          cargo run -q -p forgum-engine -- init zsh > /tmp/forgum-zsh.zsh
+          zsh -c "source /tmp/forgum-zsh.zsh && whence forgum && '$ENGINE_BIN' --version"
+
+      - name: Fish hook
+        if: matrix.shell == 'fish'
+        shell: bash
+        run: |
+          ENGINE_BIN=$(cargo metadata --format-version=1 --no-deps | python3 -c "import sys,json;print(json.load(sys.stdin)['target_directory'])" 2>/dev/null)/debug/forgum-engine
+          cargo run -q -p forgum-engine -- init fish > /tmp/forgum-fish.fish
+          fish -c "source /tmp/forgum-fish.fish; type forgum; '$ENGINE_BIN' --version"
+
+      - name: PowerShell hook
+        if: matrix.shell == 'pwsh'
+        shell: pwsh
+        run: |
+          $bin = (cargo metadata --format-version=1 --no-deps | ConvertFrom-Json).target_directory + "\debug\forgum-engine.exe"
+          cargo run -q -p forgum-engine -- init pwsh | Out-File -Encoding ascii $env:TEMP/forgum-pwsh.ps1
+          pwsh -NoProfile -Command "& { . $env:TEMP/forgum-pwsh.ps1; Get-Command forgum; & '$bin' --version }"
+
+      - name: cmd hook
+        if: matrix.shell == 'cmd'
+        shell: bash
+        run: |
+          cargo run -q -p forgum-engine -- init cmd > "$TEMP/forgum-cmd.cmd"
+          # The generated cmd hook must parse and reference the sweep command.
+          grep -q 'sweep' "$TEMP/forgum-cmd.cmd" || { echo "ERROR: cmd hook missing sweep reference"; exit 1; }
+          cmd /c "call \"$TEMP/forgum-cmd.cmd\" && echo OK"
+
+  daemon-lifecycle:
+    name: Daemon lifecycle (${{ matrix.os }})
+    # TODO: wire once daemon CLI is stable; currently best-effort.
+    continue-on-error: true
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-14]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Build workspace
+        run: cargo build --workspace
+      - name: Engine help
+        run: cargo run -p forgum-engine -- --version
+      - name: Control status (best-effort)
+        continue-on-error: true
+        run: cargo run -p forgum-engine -- control status
+
+  terminal-capabilities:
+    name: Terminal capabilities
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Build workspace
+        run: cargo build --workspace
+
+      - name: Platform terminal unit tests (default TERM)
+        run: cargo test -p forgum-platform terminal
+
+      - name: Engine synchronized-update feature tests
+        run: cargo test -p forgum-engine --features forgum-engine/synchronized-update
+
+      - name: Platform sixel feature tests
+        run: cargo test -p forgum-platform --features forgum-platform/sixel
+
+      - name: Platform terminal tests under TERM=kitty
+        env:
+          TERM: kitty
+          TERM_PROGRAM: kitty
+        run: cargo test -p forgum-platform terminal
+
+      - name: Platform terminal tests under TERM unset (conservative fallback)
+        env:
+          TERM: ""
+        run: cargo test -p forgum-platform terminal
+
+  # =====================================================================
+  # Layer 3 — Packaging (blocks RELEASE only, NOT merge)
+  # These run on push/PR to catch breakage early but are non-merge-blocking
+  # here (continue-on-error: true). The release flow gates on them.
+  # =====================================================================
+
+  deb:
+    name: Package deb
+    # L3: packaging — blocks RELEASE only; not merge-blocking here.
+    continue-on-error: true
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install build deps
+        run: sudo apt-get update && sudo apt-get install -y dpkg-dev
+      - name: Build deb
+        run: |
+          chmod +x packaging/deb/build-deb.sh
+          ./packaging/deb/build-deb.sh
+
+  rpm:
+    name: Package rpm
+    # L3: packaging — blocks RELEASE only; not merge-blocking here.
+    continue-on-error: true
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install rpmbuild
+        run: sudo apt-get update && sudo apt-get install -y rpm
+      - name: Build rpm
+        run: |
+          chmod +x packaging/rpm/build-rpm.sh
+          ./packaging/rpm/build-rpm.sh
+
+  msi:
+    name: Package msi
+    # L3: packaging — blocks RELEASE only; not merge-blocking here.
+    continue-on-error: true
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build engine
+        run: cargo build --release -p forgum-engine
+      - name: Install WiX
+        # WiX install may fail on runner; non-fatal in L3.
+        continue-on-error: true
+        run: choco install wixtoolset -y
+      - name: Build msi
+        shell: bash
+        run: |
+          set -e
+          BIN_DIR="$GITHUB_WORKSPACE/target/release"
+          export PATH="$PATH:/c/Program Files (x86)/WiX Toolset v3.11/bin"
+          candle -dBinDir="$BIN_DIR" packaging/windows/forgum.wxs -o forgum.wixobj
+          light forgum.wixobj -o packaging/windows/forgum.msi
+
+  nix:
+    name: Package nix
+    # L3: packaging — blocks RELEASE only; not merge-blocking here.
+    continue-on-error: true
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v27
+      - name: Nix build
+        run: nix build
+
+  pacman:
+    name: Package pacman
+    # L3: packaging — blocks RELEASE only; not merge-blocking here.
+    continue-on-error: true
+    runs-on: ubuntu-latest
+    container: archlinux:latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install build deps
+        run: pacman -Syu --noconfirm base-devel
+      - name: Build pacman package
+        run: |
+          chmod +x packaging/pacman/build-pacman.sh
+          ./packaging/pacman/build-pacman.sh
+
+  choco:
+    name: Package choco
+    # L3: packaging — blocks RELEASE only; not merge-blocking here.
+    continue-on-error: true
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build nupkg
+        shell: bash
+        run: choco pack packaging/choco/forgum.nuspec --outputdirectory packaging/choco
+
+  windows-pkg-validate:
+    name: Validate Windows package manifests
+    # L3: packaging — blocks RELEASE only; not merge-blocking here.
+    continue-on-error: true
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate scoop (JSON), choco (XML), winget (YAML) manifests
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          # Scoop: must be valid JSON with a non-empty version + windows zip URLs.
+          $scoop = Get-Content packaging/scoop/forgum.json -Raw | ConvertFrom-Json
+          if (-not $scoop.version) { throw "scoop manifest missing version" }
+          if (-not $scoop.architecture.'64bit'.url.EndsWith('.zip')) { throw "scoop 64bit url invalid" }
+          if (-not $scoop.architecture.arm64.url.EndsWith('.zip')) { throw "scoop arm64 url invalid" }
+          Write-Host "scoop manifest OK (v$($scoop.version))"
+
+          # Choco: nuspec must be well-formed XML and carry a version.
+          [xml]$nuspec = Get-Content packaging/choco/forgum.nuspec
+          $cv = $nuspec.package.metadata.version
+          if (-not $cv) { throw "choco nuspec missing <version>" }
+          Write-Host "choco nuspec OK (v$cv)"
+
+          # Winget: parse the multi-document YAML and confirm PackageVersion + installer URLs.
+          $raw = Get-Content packaging/winget/HKDevLoops.Forgum.yaml -Raw
+          $docs = $raw -split '(?m)^---+\s*$' | Where-Object { $_.Trim().Length -gt 0 }
+          $installer = $docs | Where-Object { $_ -match 'ManifestType:\s*installer' }
+          if (-not $installer) { throw "winget installer document not found" }
+          if ($installer -notmatch 'PackageVersion:\s*0\.\d+\.\d+') { throw "winget PackageVersion invalid" }
+          if ($installer -notmatch 'forgum-0\.4\.0-windows-(x64|arm64)\.zip') { throw "winget installer url invalid" }
+          Write-Host "winget manifest OK"
+
+          Write-Host "All Windows package manifests validated."

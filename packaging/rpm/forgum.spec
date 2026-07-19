@@ -4,7 +4,7 @@ Release:        1%{?dist}
 Summary:        Cross-platform cowsay+fortune+lolcat
 
 License:        MIT
-URL:            https://github.com/harish2222/Forgum
+URL:            https://github.com/HKDevLoops/Forgum
 Source0:        %{name}-%{version}.tar.gz
 
 BuildArch:      x86_64

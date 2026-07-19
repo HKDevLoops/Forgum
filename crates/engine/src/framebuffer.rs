@@ -162,6 +162,18 @@ impl FrameBuffer {
         self.front[y * self.width + x]
     }
 
+    /// Read a cell from the **back** buffer (the frame currently being built).
+    ///
+    /// This is what the renderer should read so the *just-rendered* frame is
+    /// drawn rather than the stale last-swapped one (BUG-A stale-frame fix).
+    #[must_use]
+    pub fn get_back(&self, x: usize, y: usize) -> Cell {
+        if x >= self.width || y >= self.height {
+            return Cell::empty();
+        }
+        self.back[y * self.width + x]
+    }
+
     /// Resize. Both buffers are reset to empty and the trackers cleared.
     pub fn resize(&mut self, width: usize, height: usize) {
         let sz = width.saturating_mul(height);
@@ -181,12 +193,19 @@ impl FrameBuffer {
         self.damage_list.clone()
     }
 
-    /// Swap buffers (back becomes the new front).
+    /// Swap buffers: `front` becomes the frame just built in `back`, and `back`
+    /// is repopulated as a copy of that displayed frame so the next frame is
+    /// built on top of it.
     ///
-    /// Resets the incremental trackers so the next frame's `set()` calls
-    /// measure damage against the freshly-displayed front buffer (G1).
+    /// Damage is measured by comparing each `set()` against `front` (the last
+    /// displayed frame). Resetting the trackers here means the next frame's
+    /// `set()` calls measure damage against the freshly-displayed front buffer
+    /// (G1), and `get_back` returns the displayed content until overwritten —
+    /// which is what `render_damage` reads to draw the current (non-stale)
+    /// frame (BUG-A).
     pub fn swap(&mut self) {
         std::mem::swap(&mut self.back, &mut self.front);
+        self.back.clone_from(&self.front);
         self.dirty.fill(false);
         self.damage_list.clear();
     }
@@ -345,6 +364,31 @@ mod tests {
     }
 
     #[test]
+    fn get_back_reads_back_buffer() {
+        let mut fb = FrameBuffer::new(4, 4);
+        // Set a cell in back, before any swap.
+        fb.set(2, 1, Cell::new('A', Color::WHITE));
+        // Before swap: back has 'A', front is empty.
+        assert_eq!(fb.get_back(2, 1).ch, 'A', "back should have the cell");
+        assert_eq!(fb.get(2, 1).ch, ' ', "front should be empty before swap");
+        // Swap: back (empty, old front) <-> front (has 'A').
+        fb.swap();
+        // After swap: both front and back agree.
+        assert_eq!(fb.get_back(2, 1).ch, 'A');
+        assert_eq!(fb.get(2, 1).ch, 'A');
+        // Now write a NEW cell to back without swapping.
+        fb.set(0, 0, Cell::new('B', Color::WHITE));
+        // back has 'B' at (0,0); front still has 'A' at (2,1) and empty elsewhere.
+        assert_eq!(fb.get_back(0, 0).ch, 'B');
+        assert_eq!(
+            fb.get(0, 0).ch,
+            ' ',
+            "front must not see the unswapped back change"
+        );
+        assert_eq!(fb.get_back(2, 1).ch, 'A');
+    }
+
+    #[test]
     fn out_of_bounds_set_returns_false() {
         let mut fb = FrameBuffer::new(2, 2);
         assert!(!fb.set(2, 0, Cell::new('x', Color::WHITE)));
@@ -375,7 +419,9 @@ mod tests {
             'A',
             "after swap, front should have the cell"
         );
-        assert_eq!(fb.back[0].ch, ' ', "after swap, back should be empty");
+        // Copy-swap: `back` mirrors the displayed frame so the next build
+        // starts from it; it is NOT empty.
+        assert_eq!(fb.back[0].ch, 'A', "after swap, back mirrors front");
     }
 
     #[test]

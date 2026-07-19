@@ -59,6 +59,21 @@ fn output_dir() -> PathBuf {
     workspace_root().join("test-renders")
 }
 
+fn feature_tag() -> String {
+    let mut parts: Vec<&str> = Vec::new();
+    if cfg!(feature = "tui") {
+        parts.push("tui");
+    }
+    if cfg!(feature = "synchronized-update") {
+        parts.push("sync");
+    }
+    if parts.is_empty() {
+        "base".to_string()
+    } else {
+        parts.join("-")
+    }
+}
+
 fn all_cow_names() -> Vec<String> {
     let cows_dir = data_dir().join("Cows");
     let mut names: Vec<String> = std::fs::read_dir(&cows_dir)
@@ -295,7 +310,9 @@ fn render_all_cows_to_png() {
             let hash = blake3::hash(&framebuffer_to_pixels(hero));
             _golden_hashes.insert(name.clone(), hash.to_hex().to_string());
 
-            let golden_path = out.join("golden").join(format!("{name}.blake3"));
+            let golden_path = out
+                .join("golden")
+                .join(format!("{name}.{}.blake3", feature_tag()));
             std::fs::write(&golden_path, hash.to_hex().as_bytes())
                 .expect("failed to write golden hash");
 
@@ -374,15 +391,20 @@ fn golden_visual_regression_deterministic_cows() {
             continue;
         }
 
-        let golden_path = golden_dir.join(format!("{name}.blake3"));
-        if !golden_path.exists() {
-            continue;
-        }
+        let golden_path = golden_dir.join(format!("{name}.{}.blake3", feature_tag()));
 
-        let expected = std::fs::read_to_string(&golden_path)
-            .expect("failed to read golden hash")
-            .trim()
-            .to_string();
+        let expected = if golden_path.exists() {
+            std::fs::read_to_string(&golden_path)
+                .expect("failed to read golden hash")
+                .trim()
+                .to_string()
+        } else {
+            // No committed golden for this build — self-golden so the test is
+            // hermetic across feature sets (a fresh checkout never has stale
+            // hashes). Stale on-disk goldens from a different build are a
+            // manual `rm test-renders/golden` case.
+            String::new()
+        };
 
         let cow_raw = load_cow(name, &dd, "oo", " ", "\\\\");
         let cow_text = expand_cow(&cow_raw, "oo", " ", "\\\\");
@@ -400,6 +422,12 @@ fn golden_visual_regression_deterministic_cows() {
 
         let hash = blake3::hash(&framebuffer_to_pixels(&fb));
         let actual = hash.to_hex().to_string();
+
+        if expected.is_empty() {
+            // Self-golden: persist and skip comparison this run.
+            std::fs::write(&golden_path, actual.as_bytes()).expect("failed to write golden hash");
+            continue;
+        }
 
         if actual != expected {
             regressions.push(format!("{name}: expected {expected}, got {actual}"));

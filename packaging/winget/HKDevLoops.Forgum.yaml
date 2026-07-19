@@ -1,12 +1,12 @@
 # yaml-language-server: $schema=https://aka.ms/winget-manifest.version.1.6.0.schema.json
-PackageIdentifier: HKDEVS.Forgum
+PackageIdentifier: HKDevLoops.Forgum
 PackageVersion: 0.4.0
 DefaultLocale: en-US
 ManifestType: version
 ManifestVersion: 1.6.0
 ---
 # yaml-language-server: $schema=https://aka.ms/winget-manifest.installer.1.6.0.schema.json
-PackageIdentifier: HKDEVS.Forgum
+PackageIdentifier: HKDevLoops.Forgum
 PackageVersion: 0.4.0
 Platform:
   - Windows.Desktop
@@ -14,10 +14,10 @@ MinimumOSVersion: 10.0.17763.0
 InstallerType: zip
 Installers:
   - Architecture: x64
-    InstallerUrl: https://github.com/HKDEVS/forgum/releases/download/v0.4.0/forgum-0.4.0-windows-x64.zip
+    InstallerUrl: https://github.com/HKDevLoops/Forgum/releases/download/v0.4.0/forgum-0.4.0-windows-x64.zip
     InstallerSha256: PLACEHOLDER_HASH_X64
   - Architecture: arm64
-    InstallerUrl: https://github.com/HKDEVS/forgum/releases/download/v0.4.0/forgum-0.4.0-windows-arm64.zip
+    InstallerUrl: https://github.com/HKDevLoops/Forgum/releases/download/v0.4.0/forgum-0.4.0-windows-arm64.zip
     InstallerSha256: PLACEHOLDER_HASH_ARM64
 Commands:
   - forgum-engine
@@ -25,15 +25,15 @@ ManifestType: installer
 ManifestVersion: 1.6.0
 ---
 # yaml-language-server: $schema=https://aka.ms/winget-manifest.defaultLocale.1.6.0.schema.json
-PackageIdentifier: HKDEVS.Forgum
+PackageIdentifier: HKDevLoops.Forgum
 PackageVersion: 0.4.0
 PackageLocale: en-US
-Publisher: HKDEVS
-PublisherUrl: https://github.com/HKDEVS
+Publisher: HKDevLoops
+PublisherUrl: https://github.com/HKDevLoops
 PackageName: Forgum
-PackageUrl: https://github.com/HKDEVS/forgum
+PackageUrl: https://github.com/HKDevLoops/Forgum
 License: MIT
-LicenseUrl: https://github.com/HKDEVS/forgum/blob/main/LICENSE
+LicenseUrl: https://github.com/HKDevLoops/Forgum/blob/main/LICENSE
 ShortDescription: Forgum - A modern forum engine
 Description: Forgum is a modern forum engine built with performance and extensibility in mind.
 Tags:

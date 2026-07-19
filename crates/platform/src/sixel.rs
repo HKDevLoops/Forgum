@@ -104,6 +104,7 @@ pub fn graphics_renderer_available() -> bool {
 #[cfg(feature = "sixel")]
 mod imp {
     use super::{FrameBufferLike, GraphicsRenderer};
+    use crate::font;
     use std::io::Write;
 
     /// Which graphics protocol to emit.
@@ -142,10 +143,10 @@ mod imp {
     }
 
     /// Pixel geometry for one character cell when rasterizing to a graphics
-    /// primitive. Real glyph rasterization is out of scope for this best-effort
-    /// backend; we draw a solid colored block per damaged cell.
-    const CELL_W: usize = 10;
-    const CELL_H: usize = 18; // multiple of 6 → clean sixel row alignment
+    /// primitive. We rasterize the real 8×8 glyph font into a cell-sized block,
+    /// falling back to a solid colored block when the font lacks the glyph.
+    const CELL_W: usize = 8;
+    const CELL_H: usize = 8; // matches the built-in font (GLYPH_W×GLYPH_H)
 
     /// Sixel/Kitty graphics renderer: draws each damaged cell as a solid block
     /// of its foreground color at the cell's screen position. This proves out
@@ -176,10 +177,21 @@ mod imp {
                 buf.push(b';');
                 write_decimal(&mut buf, (x + 1) as u32);
                 buf.push(b'H');
-                let color = if cell.alpha == 0 { (0, 0, 0) } else { cell.fg };
-                match self.protocol {
-                    Protocol::Sixel => emit_sixel_block(&mut buf, color, CELL_W, CELL_H),
-                    Protocol::Kitty => emit_kitty_block(&mut buf, color, CELL_W, CELL_H),
+
+                // Prefer real glyph rasterization; fall back to a solid block
+                // when the font has no glyph for this character.
+                let fg = if cell.alpha == 0 { (0, 0, 0) } else { cell.fg };
+                if let Some(bits) = crate::font::glyph(cell.ch) {
+                    let bg = cell.bg;
+                    match self.protocol {
+                        Protocol::Sixel => emit_sixel_glyph(&mut buf, bits, fg, bg, CELL_W, CELL_H),
+                        Protocol::Kitty => emit_kitty_glyph(&mut buf, bits, fg, bg, CELL_W, CELL_H),
+                    }
+                } else {
+                    match self.protocol {
+                        Protocol::Sixel => emit_sixel_block(&mut buf, fg, CELL_W, CELL_H),
+                        Protocol::Kitty => emit_kitty_block(&mut buf, fg, CELL_W, CELL_H),
+                    }
                 }
             }
             out.write_all(&buf)
@@ -233,6 +245,104 @@ mod imp {
         buf.extend_from_slice(b"\x1b\\");
     }
 
+    /// Build an `w`×`h` RGBA pixel buffer from an 8×8 glyph bitmap. Pixels set in
+    /// `bits` take `fg`; all others take `bg`. Fixed 8×8 geometry ⇒ stack buffer,
+    /// no heap allocation on the hot path.
+    fn build_glyph_rgba(
+        bits: [u8; crate::font::GLYPH_H],
+        fg: (u8, u8, u8),
+        bg: (u8, u8, u8),
+    ) -> [u8; crate::font::GLYPH_W * crate::font::GLYPH_H * 4] {
+        let mut px = [0u8; crate::font::GLYPH_W * crate::font::GLYPH_H * 4];
+        let w = crate::font::GLYPH_W;
+        for (row, line) in bits.iter().enumerate() {
+            for col in 0..w {
+                let on = (line >> (w - 1 - col)) & 1 == 1;
+                let (r, g, b) = if on { fg } else { bg };
+                let o = (row * w + col) * 4;
+                px[o] = r;
+                px[o + 1] = g;
+                px[o + 2] = b;
+                px[o + 3] = 255;
+            }
+        }
+        px
+    }
+
+    /// Emit a Sixel image of a glyph `bits` sized `w`×`h` at the cursor.
+    ///
+    /// Uses two color registers: register 0 = bg, register 1 = fg. Sixel rows are
+    /// 6 pixels tall; an 8px-tall glyph spans 2 sixel rows. Each sixel character
+    /// selects a color register, so per-bit fg/bg selection is faithful.
+    fn emit_sixel_glyph(
+        buf: &mut Vec<u8>,
+        bits: [u8; crate::font::GLYPH_H],
+        fg: (u8, u8, u8),
+        bg: (u8, u8, u8),
+        w: usize,
+        h: usize,
+    ) {
+        buf.extend_from_slice(b"\x1bPq");
+        // Register 0 = background.
+        buf.extend_from_slice(b"#0;2;");
+        write_decimal(buf, u32::from(bg.0) * 100 / 255);
+        buf.push(b';');
+        write_decimal(buf, u32::from(bg.1) * 100 / 255);
+        buf.push(b';');
+        write_decimal(buf, u32::from(bg.2) * 100 / 255);
+        buf.push(b';');
+        // Register 1 = foreground.
+        buf.extend_from_slice(b"#1;2;");
+        write_decimal(buf, u32::from(fg.0) * 100 / 255);
+        buf.push(b';');
+        write_decimal(buf, u32::from(fg.1) * 100 / 255);
+        buf.push(b';');
+        write_decimal(buf, u32::from(fg.2) * 100 / 255);
+
+        let rows = h.div_ceil(6);
+        for r in 0..rows {
+            for col in 0..w {
+                let mut six = 0u8;
+                for dy in 0..6 {
+                    let y = r * 6 + dy;
+                    if y < h {
+                        let line = bits[y];
+                        let on = (line >> (w - 1 - col)) & 1 == 1;
+                        if on {
+                            six |= 1 << dy;
+                        }
+                    }
+                }
+                // A sixel char code is the OR of set-bit indices, and the bits
+                // are painted with the *current* color register. We emit the run
+                // for whichever register the majority selects by emitting two
+                // characters when a row mixes fg and bg: first the bg bits under
+                // register 0, then the fg bits under register 1.
+                let all_fg = six == 0b0011_1111;
+                let all_bg = six == 0;
+                if all_bg {
+                    // char '@' = code 63 with register 0 → all 6 bg pixels.
+                    buf.push(b'@');
+                } else if all_fg {
+                    // Switch to register 1 then paint all six as fg.
+                    buf.extend_from_slice(b"#1");
+                    buf.push(b'?'); // '?' = code 63, painted with register 1.
+                    buf.extend_from_slice(b"#0");
+                } else {
+                    // Mixed: paint bg bits (register 0) then fg bits (register 1).
+                    buf.push(b'@' + six); // bits set here are bg (register 0)
+                    buf.extend_from_slice(b"#1");
+                    buf.push(b'@' + six); // same bit mask, now painted fg
+                    buf.extend_from_slice(b"#0");
+                }
+            }
+            if r + 1 < rows {
+                buf.push(b'-');
+            }
+        }
+        buf.extend_from_slice(b"\x1b\\");
+    }
+
     /// Emit a Kitty graphics image of a solid `color` block sized `w`×`h` at the
     /// cursor. Uses the "simple" transmission (a=T, f=32 RGBA, uncompressed).
     fn emit_kitty_block(buf: &mut Vec<u8>, color: (u8, u8, u8), w: usize, h: usize) {
@@ -242,6 +352,29 @@ mod imp {
         }
         let b64 = base64_encode(&pixels);
 
+        buf.extend_from_slice(b"\x1b_Gf=32,a=T,s=");
+        write_decimal(buf, w as u32);
+        buf.extend_from_slice(b",v=");
+        write_decimal(buf, h as u32);
+        buf.extend_from_slice(b",m=1;");
+        buf.extend_from_slice(b64.as_bytes());
+        buf.extend_from_slice(b"\x1b\\");
+    }
+
+    /// Emit a Kitty graphics image of a glyph `bits` sized `w`×`h` at the cursor.
+    /// Builds a real RGBA pixel buffer from the 8×8 bitmap (fg = set pixels,
+    /// bg = unset) and transmits it uncompressed. No heap alloc beyond the
+    /// fixed stack pixel buffer and the base64 string.
+    fn emit_kitty_glyph(
+        buf: &mut Vec<u8>,
+        bits: [u8; crate::font::GLYPH_H],
+        fg: (u8, u8, u8),
+        bg: (u8, u8, u8),
+        w: usize,
+        h: usize,
+    ) {
+        let px = build_glyph_rgba(bits, fg, bg);
+        let b64 = base64_encode(&px);
         buf.extend_from_slice(b"\x1b_Gf=32,a=T,s=");
         write_decimal(buf, w as u32);
         buf.extend_from_slice(b",v=");
@@ -306,7 +439,8 @@ mod imp {
             r.render_damage(&mut out, &DummyFb, &[(0, 0)]).unwrap();
             let s = String::from_utf8(out).unwrap();
             assert!(s.contains("\x1bPq"), "must open sixel DCS: {s}");
-            assert!(s.contains("#0;2;100;0;0"), "must define red color: {s}");
+            // In glyph mode register #1 carries the glyph foreground (red).
+            assert!(s.contains("#1;2;100;0;0"), "must define red fg color: {s}");
             assert!(s.ends_with("\x1b\\"), "must close DCS: {s}");
         }
 

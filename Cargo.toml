@@ -3,6 +3,7 @@ resolver = "2"
 members = [
     "crates/platform",
     "crates/engine",
+    "crates/tui",
 ]
 
 [workspace.package]
@@ -11,7 +12,7 @@ edition = "2021"
 rust-version = "1.85"
 license = "MIT"
 authors = ["Forgum Contributors"]
-repository = "https://github.com/harish2222/Forgum"
+repository = "https://github.com/HKDevLoops/Forgum"
 description = "Cross-platform cowsay+fortune+lolcat with a Rust ANSI animation engine"
 
 [workspace.lints.rust]

@@ -80,7 +80,7 @@ impl Renderer for AnsiRenderer {
         let buf = &mut self.scratch;
         buf.clear();
         for &(x, y) in damage {
-            let cell = fb.get(x, y);
+            let cell = fb.get_back(x, y);
             // Move to (x+1, y+1) in 1-indexed terminal coordinates.
             buf.extend_from_slice(b"\x1b[");
             Self::write_decimal(buf, (y + 1) as u32);
@@ -196,7 +196,7 @@ impl forgum_platform::FrameBufferLike for FrameBuffer {
     }
 
     fn cell(&self, x: usize, y: usize) -> forgum_platform::CellView {
-        let c = self.get(x, y);
+        let c = self.get_back(x, y);
         forgum_platform::CellView {
             ch: c.ch,
             fg: (c.fg.r, c.fg.g, c.fg.b),
@@ -252,6 +252,35 @@ mod tests {
             "Expected cursor move to row 3 col 4: {s}"
         );
         assert!(s.contains("X"), "Expected character X: {s}");
+    }
+
+    #[test]
+    fn ansi_renderer_reads_back_buffer() {
+        let mut fb = FrameBuffer::new(10, 5);
+        let _ = fb.set(
+            3,
+            2,
+            crate::framebuffer::Cell::new('X', crate::framebuffer::Color::WHITE),
+        );
+        fb.swap();
+        // Write a NEW cell into back WITHOUT swapping, so front stays 'X' at
+        // (3,2) but back now differs. The renderer must read back ('Y'), proving
+        // it no longer renders the stale last-swapped frame (BUG-A fix).
+        let _ = fb.set(
+            0,
+            0,
+            crate::framebuffer::Cell::new('Y', crate::framebuffer::Color::WHITE),
+        );
+
+        let mut out = Vec::new();
+        let mut renderer = AnsiRenderer::default();
+        let damage = fb.compute_damage();
+        renderer.render_damage(&mut out, &fb, &damage).unwrap();
+        let s = String::from_utf8(out).unwrap();
+        assert!(
+            s.contains('Y'),
+            "renderer must emit the back-buffer cell Y: {s}"
+        );
     }
 
     #[test]

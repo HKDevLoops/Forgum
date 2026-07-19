@@ -203,7 +203,7 @@ pub fn render_loop_foreground(
             // drop — even on panic/error — so the terminal is never left in
             // sync mode. When the feature is off (default) the output is
             // byte-identical to before.
-            if cfg!(feature = "synchronized-update") {
+            if cfg!(feature = "synchronized-update") && forgum_platform::terminal_supports_sync() {
                 let mut guard = SyncGuard::begin(&mut out, rend.as_ref());
                 rend.render_damage(guard.out_mut(), &fb, &dmg)?;
             } else {
@@ -363,7 +363,7 @@ pub fn render_loop_background(
         let dmg = fb.compute_damage();
         scheduler.observe(dmg.len());
         if !dmg.is_empty() {
-            if cfg!(feature = "synchronized-update") {
+            if cfg!(feature = "synchronized-update") && forgum_platform::terminal_supports_sync() {
                 let mut guard = SyncGuard::begin(&mut out, rend.as_ref());
                 rend.render_damage(guard.out_mut(), &fb, &dmg)?;
             } else {

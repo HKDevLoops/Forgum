@@ -12,7 +12,7 @@
 # Environment overrides:
 #   FORGUM_VERSION      release version to install (e.g. 0.4.0)
 #   FORGUM_INSTALL_DIR  explicit install directory (must be on PATH)
-#   FORGUM_REPO         owner/name of the GitHub repo (default: HKDEVS/forgum)
+#   FORGUM_REPO         owner/name of the GitHub repo (default: HKDevLoops/Forgum)
 #
 # Examples:
 #   ./install.sh                 # install latest in Cargo.toml
@@ -21,7 +21,7 @@
 
 set -euo pipefail
 
-REPO="${FORGUM_REPO:-HKDEVS/forgum}"
+REPO="${FORGUM_REPO:-HKDevLoops/Forgum}"
 ASSET_PREFIX="forgum-engine"
 FIRST_RUN=0
 
@@ -140,8 +140,38 @@ case ":$PATH:" in
     fi ;;
 esac
 
+# --- fun: fortune + shell hook ----------------------------------------------
+echo
+echo "=============================================="
+echo "  Moooo! Wrapping up your forgum install..."
+echo "=============================================="
+
+echo
+echo "🐮 Here's a fortune to chew on while we finish up:"
+"$INSTALL_DIR/forgum-engine" fortune 2>/dev/null || true
+
+echo
+echo ">> Injecting the shell hook so forgum runs on every prompt..."
+CURRENT_SHELL="bash"
+if [ -n "${SHELL:-}" ]; then
+  CURRENT_SHELL="$(basename "${SHELL}")"
+elif command -v ps >/dev/null 2>&1; then
+  DETECTED="$(ps -p $$ -o comm= 2>/dev/null | sed 's/^-//' | xargs -r basename 2>/dev/null || true)"
+  [ -n "$DETECTED" ] && CURRENT_SHELL="$DETECTED"
+fi
+case "$CURRENT_SHELL" in
+  zsh)  INIT_SHELL="zsh" ;;
+  fish) INIT_SHELL="fish" ;;
+  bash) INIT_SHELL="bash" ;;
+  *)    INIT_SHELL="bash" ;;
+esac
+"$INSTALL_DIR/forgum-engine" init "$INIT_SHELL" 2>/dev/null || true
+
 echo
 echo "Done. Try: forgum-engine --help"
 if [ "$FIRST_RUN" -eq 1 ]; then
   echo "First run: forgum-engine --daemon start"
 fi
+
+echo
+echo "✨ Customize your cow anytime:  forgum-engine config --tui"

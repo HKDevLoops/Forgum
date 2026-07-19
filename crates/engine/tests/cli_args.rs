@@ -254,7 +254,8 @@ fn init_pwsh_subcommand() {
     assert!(matches!(
         cmd,
         Some(Commands::Init {
-            shell: forgum_engine::cli::ShellArg::Pwsh
+            shell: forgum_engine::cli::ShellArg::Pwsh,
+            ..
         })
     ));
 }
