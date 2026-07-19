@@ -41,7 +41,7 @@ use crate::error::PlatformError;
 pub fn daemonize() -> Result<bool, PlatformError> {
     use nix::unistd::{fork, setsid, ForkResult};
 
-    match fork() {
+    match unsafe { fork() } {
         Ok(ForkResult::Parent { child }) => {
             println!("{}", child.as_raw());
             std::process::exit(0);
