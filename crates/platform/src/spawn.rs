@@ -46,7 +46,7 @@ pub fn daemonize() -> Result<bool, PlatformError> {
             std::process::exit(0);
         }
         Ok(ForkResult::Child) => {
-            setsid().map_err(PlatformError::Io)?;
+            setsid().map_err(|e| PlatformError::Io(std::io::Error::from(e)))?;
             Ok(false)
         }
         Err(e) => Err(PlatformError::Io(io::Error::new(io::ErrorKind::Other, e))),
@@ -120,6 +120,7 @@ pub fn spawn_detached(
     // scope at that point. The `Ok(())` return is the only failure mode
     // for setsid (which can't fail for our purposes — we're not in a
     // session leader).
+    #[allow(unsafe_code)]
     unsafe {
         cmd.pre_exec(|| {
             // Best-effort detach. setsid() is required; umask is hygiene;
@@ -166,6 +167,7 @@ pub fn spawn_silent(program: &Path, args: &[&str]) -> Result<DetachedChild, Plat
 /// On Unix, uses `kill(pid, 0)` to check without sending a signal.
 /// On Windows, uses `OpenProcess` + `GetExitCodeProcess`.
 #[cfg(unix)]
+#[allow(unsafe_code)]
 pub fn process_is_alive(pid: u32) -> bool {
     unsafe { libc::kill(pid as i32, 0) == 0 }
 }
@@ -257,6 +259,7 @@ mod tests {
             .stdout(Stdio::null())
             .stderr(Stdio::null());
         // SAFETY: same reasoning as in spawn_detached.
+        #[allow(unsafe_code)]
         unsafe {
             cmd.pre_exec(|| {
                 if libc::setsid() == -1 {

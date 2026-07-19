@@ -425,7 +425,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: cachix/install-nix-action@v27
       - name: Nix build
-        run: nix build
+        run: nix build --no-link --print-out-paths ./packaging/nix
 
   pacman:
     name: Package pacman

@@ -280,6 +280,7 @@ pub fn detect_session_id() -> String {
     }
     // Fallback: parent PID
     #[cfg(unix)]
+    #[allow(unsafe_code)]
     {
         let ppid = unsafe { libc::getppid() };
         format!("shell-{}", ppid)

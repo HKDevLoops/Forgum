@@ -1,6 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <!-- Build with: candle.exe -dBinDir=... forgum.wxs && light.exe -out forgum.msi forgum.wixobj  (or `cargo wix`). WiX Toolset must be installed in the windows runner. -->
 <!-- NOTE: generate a real GUID for UpgradeCode (placeholder PUT-GUID-HERE below). -->
-<?xml version="1.0" encoding="UTF-8"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
   <Product Id="*" Name="Forgum" Language="1033" Version="0.4.0" Manufacturer="HKDevLoops" UpgradeCode="PUT-GUID-HERE">
     <Package InstallerVersion="500" Compressed="yes" InstallScope="perMachine" />
