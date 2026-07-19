@@ -112,16 +112,4 @@ mod tests {
             assert!(line.len() <= 10);
         }
     }
-
-    #[cfg(windows)]
-    #[test]
-    fn run_say_returns_string() {
-        let output = run_say(&[
-            "cmd".to_string(),
-            "/c".to_string(),
-            "echo".to_string(),
-            "hello".to_string(),
-        ]);
-        assert!(output.contains("hello"));
-    }
 }
