@@ -63,7 +63,6 @@ fn duration_zero_runs_indefinitely_until_killed() {
     let start = Instant::now();
     #[cfg(unix)]
     {
-        use std::os::unix::process::CommandExt;
         let _ = Command::new("/bin/kill")
             .args(["-TERM", &child.id().to_string()])
             .status();
