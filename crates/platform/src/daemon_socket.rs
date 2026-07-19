@@ -141,7 +141,8 @@ impl DaemonSocket {
     /// closed, so this is a no-op.
     pub fn cleanup(&self) {
         #[cfg(unix)]
-        if let SocketInner::Unix { _path, .. } = &self.inner {
+        {
+            let SocketInner::Unix { _path, .. } = &self.inner;
             let _ = std::fs::remove_file(_path);
         }
     }

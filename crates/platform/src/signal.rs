@@ -89,6 +89,7 @@ pub struct SignalGuard {
 }
 
 #[cfg(unix)]
+#[derive(Debug)]
 struct UnixSignalState {
     _int: signal_hook_registry::SigId,
     _term: signal_hook_registry::SigId,
@@ -102,7 +103,7 @@ impl SignalGuard {
         #[cfg(unix)]
         {
             use signal_hook::consts::{SIGHUP, SIGINT, SIGTERM, SIGWINCH};
-            use signal_hook_registry::{register, SignalHook};
+            use signal_hook_registry::register;
 
             let shutdown_handle = flag.shutdown_handle();
             let resize_handle = flag.resize_handle();

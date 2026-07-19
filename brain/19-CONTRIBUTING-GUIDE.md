@@ -1,5 +1,7 @@
 # Forgum — Contributing Guide (plan)
 
+> **Historical plan.** This document is the original *plan* for the contributing guide. For the current, accurate guide, see the repo-root `CONTRIBUTING.md`.
+
 > **The "understand it in one go" blueprint.** This is the plan for the `CONTRIBUTING.md` that ships in the Forgum repo. It is written so that a developer — from a first-time Rust contributor to a 20-year veteran — can read it once and know: how to get the project building, how the code is structured, what the rules are, how to run the tests, how to add a cow / an effect / a shell hook, how to open a PR that passes CI, and how a release happens. No lore, no "ask someone in Discord" — everything is on the page.
 >
 > This document specifies the **structure** of `CONTRIBUTING.md`, the **dev environment**, the **code map**, the **coding standards** (the v2 10 principles, restated for contributors), the **task guides** (add-a-cow, add-an-effect, add-a-shell-hook, add-a-CLI-flag), the **PR + commit conventions**, the **test-running guide**, the **release process**, and the **Code of Conduct summary**. It is the contributor's manual; the wiki (`18-…`) is the user's manual.
