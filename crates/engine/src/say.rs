@@ -113,6 +113,7 @@ mod tests {
         }
     }
 
+    #[cfg(windows)]
     #[test]
     fn run_say_returns_string() {
         let output = run_say(&[

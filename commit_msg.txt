@@ -1,0 +1,7 @@
+fix: remove unused import in duration_zero test
+
+The std::os::unix::process::CommandExt import was unused in the
+#[cfg(unix)] block since Command::new("/bin/kill") doesn
+'
+t need it.
+This was causing test compilation failure on CI due to -D warnings.
