@@ -14,7 +14,8 @@ $script:ForgumBinPath = $null
 function Initialize-ForgumPester {
     if ($script:ForgumRepoRoot) { return }
     $script:ForgumRepoRoot = (Resolve-Path "$PSScriptRoot/..").Path
-    $script:ForgumBinPath = Join-Path (Join-Path (Join-Path $script:ForgumRepoRoot 'target') 'debug') 'forgum-engine.exe'
+    $engineBin = if ($IsWindows) { 'forgum-engine.exe' } else { 'forgum-engine' }
+    $script:ForgumBinPath = Join-Path (Join-Path (Join-Path $script:ForgumRepoRoot 'target') 'debug') $engineBin
 
     if (-not (Test-Path -LiteralPath $script:ForgumBinPath)) {
         Write-Host "[ForgumPester] Building forgum-engine (one-time)..."

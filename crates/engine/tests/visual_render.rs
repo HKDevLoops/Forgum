@@ -67,7 +67,12 @@ fn feature_tag() -> String {
     if cfg!(feature = "synchronized-update") {
         parts.push("sync");
     }
-    if parts.is_empty() {
+    // Pixel-level frames are not bit-identical across platforms (f32 math,
+    // sin/cos, -0.0 vs 0.0, etc.), so key the golden per target OS. Each
+    // platform self-golds independently and still catches real regressions
+    // *within* that platform.
+    parts.push(std::env::consts::OS);
+    if parts.len() == 1 {
         "base".to_string()
     } else {
         parts.join("-")
