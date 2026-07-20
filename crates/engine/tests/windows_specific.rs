@@ -30,7 +30,8 @@ fn timer_runs_cmd_echo() {
     assert!(output.status.success());
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.contains("test"));
-    // Duration should be reasonable (not zero, not too long)
-    assert!(duration > 0.001);
+    // The process was spawned and ran to completion; upper bound guards against
+    // a runaway hang. (Lower bound intentionally omitted: on fast machines
+    // Instant resolution can read ~0 for a sub-millisecond spawn.)
     assert!(duration < 10.0);
 }
