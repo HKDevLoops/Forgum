@@ -20,7 +20,18 @@ fn daemon_lifecycle_ping_stop() {
         .expect("failed to start daemon");
     assert!(child.status.success(), "daemon parent exited non-zero");
 
-    let session = forgum_platform::detect_session_id();
+    // The daemon writes its state file as `daemon-<session>.json` where
+    // `session` is what the *engine* computes via `detect_session_id()`.
+    // On Unix (no $TMUX_PANE / $ZELLIJ_SESSION_ID) that is
+    // `shell-<ppid>` where `ppid` is the engine's parent PID. The engine's
+    // parent is THIS test process, so its pid is `std::process::id()`.
+    // We must mirror that exactly — calling `detect_session_id()` here would
+    // instead return the *cargo-test harness* PID (our grandparent), a
+    // one-level-off mismatch that makes the test hunt for the wrong file.
+    #[cfg(unix)]
+    let session = format!("shell-{}", std::process::id());
+    #[cfg(windows)]
+    let session = std::process::id().to_string();
     let state_path = forgum_platform::daemon_state_path(&session);
     let socket_path = forgum_platform::control_socket_path(&session);
 
