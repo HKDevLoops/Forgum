@@ -435,6 +435,7 @@ jobs:
     container: archlinux:latest
     steps:
       - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
       - name: Install build deps
         run: pacman -Syu --noconfirm base-devel
       - name: Build pacman package
