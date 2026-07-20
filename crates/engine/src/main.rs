@@ -608,31 +608,40 @@ fn render_subcommand(args: cli::Args) -> ExitCode {
         let session_id = forgum_platform::detect_session_id();
         let socket_path = forgum_platform::control_socket_path(&session_id);
 
-        // Start control socket server before forking.
-        let (server, cmd_rx) =
+        // Daemonize (fork) BEFORE starting the control-socket thread.
+        // Forking a multi-threaded process is undefined behaviour: the child
+        // only inherits the calling thread, so any mutex held by the
+        // accept-loop thread (started by `ControlServer::start`) would stay
+        // locked forever and the child would deadlock/crash on its first
+        // allocation (writing state, binding) - leaving no state file and
+        // removing the socket on `ControlServer::Drop`. Parent prints the
+        // child PID and exits 0; child returns `Ok(false)`.
+        let is_parent = match forgum_platform::daemonize() {
+            Ok(true) => unreachable!(),
+            Ok(false) => false,
+            Err(e) => {
+                eprintln!("{PROGRAM}: daemonize: {e}");
+                return ExitCode::from(74);
+            }
+        };
+
+        // Start the control socket server (spawns its accept-loop thread)
+        // only in the child, after the single-threaded fork.
+        let (server, cmd_rx) = if is_parent {
+            unreachable!()
+        } else {
             match forgum_engine::control_socket::ControlServer::start(socket_path.clone()) {
                 Ok(v) => v,
                 Err(e) => {
                     eprintln!("{PROGRAM}: control socket: {e}");
                     return ExitCode::from(74);
                 }
-            };
+            }
+        };
 
-        // Daemonize: parent exits, child continues.
-        match forgum_platform::daemonize() {
-            Ok(true) => {
-                unreachable!();
-            }
-            Ok(false) => {
-                // Child: write daemon state.
-                let pid = std::process::id();
-                let _ = daemon::write_daemon_state(pid, 0, 80, &socket_path);
-            }
-            Err(e) => {
-                eprintln!("{PROGRAM}: daemonize: {e}");
-                return ExitCode::from(74);
-            }
-        }
+        // Child: write daemon state.
+        let pid = std::process::id();
+        let _ = daemon::write_daemon_state(pid, 0, 80, &socket_path);
 
         // Open output and render (same as foreground, but with cmd_rx).
         let out = match OutputHandle::open() {
