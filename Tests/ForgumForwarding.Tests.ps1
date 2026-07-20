@@ -30,9 +30,10 @@ Describe 'forgum wrapper forwards parameters (G-ForgumForwarding)' {
     }
 
     It 'leaves no temp JSON files behind' {
-        $before = Get-ChildItem -LiteralPath $env:TEMP -Filter 'tmp*.json' -ErrorAction SilentlyContinue
+        $tempDir = [System.IO.Path]::GetTempPath()
+        $before = Get-ChildItem -LiteralPath $tempDir -Filter 'tmp*.json' -ErrorAction SilentlyContinue
         forgum -Cow tux -Text 'cleanup check' | Out-Null
-        $after = Get-ChildItem -LiteralPath $env:TEMP -Filter 'tmp*.json' -ErrorAction SilentlyContinue
+        $after = Get-ChildItem -LiteralPath $tempDir -Filter 'tmp*.json' -ErrorAction SilentlyContinue
         $after.Count | Should -Be $before.Count
     }
 }

@@ -44,6 +44,13 @@ impl DaemonSocket {
     pub fn bind(path: &Path) -> Result<Self, PlatformError> {
         #[cfg(unix)]
         {
+            // Ensure the parent directory exists (e.g. $XDG_RUNTIME_DIR/Forgum
+            // may not exist on a fresh install or in CI). Without this,
+            // `bind` fails with ENOENT and the daemon can't start.
+            if let Some(parent) = path.parent() {
+                let _ = std::fs::create_dir_all(parent);
+            }
+
             // Remove stale socket file from a previous unclean shutdown.
             let _ = std::fs::remove_file(path);
 

@@ -2,7 +2,7 @@
 <!-- Build with: candle.exe -dBinDir=... forgum.wxs && light.exe -out forgum.msi forgum.wixobj  (or `cargo wix`). WiX Toolset must be installed in the windows runner. -->
 <!-- NOTE: generate a real GUID for UpgradeCode (placeholder PUT-GUID-HERE below). -->
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
-  <Product Id="*" Name="Forgum" Language="1033" Version="0.4.0" Manufacturer="HKDevLoops" UpgradeCode="PUT-GUID-HERE">
+  <Product Id="*" Name="Forgum" Language="1033" Version="0.4.0" Manufacturer="HKDevLoops" UpgradeCode="AE18D640-560C-4B78-9E7F-557CF387312F">
     <Package InstallerVersion="500" Compressed="yes" InstallScope="perMachine" />
     <MajorUpgrade DowngradeErrorMessage="A newer version of Forgum is already installed." />
     <MediaTemplate />

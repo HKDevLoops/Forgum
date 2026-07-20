@@ -25,6 +25,10 @@ echo "Building forgum-engine for version ${VERSION}..."
 cargo build --release --locked -p forgum-engine
 cp "target/release/forgum-engine" "${RPM_DIR}/SOURCES/forgum-engine"
 chmod 755 "${RPM_DIR}/SOURCES/forgum-engine"
+# rpmbuild runs %install with cwd set to the BUILD dir, where the spec
+# expects a relative `forgum-engine`. Stage a copy there too.
+cp "target/release/forgum-engine" "${RPM_DIR}/BUILD/forgum-engine"
+chmod 755 "${RPM_DIR}/BUILD/forgum-engine"
 
 rpmbuild -bb --define "_topdir ${RPM_DIR}" --define "version ${VERSION}" "${SCRIPT_DIR}/forgum.spec"
 
