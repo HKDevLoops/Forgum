@@ -12,7 +12,7 @@
     <Directory Id="TARGETDIR" Name="SourceDir">
       <Directory Id="ProgramFiles64Folder">
         <Directory Id="INSTALLFOLDER" Name="Forgum">
-          <Component Id="MainExecutable" Guid="*">
+          <Component Id="MainExecutable" Guid="*" Win64="yes">
             <File Id="forgumEngineExe" Source="$(var.BinDir)\forgum-engine.exe" KeyPath="yes" />
           </Component>
         </Directory>
