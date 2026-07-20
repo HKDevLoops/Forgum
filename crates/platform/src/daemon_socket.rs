@@ -344,10 +344,10 @@ fn path_to_pipe_name(path: &Path) -> String {
     format!("\\\\.\\pipe\\{}", file_name)
 }
 
+#[cfg(test)]
 #[cfg(windows)]
 mod tests {
-    use super::path_to_pipe_name;
-    use std::path::Path;
+    use super::*;
 
     #[test]
     fn path_to_pipe_name_extracts_filename() {

@@ -43,7 +43,16 @@ pub fn daemonize() -> Result<bool, PlatformError> {
 
     match unsafe { fork() } {
         Ok(ForkResult::Parent { child }) => {
-            println!("{}", child.as_raw());
+            // Print the child PID so callers (and the daemon-lifecycle test)
+            // can discover the daemon. `std::process::exit` does NOT flush
+            // buffered stdout, so flush explicitly — otherwise a captured
+            // (piped) parent stdout receives an empty string and the PID is
+            // lost.
+            use std::io::Write;
+            let stdout = std::io::stdout();
+            let mut lock = stdout.lock();
+            let _ = writeln!(lock, "{}", child.as_raw());
+            let _ = lock.flush();
             std::process::exit(0);
         }
         Ok(ForkResult::Child) => {
