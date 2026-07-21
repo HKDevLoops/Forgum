@@ -798,36 +798,28 @@ fn spawn_daemon_parent(args: &cli::Args) -> ExitCode {
     //    under heavy seccomp filters).
     let child = match spawn_with_stdio(Stdio::null(), Stdio::null(), Stdio::null()) {
         Ok(c) => c,
-        Err(null_err) => match spawn_with_stdio(
-            Stdio::piped(),
-            Stdio::piped(),
-            Stdio::piped(),
-        ) {
+        Err(null_err) => match spawn_with_stdio(Stdio::piped(), Stdio::piped(), Stdio::piped()) {
             Ok(c) => c,
-            Err(pipe_err) => match spawn_with_stdio(
-                Stdio::inherit(),
-                Stdio::inherit(),
-                Stdio::inherit(),
-            ) {
-                Ok(c) => c,
-                Err(inherit_err) => {
-                    // Surface every profile error so CI can pinpoint which
-                    // sandbox mode we're in. We print to STDOUT, not
-                    // stderr, because the daemon_lifecycle integration
-                    // test captures both - and stdout is the channel the
-                    // test runner reliably mirrors into the captured
-                    // test output (otherwise the panic at line 21
-                    // (`child.status.success()` false) hides any
-                    // diagnostic).
-                    println!(
-                        "{PROGRAM}: daemon spawn failed across all three stdio profiles:"
-                    );
-                    println!("  stdin=null  -> {null_err}");
-                    println!("  piped       -> {pipe_err}");
-                    println!("  inherit     -> {inherit_err}");
-                    return ExitCode::from(74);
+            Err(pipe_err) => {
+                match spawn_with_stdio(Stdio::inherit(), Stdio::inherit(), Stdio::inherit()) {
+                    Ok(c) => c,
+                    Err(inherit_err) => {
+                        // Surface every profile error so CI can pinpoint which
+                        // sandbox mode we're in. We print to STDOUT, not
+                        // stderr, because the daemon_lifecycle integration
+                        // test captures both - and stdout is the channel the
+                        // test runner reliably mirrors into the captured
+                        // test output (otherwise the panic at line 21
+                        // (`child.status.success()` false) hides any
+                        // diagnostic).
+                        println!("{PROGRAM}: daemon spawn failed across all three stdio profiles:");
+                        println!("  stdin=null  -> {null_err}");
+                        println!("  piped       -> {pipe_err}");
+                        println!("  inherit     -> {inherit_err}");
+                        return ExitCode::from(74);
+                    }
                 }
-            },
+            }
         },
     };
 
