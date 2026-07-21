@@ -203,6 +203,20 @@ pub fn overlay_height(total_rows: u16) -> u16 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::Mutex;
+
+    // `cargo test` runs the unit tests of one binary in parallel by
+    // default, on threads that share the *process-wide* env. Tests
+    // below mutate `TERM` and `TERM_PROGRAM`. Without this mutex a
+    // sibling test running on another worker thread racing the same
+    // mutation exposes non-deterministic state at the assert site
+    // (CI log: "left: None, right: Kitty" under `cargo test --workspace`
+    // because a `set_var("TERM_PROGRAM", "WezTerm")` somewhere else
+    // interleaved with our `set_var("TERM_PROGRAM", "kitty")`).
+    //
+    // The lock is process-global; only the env-mutating tests take it.
+    // Tests that don't touch env run as before and stay parallel.
+    static ENV_LOCK: Mutex<()> = Mutex::new(());
 
     #[test]
     fn size_fallback_sane() {
@@ -242,6 +256,7 @@ mod tests {
 
     #[test]
     fn detect_sync_support_conservative_fallback() {
+        let _guard = ENV_LOCK.lock().unwrap_or_else(|p| p.into_inner());
         // No allowlisted program and no tty-ish env → conservative false.
         std::env::remove_var("TERM_PROGRAM");
         std::env::remove_var("WT_SESSION");
@@ -262,6 +277,7 @@ mod tests {
 
     #[test]
     fn detect_graphics_cap_kitty_and_sixel() {
+        let _guard = ENV_LOCK.lock().unwrap_or_else(|p| p.into_inner());
         std::env::remove_var("TERM");
         std::env::remove_var("TERM_PROGRAM");
         assert_eq!(detect_graphics_cap(), GraphicsCaps::None);
