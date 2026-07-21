@@ -1,15 +1,44 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- Build with: candle.exe -dBinDir=... forgum.wxs && light.exe -out forgum.msi forgum.wixobj  (or `cargo wix`). WiX Toolset must be installed in the windows runner. -->
-<!-- NOTE: generate a real GUID for UpgradeCode (placeholder PUT-GUID-HERE below). -->
+<!--
+  Two components by design (each with one file OR one KeyPath - never
+  both) so each can use a fixed GUID and a single KeyPath type:
+
+   * MainExecutable         - per-machine binary, file KeyPath, fixed
+                              GUID.
+   * StartMenuShortcut      - per-user shortcut + HKCU registry, REGISTRY
+                              KeyPath, fixed GUID.
+
+  Previous attempts failed because:
+    - Having registry + file + shortcut *inside one Component* triggers
+      CNDL0230 ("Components with registry keypaths and files cannot
+      use an automatically generated guid") and was previously
+      masked by Microsoft ICE43 only because the auto-guid was the
+      same across reinstalls (which broke upgrade repair rules).
+
+    - Putting <RemoveFile>/<RemoveFolder> inside <Directory> triggers
+      CNDL0005 (unexpected child element). They're Component-level
+      actions.
+
+  All ICEs here are resolved by clean separation:
+    ICE43  - shortcut component uses HKCU registry as KeyPath
+             (not a file).
+    ICE57  - shortcut component is per-user only (HKCU + HKCU-keyed
+             shortcut), no per-machine data inside it.
+    ICE64  - <RemoveFile Name="*" On="uninstall"/> lives on the
+             shortcut component, inside the user-profile directory.
+    ICE69  - shortcut shares its Component with the HKCU registry,
+             its own file-less identity, so no cross-component target.
+    ICE80  - <Package Platform="x64"/> sets the MSI Template
+             Summary Property so x64-only components are valid.
+
+  The shortcut's "Directory=ProgramMenuDir" attribute owns the
+  wiring into ProgramMenuFolder cascade. The <Component>/<Directory>
+  hierarchy here matches: directory structure → ownership of (file
+  and/or registry + RemoveFile) per Component, not raw layout.
+-->
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
   <Product Id="*" Name="Forgum" Language="1033" Version="0.4.0" Manufacturer="HKDevLoops" UpgradeCode="AE18D640-560C-4B78-9E7F-557CF387312F">
-    <!-- Platform="x64" sets the MSI Template Summary Property to "x64;1033",
-         which is required by ICE80 when any Component declares Win64="yes".
-         Without this, WiX emits LGHT0204 ICE80 and `light.exe` refuses to
-         link the MSI, even though the underlying binary is correctly 64-bit.
-         Note: only ONE of `Platform`/`Platforms` is allowed (CNDL0035).
-         WiX 3 only requires `Platform` on a per-product basis to opt the
-         MSI into 64-bit. -->
     <Package InstallerVersion="500" Compressed="yes" InstallScope="perMachine" Platform="x64" />
     <MajorUpgrade DowngradeErrorMessage="A newer version of Forgum is already installed." />
     <MediaTemplate />
@@ -19,50 +48,35 @@
     <Directory Id="TARGETDIR" Name="SourceDir">
       <Directory Id="ProgramFiles64Folder">
         <Directory Id="INSTALLFOLDER" Name="Forgum">
-          <!-- MainExecutable owns the binary, the Start-menu Shortcut, and
-               an HKCU registry entry. Three ICEs are at play here:
-
-               ICE69 requires a Shortcut's Target file to live in the same
-               component as the Shortcut itself — splitting the file and
-               the shortcut across two components triggers LGHT1076.
-
-               ICE43 requires components with non-advertised shortcuts to
-               use a registry key as KeyPath, not a file. The HKCU entry
-               below is therefore marked KeyPath="yes".
-
-               ICE57 forbids mixing per-user data (the HKCU entry under
-               InstallScope="perMachine", therefore still per-user) with a
-               per-machine KeyPath. We split it: the binary lives in
-               per-machine ProgramFiles64 (\Program Files\...), and the
-               shortcut/registry lands under HKCU; the KeyPath is the HKCU
-               registry entry, which is per-user, so the whole component is
-               treated per-user. That is OK because the install is scoped
-               per-machine and Windows copies the per-user registry data
-               into each user's hive on first login.
-
-               ICE64 requires directories under the user profile to be
-               listed in the RemoveFile table so they actually disappear
-               on uninstall. We add <RemoveFile> for ProgramMenuDir so its
-               contents (including our shortcut) get wiped cleanly. -->
-          <Component Id="MainExecutable" Guid="*" Win64="yes">
-            <File Id="forgumEngineExe" Source="$(var.BinDir)\forgum-engine.exe" />
-            <Shortcut Id="StartMenuForgum" Name="Forgum" Directory="ProgramMenuDir" WorkingDirectory="INSTALLFOLDER" />
-            <RegistryValue Root="HKCU" Key="Software\HKDevLoops\Forgum" Name="installed" Type="integer" Value="1" KeyPath="yes" />
+          <Component Id="MainExecutable" Guid="11330A1F-8B40-4E13-9F62-A8A4B619D0F1" Win64="yes">
+            <File Id="forgumEngineExe" Source="$(var.BinDir)\forgum-engine.exe" KeyPath="yes" />
           </Component>
-          <Directory Id="ProgramMenuFolder">
-            <Directory Id="ProgramMenuDir" Name="Forgum">
-              <!-- ICE64: explicit RemoveFile inside the user-profile
-                   directory ensures the shortcut we wrote disappears on
-                   uninstall even when the directory had unrelated entries. -->
-              <RemoveFile Id="CleanProgramMenuDir" On="uninstall" Name="*" />
-              <RemoveFolder Id="ProgramMenuDir" On="uninstall" />
-            </Directory>
-          </Directory>
+        </Directory>
+      </Directory>
+      <Directory Id="ProgramMenuFolder">
+        <Directory Id="ProgramMenuDir" Name="Forgum">
+          <Component Id="StartMenuShortcut" Guid="22330A2F-8B40-4E13-9F62-A8A4B619D0F2">
+            <Shortcut Id="StartMenuForgum"
+                      Name="Forgum"
+                      Target="[INSTALLFOLDER]forgum-engine.exe"
+                      WorkingDirectory="INSTALLFOLDER" />
+            <RegistryValue Root="HKCU"
+                           Key="Software\HKDevLoops\Forgum"
+                           Name="installed"
+                           Type="integer"
+                           Value="1"
+                           KeyPath="yes" />
+            <!-- ICE64: explicitly remove the shortcut on uninstall so the
+                 user-profile directory is wiped clean. -->
+            <RemoveFile Id="CleanStartMenuShortcut" On="uninstall" Name="*" />
+            <RemoveFolder Id="RemoveProgramMenuDir" On="uninstall" />
+          </Component>
         </Directory>
       </Directory>
     </Directory>
     <ComponentGroup Id="ProductComponents">
       <ComponentRef Id="MainExecutable" />
+      <ComponentRef Id="StartMenuShortcut" />
     </ComponentGroup>
   </Product>
 </Wix>
