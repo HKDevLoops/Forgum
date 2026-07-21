@@ -51,9 +51,20 @@ impl OutputHandle {
     /// Open the right output. See module docs for the resolution order.
     pub fn open() -> Result<Self, PlatformError> {
         let target = pick_target();
+        // If we picked the TTY but can't actually open it (e.g. a
+        // headless daemon with no controlling terminal, where open("/dev/tty")
+        // fails with ENXIO), fall back to the stdout pipe rather than
+        // erroring out. This is exactly the documented "Else -> stdout
+        // (pipe)" contract: animations won't render, but cow_text still
+        // prints. Without this, a `--daemon` child that was forked
+        // with no TTY would die in OutputHandle::open() and never
+        // finish wiring up, leaving no state file / control socket.
         let writer: Box<dyn Write + Send> = match target {
             OutputTarget::Stdout => Box::new(io::stdout()),
-            OutputTarget::Tty => open_tty()?,
+            OutputTarget::Tty => match open_tty() {
+                Ok(f) => f,
+                Err(_) => Box::new(io::stdout()),
+            },
             OutputTarget::Pipe => Box::new(io::stdout()), // last resort
         };
         Ok(Self {

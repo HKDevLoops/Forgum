@@ -3,7 +3,13 @@
 <!-- NOTE: generate a real GUID for UpgradeCode (placeholder PUT-GUID-HERE below). -->
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
   <Product Id="*" Name="Forgum" Language="1033" Version="0.4.0" Manufacturer="HKDevLoops" UpgradeCode="AE18D640-560C-4B78-9E7F-557CF387312F">
-    <Package InstallerVersion="500" Compressed="yes" InstallScope="perMachine" />
+    <!-- Platform="x64" sets the MSI Template Summary to "x64;1033", which is
+         required by ICE80 when any Component declares Win64="yes". Without
+         this, WiX emits LGHT0204 ICE80 and `light.exe` refuses to link the
+         MSI, even though the underlying binary is correctly 64-bit.
+         Products that ONLY ship 64-bit components must add Platforms="x64"
+         too — WiX 3 then knows the package must be x64 (no neutral fallback). -->
+    <Package InstallerVersion="500" Compressed="yes" InstallScope="perMachine" Platform="x64" Platforms="x64" />
     <MajorUpgrade DowngradeErrorMessage="A newer version of Forgum is already installed." />
     <MediaTemplate />
     <Feature Id="ProductFeature" Title="Forgum" Level="1">
@@ -12,24 +18,26 @@
     <Directory Id="TARGETDIR" Name="SourceDir">
       <Directory Id="ProgramFiles64Folder">
         <Directory Id="INSTALLFOLDER" Name="Forgum">
+          <!-- MainExecutable owns BOTH the binary AND the Start-menu
+               Shortcut. ICE69 requires a Shortcut's Target file to live in
+               the same component as the Shortcut itself — splitting the
+               file and the shortcut across two components triggers
+               LGHT1076 ICE69 (component-reference mismatch). -->
           <Component Id="MainExecutable" Guid="*" Win64="yes">
-            <File Id="forgumEngineExe" Source="$(var.BinDir)\forgum-engine.exe" KeyPath="yes" />
-          </Component>
-        </Directory>
-      </Directory>
-      <Directory Id="ProgramMenuFolder">
-        <Directory Id="ProgramMenuDir" Name="Forgum">
-          <Component Id="StartMenuShortcut" Guid="*">
-            <Shortcut Id="StartMenuForgum" Name="Forgum" Target="[#forgumEngineExe]" WorkingDirectory="INSTALLFOLDER" />
+            <File Id="forgumEngineExe" Source="$(var.BinDir)\forgum-engine.exe" KeyPath="yes">
+              <Shortcut Id="StartMenuForgum" Name="Forgum" Directory="ProgramMenuDir" WorkingDirectory="INSTALLFOLDER" />
+            </File>
             <RemoveFolder Id="ProgramMenuDir" On="uninstall" />
-            <RegistryValue Root="HKCU" Key="Software\HKDevLoops\Forgum" Name="installed" Type="integer" Value="1" KeyPath="yes" />
+            <RegistryValue Root="HKCU" Key="Software\HKDevLoops\Forgum" Name="installed" Type="integer" Value="1" />
           </Component>
+          <Directory Id="ProgramMenuFolder">
+            <Directory Id="ProgramMenuDir" Name="Forgum" />
+          </Directory>
         </Directory>
       </Directory>
     </Directory>
     <ComponentGroup Id="ProductComponents">
       <ComponentRef Id="MainExecutable" />
-      <ComponentRef Id="StartMenuShortcut" />
     </ComponentGroup>
   </Product>
 </Wix>

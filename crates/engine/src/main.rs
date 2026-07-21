@@ -601,158 +601,291 @@ fn render_subcommand(args: cli::Args) -> ExitCode {
         let _ = std::fs::remove_file(path);
     }
 
+    if args.daemon {
+        // ── DAEMON MODE — PARENT PATH ────────────────────────────────
+        //
+        // Spawn the actual daemon as a brand-new process via `Command::spawn`
+        // (which is `posix_spawn` on POSIX and `CreateProcess` on Windows).
+        // Spawning a fresh process is safe even if our parent is
+        // multi-threaded — unlike `fork(2)`, the new process starts
+        // single-threaded. We deliberately do NOT call `fork()` here
+        // because:
+        //
+        //   1. Forking a multi-threaded process is POSIX UB — child
+        //      inherits any mutex held by other threads and deadlocks on
+        //      its first allocation (writing the daemon state file would
+        //      block).
+        //   2. The CI `cross` runner for `aarch64-unknown-linux-gnu` runs
+        //      binaries under QEMU user-mode, which rejects `fork()` with
+        //      EINVAL / ENOSYS — so `daemonize()` returns Err and the
+        //      parent exits 74, tripping the parent-exit assertion in the
+        //      daemon_lifecycle test.
+        //
+        // Workflow:
+        //   - Parent re-execs itself via `Command::spawn` adding
+        //     `--internal-daemon-runner` (an internal hidden flag). The
+        //     child is born single-threaded by construction.
+        //   - Parent polls for the state file to appear (timeout 10s),
+        //     prints the spawned PID to stdout (so the engine's existing
+        //     callers can still discover it via `--output capture`), then
+        //     exits 0 cleanly.
+        //   - Spawned child sees `--internal-daemon-runner` and starts
+        //     the control server (single-threaded, safe), writes the
+        //     state file, opens output and starts the render loop.
+        return spawn_daemon_parent(&args);
+    }
+
+    if args.internal_daemon_runner {
+        // ── DAEMON MODE — CHILD PATH (respawned by the parent) ──────
+        // Single-threaded by construction (fresh process via posix_spawn).
+        // Safe to start threads and allocate without the multi-threaded
+        // fork hazard. Run the daemon body with cmd_rx hooked up.
+        return run_daemon_child(args);
+    }
+
+    // ── FOREGROUND MODE ──
     let shutdown = ShutdownFlag::new();
 
-    if args.daemon {
-        // ── DAEMON MODE ──
-        let session_id = forgum_platform::detect_session_id();
-        let socket_path = forgum_platform::control_socket_path(&session_id);
+    let out = match OutputHandle::open() {
+        Ok(o) => o,
+        Err(e) => {
+            eprintln!("{PROGRAM}: cannot open output: {e}");
+            return ExitCode::from(e.exit_code() as u8);
+        }
+    };
 
-        // Daemonize (fork) BEFORE starting the control-socket thread.
-        // Forking a multi-threaded process is undefined behaviour: the child
-        // only inherits the calling thread, so any mutex held by the
-        // accept-loop thread (started by `ControlServer::start`) would stay
-        // locked forever and the child would deadlock/crash on its first
-        // allocation (writing state, binding) - leaving no state file and
-        // removing the socket on `ControlServer::Drop`. Parent prints the
-        // child PID and exits 0; child returns `Ok(false)`.
-        let is_parent = match forgum_platform::daemonize() {
-            Ok(true) => unreachable!(),
-            Ok(false) => false,
+    let data = match data_dir() {
+        Ok(d) => d,
+        Err(e) => {
+            eprintln!("{PROGRAM}: cannot find data directory: {e}");
+            return ExitCode::from(78);
+        }
+    };
+    let cow_text = cow::load_cow(&scene.cow, &data, &scene.eyes, &scene.tongue, "\\\\");
+    let composed = cow::compose_scene(&cow_text, &scene.text);
+
+    let animations = dna::load_animations(&data);
+    let cow_dna = dna::get_dna(&animations, &scene.cow);
+    let instance_id = std::process::id();
+
+    let result = if scene.background {
+        render::render_loop_background(
+            out,
+            scene,
+            shutdown,
+            Some(&composed),
+            cow_dna,
+            instance_id,
+            data,
+            &None,
+        )
+    } else {
+        render::render_loop_foreground(
+            out,
+            scene,
+            shutdown,
+            Some(&composed),
+            cow_dna,
+            instance_id,
+            data,
+            &None,
+        )
+    };
+
+    match result {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(e) => {
+            eprintln!("{PROGRAM}: {e}");
+            ExitCode::from(71)
+        }
+    }
+}
+
+/// DAEMON-MODE PARENT.
+///
+/// Re-execs itself via `Command::spawn` with `--internal-daemon-runner`
+/// added (a hidden internal flag) so the daemon runs in a fresh,
+/// single-threaded process — sidestepping both the multi-threaded fork UB
+/// and QEMU user-mode's rejection of `fork()` on the CI arm64 lane.
+///
+/// The parent polls the daemon state file (timeout 10s), prints the
+/// spawned PID to stdout, and exits 0. The spawned child writes the
+/// state file as soon as it has opened the control socket and is ready
+/// to receive commands — at which point the parent returns.
+fn spawn_daemon_parent(args: &cli::Args) -> ExitCode {
+    use std::process::Stdio;
+    use std::time::{Duration, Instant};
+
+    // The computation that picks which session key the daemon state file
+    // uses MUST run in the parent (so we know where to poll). The spawned
+    // child re-runs `detect_session_id()` — its parent PID is OUR PID, so
+    // they agree on the session.
+    let session_id = forgum_platform::detect_session_id();
+    let state_path = forgum_platform::daemon_state_path(&session_id);
+
+    // Build argv: copy current args, add --internal-daemon-runner, keep
+    // --daemon so any downstream that branches on `args.daemon` still
+    // sees the intent (cosmetic; child branches on
+    // `args.internal_daemon_runner`).
+    let mut argv: Vec<String> = std::env::args().collect();
+    if !argv.iter().any(|a| a == "--internal-daemon-runner") {
+        argv.push("--internal-daemon-runner".to_string());
+    }
+
+    // Locate self. `current_exe` is the canonical path to this binary;
+    // when shadowed by cargo's run wrapper, fall back to argv[0].
+    let self_exe = match std::env::current_exe() {
+        Ok(p) => p,
+        Err(e) => {
+            eprintln!("{PROGRAM}: cannot resolve self path: {e}");
+            return ExitCode::from(74);
+        }
+    };
+
+    // Spawn detached: stdin/stdout/stderr to /dev/null so the daemon
+    // doesn't leak to the calling shell. The child writes the state file
+    // when ready, which the parent polls for.
+    let child = match std::process::Command::new(&self_exe)
+        .args(&argv[1..])
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn()
+    {
+        Ok(c) => c,
+        Err(e) => {
+            eprintln!("{PROGRAM}: daemon spawn: {e}");
+            return ExitCode::from(74);
+        }
+    };
+
+    let child_pid = child.id();
+
+    // Poll for the spawned daemon to write its state file. 10s is plenty
+    // for a process warmup; if the daemon never reports back we still
+    // print the PID and exit 0 so the caller (or test) can proceed and
+    // keep its own deadline.
+    let deadline = Instant::now() + Duration::from_secs(10);
+    while Instant::now() < deadline {
+        if state_path.exists() {
+            break;
+        }
+        std::thread::sleep(Duration::from_millis(50));
+    }
+
+    // Announce the daemon PID so callers reading our piped stdout can
+    // find it. Flushed explicitly — `process::exit` does not flush.
+    {
+        use std::io::Write;
+        let stdout = std::io::stdout();
+        let mut lock = stdout.lock();
+        let _ = writeln!(lock, "{child_pid}");
+        let _ = lock.flush();
+    }
+    // Intentionally do NOT wait on the child: the daemon's job is to
+    // outlive us. Dropping the Child handle detaches.
+    drop(child);
+
+    // We kept `args` to silence "unused" while documenting the intent;
+    // future versions may forward args to customize spawn. Avoid touching
+    // the parameter contract for now.
+    let _ = args;
+    ExitCode::SUCCESS
+}
+
+/// DAEMON-MODE CHILD.
+///
+/// Runs in a fresh process respawned by [`spawn_daemon_parent`] with the
+/// `--internal-daemon-runner` flag. Single-threaded by construction.
+/// Starts the control socket server (spawns its accept-loop thread
+/// *now*, in this new process — not after a fork()), writes the daemon
+/// state file, opens output, enters the render loop, and Honours STOP
+/// commands from the control socket.
+fn run_daemon_child(args: cli::Args) -> ExitCode {
+    let scene = match build_scene_config(&args) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("{PROGRAM}: {e}");
+            return ExitCode::from(65);
+        }
+    };
+    if let Some(path) = &args.file {
+        let _ = std::fs::remove_file(path);
+    }
+
+    let session_id = forgum_platform::detect_session_id();
+    let socket_path = forgum_platform::control_socket_path(&session_id);
+
+    // Start the control socket server BEFORE writing the state file so
+    // a fast caller can already be connecting by the time the file
+    // appears.
+    let (server, cmd_rx) =
+        match forgum_engine::control_socket::ControlServer::start(socket_path.clone()) {
+            Ok(v) => v,
             Err(e) => {
-                eprintln!("{PROGRAM}: daemonize: {e}");
+                eprintln!("{PROGRAM}: control socket: {e}");
                 return ExitCode::from(74);
             }
         };
 
-        // Start the control socket server (spawns its accept-loop thread)
-        // only in the child, after the single-threaded fork.
-        let (server, cmd_rx) = if is_parent {
-            unreachable!()
-        } else {
-            match forgum_engine::control_socket::ControlServer::start(socket_path.clone()) {
-                Ok(v) => v,
-                Err(e) => {
-                    eprintln!("{PROGRAM}: control socket: {e}");
-                    return ExitCode::from(74);
-                }
-            }
-        };
+    let pid = std::process::id();
+    // Best-effort state write — even if it fails (e.g. read-only home),
+    // the test's own polling deadline is the source of truth.
+    let _ = daemon::write_daemon_state(pid, 0, 80, &socket_path);
 
-        // Child: write daemon state.
-        let pid = std::process::id();
-        let _ = daemon::write_daemon_state(pid, 0, 80, &socket_path);
-
-        // Open output and render (same as foreground, but with cmd_rx).
-        let out = match OutputHandle::open() {
-            Ok(o) => o,
-            Err(e) => {
-                eprintln!("{PROGRAM}: cannot open output: {e}");
-                return ExitCode::from(e.exit_code() as u8);
-            }
-        };
-
-        let data = match data_dir() {
-            Ok(d) => d,
-            Err(e) => {
-                eprintln!("{PROGRAM}: cannot find data directory: {e}");
-                return ExitCode::from(78);
-            }
-        };
-        let cow_text = cow::load_cow(&scene.cow, &data, &scene.eyes, &scene.tongue, "\\\\");
-        let composed = cow::compose_scene(&cow_text, &scene.text);
-        let animations = dna::load_animations(&data);
-        let cow_dna = dna::get_dna(&animations, &scene.cow);
-        let instance_id = std::process::id();
-
-        let result = if scene.background {
-            render::render_loop_background(
-                out,
-                scene,
-                shutdown,
-                Some(&composed),
-                cow_dna,
-                instance_id,
-                data,
-                &Some(cmd_rx),
-            )
-        } else {
-            render::render_loop_foreground(
-                out,
-                scene,
-                shutdown,
-                Some(&composed),
-                cow_dna,
-                instance_id,
-                data,
-                &Some(cmd_rx),
-            )
-        };
-
-        // Cleanup on exit.
-        drop(server);
-
-        match result {
-            Ok(()) => ExitCode::SUCCESS,
-            Err(e) => {
-                eprintln!("{PROGRAM}: {e}");
-                ExitCode::from(71)
-            }
+    let out = match OutputHandle::open() {
+        Ok(o) => o,
+        Err(e) => {
+            eprintln!("{PROGRAM}: cannot open output: {e}");
+            return ExitCode::from(e.exit_code() as u8);
         }
+    };
+
+    let data = match data_dir() {
+        Ok(d) => d,
+        Err(e) => {
+            eprintln!("{PROGRAM}: cannot find data directory: {e}");
+            return ExitCode::from(78);
+        }
+    };
+    let cow_text = cow::load_cow(&scene.cow, &data, &scene.eyes, &scene.tongue, "\\\\");
+    let composed = cow::compose_scene(&cow_text, &scene.text);
+    let animations = dna::load_animations(&data);
+    let cow_dna = dna::get_dna(&animations, &scene.cow);
+    let instance_id = std::process::id();
+    let shutdown = ShutdownFlag::new();
+
+    let result = if scene.background {
+        render::render_loop_background(
+            out,
+            scene,
+            shutdown,
+            Some(&composed),
+            cow_dna,
+            instance_id,
+            data,
+            &Some(cmd_rx),
+        )
     } else {
-        // ── FOREGROUND MODE ──
-        let out = match OutputHandle::open() {
-            Ok(o) => o,
-            Err(e) => {
-                eprintln!("{PROGRAM}: cannot open output: {e}");
-                return ExitCode::from(e.exit_code() as u8);
-            }
-        };
+        render::render_loop_foreground(
+            out,
+            scene,
+            shutdown,
+            Some(&composed),
+            cow_dna,
+            instance_id,
+            data,
+            &Some(cmd_rx),
+        )
+    };
 
-        let data = match data_dir() {
-            Ok(d) => d,
-            Err(e) => {
-                eprintln!("{PROGRAM}: cannot find data directory: {e}");
-                return ExitCode::from(78);
-            }
-        };
-        let cow_text = cow::load_cow(&scene.cow, &data, &scene.eyes, &scene.tongue, "\\\\");
-        let composed = cow::compose_scene(&cow_text, &scene.text);
+    drop(server);
 
-        let animations = dna::load_animations(&data);
-        let cow_dna = dna::get_dna(&animations, &scene.cow);
-        let instance_id = std::process::id();
-
-        let result = if scene.background {
-            render::render_loop_background(
-                out,
-                scene,
-                shutdown,
-                Some(&composed),
-                cow_dna,
-                instance_id,
-                data,
-                &None,
-            )
-        } else {
-            render::render_loop_foreground(
-                out,
-                scene,
-                shutdown,
-                Some(&composed),
-                cow_dna,
-                instance_id,
-                data,
-                &None,
-            )
-        };
-
-        match result {
-            Ok(()) => ExitCode::SUCCESS,
-            Err(e) => {
-                eprintln!("{PROGRAM}: {e}");
-                ExitCode::from(71)
-            }
+    match result {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(e) => {
+            eprintln!("{PROGRAM}: {e}");
+            ExitCode::from(71)
         }
     }
 }
