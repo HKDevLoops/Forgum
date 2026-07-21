@@ -150,14 +150,14 @@ impl SignalGuard {
                 signal: "SIGWINCH",
                 source: e,
             })?;
-            return Ok(Self {
+            Ok(Self {
                 unix_state: Some(UnixSignalState {
                     _int: int_id,
                     _term: term_id,
                     _hup: hup_id,
                     _winch: winch_id,
                 }),
-            });
+            })
         }
         #[cfg(windows)]
         {
