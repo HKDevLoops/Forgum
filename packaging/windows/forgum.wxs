@@ -3,13 +3,14 @@
 <!-- NOTE: generate a real GUID for UpgradeCode (placeholder PUT-GUID-HERE below). -->
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
   <Product Id="*" Name="Forgum" Language="1033" Version="0.4.0" Manufacturer="HKDevLoops" UpgradeCode="AE18D640-560C-4B78-9E7F-557CF387312F">
-    <!-- Platform="x64" sets the MSI Template Summary to "x64;1033", which is
-         required by ICE80 when any Component declares Win64="yes". Without
-         this, WiX emits LGHT0204 ICE80 and `light.exe` refuses to link the
-         MSI, even though the underlying binary is correctly 64-bit.
-         Products that ONLY ship 64-bit components must add Platforms="x64"
-         too — WiX 3 then knows the package must be x64 (no neutral fallback). -->
-    <Package InstallerVersion="500" Compressed="yes" InstallScope="perMachine" Platform="x64" Platforms="x64" />
+    <!-- Platform="x64" sets the MSI Template Summary Property to "x64;1033",
+         which is required by ICE80 when any Component declares Win64="yes".
+         Without this, WiX emits LGHT0204 ICE80 and `light.exe` refuses to
+         link the MSI, even though the underlying binary is correctly 64-bit.
+         Note: only ONE of `Platform`/`Platforms` is allowed (CNDL0035).
+         WiX 3 only requires `Platform` on a per-product basis to opt the
+         MSI into 64-bit. -->
+    <Package InstallerVersion="500" Compressed="yes" InstallScope="perMachine" Platform="x64" />
     <MajorUpgrade DowngradeErrorMessage="A newer version of Forgum is already installed." />
     <MediaTemplate />
     <Feature Id="ProductFeature" Title="Forgum" Level="1">

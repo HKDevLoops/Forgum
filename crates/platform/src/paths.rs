@@ -272,6 +272,15 @@ pub fn control_socket_path(session_id: &str) -> PathBuf {
 /// 3. Parent shell PID
 #[must_use]
 pub fn detect_session_id() -> String {
+    if let Ok(pane) = std::env::var("FORGUM_DAEMON_SESSION") {
+        // Lane used by the daemon's `--daemon` parent: it spawns a fresh
+        // child of self to avoid fork UB (single-threaded by construction),
+        // but the child's getppid() is now the engine parent, not the
+        // original shell/test process. Caller (parent) decides the
+        // session-id up front and stamps it here so the child's state
+        // file lands where the caller will poll for it.
+        return pane;
+    }
     if let Ok(pane) = std::env::var("TMUX_PANE") {
         return pane;
     }

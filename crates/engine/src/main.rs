@@ -718,8 +718,12 @@ fn spawn_daemon_parent(args: &cli::Args) -> ExitCode {
 
     // The computation that picks which session key the daemon state file
     // uses MUST run in the parent (so we know where to poll). The spawned
-    // child re-runs `detect_session_id()` — its parent PID is OUR PID, so
-    // they agree on the session.
+    // child re-runs `detect_session_id()` inside its own process; we
+    // stamp the parent's chosen session_id via FORGUM_DAEMON_SESSION env
+    // so the child picks the SAME id (its getppid() is OUR pid, not the
+    // shell/test pid, so without the stamp parent- and child-computed
+    // session-ids differ and the parent's poll-for-state-file loop
+    // misses every time).
     let session_id = forgum_platform::detect_session_id();
     let state_path = forgum_platform::daemon_state_path(&session_id);
 
@@ -745,8 +749,17 @@ fn spawn_daemon_parent(args: &cli::Args) -> ExitCode {
     // Spawn detached: stdin/stdout/stderr to /dev/null so the daemon
     // doesn't leak to the calling shell. The child writes the state file
     // when ready, which the parent polls for.
+    //
+    // We pass FORGUM_DAEMON_SESSION to the child so its getppid()-based
+    // session detection produces the SAME session-id the parent computed
+    // (the child sees US as its parent, not the original shell or test
+    // process). Without this the parent and child pick different
+    // session-ids and the state-file paths diverge, so the parent polls
+    // the wrong location and the test (which polls by its OWN ppid)
+    // never sees the state file appear.
     let child = match std::process::Command::new(&self_exe)
         .args(&argv[1..])
+        .env("FORGUM_DAEMON_SESSION", &session_id)
         .stdin(Stdio::null())
         .stdout(Stdio::null())
         .stderr(Stdio::null())
