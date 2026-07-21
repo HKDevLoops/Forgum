@@ -70,13 +70,11 @@ fn feature_tag() -> String {
     // Pixel-level frames are not bit-identical across platforms (f32 math,
     // sin/cos, -0.0 vs 0.0, etc.), so key the golden per target OS. Each
     // platform self-golds independently and still catches real regressions
-    // *within* that platform.
+    // *within* that platform. The OS is the LAST tag so a Windows goldens
+    // dir (`*.windows.blake3`) and a Linux one (`*.linux.blake3`) coexist
+    // next to each other.
     parts.push(std::env::consts::OS);
-    if parts.len() == 1 {
-        "base".to_string()
-    } else {
-        parts.join("-")
-    }
+    parts.join("-")
 }
 
 fn all_cow_names() -> Vec<String> {
@@ -295,12 +293,11 @@ fn render_all_cows_to_png() {
             fb.clear();
             effect.update(dt, CANVAS_COLS, CANVAS_ROWS);
             effect.render(&mut fb, time);
+            fb.swap();
 
             if frame == HERO_FRAME {
                 hero_fb = Some(fb.clone());
             }
-
-            fb.swap();
         }
 
         if let Some(ref hero) = hero_fb {

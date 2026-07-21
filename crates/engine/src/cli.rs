@@ -79,6 +79,12 @@ pub struct Cli {
     /// (Phase 1) Control socket path.
     #[arg(long, global = true, hide = true)]
     pub control_socket: Option<PathBuf>,
+
+    /// (Internal) Marker set by the parent on respawn so the child knows
+    /// it is THE daemon (no second fork). See `Args::internal_daemon_runner`
+    /// for the rationale. End users should never pass this.
+    #[arg(long, global = true, hide = true)]
+    pub internal_daemon_runner: bool,
 }
 
 #[derive(Debug, Subcommand)]
@@ -345,6 +351,21 @@ pub struct Args {
     pub tongue: Option<String>,
     pub daemon: bool,
     pub control_socket: Option<PathBuf>,
+    /// (Internal) Marker set by the parent on respawn so the child knows
+    /// it is THE daemon (no second fork). End users should never pass
+    /// this; it exists because fork()-based daemonization breaks under
+    ///
+    /// - multi-threaded parents (UB: held mutexes stay locked forever in
+    ///   the child, which then deadlocks on its first allocation); and
+    /// - QEMU user-mode emulation (CI's `cross` runner for arm64), which
+    ///   rejects `fork()` with EINVAL/ENOSYS.
+    ///
+    /// Instead, the parent uses `Command::spawn` (posix_spawn under the
+    /// hood, single-threaded by construction) of itself with this flag,
+    /// then waits for the state file to appear, prints the child PID,
+    /// and exits 0. The spawned process sees this flag and runs the
+    /// daemon body directly.
+    pub internal_daemon_runner: bool,
     pub max_len: Option<usize>,
     pub reduce_motion: bool,
     pub text_only: bool,
@@ -420,6 +441,7 @@ pub fn parse_args(argv: Vec<String>) -> Result<(Args, Option<Commands>), CliErro
         tongue: cli.tongue,
         daemon: cli.daemon,
         control_socket: cli.control_socket,
+        internal_daemon_runner: cli.internal_daemon_runner,
         max_len,
         reduce_motion: cli.reduce_motion,
         text_only: cli.text_only,

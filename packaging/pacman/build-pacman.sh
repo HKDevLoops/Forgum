@@ -7,7 +7,10 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 
 cd "${REPO_ROOT}"
 
-# Build the engine binary from source first (self-contained; no release download needed).
+# Build the engine binary from source first (self-contained; no release
+# download needed). Must run as the current user; do this BEFORE switching
+# to a non-root user (since the build needs write access to ${REPO_ROOT}/target/
+# and the cargo home).
 echo "Building forgum-engine..."
 cargo build --release --locked -p forgum-engine
 
@@ -43,6 +46,26 @@ package() {
 }
 EOF
 
+# makepkg refuses to run as root by default (it taints the resulting package
+# and gives a deliberate `==> ERROR` on every modern Arch container image,
+# including the CI `archlinux:latest` we use). Downgrade EUID to a normal
+# user in the temp WORKDIR (which is the only thing makepkg cares about —
+# we still pre-built the binary above), chown the build artifacts so the
+# new user can read them, then exec makepkg as that user.
+if [ "$(id -u)" = "0" ]; then
+  BUILDER="forgum-pkg-builder"
+  if ! id "$BUILDER" >/dev/null 2>&1; then
+    useradd -m -s /bin/bash "$BUILDER"
+  fi
+  chown -R "$BUILDER":"$BUILDER" "$WORKDIR"
+  chmod 755 "${REPO_ROOT}/target/release/forgum-engine"
+  chown "$BUILDER":"$BUILDER" "${REPO_ROOT}/target/release/forgum-engine"
+  cd "${PKG_DIR}"
+  exec sudo -u "$BUILDER" makepkg --nodeps --force --noconfirm
+fi
+
+# Non-root: just run it.
+chown -R "$(id -u)":"$(id -g)" "$WORKDIR" || true
 cd "${PKG_DIR}"
 makepkg --nodeps --force --noconfirm
 echo "Built pacman package(s) in: ${PKG_DIR}"
