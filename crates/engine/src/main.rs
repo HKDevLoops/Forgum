@@ -739,15 +739,21 @@ fn spawn_daemon_parent(args: &cli::Args) -> ExitCode {
         argv.push("--internal-daemon-runner".to_string());
     }
 
-    // Locate self. `current_exe` is the canonical path to this binary;
-    // when shadowed by cargo's run wrapper, fall back to argv[0].
-    let self_exe = match std::env::current_exe() {
-        Ok(p) => p,
-        Err(e) => {
-            eprintln!("{PROGRAM}: cannot resolve self path: {e}");
-            return ExitCode::from(74);
-        }
-    };
+    // Locate self. Prefer `current_exe` (canonical path); fall back to
+    // `argv[0]` when it points through `/proc/self/exe` or otherwise
+    // references a path the new process can't reach — common under
+    // `cross` arm64 QEMU user-mode where `/proc/self/exe` resolves to
+    // a host-runtime path QEMU can't re-exec. argv[0] in test contexts
+    // is `CARGO_BIN_EXE_forgum-engine` and is reachable.
+    let self_exe: std::path::PathBuf = std::env::current_exe()
+        .ok()
+        .filter(|p| p.exists())
+        .unwrap_or_else(|| {
+            std::env::args()
+                .next()
+                .map(std::path::PathBuf::from)
+                .unwrap_or_else(|| std::path::PathBuf::from("forgum-engine"))
+        });
 
     // Spawn detached: stdin/stdout/stderr to /dev/null so the daemon
     // doesn't leak to the calling shell. The child writes the state file
