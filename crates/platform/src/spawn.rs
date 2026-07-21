@@ -59,7 +59,7 @@ pub fn daemonize() -> Result<bool, PlatformError> {
             setsid().map_err(|e| PlatformError::Io(std::io::Error::from(e)))?;
             Ok(false)
         }
-        Err(e) => Err(PlatformError::Io(io::Error::new(io::ErrorKind::Other, e))),
+        Err(e) => Err(PlatformError::Io(io::Error::other(e))),
     }
 }
 
