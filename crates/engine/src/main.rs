@@ -601,6 +601,17 @@ fn render_subcommand(args: cli::Args) -> ExitCode {
         let _ = std::fs::remove_file(path);
     }
 
+    if args.internal_daemon_runner {
+        // ── DAEMON MODE — CHILD PATH (respawned by the parent) ──────
+        // Checked FIRST because the spawned child still carries the
+        // user-facing --daemon flag; we don't want it to re-enter the
+        // parent path and spawn yet another process. Single-threaded by
+        // construction (fresh process via posix_spawn). Safe to start
+        // threads and allocate without the multi-threaded fork hazard.
+        // Run the daemon body with cmd_rx hooked up.
+        return run_daemon_child(args);
+    }
+
     if args.daemon {
         // ── DAEMON MODE — PARENT PATH ────────────────────────────────
         //
@@ -633,14 +644,6 @@ fn render_subcommand(args: cli::Args) -> ExitCode {
         //     the control server (single-threaded, safe), writes the
         //     state file, opens output and starts the render loop.
         return spawn_daemon_parent(&args);
-    }
-
-    if args.internal_daemon_runner {
-        // ── DAEMON MODE — CHILD PATH (respawned by the parent) ──────
-        // Single-threaded by construction (fresh process via posix_spawn).
-        // Safe to start threads and allocate without the multi-threaded
-        // fork hazard. Run the daemon body with cmd_rx hooked up.
-        return run_daemon_child(args);
     }
 
     // ── FOREGROUND MODE ──
