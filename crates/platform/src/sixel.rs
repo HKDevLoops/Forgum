@@ -104,7 +104,6 @@ pub fn graphics_renderer_available() -> bool {
 #[cfg(feature = "sixel")]
 mod imp {
     use super::{FrameBufferLike, GraphicsRenderer};
-    use crate::font;
     use std::io::Write;
 
     /// Which graphics protocol to emit.
