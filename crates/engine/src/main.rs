@@ -785,22 +785,50 @@ fn spawn_daemon_parent(args: &cli::Args) -> ExitCode {
     // session-ids and the state-file paths diverge, so the parent polls
     // the wrong location and the test (which polls by its OWN ppid)
     // never sees the state file appear.
+    //
+    // We try three stdio profiles in order:
+    //  - all-`Stdio::null()` (preferred for real shell-hook callers:
+    //    the daemon mustn't leak stdio into the user's terminal);
+    //  - all-`Stdio::piped()` (used when the kernel rejects /dev/null
+    //    fd inheritance, e.g. under QEMU user-mode in `cross`'s
+    //    aarch64 container, where posix_spawn refuses with some
+    //    E INVAL/EACCES variants);
+    //  - inherit (last-resort; useful only when /dev/null is
+    //    wholly unreachable from the spawn path, rare-but-possible
+    //    under heavy seccomp filters).
     let child = match spawn_with_stdio(Stdio::null(), Stdio::null(), Stdio::null()) {
         Ok(c) => c,
-        Err(null_err) => {
-            // Fallback: try without Stdio::null(). Some sandboxes
-            // (notably `cross` running aarch64 binaries under QEMU
-            // user-mode) refuse the posix_spawn with /dev/null fd
-            // inheritance. The user's terminal will see the child's
-            // stdout briefly, which is fine for tests.
-            match spawn_with_stdio(Stdio::piped(), Stdio::piped(), Stdio::piped()) {
+        Err(null_err) => match spawn_with_stdio(
+            Stdio::piped(),
+            Stdio::piped(),
+            Stdio::piped(),
+        ) {
+            Ok(c) => c,
+            Err(pipe_err) => match spawn_with_stdio(
+                Stdio::inherit(),
+                Stdio::inherit(),
+                Stdio::inherit(),
+            ) {
                 Ok(c) => c,
-                Err(e) => {
-                    eprintln!("{PROGRAM}: daemon spawn failed ({null_err}; {e})");
+                Err(inherit_err) => {
+                    // Surface every profile error so CI can pinpoint which
+                    // sandbox mode we're in. We print to STDOUT, not
+                    // stderr, because the daemon_lifecycle integration
+                    // test captures both - and stdout is the channel the
+                    // test runner reliably mirrors into the captured
+                    // test output (otherwise the panic at line 21
+                    // (`child.status.success()` false) hides any
+                    // diagnostic).
+                    println!(
+                        "{PROGRAM}: daemon spawn failed across all three stdio profiles:"
+                    );
+                    println!("  stdin=null  -> {null_err}");
+                    println!("  piped       -> {pipe_err}");
+                    println!("  inherit     -> {inherit_err}");
                     return ExitCode::from(74);
                 }
-            }
-        }
+            },
+        },
     };
 
     let child_pid = child.id();
