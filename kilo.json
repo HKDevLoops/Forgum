@@ -17,6 +17,33 @@
     "skill": "allow",
     "semantic_search": "allow"
   },
+  "lsp": {
+    "rust": {
+      "command": ["rust-analyzer"],
+      "extensions": [".rs"],
+      "env": {}
+    },
+    "yaml": {
+      "command": ["yaml-language-server", "--stdio"],
+      "extensions": [".yaml", ".yml"],
+      "env": {}
+    },
+    "markdown": {
+      "command": ["marksman", "server"],
+      "extensions": [".md", ".markdown"],
+      "env": {}
+    },
+    "json": {
+      "command": ["vscode-json-language-server", "--stdio"],
+      "extensions": [".json", ".jsonc"],
+      "env": {}
+    },
+    "bash": {
+      "command": ["bash-language-server", "start"],
+      "extensions": [".sh", ".bash"],
+      "env": {}
+    }
+  },
   "compaction": {
     "auto": true,
     "prune": true
