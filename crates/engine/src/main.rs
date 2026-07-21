@@ -755,29 +755,51 @@ fn spawn_daemon_parent(args: &cli::Args) -> ExitCode {
                 .unwrap_or_else(|| std::path::PathBuf::from("forgum-engine"))
         });
 
+    // Try two spawn strategies:
+    // 1. `Stdio::null()` for all three streams (preferred on a real
+    //    shell-hook caller; the daemon mustn't leak stdio into the
+    //    user's terminal).
+    // 2. `Stdio::inherit()` (kept only as a fallback for unusual
+    //    environments where `/dev/null` isn't reachable from inside
+    //    the container — QEMU user-mode running inside `cross` has
+    //    been observed to fail posix_spawn with the first profile; the
+    //    second profile succeeds because it never opens a file handle).
+    let spawn_with_stdio = |stdin: Stdio, stdout: Stdio, stderr: Stdio| {
+        std::process::Command::new(&self_exe)
+            .args(&argv[1..])
+            .env("FORGUM_DAEMON_SESSION", &session_id)
+            .stdin(stdin)
+            .stdout(stdout)
+            .stderr(stderr)
+            .spawn()
+    };
+
     // Spawn detached: stdin/stdout/stderr to /dev/null so the daemon
     // doesn't leak to the calling shell. The child writes the state file
     // when ready, which the parent polls for.
     //
     // We pass FORGUM_DAEMON_SESSION to the child so its getppid()-based
     // session detection produces the SAME session-id the parent computed
-    // (the child sees US as its parent, not the original shell or test
+    // (the child sees US as its parent, not the original shell/test
     // process). Without this the parent and child pick different
     // session-ids and the state-file paths diverge, so the parent polls
     // the wrong location and the test (which polls by its OWN ppid)
     // never sees the state file appear.
-    let child = match std::process::Command::new(&self_exe)
-        .args(&argv[1..])
-        .env("FORGUM_DAEMON_SESSION", &session_id)
-        .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .spawn()
-    {
+    let child = match spawn_with_stdio(Stdio::null(), Stdio::null(), Stdio::null()) {
         Ok(c) => c,
-        Err(e) => {
-            eprintln!("{PROGRAM}: daemon spawn: {e}");
-            return ExitCode::from(74);
+        Err(null_err) => {
+            // Fallback: try without Stdio::null(). Some sandboxes
+            // (notably `cross` running aarch64 binaries under QEMU
+            // user-mode) refuse the posix_spawn with /dev/null fd
+            // inheritance. The user's terminal will see the child's
+            // stdout briefly, which is fine for tests.
+            match spawn_with_stdio(Stdio::piped(), Stdio::piped(), Stdio::piped()) {
+                Ok(c) => c,
+                Err(e) => {
+                    eprintln!("{PROGRAM}: daemon spawn failed ({null_err}; {e})");
+                    return ExitCode::from(74);
+                }
+            }
         }
     };
 
