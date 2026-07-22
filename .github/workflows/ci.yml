@@ -54,23 +54,11 @@ jobs:
 
   arm64-linux-test:
     name: Rust (arm64-linux, cross)
-    # The CI cross-rs aarch64 lane executes binaries under QEMU
-    # user-mode emulation (binfmt_misc), which:
-    #   - rejects fork(2), and historically rejected posix_spawn() / clone()
-    #     for some /dev/null fd-inheritance combos on certain cross-rs
-    #     container image revisions; and
-    #   - cannot ensure XDG_RUNTIME_DIR is writable for ControlServer's
-    #     Unix-domain socket bind path.
-    # The engine's `--daemon` flow has a robust in-process fallback
-    # in `daemon_in_process_fallback` that produces the same state
-    # file + control socket contract; this lane exercises that
-    # branch. We mark the lane `continue-on-error` to handle the
-    # remaining QEMU-emulation edge cases that surface as flaky
-    # `daemon_lifecycle_ping_stop` failures when the emulation
-    # re-enters itself through a second-stage spawn. The native
-    # Linux/macOS lanes continue to enforce this test as a hard
-    # merge blocker.
-    continue-on-error: true
+    # Cross-rs runs aarch64 binaries through QEMU-binfmt user-mode.
+    # The engine's `--daemon` mode re-execs itself via `execve` (no
+    # fork, no posix_spawn), which neither uses nor needs the emulated
+    # fork path on aarch64 — so the daemon_lifecycle_ping_stop test
+    # passes directly here, same as on the native Linux lane.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
