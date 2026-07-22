@@ -120,6 +120,18 @@ pub fn spawn_silent(program: &Path, args: &[&str]) -> Result<DetachedChild, Plat
 /// API exists, so we run the supplied closure in-place.
 ///
 /// The platform dispatch lives here, so callers stay cfg-free.
+/// Drop into daemon mode for the calling process. On Unix we
+/// use the standard library's `CommandExt::exec` (execve(2) under
+/// the hood): the daemon body runs in the same process slot.
+///
+/// Contract on success: the address space is atomically replaced;
+/// this function does not return. On any platform we hit where
+/// exec fails (sandbox-specific permission / inode denial),
+/// the supplied `fallback` closure runs in-place.
+///
+/// On Windows no portable exec stable-API exists, so we run the
+/// closure inline. The cfg dispatch lives here so callers stay
+/// cfg-free.
 #[cfg(unix)]
 pub fn daemon_bootstrap<F: FnOnce() -> std::process::ExitCode>(
     argv: &[String],
@@ -127,6 +139,9 @@ pub fn daemon_bootstrap<F: FnOnce() -> std::process::ExitCode>(
 ) -> std::process::ExitCode {
     use std::os::unix::process::CommandExt;
 
+    // current_exe first, then argv[0], then the literal name.
+    // The .exists() filter dodges /proc/self/exe pointing to a
+    // host-only path under cross-rs/aarch64 QEMU.
     let self_exe: std::path::PathBuf = std::env::current_exe()
         .ok()
         .filter(|p| p.exists())
@@ -138,21 +153,15 @@ pub fn daemon_bootstrap<F: FnOnce() -> std::process::ExitCode>(
         .stdin(Stdio::null())
         .stdout(Stdio::null())
         .stderr(Stdio::null());
-    // exec() comes from std::os::unix::process::CommandExt.
-    // It returns io::Result<Infallible>: Ok is unreachable
-    // (the process image is gone on success), Err is the
-    // real diagnostic. We match the two arms for clarity, since
-    // `!` is unstable on stable rustc.
-    let exec_result: Result<std::convert::Infallible, std::io::Error> = cmd.exec();
-    match exec_result {
-        Ok(unreachable) => match unreachable {},
-        Err(e) => {
-            eprintln!("forgum-engine: daemon re-exec failed: {e}; running daemon body inline");
-            fallback()
-        }
-    }
-}
 
+    // cmd.exec() returns io::Error on failure and atomically
+    // replaces the address space on success - the success case
+    // never returns. Treat any returned value as a fallback signal.
+    let result = cmd.exec();
+    eprintln!("forgum-engine: daemon re-exec failed: {result}; running daemon body inline");
+    let _ = argv; // parameter preserved for future args-forwarding.
+    fallback()
+}
 /// Windows variant of `daemon_bootstrap`. No portable exec-stable on
 /// Windows; run the supplied closure inline.
 #[cfg(windows)]
