@@ -125,19 +125,32 @@ pub fn daemon_bootstrap<F: FnOnce() -> std::process::ExitCode>(
     argv: &[String],
     fallback: F,
 ) -> std::process::ExitCode {
+    use std::os::unix::process::CommandExt;
+
     let self_exe: std::path::PathBuf = std::env::current_exe()
         .ok()
         .filter(|p| p.exists())
         .or_else(|| std::env::args().next().map(std::path::PathBuf::from))
         .unwrap_or_else(|| std::path::PathBuf::from("forgum-engine"));
+
     let mut cmd = std::process::Command::new(&self_exe);
     cmd.args(argv)
         .stdin(Stdio::null())
         .stdout(Stdio::null())
         .stderr(Stdio::null());
-    let err = cmd.exec();
-    eprintln!("forgum-engine: daemon re-exec failed: {err}; running daemon body inline");
-    fallback()
+    // exec() comes from std::os::unix::process::CommandExt.
+    // It returns io::Result<Infallible>: Ok is unreachable
+    // (the process image is gone on success), Err is the
+    // real diagnostic. We match the two arms for clarity, since
+    // `!` is unstable on stable rustc.
+    let exec_result: Result<std::convert::Infallible, std::io::Error> = cmd.exec();
+    match exec_result {
+        Ok(unreachable) => match unreachable {},
+        Err(e) => {
+            eprintln!("forgum-engine: daemon re-exec failed: {e}; running daemon body inline");
+            fallback()
+        }
+    }
 }
 
 /// Windows variant of `daemon_bootstrap`. No portable exec-stable on
