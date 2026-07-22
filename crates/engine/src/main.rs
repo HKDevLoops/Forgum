@@ -887,7 +887,16 @@ fn spawn_daemon_parent(args: &cli::Args) -> ExitCode {
 /// the now-returned spawn helper; when the spawn path bails we have to
 /// reconstruct the args from the live process state, not from `args`.
 fn daemon_in_process_fallback(session_id: &str) -> ExitCode {
-    let _ = session_id;
+    // Tell the caller (a real shell hook on a constrained box) that the
+    // detached model could not be used; the daemon is now in this
+    // process. Useful as a teaser for `herd census` diagnostics but
+    // harmless for the integration test, which only checks the state
+    // file and the control socket.
+    eprintln!(
+        "{PROGRAM}: detached spawn unavailable on this platform; the \
+         daemon is running in-process under session `{session_id}`. Hook \
+         invocations will delay until this process exits."
+    );
     let argv: Vec<String> = std::env::args().collect();
     let parsed = match forgum_engine::cli::parse_args(argv) {
         Ok((args, _)) => args,
