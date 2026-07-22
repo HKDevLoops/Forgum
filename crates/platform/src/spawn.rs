@@ -172,6 +172,66 @@ pub fn spawn_silent(program: &Path, args: &[&str]) -> Result<DetachedChild, Plat
     Ok(DetachedChild { inner: child })
 }
 
+/// Drop into daemon mode for the calling process. On Unix, replaces
+/// this process image with `argv[0]` (the engine binary) re-exec'd
+/// with the supplied args (the caller sets argv up the way it wants
+/// the daemon child to see it). On Windows, no portable exec
+/// exists in stable Rust, so we just run the supplied closure in
+/// place — the caller has to inline its daemon body. The
+/// platform dispatch lives here, so callers stay cfg-free.
+///
+/// Tests verifying that callers without a TTY or with restricted
+/// filesystem namespaces still rely on `Command::spawn`-style
+/// detach will require running the binary's helpful re-exec path.
+/// On `cross-rs/...:aarch64` QEMU user-mode emulators we observe
+/// `posix_spawn()` reject /dev/null fd inheritance and ITSELF
+/// fork() returning EINVAL/ENOSYS; re-exec is the only path that
+/// avoids both.
+#[cfg(unix)]
+#[allow(unsafe_code)]
+pub fn daemon_bootstrap<F: FnOnce() -> std::process::ExitCode>(
+    argv: &[String],
+    fallback: F,
+) -> std::process::ExitCode {
+    use std::os::unix::process::CommandExt;
+
+    // Prefer current_exe (canonical path); fall back to argv[0]
+    // when current_exe points through /proc/self/exe to a path
+    // QEMU-binfmt cannot re-exec (cross-rs aarch64). Fall back
+    // further to the binary literal name (POSIX PATH search).
+    let self_exe: std::path::PathBuf = std::env::current_exe()
+        .ok()
+        .filter(|p| p.exists())
+        .or_else(|| std::env::args().next().map(std::path::PathBuf::from))
+        .unwrap_or_else(|| std::path::PathBuf::from("forgum-engine"));
+
+    if let Err(e) = std::process::Command::new(&self_exe)
+        .args(argv)
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .exec()
+    {
+        eprintln!("forgum-engine: daemon re-exec failed: {e}; running daemon body inline");
+        return fallback();
+    }
+    // Unreachable: exec on success replaces the process.
+    std::process::ExitCode::from(74)
+}
+
+/// Drop into daemon mode for the calling process (Windows variant).
+/// No portable exec stable-API exists on Windows — we run the
+/// daemon body inline, so the daemon's lifetime matches the
+/// host lifetime. The caller should mirror whatever shape they had
+/// planned for the post-exec daemon child.
+#[cfg(windows)]
+pub fn daemon_bootstrap<F: FnOnce() -> std::process::ExitCode>(
+    _argv: &[String],
+    fallback: F,
+) -> std::process::ExitCode {
+    fallback()
+}
+
 /// Check if a process with the given PID is still alive.
 ///
 /// On Unix, uses `kill(pid, 0)` to check without sending a signal.
