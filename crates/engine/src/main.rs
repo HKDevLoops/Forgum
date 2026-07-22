@@ -715,146 +715,33 @@ fn render_subcommand(args: cli::Args) -> ExitCode {
 /// spawned PID to stdout, and exits 0. The spawned child writes the
 /// state file as soon as it has opened the control socket and is ready
 /// to receive commands — at which point the parent returns.
+/// Re-exec this binary with `--internal-daemon-runner` so the
+/// daemon body runs in the same process slot. Canonical POSIX pattern;
+/// avoids fork() UB and QEMU-binfmt posix_spawn issues. Only Err returns.
 fn spawn_daemon_parent(args: &cli::Args) -> ExitCode {
-    use std::process::Stdio;
-    use std::time::{Duration, Instant};
+    let _ = args; // kept for stable signature; future args-forwarding.
 
-    // The computation that picks which session key the daemon state file
-    // uses MUST run in the parent (so we know where to poll). The spawned
-    // child re-runs `detect_session_id()` inside its own process; we
-    // stamp the parent's chosen session_id via FORGUM_DAEMON_SESSION env
-    // so the child picks the SAME id (its getppid() is OUR pid, not the
-    // shell/test pid, so without the stamp parent- and child-computed
-    // session-ids differ and the parent's poll-for-state-file loop
-    // misses every time).
-    let session_id = forgum_platform::detect_session_id();
-    let state_path = forgum_platform::daemon_state_path(&session_id);
-
-    // Build argv: copy current args, add --internal-daemon-runner, keep
-    // --daemon so any downstream that branches on `args.daemon` still
-    // sees the intent (cosmetic; child branches on
-    // `args.internal_daemon_runner`).
-    let mut argv: Vec<String> = std::env::args().collect();
+    // Carry every current flag forward plus the internal marker.
+    let mut argv: Vec<String> = std::env::args().skip(1).collect();
     if !argv.iter().any(|a| a == "--internal-daemon-runner") {
         argv.push("--internal-daemon-runner".to_string());
     }
 
-    // Locate self. Prefer `current_exe` (canonical path); fall back to
-    // `argv[0]` when it points through `/proc/self/exe` or otherwise
-    // references a path the new process can't reach — common under
-    // `cross` arm64 QEMU user-mode where `/proc/self/exe` resolves to
-    // a host-runtime path QEMU can't re-exec. argv[0] in test contexts
-    // is `CARGO_BIN_EXE_forgum-engine` and is reachable.
-    let self_exe: std::path::PathBuf = std::env::current_exe()
-        .ok()
-        .filter(|p| p.exists())
-        .unwrap_or_else(|| {
-            std::env::args()
-                .next()
-                .map(std::path::PathBuf::from)
-                .unwrap_or_else(|| std::path::PathBuf::from("forgum-engine"))
-        });
-
-    // Try two spawn strategies:
-    // 1. `Stdio::null()` for all three streams (preferred on a real
-    //    shell-hook caller; the daemon mustn't leak stdio into the
-    //    user's terminal).
-    // 2. `Stdio::inherit()` (kept only as a fallback for unusual
-    //    environments where `/dev/null` isn't reachable from inside
-    //    the container — QEMU user-mode running inside `cross` has
-    //    been observed to fail posix_spawn with the first profile; the
-    //    second profile succeeds because it never opens a file handle).
-    let spawn_with_stdio = |stdin: Stdio, stdout: Stdio, stderr: Stdio| {
-        std::process::Command::new(&self_exe)
-            .args(&argv[1..])
-            .env("FORGUM_DAEMON_SESSION", &session_id)
-            .stdin(stdin)
-            .stdout(stdout)
-            .stderr(stderr)
-            .spawn()
-    };
-
-    // Spawn detached: stdin/stdout/stderr to /dev/null so the daemon
-    // doesn't leak to the calling shell. The child writes the state file
-    // when ready, which the parent polls for.
-    //
-    // We pass FORGUM_DAEMON_SESSION to the child so its getppid()-based
-    // session detection produces the SAME session-id the parent computed
-    // (the child sees US as its parent, not the original shell/test
-    // process). Without this the parent and child pick different
-    // session-ids and the state-file paths diverge, so the parent polls
-    // the wrong location and the test (which polls by its OWN ppid)
-    // never sees the state file appear.
-    //
-    // We try three stdio profiles in order:
-    //  - all-`Stdio::null()` (preferred for real shell-hook callers:
-    //    the daemon mustn't leak stdio into the user's terminal);
-    //  - all-`Stdio::piped()` (used when the kernel rejects /dev/null
-    //    fd inheritance, e.g. under QEMU user-mode in `cross`'s
-    //    aarch64 container, where posix_spawn refuses with some
-    //    E INVAL/EACCES variants);
-    //  - inherit (last-resort; useful only when /dev/null is
-    //    wholly unreachable from the spawn path, rare-but-possible
-    //    under heavy seccomp filters).
-    let child = match spawn_with_stdio(Stdio::null(), Stdio::null(), Stdio::null()) {
-        Ok(c) => c,
-        Err(null_err) => match spawn_with_stdio(Stdio::piped(), Stdio::piped(), Stdio::piped()) {
-            Ok(c) => c,
-            Err(pipe_err) => {
-                match spawn_with_stdio(Stdio::inherit(), Stdio::inherit(), Stdio::inherit()) {
-                    Ok(c) => c,
-                    Err(inherit_err) => {
-                        // Surface every profile error so CI can pinpoint which
-                        // sandbox mode we're in. We print to STDOUT, not
-                        // stderr, because the daemon_lifecycle integration
-                        // test captures both - and stdout is the channel the
-                        // test runner reliably mirrors into the captured
-                        // test output (otherwise the panic at line 21
-                        // (`child.status.success()` false) hides any
-                        // diagnostic).
-                        println!("{PROGRAM}: daemon spawn failed across all three stdio profiles; falling back to in-process daemon:");
-                        println!("  stdin=null  -> {null_err}");
-                        println!("  piped       -> {pipe_err}");
-                        println!("  inherit     -> {inherit_err}");
-                        return daemon_in_process_fallback(&session_id);
-                    }
-                }
-            }
-        },
-    };
-
-    let child_pid = child.id();
-
-    // Poll for the spawned daemon to write its state file. 10s is plenty
-    // for a process warmup; if the daemon never reports back we still
-    // print the PID and exit 0 so the caller (or test) can proceed and
-    // keep its own deadline.
-    let deadline = Instant::now() + Duration::from_secs(10);
-    while Instant::now() < deadline {
-        if state_path.exists() {
-            break;
-        }
-        std::thread::sleep(Duration::from_millis(50));
-    }
-
-    // Announce the daemon PID so callers reading our piped stdout can
-    // find it. Flushed explicitly — `process::exit` does not flush.
-    {
-        use std::io::Write;
-        let stdout = std::io::stdout();
-        let mut lock = stdout.lock();
-        let _ = writeln!(lock, "{child_pid}");
-        let _ = lock.flush();
-    }
-    // Intentionally do NOT wait on the child: the daemon's job is to
-    // outlive us. Dropping the Child handle detaches.
-    drop(child);
-
-    // We kept `args` to silence "unused" while documenting the intent;
-    // future versions may forward args to customize spawn. Avoid touching
-    // the parameter contract for now.
+    // Whole-platform daemon-mode bootstrap: the engine does NOT itself
+    // carry any platform cfg. The dispatch lives in forgum_platform
+    // (`daemon_bootstrap`), which on Unix uses execve to replace this
+    // process; on Windows has no portable exec, so it runs the body
+    // inline. Either way, callers see one lifetime, exit 0 on success.
     let _ = args;
-    ExitCode::SUCCESS
+    let argv_full: Vec<String> = std::env::args().collect();
+    let parsed = match parse_args(argv_full) {
+        Ok((a, _)) => a,
+        Err(e) => {
+            eprintln!("{PROGRAM}: {}", e.message);
+            return ExitCode::from(e.exit_code);
+        }
+    };
+    forgum_platform::daemon_bootstrap(&argv, || run_daemon_child(parsed))
 }
 
 /// When `Command::spawn` cannot detach on POSIX (typical for QEMU user-mode
@@ -865,57 +752,10 @@ fn spawn_daemon_parent(args: &cli::Args) -> ExitCode {
 /// state-file path the in-process daemon writes — and that's exactly what
 /// [`run_daemon_child`] produces.
 ///
-/// Why this is project-correct, not just test-bypass: from the shell-hook
-/// caller's perspective, the daemon must survive the caller's exit. We
-/// never reach that stage under this fallback (the caller is the test
-/// itself, holding the captured child open), and the test polls the
-/// child for state and then sends STOP through the same control socket
-/// `run_daemon_child` wires up. The only thing the caller notices is a
-/// longer hang vs the two-process model.
-///
-/// Note on `FORGUM_DAEMON_SESSION`: we do NOT set it here. `detect_session_id`
-/// already picks the right id for the in-process daemon — the parent IS
-/// the daemon, the getppid() the daemon sees is the test's pid, and
-/// the test polls the same shell-<test_pid> session. Mutating the
-/// process env to plant an explicit session id would require unsafe
-/// (set_var), which the project forbids via `-D unsafe-code`. We
-/// deliberately AVOID touching process env in this path. The
-/// no-op `session_id` parameter is kept as documentation of the
-/// intent and to make the call site self-explanatory.
-///
-/// Re-parse argv because the parent has already moved `cli::Args` into
-/// the now-returned spawn helper; when the spawn path bails we have to
-/// reconstruct the args from the live process state, not from `args`.
-fn daemon_in_process_fallback(session_id: &str) -> ExitCode {
-    // Tell the caller (a real shell hook on a constrained box) that the
-    // detached model could not be used; the daemon is now in this
-    // process. Useful as a teaser for `herd census` diagnostics but
-    // harmless for the integration test, which only checks the state
-    // file and the control socket.
-    eprintln!(
-        "{PROGRAM}: detached spawn unavailable on this platform; the \
-         daemon is running in-process under session `{session_id}`. Hook \
-         invocations will delay until this process exits."
-    );
-    let argv: Vec<String> = std::env::args().collect();
-    let parsed = match forgum_engine::cli::parse_args(argv) {
-        Ok((args, _)) => args,
-        Err(e) => {
-            eprintln!("{PROGRAM}:{}", e.message);
-            return ExitCode::from(e.exit_code);
-        }
-    };
-    run_daemon_child(parsed)
-}
-
-/// DAEMON-MODE CHILD.
-///
-/// Runs in a fresh process respawned by [`spawn_daemon_parent`] with the
-/// `--internal-daemon-runner` flag. Single-threaded by construction.
-/// Starts the control socket server (spawns its accept-loop thread
-/// *now*, in this new process — not after a fork()), writes the daemon
-/// state file, opens output, enters the render loop, and Honours STOP
-/// commands from the control socket.
+/// DAEMON mode body. Runs after spawn_daemon_parent exec's this binary
+/// with --internal-daemon-runner attached. Single-threaded by construction
+/// (fresh exec → no fork UB), starts the control socket thread, writes
+/// the state file, opens output, enters the render loop, honours STOP.
 fn run_daemon_child(args: cli::Args) -> ExitCode {
     let scene = match build_scene_config(&args) {
         Ok(s) => s,
