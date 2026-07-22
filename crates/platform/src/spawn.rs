@@ -205,18 +205,22 @@ pub fn daemon_bootstrap<F: FnOnce() -> std::process::ExitCode>(
         .or_else(|| std::env::args().next().map(std::path::PathBuf::from))
         .unwrap_or_else(|| std::path::PathBuf::from("forgum-engine"));
 
-    if let Err(e) = std::process::Command::new(&self_exe)
+    // exec replaces this process with the arg image. The function
+    // returns `io::Error` ONLY on failure - on success the process
+    // image is gone, so the `_x: Infallible` branch is unreachable.
+    let exec_result: Result<!, std::io::Error> = std::process::Command::new(&self_exe)
         .args(argv)
         .stdin(Stdio::null())
         .stdout(Stdio::null())
         .stderr(Stdio::null())
-        .exec()
-    {
-        eprintln!("forgum-engine: daemon re-exec failed: {e}; running daemon body inline");
-        return fallback();
+        .exec();
+    match exec_result {
+        Ok(unreachable) => match unreachable {},
+        Err(e) => {
+            eprintln!("forgum-engine: daemon re-exec failed: {e}; running daemon body inline");
+            fallback()
+        }
     }
-    // Unreachable: exec on success replaces the process.
-    std::process::ExitCode::from(74)
 }
 
 /// Drop into daemon mode for the calling process (Windows variant).
