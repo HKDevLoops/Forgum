@@ -137,30 +137,40 @@ pub fn daemon_bootstrap<F: FnOnce() -> std::process::ExitCode>(
     argv: &[String],
     fallback: F,
 ) -> std::process::ExitCode {
-    use std::os::unix::process::CommandExt;
-
     // current_exe first, then argv[0], then the literal name.
-    // The .exists() filter dodges /proc/self/exe pointing to a
-    // host-only path under cross-rs/aarch64 QEMU.
     let self_exe: std::path::PathBuf = std::env::current_exe()
         .ok()
         .filter(|p| p.exists())
         .or_else(|| std::env::args().next().map(std::path::PathBuf::from))
         .unwrap_or_else(|| std::path::PathBuf::from("forgum-engine"));
 
-    let mut cmd = std::process::Command::new(&self_exe);
-    cmd.args(argv)
-        .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null());
+    // Spawn detached. stdio to /dev/null so the daemon doesn't leak
+    // into the user's terminal. If /dev/null path is unreachable
+    // we fall through to the closure path and run in-process.
+    let spawn_with = |stdin: Stdio, stdout: Stdio, stderr: Stdio| {
+        std::process::Command::new(&self_exe)
+            .args(argv)
+            .stdin(stdin)
+            .stdout(stdout)
+            .stderr(stderr)
+            .spawn()
+    };
+    let child = match spawn_with(Stdio::null(), Stdio::null(), Stdio::null()) {
+        Ok(c) => c,
+        Err(_) => return fallback(),
+    };
 
-    // cmd.exec() returns io::Error on failure and atomically
-    // replaces the address space on success - the success case
-    // never returns. Treat any returned value as a fallback signal.
-    let result = cmd.exec();
-    eprintln!("forgum-engine: daemon re-exec failed: {result}; running daemon body inline");
-    let _ = argv; // parameter preserved for future args-forwarding.
-    fallback()
+    // Parent: announce the daemon PID, flush, exit 0. The kernel
+    // reparents the detached child to init when this parent dies.
+    let child_pid = child.id();
+    {
+        use std::io::Write;
+        let stdout = std::io::stdout();
+        let mut lock = stdout.lock();
+        let _ = writeln!(lock, "{child_pid}");
+        let _ = lock.flush();
+    }
+    std::process::exit(0);
 }
 /// Windows variant of `daemon_bootstrap`. No portable exec-stable on
 /// Windows; run the supplied closure inline.
