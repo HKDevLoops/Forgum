@@ -148,22 +148,13 @@ pub fn daemon_bootstrap<F: FnOnce() -> std::process::ExitCode>(
         .args(argv)
         .env("FORGUM_DAEMON_SESSION", session_id)
         .stdin(Stdio::null())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::inherit())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
         .spawn();
 
     let child = match spawn_attempt {
         Ok(c) => c,
-        Err(e) => {
-            // Diagnostic surface: on CI we need to see *why* spawn failed
-            // to disambiguate the cross-rs / QEMU-emulation rejection from
-            // a path-resolution or permission denial. stderr only — parent
-            // stdout is reserved for the PID announcement (test's pipe).
-            if std::env::var_os("FORGUM_DEBUG_SPAWN").is_some() {
-                eprintln!("forgum-platform: spawn failed: {e}; falling back in-process");
-            }
-            return fallback();
-        }
+        Err(_) => return fallback(),
     };
 
     let child_pid = child.id();
