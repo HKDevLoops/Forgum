@@ -24,7 +24,7 @@ pub fn daemonize() -> Result<bool, PlatformError> {
             std::process::exit(0);
         }
         Ok(ForkResult::Child) => {
-            setsid().map_err(|e| PlatformError::Io(std::io::Error::other(e)))?;
+            setsid().map_err(|e: nix::errno::Errno| PlatformError::Io(std::io::Error::other(e)))?;
             Ok(false)
         }
         Err(e) => Err(PlatformError::Io(io::Error::other(e))),
@@ -79,10 +79,11 @@ pub fn spawn_detached(
     let mut cmd = Command::new(program);
     cmd.args(args).stdin(stdin).stdout(stdout).stderr(stderr);
     #[allow(unsafe_code)]
+    #[allow(unsafe_code)]
     unsafe {
         cmd.pre_exec(|| {
             if libc::setsid() == -1 {
-                return Err(io::Error::last_os_error());
+                return Err(std::io::Error::last_os_error());
             }
             Ok(())
         });
