@@ -741,7 +741,16 @@ fn spawn_daemon_parent(args: &cli::Args) -> ExitCode {
             return ExitCode::from(e.exit_code);
         }
     };
-    forgum_platform::daemon_bootstrap(&argv, || run_daemon_child(parsed))
+
+    // Derive session id from the parent's perspective BEFORE spawning.
+    // The detector already honors `FORGUM_DAEMON_SESSION` if present;
+    // otherwise falls through to `shell-<ppid>` on Unix. We then stamp
+    // that exact id on the child via the spawn helper so the daemon's
+    // state file lands where our caller (and the polling test) is
+    // going to look for it.
+    let session_id = forgum_platform::detect_session_id();
+
+    forgum_platform::daemon_bootstrap(&session_id, &argv, || run_daemon_child(parsed))
 }
 
 /// When `Command::spawn` cannot detach on POSIX (typical for QEMU user-mode
