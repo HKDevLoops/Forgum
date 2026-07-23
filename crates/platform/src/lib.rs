@@ -74,7 +74,11 @@ pub use sixel::{
     create_graphics_renderer, graphics_renderer_available, CellView, FrameBufferLike,
     GraphicsRenderer,
 };
-pub use spawn::{daemon_bootstrap, daemonize, process_is_alive, spawn_detached, DetachedChild};
+#[cfg(unix)]
+pub use spawn::fork_then_exec_self;
+pub use spawn::{
+    daemon_bootstrap, daemonize, prefer_fork_exec, process_is_alive, spawn_detached, DetachedChild,
+};
 
 /// Returns the current process's open handle/fd count, or `None` if the OS
 /// doesn't expose a reliable signal. Used by the daemon soak test to assert

@@ -70,7 +70,13 @@ jobs:
       - name: Build (cross, arm64)
         run: cross build --workspace --locked --target aarch64-unknown-linux-gnu -p forgum-engine
       - name: Test (cross, arm64)
-        run: cross test --locked --target aarch64-unknown-linux-gnu -p forgum-engine
+        # qemu-aarch64-static under cross-rs user-mode rejects glibc's
+        # posix_spawn(CLONE_VFORK|CLONE_VM) with EINVAL. The platform crate
+        # also exposes a fork()+execve() path that's emulated fine on QEMU;
+        # we use it explicitly here.
+        run: cross test --locked --target aarch64-unknown-linux-gnu -p forgum-engine -- --test-threads=1
+        env:
+          FORGUM_USE_FORK_EXEC: '1'
 
   cfg-grep:
     name: Platform cfg isolation
