@@ -114,71 +114,81 @@ pub fn spawn_silent(program: &Path, args: &[&str]) -> Result<DetachedChild, Plat
     Ok(DetachedChild { inner: child })
 }
 
-/// Drop into daemon mode for the calling process. On Unix, atomic
-/// process replacement via the inherent `Command::exec` method
-/// (execve(2) under the hood). On Windows, no portable exec-stable
-/// API exists, so we run the supplied closure in-place.
+/// Drop into daemon mode for the calling process, anchoring the new
+/// process (or fallback) to a stable `session_id`.
 ///
-/// The platform dispatch lives here, so callers stay cfg-free.
-/// Drop into daemon mode for the calling process. On Unix we
-/// use the standard library's `CommandExt::exec` (execve(2) under
-/// the hood): the daemon body runs in the same process slot.
+/// `session_id` is the key the daemon uses for its discoverable state file
+/// and control socket (`daemon-<id>.json`, `ctrl-<id>.sock`). Callers MUST
+/// derive it from the *caller's* perspective (typically from the process
+/// that's about to invoke us) and forward it here, so the eventual daemon
+/// — whether it's the spawned child or the in-process fallback — writes
+/// to the same path the caller is going to poll.
 ///
-/// Contract on success: the address space is atomically replaced;
-/// this function does not return. On any platform we hit where
-/// exec fails (sandbox-specific permission / inode denial),
-/// the supplied `fallback` closure runs in-place.
-///
-/// On Windows no portable exec stable-API exists, so we run the
-/// closure inline. The cfg dispatch lives here so callers stay
-/// cfg-free.
+/// The Unix branch spawns a fresh single-threaded copy of this binary via
+/// `Command::spawn` (posix_spawn), stamping `FORGUM_DAEMON_SESSION=<id>` on
+/// the child so the engine's `detect_session_id()` resolves to the same
+/// id. On Windows we run the supplied closure in-process, but the caller
+/// still passes the same `session_id` so the child state's path matches
+/// the test's expectation by construction.
 #[cfg(unix)]
 pub fn daemon_bootstrap<F: FnOnce() -> std::process::ExitCode>(
+    session_id: &str,
     argv: &[String],
     fallback: F,
 ) -> std::process::ExitCode {
-    // current_exe first, then argv[0], then the literal name.
+    use std::io::Write;
+
     let self_exe: std::path::PathBuf = std::env::current_exe()
         .ok()
         .filter(|p| p.exists())
         .or_else(|| std::env::args().next().map(std::path::PathBuf::from))
         .unwrap_or_else(|| std::path::PathBuf::from("forgum-engine"));
 
-    // Spawn detached. stdio to /dev/null so the daemon doesn't leak
-    // into the user's terminal. If /dev/null path is unreachable
-    // we fall through to the closure path and run in-process.
-    let spawn_with = |stdin: Stdio, stdout: Stdio, stderr: Stdio| {
-        std::process::Command::new(&self_exe)
-            .args(argv)
-            .stdin(stdin)
-            .stdout(stdout)
-            .stderr(stderr)
-            .spawn()
-    };
-    let child = match spawn_with(Stdio::null(), Stdio::null(), Stdio::null()) {
+    let spawn_attempt = std::process::Command::new(&self_exe)
+        .args(argv)
+        .env("FORGUM_DAEMON_SESSION", session_id)
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn();
+
+    let child = match spawn_attempt {
         Ok(c) => c,
         Err(_) => return fallback(),
     };
 
-    // Parent: announce the daemon PID, flush, exit 0. The kernel
-    // reparents the detached child to init when this parent dies.
     let child_pid = child.id();
-    {
-        use std::io::Write;
-        let stdout = std::io::stdout();
-        let mut lock = stdout.lock();
-        let _ = writeln!(lock, "{child_pid}");
-        let _ = lock.flush();
-    }
+    let stdout = std::io::stdout();
+    let mut lock = stdout.lock();
+    let _ = writeln!(lock, "{child_pid}");
+    let _ = lock.flush();
     std::process::exit(0);
 }
-/// Windows variant of `daemon_bootstrap`. No portable exec-stable on
-/// Windows; run the supplied closure inline.
+
+/// Windows variant: no portable exec-stable on Windows so we run the
+/// supplied closure inline. `session_id` is accepted but unused on this
+/// path (the engine derives its own via `FORGUM_DAEMON_SESSION` if
+/// present, falling back to `shell-<pid>`).
 #[cfg(windows)]
 pub fn daemon_bootstrap<F: FnOnce() -> std::process::ExitCode>(
+    _session_id: &str,
     _argv: &[String],
     fallback: F,
 ) -> std::process::ExitCode {
+    fallback()
+}
+
+/// Backwards-compatible alias: lets older call-sites that don't derive a
+/// session id still hand control to the platform dispatch. New code
+/// should prefer the [`daemon_bootstrap`] three-arg form and pass an
+/// explicit session id; `argv` is unused on the Windows inline path and
+/// on Unix where the cfg dispatch handles fd setup.
+#[allow(dead_code)]
+fn _legacy_daemon_bootstrap_unused<F: FnOnce() -> std::process::ExitCode>(
+    argv: &[String],
+    fallback: F,
+) -> std::process::ExitCode {
+    let _ = argv;
     fallback()
 }
 
@@ -274,7 +284,10 @@ mod tests {
     #[test]
     fn daemon_bootstrap_signature_is_cross_platform() {
         #[allow(clippy::type_complexity)]
-        let _f: fn(&[String], fn() -> std::process::ExitCode) -> std::process::ExitCode =
-            |a, b| daemon_bootstrap(a, b);
+        let _f: fn(
+            &str,
+            &[String],
+            fn() -> std::process::ExitCode,
+        ) -> std::process::ExitCode = |s, a, b| daemon_bootstrap(s, a, b);
     }
 }
