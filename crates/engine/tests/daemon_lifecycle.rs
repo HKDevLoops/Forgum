@@ -16,7 +16,6 @@ fn daemon_lifecycle_ping_stop() {
     // `Stop-ForgumDaemon` use to discover running daemons).
     let child = Command::new(exe)
         .args(["--background", "--duration", "30", "--daemon"])
-        .env("FORGUM_DEBUG_SPAWN", "1")
         .output()
         .expect("failed to start daemon");
     assert!(child.status.success(), "daemon parent exited non-zero");
