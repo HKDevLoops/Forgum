@@ -245,12 +245,9 @@ pub fn fork_then_exec_self(
         }
         libc::execve(exe_c.as_ptr(), argv_ptrs.as_ptr(), env_ptrs.as_ptr());
     }
-    // execve only returns on error. Write error to stderr before exiting.
-    // Use raw syscall to avoid any buffering issues post-fork.
+    // execve only returns on error. The child must terminate — never return
+    // to the runtime ABI. Parent detects failure via waitpid.
     unsafe {
-        let err = std::io::Error::last_os_error();
-        let msg = format!("execve failed: {err}\0");
-        libc::write(2, msg.as_ptr() as *const libc::c_char, msg.len() as libc::size_t);
         libc::_exit(127);
     }
 }
