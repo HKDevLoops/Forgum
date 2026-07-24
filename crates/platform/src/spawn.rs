@@ -250,7 +250,7 @@ pub fn fork_then_exec_self(
     unsafe {
         let err = std::io::Error::last_os_error();
         let msg = format!("execve failed: {err}\0");
-        libc::write(2, msg.as_ptr() as *const libc::c_char, msg.len().min(512));
+        libc::write(2, msg.as_ptr() as *const libc::c_char, msg.len() as libc::size_t);
         libc::_exit(127);
     }
 }
