@@ -161,7 +161,7 @@ pub fn fork_then_exec_self(
     argv: &[String],
     env_overrides: &[(&str, &str)],
 ) -> std::io::Result<u32> {
-    use std::ffi::CString;
+    use std::ffi::{c_char, CString};
 
     // Resolve `self_exe` exactly once up-front. `current_exe()` is async-
     // signal-safe so it's fine here.
@@ -188,7 +188,7 @@ pub fn fork_then_exec_self(
                 .map(|a| CString::new(a.as_str()).unwrap_or_default()),
         );
     }
-    let mut argv_ptrs: Vec<*const i8> = argv_buf.iter().map(|s| s.as_ptr()).collect();
+    let mut argv_ptrs: Vec<*const c_char> = argv_buf.iter().map(|s| s.as_ptr()).collect();
     argv_ptrs.push(std::ptr::null());
 
     // Build envp: caller overrides first, then inherit from current env.
@@ -207,7 +207,7 @@ pub fn fork_then_exec_self(
                 .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidInput, e))?,
         );
     }
-    let mut env_ptrs: Vec<*const i8> = env_buf.iter().map(|s| s.as_ptr()).collect();
+    let mut env_ptrs: Vec<*const c_char> = env_buf.iter().map(|s| s.as_ptr()).collect();
     env_ptrs.push(std::ptr::null());
 
     // SAFETY: see fn-level contract. The child execs immediately; the parent
