@@ -160,7 +160,7 @@ pub fn prefer_fork_exec() -> bool {
 pub fn fork_then_exec_self(
     argv: &[String],
     env_overrides: &[(&str, &str)],
-) -> std::io::Result<std::process::Child> {
+) -> std::io::Result<u32> {
     use std::ffi::CString;
 
     // Resolve `self_exe` exactly once up-front. `current_exe()` is async-
@@ -200,10 +200,8 @@ pub fn fork_then_exec_self(
         );
     }
     for (k, v) in std::env::vars_os() {
-        let s = std::ffi::OsString::into_string(std::ffi::OsStr::into_os_string(&k).to_owned())
-            .unwrap_or_default();
-        let v_str = std::ffi::OsString::into_string(std::ffi::OsStr::into_os_string(&v).to_owned())
-            .unwrap_or_default();
+        let s = k.into_string().unwrap_or_default();
+        let v_str = v.into_string().unwrap_or_default();
         env_buf.push(
             CString::new(format!("{s}={v_str}"))
                 .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidInput, e))?,
@@ -223,7 +221,7 @@ pub fn fork_then_exec_self(
         // Parent. Build a minimal Child handle so callers can identify pid
         // uniformly with the posix_spawn path. We use POSIX `waitpid(WNOHANG)`
         // downstream only after `Libc::write` so the caller doesn't race.
-        return Ok(unsafe { std::process::Child::from_raw(pid as u32) });
+        return Ok(pid);
     }
 
     // Child: become process-group leader so we survive the parent's SIGHUP;
@@ -279,29 +277,29 @@ pub fn daemon_bootstrap<F: FnOnce() -> std::process::ExitCode>(
     let overrides = [("FORGUM_DAEMON_SESSION", session_id.to_owned())];
     let override_refs = [("FORGUM_DAEMON_SESSION", overrides[0].1.as_str())];
 
-    let child_result = if prefer_fork_exec() {
-        fork_then_exec_self(argv, &override_refs)
+    let child_pid: u32 = if prefer_fork_exec() {
+        match fork_then_exec_self(argv, &override_refs) {
+            Ok(pid) => pid,
+            Err(_) => return fallback(),
+        }
     } else {
-        std::process::Command::new(&self_exe)
+        match std::process::Command::new(&self_exe)
             .args(argv)
             .env("FORGUM_DAEMON_SESSION", session_id)
             .stdin(Stdio::null())
             .stdout(Stdio::null())
             .stderr(Stdio::null())
             .spawn()
+        {
+            Ok(child) => child.id(),
+            Err(_) => return fallback(),
+        }
     };
 
-    let mut child = match child_result {
-        Ok(c) => c,
-        Err(_) => return fallback(),
-    };
-
-    let child_pid = child.id();
     let stdout = std::io::stdout();
     let mut lock = stdout.lock();
     let _ = writeln!(lock, "{child_pid}");
     let _ = lock.flush();
-    drop(child);
     std::process::exit(0);
 }
 
@@ -439,7 +437,7 @@ mod tests {
         // arity and the env-overrides slice is empty-asset-safe.
         let argv: Vec<String> = vec!["--version".to_string()];
         let overrides: Vec<(&str, &str)> = vec![];
-        let _f: fn(&[String], &[(&str, &str)]) -> std::io::Result<std::process::Child> =
+        let _f: fn(&[String], &[(&str, &str)]) -> std::io::Result<u32> =
             |a, o| fork_then_exec_self(a, o);
         // Reference argv/overrides so the lints don't flag them unused.
         let _ = (argv, overrides);
