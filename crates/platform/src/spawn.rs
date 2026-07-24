@@ -225,10 +225,10 @@ pub fn fork_then_exec_self(
         if ret != 0 {
             // Child exited - execve must have failed. Propagate the error.
             let exit_code = status >> 8;
-            return Err(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                format!("execve failed with exit code {}", exit_code),
-            ));
+            return Err(std::io::Error::other(format!(
+                "execve failed with exit code {}",
+                exit_code
+            )));
         }
         // Child is still running - execve succeeded.
         return Ok(pid as u32);
