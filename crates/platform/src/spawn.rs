@@ -221,7 +221,7 @@ pub fn fork_then_exec_self(
         // Parent. Build a minimal Child handle so callers can identify pid
         // uniformly with the posix_spawn path. We use POSIX `waitpid(WNOHANG)`
         // downstream only after `Libc::write` so the caller doesn't race.
-        return Ok(pid);
+        return Ok(pid as u32);
     }
 
     // Child: become process-group leader so we survive the parent's SIGHUP;
