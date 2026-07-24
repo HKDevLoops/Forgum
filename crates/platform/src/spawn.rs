@@ -437,8 +437,7 @@ mod tests {
         // arity and the env-overrides slice is empty-asset-safe.
         let argv: Vec<String> = vec!["--version".to_string()];
         let overrides: Vec<(&str, &str)> = vec![];
-        let _f: fn(&[String], &[(&str, &str)]) -> std::io::Result<u32> =
-            |a, o| fork_then_exec_self(a, o);
+        let _f = fork_then_exec_self as fn(&[String], &[(&str, &str)]) -> std::io::Result<u32>;
         // Reference argv/overrides so the lints don't flag them unused.
         let _ = (argv, overrides);
     }
