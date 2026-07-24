@@ -1,0 +1,3 @@
+# Ensure packaging files use LF line endings on all platforms
+# This prevents grep/sed failures on Linux CI runners due to CRLF line endings
+packaging/** text eol=lf

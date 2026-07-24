@@ -202,8 +202,8 @@ jobs:
           fi
 
           # Check Nix version (flake.nix and/or package.nix)
-          NIX_FLAGE_VER=$(grep -m1 'version = ' packaging/nix/flake.nix 2>/dev/null | sed -E 's/.*version = "([^"]+)".*/\1/' | tr -d '[:space:]')
-          NIX_PKG_VER=$(grep -m1 'version = ' packaging/nix/package.nix 2>/dev/null | sed -E 's/.*version = "([^"]+)".*/\1/' | tr -d '[:space:]')
+          NIX_FLAGE_VER=$(grep -m1 'version\s*=' packaging/nix/flake.nix 2>/dev/null | sed -E 's/.*version\s*=\s*"([^"]+)".*/\1/' | tr -d '[:space:]')
+          NIX_PKG_VER=$(grep -m1 'version\s*=' packaging/nix/package.nix 2>/dev/null | sed -E 's/.*version\s*=\s*"([^"]+)".*/\1/' | tr -d '[:space:]')
           NIX_VER="${NIX_FLAGE_VER:-$NIX_PKG_VER}"
           if [ -z "$NIX_VER" ]; then
             echo "ERROR: No version found in packaging/nix/flake.nix or package.nix"
