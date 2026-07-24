@@ -44,7 +44,7 @@ fn daemon_lifecycle_ping_stop() {
         s
     });
     let stderr_thread = thread::spawn(move || {
-        let mut s = String::new();
+        let s = String::new();
         BufReader::new(stderr)
             .lines()
             .take(200)
