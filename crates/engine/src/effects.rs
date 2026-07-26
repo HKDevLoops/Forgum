@@ -515,21 +515,46 @@ impl Effect for SwayEffect {
 #[derive(Debug)]
 pub struct DissolveEffect {
     cow_text: String,
+    line_ranges: Vec<(usize, usize)>,
     _easing_fn: fn(f32) -> f32,
     phase: f32,
     speed: f32,
     _done: bool,
+    scatter_offsets: Vec<(f32, f32)>,
 }
 
 impl DissolveEffect {
     pub fn new(cow_text: String, dna: &CowDna, instance_id: u32) -> Self {
         let phase = instance_phase(dna.phase_seed, instance_id);
+        let line_ranges: Vec<(usize, usize)> = cow_text
+            .lines()
+            .map(|line| {
+                let start = line.as_ptr() as usize - cow_text.as_ptr() as usize;
+                (start, line.len())
+            })
+            .collect();
+        let mut scatter_offsets = Vec::new();
+        for (y, &(start, len)) in line_ranges.iter().enumerate() {
+            let line = &cow_text[start..start + len];
+            for (x, ch) in line.chars().enumerate() {
+                if ch == ' ' {
+                    scatter_offsets.push((f32::MAX, f32::MAX));
+                    continue;
+                }
+                let seed = ((x as f32 * 0.618 + y as f32 * 0.382) * 1000.0) as u32;
+                let dx = ((seed.wrapping_mul(7) % 20) as i32 - 10) as f32;
+                let dy = ((seed.wrapping_mul(13) % 10) as i32 - 5) as f32;
+                scatter_offsets.push((dx, dy));
+            }
+        }
         Self {
             cow_text,
+            line_ranges,
             _easing_fn: easing::by_name(&dna.easing.base),
             phase,
             speed: dna.speed,
             _done: false,
+            scatter_offsets,
         }
     }
 }
@@ -539,20 +564,22 @@ impl Effect for DissolveEffect {
 
     fn render(&self, fb: &mut FrameBuffer, time: f32) {
         let cycle = (time * self.speed + self.phase) % 2.0;
-        let t = if cycle < 1.0 { cycle } else { 2.0 - cycle }; // 0→1→0
-        let scatter = 1.0 - t; // 1.0 = scattered, 0.0 = assembled
+        let t = if cycle < 1.0 { cycle } else { 2.0 - cycle };
+        let scatter = 1.0 - t;
 
-        let lines: Vec<&str> = self.cow_text.lines().collect();
-        for (y, line) in lines.iter().enumerate() {
+        let mut offset_idx = 0;
+        for (y, &(start, len)) in self.line_ranges.iter().enumerate() {
+            let line = &self.cow_text[start..start + len];
             for (x, ch) in line.chars().enumerate() {
-                if ch == ' ' {
+                let (dx_base, dy_base) = self.scatter_offsets[offset_idx];
+                offset_idx += 1;
+                if dx_base == f32::MAX && dy_base == f32::MAX {
                     continue;
                 }
-                let seed = ((x as f32 * 0.618 + y as f32 * 0.382 + time * 0.1) * 1000.0) as u32;
-                let dx = ((seed.wrapping_mul(7) % 20) as i32 - 10) as f32;
-                let dy = ((seed.wrapping_mul(13) % 10) as i32 - 5) as f32;
-                let final_x = (x as f32 + dx * scatter) as i32;
-                let final_y = (y as f32 + dy * scatter) as i32;
+                let dx = dx_base * scatter;
+                let dy = dy_base * scatter;
+                let final_x = (x as f32 + dx) as i32;
+                let final_y = (y as f32 + dy) as i32;
                 if final_x >= 0 && final_y >= 0 {
                     let fx = final_x as usize;
                     let fy = final_y as usize;

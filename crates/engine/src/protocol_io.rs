@@ -57,13 +57,15 @@ pub fn read_scene(file: Option<&Path>, cleanup: bool) -> Result<SceneConfig, Pla
         return Ok(SceneConfig::default());
     }
 
-    serde_json::from_slice::<SceneConfig>(&raw).map_err(|e| PlatformError::ConfigParse {
-        path: file.map_or_else(
-            || std::path::PathBuf::from("<stdin>"),
-            std::path::Path::to_path_buf,
-        ),
-        message: e.to_string(),
-    })
+    serde_json::from_slice::<SceneConfig>(&raw)
+        .map_err(|e| PlatformError::ConfigParse {
+            path: file.map_or_else(|| std::path::PathBuf::from("<stdin>"), |p| p.to_path_buf()),
+            message: e.to_string(),
+        })
+        .map(|mut cfg| {
+            cfg.validate();
+            cfg
+        })
 }
 
 fn atty_stdin() -> bool {

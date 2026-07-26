@@ -60,6 +60,21 @@ pub struct SceneConfig {
     pub color_mode: String,
 }
 
+impl SceneConfig {
+    pub fn validate(&mut self) {
+        self.fps = self.fps.clamp(1, 240);
+        self.duration = self.duration.min(86400);
+        if self.text.len() > 4096 {
+            self.text.truncate(4096);
+        }
+        self.cow = self
+            .cow
+            .chars()
+            .filter(|c| c.is_alphanumeric() || *c == '-' || *c == '_')
+            .collect();
+    }
+}
+
 fn default_cow() -> String {
     "default".to_string()
 }

@@ -17,10 +17,13 @@ pub fn read_config_file(path: &Path) -> Result<SceneConfig, PlatformError> {
     let bytes = fs::read(path).map_err(PlatformError::Io)?;
     let text = std::str::from_utf8(&bytes)
         .map_err(|_| PlatformError::ConfigEncoding(path.to_path_buf()))?;
-    serde_json::from_str(text).map_err(|e| PlatformError::ConfigParse {
-        path: path.to_path_buf(),
-        message: e.to_string(),
-    })
+    let mut cfg: SceneConfig =
+        serde_json::from_str(text).map_err(|e| PlatformError::ConfigParse {
+            path: path.to_path_buf(),
+            message: e.to_string(),
+        })?;
+    cfg.validate();
+    Ok(cfg)
 }
 
 /// Apply a layer of overrides onto a base config.
