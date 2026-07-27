@@ -30,7 +30,7 @@ fn bench_render_region(c: &mut Criterion) {
             fb.set(x, y, make_cell('@'));
         }
     }
-    let dmg: Vec<(usize, usize)> = fb.compute_damage();
+    let dmg: Vec<(usize, usize)> = fb.compute_damage().to_vec();
     let mut out = Vec::new();
     let mut r = AnsiRenderer::default();
     c.bench_function("render_damage_full", |b| {

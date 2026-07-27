@@ -38,7 +38,7 @@ fn golden_frame() -> String {
     let mut out = Vec::new();
     let mut renderer = AnsiRenderer::default();
     let damage = fb.compute_damage();
-    renderer.render_damage(&mut out, &fb, &damage).unwrap();
+    renderer.render_damage(&mut out, &fb, damage).unwrap();
 
     String::from_utf8(out).unwrap()
 }

@@ -100,7 +100,7 @@ fn sync_guard_like_always_emits_end_sync() {
         fb.set(0, 0, Cell::new('Z', Color::WHITE));
         let damage = fb.compute_damage();
         let mut inner = AnsiRenderer::default();
-        inner.render_damage(&mut guard.out, &fb, &damage).unwrap();
+        inner.render_damage(&mut guard.out, &fb, damage).unwrap();
         guard.finish().unwrap();
     }
     let s = String::from_utf8(buf).unwrap();

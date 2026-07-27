@@ -275,7 +275,7 @@ mod tests {
         let mut out = Vec::new();
         let mut renderer = AnsiRenderer::default();
         let damage = fb.compute_damage();
-        renderer.render_damage(&mut out, &fb, &damage).unwrap();
+        renderer.render_damage(&mut out, &fb, damage).unwrap();
         let s = String::from_utf8(out).unwrap();
         assert!(
             s.contains('Y'),

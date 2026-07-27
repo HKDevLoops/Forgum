@@ -25,7 +25,7 @@ fn renderer_emits_back_buffer_cell_not_stale_front() {
 
     let mut out = Vec::new();
     let mut renderer = AnsiRenderer::default();
-    renderer.render_damage(&mut out, &fb, &damage).unwrap();
+    renderer.render_damage(&mut out, &fb, damage).unwrap();
     let s = String::from_utf8(out).unwrap();
 
     assert!(

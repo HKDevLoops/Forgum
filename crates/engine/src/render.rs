@@ -205,9 +205,9 @@ pub fn render_loop_foreground(
             // byte-identical to before.
             if cfg!(feature = "synchronized-update") && forgum_platform::terminal_supports_sync() {
                 let mut guard = SyncGuard::begin(&mut out, rend.as_ref());
-                rend.render_damage(guard.out_mut(), &fb, &dmg)?;
+                rend.render_damage(guard.out_mut(), &fb, dmg)?;
             } else {
-                rend.render_damage(&mut out, &fb, &dmg)?;
+                rend.render_damage(&mut out, &fb, dmg)?;
             }
         }
         fb.swap();
@@ -365,9 +365,9 @@ pub fn render_loop_background(
         if !dmg.is_empty() {
             if cfg!(feature = "synchronized-update") && forgum_platform::terminal_supports_sync() {
                 let mut guard = SyncGuard::begin(&mut out, rend.as_ref());
-                rend.render_damage(guard.out_mut(), &fb, &dmg)?;
+                rend.render_damage(guard.out_mut(), &fb, dmg)?;
             } else {
-                rend.render_damage(&mut out, &fb, &dmg)?;
+                rend.render_damage(&mut out, &fb, dmg)?;
             }
         }
         fb.swap();

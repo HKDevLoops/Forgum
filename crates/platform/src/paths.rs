@@ -246,7 +246,9 @@ fn is_safe_session_id(sid: &str) -> bool {
         && !sid.contains("..")
         && !sid.starts_with('/')
         && !sid.contains(':')
-        && sid.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_')
+        && sid
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_')
 }
 
 /// Assert that a session ID is safe to use in a filesystem path.
