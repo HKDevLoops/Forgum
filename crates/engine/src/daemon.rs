@@ -31,8 +31,21 @@ impl DaemonState {
         if let Some(parent) = path.parent() {
             fs::create_dir_all(parent)?;
         }
+        if let Ok(meta) = std::fs::symlink_metadata(path) {
+            if meta.file_type().is_symlink() {
+                return Err(std::io::Error::new(
+                    std::io::ErrorKind::InvalidInput,
+                    "refusing to write to a symlink",
+                ));
+            }
+        }
         let json = serde_json::to_string_pretty(self)?;
-        fs::write(path, json)
+        let file = std::fs::OpenOptions::new()
+            .create(true)
+            .write(true)
+            .truncate(true)
+            .open(path)?;
+        std::io::Write::write_all(&mut std::io::BufWriter::new(file), json.as_bytes())
     }
 
     /// Read state from a file.

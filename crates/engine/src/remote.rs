@@ -136,8 +136,33 @@ pub fn discover_remote_peers(extra_hosts: &[String]) -> Vec<RemoteDaemon> {
     peers
 }
 
+/// Validate a hostname or [user@]host argument for SSH.
+/// Rejects hosts that could contain injected SSH flags.
+fn validate_ssh_host(host: &str) -> Result<(), String> {
+    if host.is_empty() {
+        return Err("SSH host must not be empty".to_string());
+    }
+    if host.contains(char::is_whitespace) {
+        return Err(format!("SSH host contains whitespace: {:?}", host));
+    }
+    if host.starts_with('-') {
+        return Err(format!("SSH host looks like an option: {:?}", host));
+    }
+    if let Some(at) = host.find('@') {
+        let after_at = &host[at + 1..];
+        if after_at.starts_with('-') {
+            return Err(format!(
+                "SSH host after @ looks like an option: {:?}",
+                after_at
+            ));
+        }
+    }
+    Ok(())
+}
+
 /// Discover daemons on a remote host via SSH.
 fn discover_via_ssh(host: &str) -> Result<Vec<RemoteDaemon>, String> {
+    validate_ssh_host(host)?;
     use std::process::Command;
 
     let user = local_user();

@@ -51,8 +51,17 @@ impl DaemonSocket {
                 let _ = std::fs::create_dir_all(parent);
             }
 
-            // Remove stale socket file from a previous unclean shutdown.
-            let _ = std::fs::remove_file(path);
+            // Remove stale socket file from a previous unclean shutdown,
+            // but only after verifying it is not a symlink (TOCTOU guard).
+            if let Ok(meta) = std::fs::symlink_metadata(path) {
+                if meta.file_type().is_symlink() {
+                    return Err(PlatformError::Io(std::io::Error::new(
+                        std::io::ErrorKind::InvalidInput,
+                        "socket path is a symlink — refusing to bind",
+                    )));
+                }
+                let _ = std::fs::remove_file(path);
+            }
 
             let listener =
                 std::os::unix::net::UnixListener::bind(path).map_err(PlatformError::Io)?;

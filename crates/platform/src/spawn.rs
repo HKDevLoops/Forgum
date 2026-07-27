@@ -182,11 +182,11 @@ pub fn fork_then_exec_self(
             CString::new(a0)
                 .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidInput, e))?,
         );
-        argv_buf.extend(
-            argv[1..]
-                .iter()
-                .map(|a| CString::new(a.as_str()).unwrap_or_default()),
-        );
+        for a in &argv[1..] {
+            let cs = CString::new(a.as_str())
+                .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidInput, e))?;
+            argv_buf.push(cs);
+        }
     }
     let mut argv_ptrs: Vec<*const c_char> = argv_buf.iter().map(|s| s.as_ptr()).collect();
     argv_ptrs.push(std::ptr::null());

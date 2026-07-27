@@ -189,8 +189,8 @@ impl FrameBuffer {
     /// the last `clear()`/`swap()`. This is **`O(changed cells)`** and
     /// **zero-alloc when the frame is static** (no `HashSet`).
     #[must_use]
-    pub fn compute_damage(&self) -> Vec<(usize, usize)> {
-        self.damage_list.clone()
+    pub fn compute_damage(&self) -> &[(usize, usize)] {
+        &self.damage_list
     }
 
     /// Swap buffers: `front` becomes the frame just built in `back`, and `back`

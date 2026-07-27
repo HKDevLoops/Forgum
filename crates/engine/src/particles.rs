@@ -48,6 +48,7 @@ impl Default for Particle {
 pub struct ParticlePool {
     particles: [Particle; MAX_PARTICLES],
     count: usize,
+    active_indices: Vec<usize>,
 }
 
 impl ParticlePool {
@@ -56,6 +57,7 @@ impl ParticlePool {
         Self {
             particles: std::array::from_fn(|_| Particle::default()),
             count: 0,
+            active_indices: Vec::with_capacity(MAX_PARTICLES),
         }
     }
 
@@ -65,6 +67,7 @@ impl ParticlePool {
             if !self.particles[i].active {
                 self.particles[i] = p;
                 self.count += 1;
+                self.active_indices.push(i);
                 return true;
             }
         }
@@ -74,7 +77,9 @@ impl ParticlePool {
     /// Update all active particles by `dt` seconds.
     pub fn update(&mut self, dt: f32) {
         self.count = 0;
-        for p in &mut self.particles {
+        self.active_indices.clear();
+        self.active_indices.reserve(MAX_PARTICLES);
+        for (i, p) in self.particles.iter_mut().enumerate() {
             if !p.active {
                 continue;
             }
@@ -85,16 +90,15 @@ impl ParticlePool {
                 p.active = false;
             } else {
                 self.count += 1;
+                self.active_indices.push(i);
             }
         }
     }
 
     /// Render active particles into the framebuffer.
     pub fn render(&self, fb: &mut FrameBuffer, _time: f32, alpha_fn: fn(f32) -> f32) {
-        for p in &self.particles {
-            if !p.active {
-                continue;
-            }
+        for &i in &self.active_indices {
+            let p = &self.particles[i];
             let xi = p.x as i32;
             let yi = p.y as i32;
             if xi < 0 || yi < 0 {
@@ -134,6 +138,7 @@ impl ParticlePool {
             p.active = false;
         }
         self.count = 0;
+        self.active_indices.clear();
     }
 }
 

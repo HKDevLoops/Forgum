@@ -239,12 +239,32 @@ pub fn is_canonical(path: &Path) -> bool {
         .unwrap_or(false)
 }
 
+/// Validate a session ID for use in a filesystem path.
+/// Rejects session IDs that could escape the runtime directory via ".." or absolute paths.
+fn is_safe_session_id(sid: &str) -> bool {
+    !sid.is_empty()
+        && !sid.contains("..")
+        && !sid.starts_with('/')
+        && !sid.contains(':')
+        && sid.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_')
+}
+
+/// Assert that a session ID is safe to use in a filesystem path.
+/// Panics if the session ID is invalid — this should only be called with
+/// IDs derived from detect_session_id() which uses safe fallbacks.
+fn require_safe_session_id(sid: &str) {
+    if !is_safe_session_id(sid) {
+        panic!("BUG: session ID contains unsafe characters: {:?}", sid);
+    }
+}
+
 /// Compute the path to a daemon state file for a given session ID.
 ///
 /// On Unix: `$XDG_RUNTIME_DIR/Forgum/daemon-{id}.json`
 /// On Windows: `%LOCALAPPDATA%/Forgum/daemon-{id}.json`
 #[must_use]
 pub fn daemon_state_path(session_id: &str) -> PathBuf {
+    require_safe_session_id(session_id);
     runtime_dir()
         .unwrap_or_else(|_| PathBuf::from("/tmp"))
         .join(format!("daemon-{}.json", session_id))
@@ -256,6 +276,7 @@ pub fn daemon_state_path(session_id: &str) -> PathBuf {
 /// On Windows: `%LOCALAPPDATA%/Forgum/ctrl-{id}.pipe`
 #[must_use]
 pub fn control_socket_path(session_id: &str) -> PathBuf {
+    require_safe_session_id(session_id);
     let base = runtime_dir().unwrap_or_else(|_| PathBuf::from("/tmp"));
     if cfg!(unix) {
         base.join(format!("ctrl-{}.sock", session_id))
