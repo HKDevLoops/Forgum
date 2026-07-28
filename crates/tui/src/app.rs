@@ -126,7 +126,22 @@ pub struct ConfigApp {
 
 impl ConfigApp {
     pub fn new(config: SceneConfig) -> Self {
-        let effect = Dropdown::new(vec!["static", "rainbow", "fade"], &config.effect);
+        let effect = Dropdown::new(
+            vec![
+                "static",
+                "breathe",
+                "float",
+                "walk",
+                "particles",
+                "pulse",
+                "glitch",
+                "fly",
+                "talk",
+                "sway",
+                "dissolve",
+            ],
+            &config.effect,
+        );
         let color_mode = Dropdown::new(vec!["rainbow", "solid", "none"], &config.color_mode);
         let default_shell = Dropdown::new(
             vec!["", "bash", "zsh", "fish", "pwsh", "cmd", "powershell"],
@@ -311,8 +326,14 @@ impl ConfigApp {
 
     fn cycle_focused(&mut self, forward: bool) {
         match self.focused() {
-            Field::Effect => self.effect.cycle(forward),
-            Field::ColorMode => self.color_mode.cycle(forward),
+            Field::Effect => {
+                self.effect.cycle(forward);
+                self.config.effect = self.effect.current();
+            }
+            Field::ColorMode => {
+                self.color_mode.cycle(forward);
+                self.config.color_mode = self.color_mode.current();
+            }
             Field::DefaultShell => {
                 self.default_shell.cycle(forward);
                 let v = self.default_shell.current();
@@ -337,10 +358,10 @@ impl ConfigApp {
         let chunks = Layout::default()
             .direction(Direction::Vertical)
             .constraints([
-                Constraint::Length(3),
-                Constraint::Min(5),
-                Constraint::Length(3),
-                Constraint::Length(1),
+                Constraint::Length(3), // title
+                Constraint::Min(8),    // field list + detail
+                Constraint::Length(8), // cow preview
+                Constraint::Length(1), // footer
             ])
             .split(size);
 
@@ -358,8 +379,8 @@ impl ConfigApp {
 
         self.render_list(f, chunks[1]);
         self.render_detail(f, chunks[1]);
-        self.render_footer(f, chunks[2]);
-        self.render_help(f, chunks[3]);
+        self.render_preview(f, chunks[2]);
+        self.render_footer(f, chunks[3]);
     }
 
     fn render_list(&self, f: &mut Frame, area: Rect) {
@@ -429,28 +450,88 @@ impl ConfigApp {
     }
 
     fn render_footer(&self, f: &mut Frame, area: Rect) {
+        let help = "↑/↓ select · Enter edit · Space toggle · ←/→ cycle · s save · q quit";
         let text = if !self.footer.is_empty() {
-            self.footer.clone()
+            format!("{}  |  {}", self.footer, help)
         } else if self.editing.is_some() {
-            "editing: type, Enter to commit, Esc to cancel".to_string()
+            format!("editing: type, Enter to commit, Esc to cancel  |  {}", help)
         } else {
-            self.focused().quip().to_string()
+            format!("{}  |  {}", self.focused().quip(), help)
         };
         let p = Paragraph::new(Line::from(Span::styled(
             text,
             Style::default().fg(Color::Cyan),
-        )))
-        .block(Block::default().borders(Borders::ALL));
+        )));
         f.render_widget(p, area);
     }
 
-    fn render_help(&self, f: &mut Frame, area: Rect) {
-        let help = "↑/↓ select · Enter edit · Space toggle · ←/→ cycle · s save · q quit";
-        let p = Paragraph::new(Line::from(Span::styled(
-            help,
-            Style::default().fg(Color::DarkGray),
-        )));
-        f.render_widget(p, area);
+    fn render_preview(&self, f: &mut Frame, area: Rect) {
+        let cow_art = self.load_cow_art();
+
+        let preview_text = format!(
+            " {} ({}) [{}]",
+            self.config.cow,
+            self.effect.current(),
+            self.color_mode.current()
+        );
+
+        let block = Block::default().borders(Borders::ALL).title(preview_text);
+
+        let lines: Vec<Line> = cow_art
+            .lines()
+            .map(|l| {
+                Line::from(Span::styled(
+                    l.to_string(),
+                    Style::default().fg(Color::Green),
+                ))
+            })
+            .collect();
+        let paragraph = Paragraph::new(lines).block(block);
+        f.render_widget(paragraph, area);
+    }
+
+    fn load_cow_art(&self) -> String {
+        let data = match forgum_platform::data_dir() {
+            Ok(d) => d,
+            Err(_) => return Self::fallback_cow(&self.config.eyes, &self.config.tongue),
+        };
+        let cow_path = data.join("Cows").join(format!("{}.cow", self.config.cow));
+        let raw = match std::fs::read_to_string(&cow_path) {
+            Ok(s) => s,
+            Err(_) => return Self::fallback_cow(&self.config.eyes, &self.config.tongue),
+        };
+        Self::expand_cow_template(&raw, &self.config.eyes, &self.config.tongue)
+    }
+
+    fn expand_cow_template(template: &str, eyes: &str, tongue: &str) -> String {
+        let body = if let Some(start) = template.find("<<EOC;") {
+            let bstart = start + "<<EOC;".len();
+            if let Some(end) = template[bstart..].find("EOC;") {
+                &template[bstart..bstart + end]
+            } else {
+                &template[bstart..]
+            }
+        } else {
+            template
+        };
+        let mut out = String::with_capacity(body.len());
+        for line in body.lines() {
+            out.push_str(&line.replace("$eyes", eyes).replace("$tongue", tongue));
+            out.push('\n');
+        }
+        if out.ends_with('\n') {
+            out.pop();
+        }
+        out
+    }
+
+    fn fallback_cow(eyes: &str, tongue: &str) -> String {
+        let e1 = eyes.chars().next().unwrap_or('o');
+        let e2 = eyes.chars().last().unwrap_or('o');
+        let t = tongue.chars().next().unwrap_or(' ');
+        format!(
+            "        \\   {e1}^__{e2}\n         \\  ({e1}{e2})\\_______\n            (__)\\      ({t})\\/\\\n                ||----w |\n                ||     ||"
+        )
     }
 }
 
@@ -459,14 +540,14 @@ fn list_rect(area: Rect) -> Rect {
     Rect {
         x: area.x,
         y: area.y,
-        width: area.width / 3,
+        width: area.width / 4,
         height: area.height,
     }
 }
 
 /// Right portion of the detail area for the focused field editor.
 fn detail_rect(area: Rect) -> Rect {
-    let w = area.width / 3;
+    let w = area.width / 4;
     Rect {
         x: area.x + w,
         y: area.y + 1,

@@ -70,6 +70,16 @@ Describe 'Get-ForgumEngineBinary (G11)' {
         $marker = Join-Path ([System.IO.Path]::GetTempPath()) ('forgum-build-marker-' + [guid]::NewGuid())
         $env:FORGUM_BUILD_MARKER = $marker
         $env:FORGUM_ENGINE = $marker  # nonexistent on purpose
+
+        # If forgum-engine is resolvable via PATH, the function returns success
+        # via the PATH fallback before our env override matters — the throw
+        # path can never trigger, so skip with the same pattern as test 3.
+        $resolveEnv = Get-Command 'forgum-engine' -ErrorAction SilentlyContinue
+        if ($resolveEnv) {
+            Set-ItResult -Pending -Because 'forgum-engine is on PATH and would mask this test'
+            return
+        }
+
         try {
             { Get-ForgumEngineBinary -ErrorAction SilentlyContinue } | Should -Throw
             Test-Path -LiteralPath $marker | Should -BeFalse -Because "must not have created the file"
