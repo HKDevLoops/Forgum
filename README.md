@@ -1,58 +1,77 @@
-# Forgum 🐮
+# ╔══════════════════════════════════════════════════════════════════════════╗
+# ║                        🐮  F O R G U M  🐮                            ║
+# ║                                                                        ║
+# ║   The terminal cow that refuses to be ordinary.                        ║
+# ║   Cowsay's cooler, smarter, more animated cousin.                      ║
+# ╚══════════════════════════════════════════════════════════════════════════╝
 
-> A Rust CLI that renders ANSI cows (cowsay-like) in your live terminal — with a
-> render loop, effects, shell hooks, a daemon, and a capability probe. Cross-platform
-> on Windows, macOS, and Linux; bash, zsh, fish, pwsh, powershell, and cmd.
+> **Forgum** is a Rust CLI that renders ANSI cows in your live terminal —
+> with a render loop, animation effects, shell hooks, a daemon, and a
+> capability probe. Cross-platform on Windows, macOS, and Linux.
 
-**Repo:** `HKDevLoops/Forgum` · **Version:** `v0.4.0`
+**Repo:** `HKDevLoops/Forgum` · **Version:** `v0.4.0` · **License:** MIT
 
 ---
 
-## Why Forgum?
+## 🎯 Why Forgum?
 
 Forgum is not just another cowsay. It is a tiny, opinionated animation engine that
-lives *above* your prompt without getting in the way.
+lives *above* your prompt without getting in the way. Think of it as the cow
+that went to art school and came back with a portfolio.
 
-- **Dirty-tracking performance** — only redraws the pixels that changed, so the
-  render loop stays cheap even at high FPS.
-- **Zero-alloc renderer** — the hot path reuses buffers; no per-frame heap churn.
-- **Synchronized-update off by default** — safe ANSI output everywhere; it opts in
-  only where the terminal proves it can handle it.
-- **Capability probe** — detects your terminal's features at runtime and degrades
-  gracefully instead of corrupting your screen.
-- **Leak-proofed daemon** — the background overlay manager cleans up its pipes, PID,
-  and socket on exit.
-- **6-shell hooks** — first-class integration for bash, zsh, fish, pwsh, powershell,
-  and cmd.
-- **9 package managers** — winget, scoop, choco, brew, apt, dnf, pacman, emerge, nix.
-- **Cross-platform** — Windows, macOS, and Linux, with consistent behavior.
+| Feature | What it means |
+|---------|---------------|
+| 🎨 **Dirty-tracking renderer** | Only redraws pixels that changed — cheap even at high FPS |
+| ⚡ **Zero-alloc hot path** | No per-frame heap churn; the engine reuses its buffers |
+| 🔒 **Synchronized-update safe** | Opt-in only where the terminal proves it can handle it |
+| 🔍 **Capability probe** | Detects terminal features at runtime; degrades gracefully |
+| 🐜 **Leak-proofed daemon** | Cleans up pipes, PID, and socket on exit |
+| 🐚 **6-shell hooks** | bash, zsh, fish, pwsh, powershell, cmd — first-class |
+| 📦 **9 package managers** | winget, scoop, choco, brew, apt, dnf, pacman, emerge, nix |
+| 🌍 **Cross-platform** | Windows, macOS, Linux — consistent behavior everywhere |
 
 ---
 
-## Quick install
+## ⚡ Quick install
 
-These are package-manager lanes. Community-maintained — install at your own risk;
-the official build is `cargo build --workspace` (see [Build from source](#build-from-source)).
-See `CONTRIBUTING.md` for the current PR/availability status of each lane.
+| Platform / pkg mgr | Command |
+|--------------------|---------|
+| Windows (winget) | `winget install HKDevLoops.Forgum` |
+| Windows (scoop) | `scoop bucket add extras; scoop install forgum` |
+| Windows (choco) | `choco install forgum` |
+| macOS (Homebrew) | `brew install forgum` |
+| Debian / apt | `sudo apt install forgum` |
+| Fedora (dnf) | `sudo dnf install forgum` |
+| Arch (pacman) | `sudo pacman -S forgum` |
+| Gentoo (emerge) | `sudo emerge forgum` |
+| Nix | `nix-env -iA nixpkgs.forgum` |
+| Any (cargo) | `cargo install forgum` |
 
-| Platform / pkg mgr | Command                                            |
-|--------------------|----------------------------------------------------|
-| Windows (winget)   | `winget install HKDevLoops.Forgum`                 |
-| Windows (scoop)    | `scoop bucket add extras; scoop install forgum`    |
-| Windows (choco)    | `choco install forgum`                             |
-| macOS (Homebrew)   | `brew install forgum` *(tap may vary)*             |
-| Debian / apt       | `sudo apt install forgum`                          |
-| Fedora (dnf)       | `sudo dnf install forgum`                          |
-| Arch (pacman)      | `sudo pacman -S forgum`                            |
-| Gentoo (emerge)    | `sudo emerge forgum`                               |
-| Nix                | `nix-env -iA nixpkgs.forgum`                       |
+> Community-maintained lanes — install at your own risk.
+> The official build is `cargo build --workspace`.
 
 ---
 
-## The Forgum farm — a tour in animal voices
+## 🚀 Quickstart (3 commands)
 
-Every Forgum scene is described by a `SceneConfig`. Think of the config as a little
-farm, and each option as one of the animals that lives there. Here is who you'll meet:
+```bash
+# 1. Install (pick your lane from above)
+
+# 2. Run Forgum
+forgum
+
+# 3. See the cow. Type `forgum` again anytime to change things.
+```
+
+That's it. You do not need to edit any config file. Run `forgum` and follow the cow.
+
+---
+
+## 🎪 The Forgum Farm — A Tour in Animal Voices
+
+Every Forgum scene is described by a `SceneConfig`. Think of the config as a
+little farm, and each option as one of the animals that lives there. Here is
+who you'll meet:
 
 ### 🐮 The Cow says:
 
@@ -112,65 +131,60 @@ farm, and each option as one of the animals that lives there. Here is who you'll
 
 ---
 
-## Shell integration
+## 🐚 Shell Integration
 
-Forgum hooks into your shell so the cow shows up automatically. The easiest path is:
+Forgum hooks into your shell so the cow shows up automatically. The easiest path:
 
 ```bash
 forgum-engine init <shell>
 ```
 
 …where `<shell>` is one of `bash`, `zsh`, `fish`, `pwsh`, `cmd`, `powershell`.
-That command prints the exact snippet your shell needs — but if you'd rather wire it
-by hand, here's the manual version for each:
 
-| Shell                | Manual snippet                                                                                        |
-|----------------------|-------------------------------------------------------------------------------------------------------|
-| bash                 | Add `eval "$(forgum-engine init bash)"` to `~/.bashrc`                                                |
-| zsh                  | Add `eval "$(forgum-engine init zsh)"` to `~/.zshrc`                                                  |
-| fish                 | `forgum-engine init fish \| source` in `~/.config/fish/config.fish`                                   |
-| pwsh (PowerShell 7+) | `forgum-engine init pwsh \| Out-String \| Invoke-Expression` in `$PROFILE`                            |
-| powershell (5.1)     | `forgum-engine init pwsh \| Out-String \| Invoke-Expression` in `$PROFILE` for Windows PowerShell     |
-| cmd                  | `forgum-engine init cmd` prints a registry/AutoRun snippet to add (manual reg edit required)          |
+### Manual integration
 
-> `forgum-engine init <shell>` does all of the above automatically — the manual
-> snippets are for when you want to see (or tweak) what gets injected.
+| Shell | Manual snippet |
+|-------|----------------|
+| bash | Add `eval "$(forgum-engine init bash)"` to `~/.bashrc` |
+| zsh | Add `eval "$(forgum-engine init zsh)"` to `~/.zshrc` |
+| fish | `forgum-engine init fish \| source` in `~/.config/fish/config.fish` |
+| pwsh (PowerShell 7+) | `forgum-engine init pwsh \| Out-String \| Invoke-Expression` in `$PROFILE` |
+| powershell (5.1) | Same as pwsh, in Windows PowerShell's `$PROFILE` |
+| cmd | `forgum-engine init cmd` prints a registry/AutoRun snippet |
 
 ---
 
-## Terminal compatibility
+## 🖥️ Terminal Compatibility
 
-| Terminal                 | Sync (DEC 2026)        | Graphics (Sixel/Kitty)      | Notes                                          |
-|--------------------------|------------------------|-----------------------------|------------------------------------------------|
-| Windows Terminal         | ✓ (when supported)     | ✗                           | sync gated by capability probe; graphics off by default |
-| Ghostty                  | ✓                      | ✓ (Sixel)                   | full modern support                            |
-| kitty                    | ✓                      | ✓ (Kitty graphics)          | native graphics protocol                        |
-| iTerm2                   | ✓                      | via imgcat (out of scope)   | sync supported                                 |
-| Alacritty                | ✓                      | ✗                           | sync only                                      |
-| Konsole                  | ✓                      | ✓ (Sixel)                   | sync + sixel                                   |
-| gnome-terminal / xterm   | varies                 | Sixel via xterm sometimes   | conservative                                   |
-| Terminal.app (macOS)     | ✗                      | ✗                           | ANSI only (conservative default)               |
+| Terminal | Sync (DEC 2026) | Graphics | Notes |
+|----------|-----------------|----------|-------|
+| Windows Terminal | ✓ (when supported) | ✗ | sync gated by capability probe |
+| Ghostty | ✓ | ✓ (Sixel) | full modern support |
+| kitty | ✓ | ✓ (Kitty graphics) | native graphics protocol |
+| iTerm2 | ✓ | via imgcat (out of scope) | sync supported |
+| Alacritty | ✓ | ✗ | sync only |
+| Konsole | ✓ | ✓ (Sixel) | sync + sixel |
+| gnome-terminal / xterm | varies | Sixel via xterm sometimes | conservative |
+| Terminal.app (macOS) | ✗ | ✗ | ANSI only |
 
-All advanced features are capability-probed and OFF by default; Forgum emits conservative ANSI so it never breaks on an unknown terminal.
-
----
-
-## Config file location
-
-Forgum stores its config as JSON. The path depends on your platform:
-
-| Platform | Path                                |
-|----------|-------------------------------------|
-| Windows  | `%APPDATA%\Forgum\config.json`      |
-| macOS    | `~/.config/Forgum/config.json`      |
-| Linux    | `~/.config/Forgum/config.json`      |
-
-You can also override the path at runtime with the `FORGUM_CONFIG` environment
-variable.
+All advanced features are capability-probed and OFF by default; Forgum emits
+conservative ANSI so it never breaks on an unknown terminal.
 
 ---
 
-## Interactive config
+## ⚙️ Config File Location
+
+| Platform | Path |
+|----------|------|
+| Windows | `%APPDATA%\Forgum\config.json` |
+| macOS | `~/.config/Forgum/config.json` |
+| Linux | `~/.config/Forgum/config.json` |
+
+Override at runtime with the `FORGUM_CONFIG` environment variable.
+
+---
+
+## 🎛️ Interactive Config
 
 Prefer a menu to hand-editing JSON? If Forgum was built with the `tui` feature:
 
@@ -191,26 +205,30 @@ For example: `forgum-engine config set color_mode none`.
 
 ---
 
-## Sample configs
+## 🎨 Sample Configs
 
 Want a head start? Browse the ready-made scenes in `docs/samples/`:
 
-- `docs/samples/config.rainbow.json` — full-color, effect-heavy joy
-- `docs/samples/config.minimal.json` — just the cow, nothing else
-- `docs/samples/config.solid.json` — solid background, calm and clean
+| Config | Description |
+|--------|-------------|
+| `config.rainbow.json` | Full-color, effect-heavy joy |
+| `config.minimal.json` | Just the cow, nothing else |
+| `config.solid.json` | Solid background, calm and clean |
 
 See `docs/samples/README.md` for the full tour of each sample.
 
 ---
 
-## Build from source
+## 🏗️ Build from Source
 
 ```bash
 cargo build --workspace
 cargo test --workspace
 ```
 
-## Fortune
+---
+
+## 🍀 Fortune
 
 Need a little wisdom from the farm?
 
@@ -220,15 +238,33 @@ forgum-engine fortune
 
 ---
 
-## Further reading
+## 📚 Further Reading
 
-- `CONTRIBUTING.md` — how to contribute, and the current status of each package-manager lane
-- `ADVANCED.md` — deep dives into the engine, daemon, and capability probe
-- `docs/TALES.md` — longer stories from the Forgum menagerie
-- `docs/samples/README.md` — the sample config catalog
+| Document | What it covers |
+|----------|----------------|
+| `CONTRIBUTING.md` | How to contribute, and the current status of each package-manager lane |
+| `ADVANCED.md` | Deep dives into the engine, daemon, and capability probe |
+| `docs/TALES.md` | Longer stories from the Forgum menagerie |
+| `docs/samples/README.md` | The sample config catalog |
 
 ---
 
-## License
+## 📜 License
 
 MIT. See `LICENSE`.
+
+---
+
+<div align="center">
+
+```
+    \   ^__^
+     \  (oo)\_______
+        (__)\       )\/\
+            ||----w |
+            ||     ||
+```
+
+*Made with ❤️ and Rust · For the terminal cow in all of us*
+
+</div>

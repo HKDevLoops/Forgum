@@ -1,5 +1,13 @@
 {
   "cow": "default",
+  "text": "",
   "effect": "static",
+  "background": false,
+  "duration": 0,
+  "fps": 30,
+  "eyes": "oo",
+  "tongue": " ",
+  "default_shell": "",
+  "auto_render_on_prompt": false,
   "color_mode": "none"
 }
