@@ -33,19 +33,23 @@ pub trait Effect: Send + Sync {
 #[derive(Debug)]
 pub struct StaticEffect {
     cow_text: String,
+    color_mode: String,
 }
 
 impl StaticEffect {
-    pub fn new(cow_text: String) -> Self {
-        Self { cow_text }
+    pub fn new(cow_text: String, color_mode: String) -> Self {
+        Self {
+            cow_text,
+            color_mode,
+        }
     }
 }
 
 impl Effect for StaticEffect {
     fn update(&mut self, _dt: f32, _cols: usize, _rows: usize) {}
 
-    fn render(&self, fb: &mut FrameBuffer, _time: f32) {
-        render_text(fb, &self.cow_text, Color::WHITE);
+    fn render(&self, fb: &mut FrameBuffer, time: f32) {
+        render_text(fb, &self.cow_text, Color::WHITE, &self.color_mode, time);
     }
 }
 
@@ -59,10 +63,11 @@ pub struct BreatheEffect {
     easing_fn: fn(f32) -> f32,
     phase: f32,
     speed: f32,
+    color_mode: String,
 }
 
 impl BreatheEffect {
-    pub fn new(cow_text: String, dna: &CowDna, instance_id: u32) -> Self {
+    pub fn new(cow_text: String, dna: &CowDna, instance_id: u32, color_mode: String) -> Self {
         let phase = instance_phase(dna.phase_seed, instance_id);
         Self {
             cow_text,
@@ -70,6 +75,7 @@ impl BreatheEffect {
             easing_fn: easing::by_name(&dna.easing.base),
             phase,
             speed: dna.speed,
+            color_mode,
         }
     }
 }
@@ -81,7 +87,15 @@ impl Effect for BreatheEffect {
         let t = (time * self.speed + self.phase) % 1.0;
         let eased = (self.easing_fn)(t);
         let y_offset = (eased * self.amp.breath * 3.0) as i32;
-        render_text_offset(fb, &self.cow_text, Color::WHITE, 0, y_offset);
+        render_text_offset(
+            fb,
+            &self.cow_text,
+            Color::WHITE,
+            0,
+            y_offset,
+            &self.color_mode,
+            time,
+        );
     }
 }
 
@@ -95,10 +109,11 @@ pub struct FloatEffect {
     easing_fn: fn(f32) -> f32,
     phase: f32,
     speed: f32,
+    color_mode: String,
 }
 
 impl FloatEffect {
-    pub fn new(cow_text: String, dna: &CowDna, instance_id: u32) -> Self {
+    pub fn new(cow_text: String, dna: &CowDna, instance_id: u32, color_mode: String) -> Self {
         let phase = instance_phase(dna.phase_seed, instance_id);
         Self {
             cow_text,
@@ -106,6 +121,7 @@ impl FloatEffect {
             easing_fn: easing::by_name(&dna.easing.base),
             phase,
             speed: dna.speed,
+            color_mode,
         }
     }
 }
@@ -118,7 +134,15 @@ impl Effect for FloatEffect {
         let intensity = (self.easing_fn)(t);
         let x_off = ((intensity * self.amp.sway * 4.0) as i32) - 2;
         let y_off = ((intensity * self.amp.float * 3.0) as i32) - 1;
-        render_text_offset(fb, &self.cow_text, Color::WHITE, x_off, y_off);
+        render_text_offset(
+            fb,
+            &self.cow_text,
+            Color::WHITE,
+            x_off,
+            y_off,
+            &self.color_mode,
+            time,
+        );
     }
 }
 
@@ -132,10 +156,11 @@ pub struct WalkEffect {
     easing_fn: fn(f32) -> f32,
     phase: f32,
     speed: f32,
+    color_mode: String,
 }
 
 impl WalkEffect {
-    pub fn new(cow_text: String, dna: &CowDna, instance_id: u32) -> Self {
+    pub fn new(cow_text: String, dna: &CowDna, instance_id: u32, color_mode: String) -> Self {
         let phase = instance_phase(dna.phase_seed, instance_id);
         Self {
             cow_text,
@@ -143,6 +168,7 @@ impl WalkEffect {
             easing_fn: easing::by_name(&dna.easing.base),
             phase,
             speed: dna.speed,
+            color_mode,
         }
     }
 }
@@ -174,7 +200,8 @@ impl Effect for WalkEffect {
                     ch
                 };
                 if i < fb.height && x < fb.width {
-                    let _ = fb.set(x, i, Cell::new(display_ch, Color::WHITE));
+                    let cell_fg = resolve_fg(&self.color_mode, x, i, time, Color::WHITE);
+                    let _ = fb.set(x, i, Cell::new(display_ch, cell_fg));
                 }
                 x = x.saturating_add(1);
             }
@@ -194,10 +221,11 @@ pub struct ParticlesEffect {
     spawn_timer: f32,
     phase: f32,
     instance_id: u32,
+    color_mode: String,
 }
 
 impl ParticlesEffect {
-    pub fn new(cow_text: String, dna: CowDna, instance_id: u32) -> Self {
+    pub fn new(cow_text: String, dna: CowDna, instance_id: u32, color_mode: String) -> Self {
         let phase = instance_phase(dna.phase_seed, instance_id);
         Self {
             cow_text,
@@ -206,6 +234,7 @@ impl ParticlesEffect {
             spawn_timer: 0.0,
             phase,
             instance_id,
+            color_mode,
         }
     }
 }
@@ -237,7 +266,7 @@ impl Effect for ParticlesEffect {
     }
 
     fn render(&self, fb: &mut FrameBuffer, time: f32) {
-        render_text(fb, &self.cow_text, Color::WHITE);
+        render_text(fb, &self.cow_text, Color::WHITE, &self.color_mode, time);
         self.pool.render(fb, time, easing::expo_out);
     }
 }
@@ -254,10 +283,11 @@ pub struct PulseEffect {
     easing_fn: fn(f32) -> f32,
     phase: f32,
     speed: f32,
+    color_mode: String,
 }
 
 impl PulseEffect {
-    pub fn new(cow_text: String, dna: &CowDna, instance_id: u32) -> Self {
+    pub fn new(cow_text: String, dna: &CowDna, instance_id: u32, color_mode: String) -> Self {
         let phase = instance_phase(dna.phase_seed, instance_id);
         let palette = color::parse_palette(&dna.palette);
         let glow_color = parse_hex(&dna.glow.color)
@@ -271,6 +301,7 @@ impl PulseEffect {
             easing_fn: easing::by_name(&dna.easing.base),
             phase,
             speed: dna.speed,
+            color_mode,
         }
     }
 }
@@ -289,7 +320,7 @@ impl Effect for PulseEffect {
             let (r, g, b) = lerp_palette(&self.palette, intensity);
             Color::rgb(r, g, b)
         };
-        render_text(fb, &self.cow_text, color);
+        render_text(fb, &self.cow_text, color, &self.color_mode, time);
 
         // Apply glow at center of cow
         let cx = fb.width as f32 / 2.0;
@@ -314,15 +345,17 @@ pub struct GlitchEffect {
     cow_text: String,
     phase: f32,
     speed: f32,
+    color_mode: String,
 }
 
 impl GlitchEffect {
-    pub fn new(cow_text: String, dna: &CowDna, instance_id: u32) -> Self {
+    pub fn new(cow_text: String, dna: &CowDna, instance_id: u32, color_mode: String) -> Self {
         let phase = instance_phase(dna.phase_seed, instance_id);
         Self {
             cow_text,
             phase,
             speed: dna.speed,
+            color_mode,
         }
     }
 }
@@ -331,7 +364,7 @@ impl Effect for GlitchEffect {
     fn update(&mut self, _dt: f32, _cols: usize, _rows: usize) {}
 
     fn render(&self, fb: &mut FrameBuffer, time: f32) {
-        render_text(fb, &self.cow_text, Color::WHITE);
+        render_text(fb, &self.cow_text, Color::WHITE, &self.color_mode, time);
         // Randomly overwrite some cells with glitch chars
         let glitch_chars = ['0', '1', '#', '@', '█', '▓'];
         let t = time * self.speed + self.phase;
@@ -365,10 +398,11 @@ pub struct FlyEffect {
     easing_fn: fn(f32) -> f32,
     phase: f32,
     speed: f32,
+    color_mode: String,
 }
 
 impl FlyEffect {
-    pub fn new(cow_text: String, dna: &CowDna, instance_id: u32) -> Self {
+    pub fn new(cow_text: String, dna: &CowDna, instance_id: u32, color_mode: String) -> Self {
         let phase = instance_phase(dna.phase_seed, instance_id);
         Self {
             cow_text,
@@ -376,6 +410,7 @@ impl FlyEffect {
             easing_fn: easing::by_name(&dna.easing.base),
             phase,
             speed: dna.speed,
+            color_mode,
         }
     }
 }
@@ -390,7 +425,15 @@ impl Effect for FlyEffect {
         let x_off = ((t * std::f32::consts::TAU * 3.0).sin() * self.amp.sway * 5.0) as i32;
         let y_off = ((t * std::f32::consts::TAU * 2.0).cos() * self.amp.float * 3.0
             + (intensity * 2.0 - 1.0)) as i32;
-        render_text_offset(fb, &self.cow_text, Color::WHITE, x_off, y_off);
+        render_text_offset(
+            fb,
+            &self.cow_text,
+            Color::WHITE,
+            x_off,
+            y_off,
+            &self.color_mode,
+            time,
+        );
         // Wing flap indicator near top
         let flap_ch = if (time * 12.0) as i32 % 2 == 0 {
             '~'
@@ -398,7 +441,8 @@ impl Effect for FlyEffect {
             '^'
         };
         if fb.height > 0 && fb.width > 2 {
-            let _ = fb.set(1, 0, Cell::new(flap_ch, Color::WHITE));
+            let cell_fg = resolve_fg(&self.color_mode, 1, 0, time, Color::WHITE);
+            let _ = fb.set(1, 0, Cell::new(flap_ch, cell_fg));
         }
     }
 }
@@ -413,10 +457,11 @@ pub struct TalkEffect {
     easing_fn: fn(f32) -> f32,
     phase: f32,
     speed: f32,
+    color_mode: String,
 }
 
 impl TalkEffect {
-    pub fn new(cow_text: String, dna: &CowDna, instance_id: u32) -> Self {
+    pub fn new(cow_text: String, dna: &CowDna, instance_id: u32, color_mode: String) -> Self {
         let phase = instance_phase(dna.phase_seed, instance_id);
         Self {
             cow_text,
@@ -424,6 +469,7 @@ impl TalkEffect {
             easing_fn: easing::by_name(&dna.easing.base),
             phase,
             speed: dna.speed,
+            color_mode,
         }
     }
 }
@@ -451,7 +497,8 @@ impl Effect for TalkEffect {
                     'o' | 'O' | '0' | '@' => mouth_ch,
                     _ => ch,
                 };
-                let _ = fb.set(x, y, Cell::new(display_ch, Color::WHITE));
+                let cell_fg = resolve_fg(&self.color_mode, x, y, time, Color::WHITE);
+                let _ = fb.set(x, y, Cell::new(display_ch, cell_fg));
             }
         }
     }
@@ -467,10 +514,11 @@ pub struct SwayEffect {
     easing_fn: fn(f32) -> f32,
     phase: f32,
     speed: f32,
+    color_mode: String,
 }
 
 impl SwayEffect {
-    pub fn new(cow_text: String, dna: &CowDna, instance_id: u32) -> Self {
+    pub fn new(cow_text: String, dna: &CowDna, instance_id: u32, color_mode: String) -> Self {
         let phase = instance_phase(dna.phase_seed, instance_id);
         Self {
             cow_text,
@@ -478,6 +526,7 @@ impl SwayEffect {
             easing_fn: easing::by_name(&dna.easing.base),
             phase,
             speed: dna.speed,
+            color_mode,
         }
     }
 }
@@ -500,7 +549,8 @@ impl Effect for SwayEffect {
                 if i < fb.height && xi >= 0 {
                     let xi = xi as usize;
                     if xi < fb.width {
-                        let _ = fb.set(xi, i, Cell::new(ch, Color::WHITE));
+                        let cell_fg = resolve_fg(&self.color_mode, xi, i, time, Color::WHITE);
+                        let _ = fb.set(xi, i, Cell::new(ch, cell_fg));
                     }
                 }
                 x = x.saturating_add(1);
@@ -521,10 +571,11 @@ pub struct DissolveEffect {
     speed: f32,
     _done: bool,
     scatter_offsets: Vec<(f32, f32)>,
+    color_mode: String,
 }
 
 impl DissolveEffect {
-    pub fn new(cow_text: String, dna: &CowDna, instance_id: u32) -> Self {
+    pub fn new(cow_text: String, dna: &CowDna, instance_id: u32, color_mode: String) -> Self {
         let phase = instance_phase(dna.phase_seed, instance_id);
         let line_ranges: Vec<(usize, usize)> = cow_text
             .lines()
@@ -555,6 +606,7 @@ impl DissolveEffect {
             speed: dna.speed,
             _done: false,
             scatter_offsets,
+            color_mode,
         }
     }
 }
@@ -585,12 +637,13 @@ impl Effect for DissolveEffect {
                     let fy = final_y as usize;
                     if fy < fb.height && fx < fb.width {
                         let alpha = (t * 255.0) as u8;
+                        let cell_fg = resolve_fg(&self.color_mode, fx, fy, time, Color::WHITE);
                         let _ = fb.set(
                             fx,
                             fy,
                             Cell {
                                 ch,
-                                fg: Color::WHITE,
+                                fg: cell_fg,
                                 bg: Color::TRANSPARENT,
                                 alpha,
                             },
@@ -608,13 +661,33 @@ impl Effect for DissolveEffect {
 
 // ── Shared helpers ─────────────────────────────────────────────────
 
+/// Resolve foreground color based on color_mode.
+/// "rainbow" = lolcat per-character HSV rainbow, "solid" or anything else = base color.
+pub(crate) fn resolve_fg(color_mode: &str, x: usize, y: usize, time: f32, base: Color) -> Color {
+    match color_mode {
+        "rainbow" => {
+            let (r, g, b) = crate::color::lolcat_color(x as f32, y as f32, time, 0.0);
+            Color { r, g, b, a: 255 }
+        }
+        _ => base,
+    }
+}
+
 /// Render text into the framebuffer at row 0.
-fn render_text(fb: &mut FrameBuffer, text: &str, fg: Color) {
-    render_text_offset(fb, text, fg, 0, 0);
+fn render_text(fb: &mut FrameBuffer, text: &str, fg: Color, color_mode: &str, time: f32) {
+    render_text_offset(fb, text, fg, 0, 0, color_mode, time);
 }
 
 /// Render text with x/y offset into the framebuffer.
-fn render_text_offset(fb: &mut FrameBuffer, text: &str, fg: Color, x_off: i32, y_off: i32) {
+fn render_text_offset(
+    fb: &mut FrameBuffer,
+    text: &str,
+    fg: Color,
+    x_off: i32,
+    y_off: i32,
+    color_mode: &str,
+    time: f32,
+) {
     let mut x = 0usize;
     let mut y = 0usize;
     for ch in text.chars() {
@@ -629,7 +702,8 @@ fn render_text_offset(fb: &mut FrameBuffer, text: &str, fg: Color, x_off: i32, y
             let xi = xi as usize;
             let yi = yi as usize;
             if yi < fb.height && xi < fb.width {
-                let _ = fb.set(xi, yi, Cell::new(ch, fg));
+                let cell_fg = resolve_fg(color_mode, xi, yi, time, fg);
+                let _ = fb.set(xi, yi, Cell::new(ch, cell_fg));
             }
         }
         x = x.saturating_add(1);
@@ -690,26 +764,77 @@ pub fn create_effect(
     cow_text: String,
     dna: CowDna,
     instance_id: u32,
+    color_mode: &str,
 ) -> Box<dyn Effect> {
     match base {
-        BaseAnim::Breathe => Box::new(BreatheEffect::new(cow_text, &dna, instance_id)),
-        BaseAnim::Float => Box::new(FloatEffect::new(cow_text, &dna, instance_id)),
-        BaseAnim::Walk => Box::new(WalkEffect::new(cow_text, &dna, instance_id)),
-        BaseAnim::Particles => Box::new(ParticlesEffect::new(cow_text, dna, instance_id)),
-        BaseAnim::Pulse => Box::new(PulseEffect::new(cow_text, &dna, instance_id)),
-        BaseAnim::Glitch => Box::new(GlitchEffect::new(cow_text, &dna, instance_id)),
-        BaseAnim::Fly => Box::new(FlyEffect::new(cow_text, &dna, instance_id)),
-        BaseAnim::Talk => Box::new(TalkEffect::new(cow_text, &dna, instance_id)),
-        BaseAnim::Sway => Box::new(SwayEffect::new(cow_text, &dna, instance_id)),
-        BaseAnim::Dissolve => Box::new(DissolveEffect::new(cow_text, &dna, instance_id)),
+        BaseAnim::Breathe => Box::new(BreatheEffect::new(
+            cow_text,
+            &dna,
+            instance_id,
+            color_mode.to_string(),
+        )),
+        BaseAnim::Float => Box::new(FloatEffect::new(
+            cow_text,
+            &dna,
+            instance_id,
+            color_mode.to_string(),
+        )),
+        BaseAnim::Walk => Box::new(WalkEffect::new(
+            cow_text,
+            &dna,
+            instance_id,
+            color_mode.to_string(),
+        )),
+        BaseAnim::Particles => Box::new(ParticlesEffect::new(
+            cow_text,
+            dna,
+            instance_id,
+            color_mode.to_string(),
+        )),
+        BaseAnim::Pulse => Box::new(PulseEffect::new(
+            cow_text,
+            &dna,
+            instance_id,
+            color_mode.to_string(),
+        )),
+        BaseAnim::Glitch => Box::new(GlitchEffect::new(
+            cow_text,
+            &dna,
+            instance_id,
+            color_mode.to_string(),
+        )),
+        BaseAnim::Fly => Box::new(FlyEffect::new(
+            cow_text,
+            &dna,
+            instance_id,
+            color_mode.to_string(),
+        )),
+        BaseAnim::Talk => Box::new(TalkEffect::new(
+            cow_text,
+            &dna,
+            instance_id,
+            color_mode.to_string(),
+        )),
+        BaseAnim::Sway => Box::new(SwayEffect::new(
+            cow_text,
+            &dna,
+            instance_id,
+            color_mode.to_string(),
+        )),
+        BaseAnim::Dissolve => Box::new(DissolveEffect::new(
+            cow_text,
+            &dna,
+            instance_id,
+            color_mode.to_string(),
+        )),
     }
 }
 
 // ── Legacy static cow text (backward compat) ───────────────────────
 
 /// Write the cow text into `fb` at row 0 (Phase 0 compat).
-pub fn render_static_cow(fb: &mut FrameBuffer, cow_text: &str) {
-    render_text(fb, cow_text, Color::WHITE);
+pub fn render_static_cow(fb: &mut FrameBuffer, cow_text: &str, color_mode: &str, time: f32) {
+    render_text(fb, cow_text, Color::WHITE, color_mode, time);
 }
 
 /// Returns the canonical "default" cow art for Phase 0.
@@ -762,7 +887,7 @@ mod tests {
     #[test]
     fn static_cow_renders_exact_art() {
         let mut fb = FrameBuffer::new(80, 24);
-        render_static_cow(&mut fb, default_cow_text());
+        render_static_cow(&mut fb, default_cow_text(), "static", 0.0);
         fb.swap();
         // default_cow_text() starts with "        \   ^__^"
         // Row 0: 8 spaces, \, 3 spaces, ^__^ → ^ at column 12
@@ -786,7 +911,7 @@ mod tests {
     #[test]
     fn static_cow_all_chars_white() {
         let mut fb = FrameBuffer::new(80, 24);
-        render_static_cow(&mut fb, default_cow_text());
+        render_static_cow(&mut fb, default_cow_text(), "static", 0.0);
         fb.swap();
         for y in 0..5 {
             for x in 0..20 {
@@ -806,7 +931,7 @@ mod tests {
     #[test]
     fn empty_text_produces_no_damage() {
         let mut fb = FrameBuffer::new(10, 10);
-        render_static_cow(&mut fb, "");
+        render_static_cow(&mut fb, "", "static", 0.0);
         assert!(
             fb.compute_damage().is_empty(),
             "rendering empty text should produce zero damage"
@@ -817,7 +942,7 @@ mod tests {
     fn render_cow_text_fits_in_framebuffer() {
         // A 1x1 framebuffer should only show the first character
         let mut fb = FrameBuffer::new(1, 1);
-        render_static_cow(&mut fb, "ABC\nDEF");
+        render_static_cow(&mut fb, "ABC\nDEF", "static", 0.0);
         fb.swap();
         assert_eq!(fb.get(0, 0).ch, 'A');
         // Second row is out of bounds for height=1
@@ -830,7 +955,7 @@ mod tests {
         let mut dna = CowDna::default();
         dna.amplitude.breath = 5.0;
         dna.speed = 1.0;
-        let effect = BreatheEffect::new(COW.to_string(), &dna, 0);
+        let effect = BreatheEffect::new(COW.to_string(), &dna, 0, "static".to_string());
 
         let mut fb0 = FrameBuffer::new(80, 24);
         let mut fb1 = FrameBuffer::new(80, 24);
@@ -883,7 +1008,7 @@ mod tests {
         let mut dna = CowDna::default();
         dna.amplitude.breath = 0.0;
         dna.speed = 1.0;
-        let effect = BreatheEffect::new(COW.to_string(), &dna, 0);
+        let effect = BreatheEffect::new(COW.to_string(), &dna, 0, "static".to_string());
         let mut fb0 = FrameBuffer::new(80, 24);
         let mut fb1 = FrameBuffer::new(80, 24);
         effect.render(&mut fb0, 0.0);
@@ -901,7 +1026,7 @@ mod tests {
         dna.amplitude.sway = 0.0;
         dna.amplitude.float = 0.0;
         dna.speed = 1.0;
-        let effect = FloatEffect::new(COW.to_string(), &dna, 0);
+        let effect = FloatEffect::new(COW.to_string(), &dna, 0, "static".to_string());
         let mut fb0 = FrameBuffer::new(80, 24);
         let mut fb1 = FrameBuffer::new(80, 24);
         effect.render(&mut fb0, 0.0);
@@ -918,8 +1043,8 @@ mod tests {
     #[test]
     fn breathe_instance_phase_offsets_multiple_instances() {
         let dna = CowDna::default();
-        let e0 = BreatheEffect::new(COW.to_string(), &dna, 0);
-        let e1 = BreatheEffect::new(COW.to_string(), &dna, 1);
+        let e0 = BreatheEffect::new(COW.to_string(), &dna, 0, "static".to_string());
+        let e1 = BreatheEffect::new(COW.to_string(), &dna, 1, "static".to_string());
 
         let mut fb0 = FrameBuffer::new(80, 24);
         let mut fb1 = FrameBuffer::new(80, 24);
@@ -954,7 +1079,7 @@ mod tests {
         dna.amplitude.sway = 3.0;
         dna.amplitude.float = 3.0;
         dna.speed = 1.0;
-        let effect = FloatEffect::new(COW.to_string(), &dna, 0);
+        let effect = FloatEffect::new(COW.to_string(), &dna, 0, "static".to_string());
 
         let mut fb0 = FrameBuffer::new(80, 24);
         let mut fb1 = FrameBuffer::new(80, 24);
@@ -990,8 +1115,8 @@ mod tests {
     #[test]
     fn walk_legs_alternate_between_frames() {
         let dna = CowDna::default();
-        let effect_a = WalkEffect::new(COW.to_string(), &dna, 0);
-        let effect_b = WalkEffect::new(COW.to_string(), &dna, 0);
+        let effect_a = WalkEffect::new(COW.to_string(), &dna, 0, "static".to_string());
+        let effect_b = WalkEffect::new(COW.to_string(), &dna, 0, "static".to_string());
         let mut fb_a = FrameBuffer::new(80, 24);
         let mut fb_b = FrameBuffer::new(80, 24);
         effect_a.render(&mut fb_a, 0.25);
@@ -1025,7 +1150,7 @@ mod tests {
     #[test]
     fn walk_only_modifies_last_row() {
         let dna = CowDna::default();
-        let effect = WalkEffect::new(COW.to_string(), &dna, 0);
+        let effect = WalkEffect::new(COW.to_string(), &dna, 0, "static".to_string());
         let mut fb = FrameBuffer::new(80, 24);
         effect.render(&mut fb, 0.25);
         fb.swap();
@@ -1057,7 +1182,7 @@ mod tests {
         };
 
         // peak: sin(t*3) ≈ 1 → intensity ≈ 1 → many glitch chars
-        let effect_peak = GlitchEffect::new(COW.to_string(), &dna, 0);
+        let effect_peak = GlitchEffect::new(COW.to_string(), &dna, 0, "static".to_string());
         let mut fb_peak = FrameBuffer::new(80, 24);
         effect_peak.render(&mut fb_peak, std::f32::consts::FRAC_PI_6);
         fb_peak.swap();
@@ -1068,7 +1193,7 @@ mod tests {
         );
 
         // trough: sin(t*3) ≈ -1 → intensity ≈ 0 → fewer or zero
-        let effect_trough = GlitchEffect::new(COW.to_string(), &dna, 0);
+        let effect_trough = GlitchEffect::new(COW.to_string(), &dna, 0, "static".to_string());
         let mut fb_trough = FrameBuffer::new(80, 24);
         effect_trough.render(&mut fb_trough, std::f32::consts::FRAC_PI_3);
         fb_trough.swap();
@@ -1085,7 +1210,7 @@ mod tests {
     #[test]
     fn fly_renders_wing_flap_indicator() {
         let dna = CowDna::default();
-        let effect = FlyEffect::new(COW.to_string(), &dna, 0);
+        let effect = FlyEffect::new(COW.to_string(), &dna, 0, "static".to_string());
         let mut fb = FrameBuffer::new(80, 24);
         effect.render(&mut fb, 0.0);
         fb.swap();
@@ -1101,8 +1226,8 @@ mod tests {
     #[test]
     fn fly_wing_flap_toggles() {
         let dna = CowDna::default();
-        let e1 = FlyEffect::new(COW.to_string(), &dna, 0);
-        let e2 = FlyEffect::new(COW.to_string(), &dna, 0);
+        let e1 = FlyEffect::new(COW.to_string(), &dna, 0, "static".to_string());
+        let e2 = FlyEffect::new(COW.to_string(), &dna, 0, "static".to_string());
         let mut fb1 = FrameBuffer::new(80, 24);
         let mut fb2 = FrameBuffer::new(80, 24);
         e1.render(&mut fb1, 0.0);
@@ -1112,7 +1237,7 @@ mod tests {
         // (time * 12.0) as i32 % 2 toggles between 0 and 1
         // at t=0: 0 % 2 = 0 => '~'; at t=0.05: (0.6) as i32 = 0 => '~' still
         // need enough time delta to toggle: t=0.1 => (1.2) as i32 = 1 => '^'
-        let e3 = FlyEffect::new(COW.to_string(), &dna, 0);
+        let e3 = FlyEffect::new(COW.to_string(), &dna, 0, "static".to_string());
         let mut fb3 = FrameBuffer::new(80, 24);
         e3.render(&mut fb3, 0.1);
         fb3.swap();
@@ -1133,7 +1258,7 @@ mod tests {
         // Render at 4 different times: verify mouth chars are replaced AND cycle
         let mut seen = std::collections::HashSet::new();
         for i in 0..4 {
-            let effect = TalkEffect::new(COW.to_string(), &dna, 0);
+            let effect = TalkEffect::new(COW.to_string(), &dna, 0, "static".to_string());
             let mut fb = FrameBuffer::new(80, 24);
             let t = i as f32 / 4.0;
             effect.render(&mut fb, t);
@@ -1161,7 +1286,7 @@ mod tests {
         let mut dna = CowDna::default();
         dna.amplitude.sway = 4.0;
         dna.speed = 1.0;
-        let effect = SwayEffect::new(COW.to_string(), &dna, 0);
+        let effect = SwayEffect::new(COW.to_string(), &dna, 0, "static".to_string());
 
         let mut fb_t0 = FrameBuffer::new(80, 24);
         let mut fb_t1 = FrameBuffer::new(80, 24);
@@ -1196,7 +1321,8 @@ mod tests {
     #[test]
     fn dissolve_at_assembled_has_low_scatter() {
         let dna = CowDna::default();
-        let effect = DissolveEffect::new(COW.to_string(), &dna, 0);
+        let effect = DissolveEffect::new(COW.to_string(), &dna, 0, "static".to_string());
+
         let mut fb = FrameBuffer::new(80, 24);
         // At cycle midpoint (t=1.0 in 0→1→0 cycle), scatter is 0 (assembled)
         effect.render(&mut fb, 1.0);
@@ -1214,9 +1340,8 @@ mod tests {
     #[test]
     fn dissolve_at_scattered_has_different_positions() {
         let dna = CowDna::default();
-        let effect_assembled = DissolveEffect::new(COW.to_string(), &dna, 0);
-        let effect_scattered = DissolveEffect::new(COW.to_string(), &dna, 0);
-
+        let effect_assembled = DissolveEffect::new(COW.to_string(), &dna, 0, "static".to_string());
+        let effect_scattered = DissolveEffect::new(COW.to_string(), &dna, 0, "static".to_string());
         let mut fb_assembled = FrameBuffer::new(80, 24);
         let mut fb_scattered = FrameBuffer::new(80, 24);
 
@@ -1255,7 +1380,7 @@ mod tests {
             palette: vec!["#ff0000".to_string(), "#0000ff".to_string()],
             ..CowDna::default()
         };
-        let effect = PulseEffect::new(COW.to_string(), &dna, 0);
+        let effect = PulseEffect::new(COW.to_string(), &dna, 0, "static".to_string());
         let mut fb = FrameBuffer::new(80, 24);
         effect.render(&mut fb, 0.5);
         fb.swap();
@@ -1282,7 +1407,7 @@ mod tests {
     #[test]
     fn pulse_without_palette_is_white() {
         let dna = CowDna::default();
-        let effect = PulseEffect::new(COW.to_string(), &dna, 0);
+        let effect = PulseEffect::new(COW.to_string(), &dna, 0, "static".to_string());
         let mut fb = FrameBuffer::new(80, 24);
         effect.render(&mut fb, 0.5);
         fb.swap();
@@ -1313,7 +1438,7 @@ mod tests {
             },
             ..CowDna::default()
         };
-        let effect = PulseEffect::new(COW.to_string(), &dna, 0);
+        let effect = PulseEffect::new(COW.to_string(), &dna, 0, "static".to_string());
         let mut fb = FrameBuffer::new(80, 24);
         effect.render(&mut fb, 0.5);
         fb.swap();
@@ -1352,7 +1477,7 @@ mod tests {
         for rate in [0u32, 5, 20] {
             let mut dna = CowDna::default();
             dna.particles.rate = rate;
-            let mut effect = ParticlesEffect::new(COW.to_string(), dna, 0);
+            let mut effect = ParticlesEffect::new(COW.to_string(), dna, 0, "static".to_string());
             effect.update(1.0, 80, 24);
             let mut fb = FrameBuffer::new(80, 24);
             effect.render(&mut fb, 1.0);
@@ -1383,7 +1508,7 @@ mod tests {
             BaseAnim::Dissolve,
         ];
         for base in &bases {
-            let mut effect = create_effect(*base, COW.to_string(), dna.clone(), 0);
+            let mut effect = create_effect(*base, COW.to_string(), dna.clone(), 0, "static");
             effect.update(0.1, 40, 10);
             let mut fb = FrameBuffer::new(40, 10);
             effect.render(&mut fb, 0.5);
@@ -1415,8 +1540,8 @@ mod tests {
             ..CowDna::default()
         };
 
-        let e_fast = BreatheEffect::new(COW.to_string(), &dna_fast, 0);
-        let e_slow = BreatheEffect::new(COW.to_string(), &dna_slow, 0);
+        let e_fast = BreatheEffect::new(COW.to_string(), &dna_fast, 0, "static".to_string());
+        let e_slow = BreatheEffect::new(COW.to_string(), &dna_slow, 0, "static".to_string());
 
         let mut fb_fast = FrameBuffer::new(80, 24);
         let mut fb_slow = FrameBuffer::new(80, 24);
@@ -1463,7 +1588,7 @@ mod tests {
             BaseAnim::Dissolve,
         ];
         for base in &bases {
-            let mut effect = create_effect(*base, COW.to_string(), dna.clone(), 0);
+            let mut effect = create_effect(*base, COW.to_string(), dna.clone(), 0, "static");
             effect.update(0.1, 1, 1);
             let mut fb = FrameBuffer::new(1, 1);
             effect.render(&mut fb, 0.5);
@@ -1492,7 +1617,7 @@ mod tests {
             BaseAnim::Dissolve,
         ];
         for base in &bases {
-            let mut effect = create_effect(*base, COW.to_string(), dna.clone(), 0);
+            let mut effect = create_effect(*base, COW.to_string(), dna.clone(), 0, "static");
             effect.update(0.1, 0, 0);
             let mut fb = FrameBuffer::new(0, 0);
             effect.render(&mut fb, 0.5);
@@ -1521,7 +1646,7 @@ mod tests {
             BaseAnim::Dissolve,
         ];
         for base in &bases {
-            let mut effect = create_effect(*base, COW.to_string(), dna.clone(), 0);
+            let mut effect = create_effect(*base, COW.to_string(), dna.clone(), 0, "static");
             effect.on_resize(1, 1);
             let mut fb = FrameBuffer::new(1, 1);
             effect.render(&mut fb, 0.5);
@@ -1561,7 +1686,7 @@ mod tests {
         };
 
         let mut fb = FrameBuffer::new(40, 10);
-        let effect = BreatheEffect::new(COW.to_string(), &dna, 0);
+        let effect = BreatheEffect::new(COW.to_string(), &dna, 0, "static".to_string());
         effect.render(&mut fb, 999.0);
         assert!(
             !fb.compute_damage().is_empty(),
@@ -1569,7 +1694,7 @@ mod tests {
         );
         fb.swap();
 
-        let effect = FloatEffect::new(COW.to_string(), &dna, 0);
+        let effect = FloatEffect::new(COW.to_string(), &dna, 0, "static".to_string());
         effect.render(&mut fb, 999.0);
         assert!(
             !fb.compute_damage().is_empty(),
@@ -1593,10 +1718,18 @@ mod tests {
         for (name, times) in &effects_and_times {
             let first_count = {
                 let effect = match *name {
-                    "breathe" => {
-                        Box::new(BreatheEffect::new(COW.to_string(), &dna, 0)) as Box<dyn Effect>
-                    }
-                    "walk" => Box::new(WalkEffect::new(COW.to_string(), &dna, 0)),
+                    "breathe" => Box::new(BreatheEffect::new(
+                        COW.to_string(),
+                        &dna,
+                        0,
+                        "static".to_string(),
+                    )) as Box<dyn Effect>,
+                    "walk" => Box::new(WalkEffect::new(
+                        COW.to_string(),
+                        &dna,
+                        0,
+                        "static".to_string(),
+                    )),
                     _ => unreachable!(),
                 };
                 let mut fb = FrameBuffer::new(80, 24);
@@ -1607,10 +1740,18 @@ mod tests {
 
             for &t in &times[1..] {
                 let effect = match *name {
-                    "breathe" => {
-                        Box::new(BreatheEffect::new(COW.to_string(), &dna, 0)) as Box<dyn Effect>
-                    }
-                    "walk" => Box::new(WalkEffect::new(COW.to_string(), &dna, 0)),
+                    "breathe" => Box::new(BreatheEffect::new(
+                        COW.to_string(),
+                        &dna,
+                        0,
+                        "static".to_string(),
+                    )) as Box<dyn Effect>,
+                    "walk" => Box::new(WalkEffect::new(
+                        COW.to_string(),
+                        &dna,
+                        0,
+                        "static".to_string(),
+                    )),
                     _ => unreachable!(),
                 };
                 let mut fb = FrameBuffer::new(80, 24);
@@ -1630,9 +1771,9 @@ mod tests {
     #[test]
     fn non_one_shot_effects_return_is_done_false() {
         let dna = CowDna::default();
-        let breathe = BreatheEffect::new(COW.to_string(), &dna, 0);
+        let breathe = BreatheEffect::new(COW.to_string(), &dna, 0, "static".to_string());
         assert!(!breathe.is_done());
-        let dissolve = DissolveEffect::new(COW.to_string(), &dna, 0);
+        let dissolve = DissolveEffect::new(COW.to_string(), &dna, 0, "static".to_string());
         assert!(!dissolve.is_done());
     }
 }

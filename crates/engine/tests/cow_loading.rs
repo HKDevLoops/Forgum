@@ -147,7 +147,7 @@ fn all_cows_render_into_framebuffer_without_overflow() {
 
         // Render into a small framebuffer — must not panic or overflow.
         let mut fb = FrameBuffer::new(60, 20);
-        render_cow(&mut fb, &scene);
+        render_cow(&mut fb, &scene, "static", 0.0);
         fb.swap();
 
         // Verify at least one non-space character was written.

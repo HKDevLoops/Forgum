@@ -103,8 +103,13 @@ pub fn render_loop_foreground(
     };
 
     // Create the animation effect from DNA
-    let mut effect =
-        effects::create_effect(cow_dna.base, cow_text.clone(), cow_dna.clone(), instance_id);
+    let mut effect = effects::create_effect(
+        cow_dna.base,
+        cow_text.clone(),
+        cow_dna.clone(),
+        instance_id,
+        &config.color_mode,
+    );
     let mut rend = renderer::create_renderer();
 
     let mut frame_count: u64 = 0;
@@ -147,7 +152,7 @@ pub fn render_loop_foreground(
                     ControlCmd::Cow(name) => {
                         // Reload the cow art (preserving current eyes/tongue)
                         // and recreate the live effect with the same text.
-                        config.cow = name.clone();
+                        config.cow = crate::cow::resolve_cow_name(&name, &data_dir);
                         let cow_text = cow::load_cow(
                             &config.cow,
                             &data_dir,
@@ -161,6 +166,7 @@ pub fn render_loop_foreground(
                             new_composed,
                             cow_dna.clone(),
                             instance_id,
+                            &config.color_mode,
                         );
                     }
                     ControlCmd::Text(text) => {
@@ -180,6 +186,7 @@ pub fn render_loop_foreground(
                             new_composed,
                             cow_dna.clone(),
                             instance_id,
+                            &config.color_mode,
                         );
                     }
                     _ => {}
@@ -270,8 +277,13 @@ pub fn render_loop_background(
     };
 
     // Create the animation effect from DNA
-    let mut effect =
-        effects::create_effect(cow_dna.base, cow_text.clone(), cow_dna.clone(), instance_id);
+    let mut effect = effects::create_effect(
+        cow_dna.base,
+        cow_text.clone(),
+        cow_dna.clone(),
+        instance_id,
+        &config.color_mode,
+    );
     let mut rend = renderer::create_renderer();
 
     let mut frame_count: u64 = 0;
@@ -314,7 +326,7 @@ pub fn render_loop_background(
                     ControlCmd::Cow(name) => {
                         // Reload the cow art (preserving current eyes/tongue)
                         // and recreate the live effect with the same text.
-                        config.cow = name.clone();
+                        config.cow = crate::cow::resolve_cow_name(&name, &data_dir);
                         let cow_text = cow::load_cow(
                             &config.cow,
                             &data_dir,
@@ -328,6 +340,7 @@ pub fn render_loop_background(
                             new_composed,
                             cow_dna.clone(),
                             instance_id,
+                            &config.color_mode,
                         );
                     }
                     ControlCmd::Text(text) => {
@@ -347,6 +360,7 @@ pub fn render_loop_background(
                             new_composed,
                             cow_dna.clone(),
                             instance_id,
+                            &config.color_mode,
                         );
                     }
                     _ => {}
@@ -376,7 +390,7 @@ pub fn render_loop_background(
     }
 
     // Belt + braces: clear and show cursor on the way out.
-    let _ = out.write_all(b"\x1b[0m\x1b[?25h");
+    let _ = out.write_all(b"\x1b[0m\x1b[?25h\n");
     let _ = out.flush();
     Ok(())
 }

@@ -588,7 +588,7 @@ fn render_subcommand(args: cli::Args) -> ExitCode {
     let _ = scene_from_file;
 
     // Build merged scene (config auto-discovered if --config not given).
-    let scene = match build_scene_config(&args) {
+    let mut scene = match build_scene_config(&args) {
         Ok(s) => s,
         Err(e) => {
             eprintln!("{PROGRAM}: {e}");
@@ -664,6 +664,7 @@ fn render_subcommand(args: cli::Args) -> ExitCode {
             return ExitCode::from(78);
         }
     };
+    scene.cow = cow::resolve_cow_name(&scene.cow, &data);
     let cow_text = cow::load_cow(&scene.cow, &data, &scene.eyes, &scene.tongue, "\\\\");
     let composed = cow::compose_scene(&cow_text, &scene.text);
 
@@ -766,7 +767,7 @@ fn spawn_daemon_parent(args: &cli::Args) -> ExitCode {
 /// (fresh exec → no fork UB), starts the control socket thread, writes
 /// the state file, opens output, enters the render loop, honours STOP.
 fn run_daemon_child(args: cli::Args) -> ExitCode {
-    let scene = match build_scene_config(&args) {
+    let mut scene = match build_scene_config(&args) {
         Ok(s) => s,
         Err(e) => {
             eprintln!("{PROGRAM}: {e}");
@@ -812,6 +813,7 @@ fn run_daemon_child(args: cli::Args) -> ExitCode {
             return ExitCode::from(78);
         }
     };
+    scene.cow = cow::resolve_cow_name(&scene.cow, &data);
     let cow_text = cow::load_cow(&scene.cow, &data, &scene.eyes, &scene.tongue, "\\\\");
     let composed = cow::compose_scene(&cow_text, &scene.text);
     let animations = dna::load_animations(&data);

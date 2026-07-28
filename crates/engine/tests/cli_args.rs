@@ -99,7 +99,17 @@ fn build_scene_uses_cli_eyes_tongue() {
 
 #[test]
 fn build_scene_text_only_does_not_change_config() {
-    let (a, _) = parse_args(argv(&["forgum-engine", "render", "--text-only"])).unwrap();
+    let tmp = tempfile::tempdir().unwrap();
+    let cfg_path = tmp.path().join("config.json");
+    std::fs::write(&cfg_path, r#"{}"#).unwrap();
+    let (a, _) = parse_args(argv(&[
+        "forgum-engine",
+        "render",
+        "--config",
+        cfg_path.to_str().unwrap(),
+        "--text-only",
+    ]))
+    .unwrap();
     assert!(a.text_only);
     let cfg = build_scene_config(&a).unwrap();
     assert_eq!(cfg, SceneConfig::default());

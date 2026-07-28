@@ -6,6 +6,8 @@
 
 use std::path::Path;
 
+use rand::seq::SliceRandom;
+
 use crate::framebuffer::{Cell, Color, FrameBuffer};
 
 /// The default cow art when no `.cow` file is found.
@@ -32,6 +34,37 @@ pub fn load_cow(
         Err(_) => return default_cow_expanded(eyes, tongue, thoughts),
     };
     expand_cow(&raw, eyes, tongue, thoughts)
+}
+
+/// If `cow_name` is `"random"`, pick a random `.cow` file from the data
+/// directory and return its basename. Otherwise return `cow_name` unchanged.
+pub fn resolve_cow_name(cow_name: &str, data_dir: &Path) -> String {
+    if cow_name != "random" {
+        return cow_name.to_string();
+    }
+    let cows_dir = data_dir.join("Cows");
+    let mut entries: Vec<String> = match std::fs::read_dir(&cows_dir) {
+        Ok(rd) => rd
+            .filter_map(|e| e.ok())
+            .filter(|e| {
+                e.path()
+                    .extension()
+                    .is_some_and(|ext| ext.eq_ignore_ascii_case("cow"))
+            })
+            .filter_map(|e| {
+                e.path()
+                    .file_stem()
+                    .map(|s| s.to_string_lossy().into_owned())
+            })
+            .collect(),
+        Err(_) => return "default".to_string(),
+    };
+    if entries.is_empty() {
+        return "default".to_string();
+    }
+    let mut rng = rand::thread_rng();
+    entries.shuffle(&mut rng);
+    entries[0].clone()
 }
 
 /// Load a `.cow` file from an explicit path.
@@ -125,49 +158,30 @@ fn wrap_bubble(text: &str, min_width: usize) -> String {
         .max()
         .unwrap_or(0)
         .max(min_width.saturating_sub(2));
-    let inner_width = text_width + 2; // +2 for padding spaces
+    let inner_width = text_width + 2; // +2 for padding spaces around text
 
     let mut result = String::with_capacity((inner_width + 4) * (lines.len() + 2));
 
     // Top border: ` _______________ `
     result.push(' ');
-    result.push('_');
-    for _ in 0..inner_width {
+    for _ in 0..=inner_width {
         result.push('_');
     }
     result.push('\n');
 
     // Content lines: `|  Hello, world |`
-    if lines.len() == 1 {
+    for line in lines.iter() {
+        let pad_target = if lines.len() == 1 {
+            inner_width + 2
+        } else {
+            inner_width + 1
+        };
         result.push('|');
         result.push(' ');
-        result.push_str(&format!(" {} ", lines[0]));
-        pad_to(&mut result, inner_width + 2);
+        result.push_str(line);
+        pad_to(&mut result, pad_target);
         result.push('|');
         result.push('\n');
-    } else {
-        for (i, line) in lines.iter().enumerate() {
-            result.push('|');
-            if i == 0 {
-                // First line: opening quote style
-                result.push(' ');
-                result.push_str(line);
-                pad_to(&mut result, inner_width + 1);
-                result.push('|');
-            } else if i == lines.len() - 1 {
-                // Last line
-                result.push(' ');
-                result.push_str(line);
-                pad_to(&mut result, inner_width + 1);
-                result.push('|');
-            } else {
-                result.push(' ');
-                result.push_str(line);
-                pad_to(&mut result, inner_width + 1);
-                result.push('|');
-            }
-            result.push('\n');
-        }
     }
 
     // Bottom border: `|_______________|`
@@ -183,14 +197,16 @@ fn wrap_bubble(text: &str, min_width: usize) -> String {
 
 /// Pad `result` with spaces until its current line length reaches `target_len`.
 fn pad_to(result: &mut String, target_len: usize) {
-    let current_len = result.lines().last().map_or(0, |l| l.len());
+    let current_len = result
+        .rsplit_once('\n')
+        .map_or(result.len(), |(_, last)| last.len());
     for _ in current_len..target_len {
         result.push(' ');
     }
 }
 
 /// Render the composed cow text (bubble + cow art) into a framebuffer.
-pub fn render_cow(fb: &mut FrameBuffer, composed: &str) {
+pub fn render_cow(fb: &mut FrameBuffer, composed: &str, color_mode: &str, time: f32) {
     let fg = Color::WHITE;
     let mut x = 0usize;
     let mut y = 0usize;
@@ -205,7 +221,8 @@ pub fn render_cow(fb: &mut FrameBuffer, composed: &str) {
             break;
         }
         if x < fb.width {
-            let _ = fb.set(x, y, Cell::new(ch, fg));
+            let cell_fg = crate::effects::resolve_fg(color_mode, x, y, time, fg);
+            let _ = fb.set(x, y, Cell::new(ch, cell_fg));
         }
         x = x.saturating_add(1);
     }
@@ -447,7 +464,7 @@ mod tests {
     fn render_cow_exact_positions() {
         let mut fb = FrameBuffer::new(10, 5);
         let composed = "ABCDE\n  FG\nX";
-        render_cow(&mut fb, composed);
+        render_cow(&mut fb, composed, "static", 0.0);
         fb.swap();
         assert_eq!(fb.get(0, 0).ch, 'A');
         assert_eq!(fb.get(1, 0).ch, 'B');
@@ -464,7 +481,7 @@ mod tests {
     #[test]
     fn render_cow_all_chars_white_fg() {
         let mut fb = FrameBuffer::new(20, 5);
-        render_cow(&mut fb, "ABC\nDEF");
+        render_cow(&mut fb, "ABC\nDEF", "static", 0.0);
         fb.swap();
         for y in 0..2 {
             for x in 0..3 {
@@ -478,7 +495,7 @@ mod tests {
     #[test]
     fn render_cow_truncates_at_width_boundary() {
         let mut fb = FrameBuffer::new(3, 1);
-        render_cow(&mut fb, "ABCDE");
+        render_cow(&mut fb, "ABCDE", "static", 0.0);
         fb.swap();
         assert_eq!(fb.get(0, 0).ch, 'A');
         assert_eq!(fb.get(1, 0).ch, 'B');
@@ -490,7 +507,7 @@ mod tests {
     #[test]
     fn render_cow_truncates_at_height_boundary() {
         let mut fb = FrameBuffer::new(10, 2);
-        render_cow(&mut fb, "line1\nline2\nline3\nline4");
+        render_cow(&mut fb, "line1\nline2\nline3\nline4", "static", 0.0);
         fb.swap();
         assert_eq!(fb.get(0, 0).ch, 'l');
         assert_eq!(fb.get(0, 1).ch, 'l');
@@ -500,7 +517,7 @@ mod tests {
     #[test]
     fn render_cow_empty_text_no_damage() {
         let mut fb = FrameBuffer::new(10, 5);
-        render_cow(&mut fb, "");
+        render_cow(&mut fb, "", "static", 0.0);
         assert!(
             fb.compute_damage().is_empty(),
             "empty text should produce no damage"
@@ -510,7 +527,7 @@ mod tests {
     #[test]
     fn render_cow_newline_resets_x() {
         let mut fb = FrameBuffer::new(10, 3);
-        render_cow(&mut fb, "A\nB\nC");
+        render_cow(&mut fb, "A\nB\nC", "static", 0.0);
         fb.swap();
         assert_eq!(fb.get(0, 0).ch, 'A');
         assert_eq!(fb.get(0, 1).ch, 'B');
@@ -554,5 +571,47 @@ mod tests {
         if let Ok(cow) = result {
             assert!(!cow.is_empty(), "loaded cow must not be empty");
         }
+    }
+
+    #[test]
+    fn resolve_cow_name_passthrough() {
+        let tmp = std::env::temp_dir().join("forgum_test_cow_resolve");
+        let _ = std::fs::create_dir_all(&tmp);
+        assert_eq!(resolve_cow_name("tux", &tmp), "tux");
+        assert_eq!(resolve_cow_name("default", &tmp), "default");
+        let _ = std::fs::remove_dir(&tmp);
+    }
+
+    #[test]
+    fn resolve_cow_name_random_picks_from_dir() {
+        let tmp = std::env::temp_dir().join("forgum_test_cow_resolve2");
+        let cows = tmp.join("Cows");
+        let _ = std::fs::create_dir_all(&cows);
+        std::fs::write(cows.join("alpha.cow"), "alpha").unwrap();
+        std::fs::write(cows.join("bravo.cow"), "bravo").unwrap();
+        std::fs::write(cows.join("charlie.cow"), "charlie").unwrap();
+        let mut seen = std::collections::HashSet::new();
+        for _ in 0..20 {
+            let name = resolve_cow_name("random", &tmp);
+            assert!(
+                name == "alpha" || name == "bravo" || name == "charlie",
+                "unexpected cow: {name}"
+            );
+            seen.insert(name);
+        }
+        assert!(
+            seen.len() > 1,
+            "random must pick different cows across calls"
+        );
+        let _ = std::fs::remove_dir_all(&tmp);
+    }
+
+    #[test]
+    fn resolve_cow_name_random_empty_dir_falls_back() {
+        let tmp = std::env::temp_dir().join("forgum_test_cow_resolve_empty");
+        let cows = tmp.join("Cows");
+        let _ = std::fs::create_dir_all(&cows);
+        assert_eq!(resolve_cow_name("random", &tmp), "default");
+        let _ = std::fs::remove_dir_all(&tmp);
     }
 }

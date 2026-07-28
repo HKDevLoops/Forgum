@@ -281,7 +281,8 @@ fn render_all_cows_to_png() {
         let cow_text = expand_cow(&cow_raw, "oo", " ", "\\\\");
         let cow_dna = dna::get_dna(&animations, name);
 
-        let mut effect = effects::create_effect(cow_dna.base, cow_text.clone(), cow_dna.clone(), 0);
+        let mut effect =
+            effects::create_effect(cow_dna.base, cow_text.clone(), cow_dna.clone(), 0, "static");
 
         let mut fb = FrameBuffer::new(CANVAS_COLS, CANVAS_ROWS);
         let mut hero_fb = None;
@@ -410,7 +411,8 @@ fn golden_visual_regression_deterministic_cows() {
 
         let cow_raw = load_cow(name, &dd, "oo", " ", "\\\\");
         let cow_text = expand_cow(&cow_raw, "oo", " ", "\\\\");
-        let mut effect = effects::create_effect(cow_dna.base, cow_text.clone(), cow_dna.clone(), 0);
+        let mut effect =
+            effects::create_effect(cow_dna.base, cow_text.clone(), cow_dna.clone(), 0, "static");
 
         let mut fb = FrameBuffer::new(CANVAS_COLS, CANVAS_ROWS);
         for frame in 0..=HERO_FRAME {
@@ -471,7 +473,8 @@ fn all_effects_produce_nonempty_frames() {
         let cow_raw = load_cow(name, &dd, "oo", " ", "\\\\");
         let cow_text = expand_cow(&cow_raw, "oo", " ", "\\\\");
         let cow_dna = dna::get_dna(&animations, name);
-        let mut effect = effects::create_effect(cow_dna.base, cow_text.clone(), cow_dna.clone(), 0);
+        let mut effect =
+            effects::create_effect(cow_dna.base, cow_text.clone(), cow_dna.clone(), 0, "static");
 
         let mut fb = FrameBuffer::new(CANVAS_COLS, CANVAS_ROWS);
         let mut any_content = false;
@@ -540,7 +543,8 @@ fn all_cows_have_correct_color_range() {
             continue;
         }
 
-        let mut effect = effects::create_effect(cow_dna.base, cow_text.clone(), cow_dna.clone(), 0);
+        let mut effect =
+            effects::create_effect(cow_dna.base, cow_text.clone(), cow_dna.clone(), 0, "static");
 
         let mut fb = FrameBuffer::new(CANVAS_COLS, CANVAS_ROWS);
         let mut has_colored_cells = false;
