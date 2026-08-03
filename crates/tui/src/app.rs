@@ -568,6 +568,9 @@ mod tests {
         let art_b = ConfigApp::expand_cow_template(template_b, "xx", " ");
         assert!(!art_a.is_empty(), "cow art A must not be empty");
         assert!(!art_b.is_empty(), "cow art B must not be empty");
-        assert_ne!(art_a, art_b, "different templates must produce different art");
+        assert_ne!(
+            art_a, art_b,
+            "different templates must produce different art"
+        );
     }
 }
