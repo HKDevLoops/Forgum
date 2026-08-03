@@ -159,24 +159,22 @@ impl SimState {
         // Render into back buffer.
         self.effect.render(&mut self.fb, self.elapsed);
 
-        // Compute damage against the previous front buffer.
-        // Because SimState owns the FrameBuffer persistently, `front` holds
-        // the last frame sent to RENDER — so damage is correct (not always 100%).
+        // Compute damage against the previous front buffer (BEFORE swap clears it).
         let damage = self.fb.compute_damage().to_vec();
         self.scheduler.observe(damage.len());
 
-        // Ship a snapshot of the rendered cells.
-        let cells = self.fb.back.clone();
-
-        // Swap buffers: front becomes what we just built, back becomes a copy
-        // for the next frame to build on top of.
+        // Swap buffers: front ← back (just-rendered), back ← front (previous).
+        // After swap, front has the rendered cells we need to ship.
         self.fb.swap();
 
         self.frame_count = self.frame_count.saturating_add(1);
         FRAME_COUNT.fetch_add(1, Ordering::Relaxed);
 
+        // Clone front for the render thread. Front must stay intact so the
+        // next tick's compute_damage() compares against the last rendered
+        // frame, preserving incremental damage tracking.
         Arc::new(Frame {
-            cells,
+            cells: self.fb.front.clone(),
             damage,
             cols: self.fb.width,
             rows: self.fb.height,
@@ -368,41 +366,32 @@ impl RenderState {
             self.front.resize(expected, Cell::default());
         }
 
-        // Compute damage: cells where new frame differs from front.
-        let damage: Vec<(usize, usize)> = frame
-            .cells
-            .iter()
-            .enumerate()
-            .filter(|(i, new_cell)| self.front.get(*i) != Some(new_cell))
-            .map(|(i, _)| (i % frame.cols, i / frame.cols))
-            .collect();
+        // Use SIM-computed damage directly — no recomputation needed.
+        // The SIM thread's FrameBuffer tracks damage incrementally via set()
+        // against its own front buffer, which is the last shipped frame.
+        let damage = &frame.damage;
 
         if !damage.is_empty() {
             // Wrap in synchronized update if supported.
             if cfg!(feature = "synchronized-update") && forgum_platform::terminal_supports_sync() {
                 let begin = self.renderer.begin_sync();
                 let _ = self.out.write_all(begin.as_bytes());
-                self.renderer.render_frame_from_cells(
-                    &mut self.out,
-                    &frame.cells,
-                    frame.cols,
-                    &damage,
-                )?;
+                self.renderer
+                    .render_damage(&mut self.out, &frame.cells, frame.cols, damage)?;
                 let end = self.renderer.end_sync();
                 let _ = self.out.write_all(end.as_bytes());
             } else {
-                self.renderer.render_frame_from_cells(
-                    &mut self.out,
-                    &frame.cells,
-                    frame.cols,
-                    &damage,
-                )?;
+                self.renderer
+                    .render_damage(&mut self.out, &frame.cells, frame.cols, damage)?;
             }
             let _ = self.out.flush();
         }
 
-        // Update front buffer.
-        self.front.clone_from_slice(&frame.cells);
+        // Update front buffer by swapping in the frame's cells.
+        // The frame's cells Vec is moved into front, old front is dropped.
+        if self.front.len() == frame.cells.len() {
+            self.front.clone_from_slice(&frame.cells);
+        }
 
         Ok(())
     }
@@ -572,5 +561,55 @@ mod tests {
             ControlMsg::Resize { cols: 80, rows: 24 },
         ];
         assert_eq!(msgs.len(), 8);
+    }
+
+    #[test]
+    fn sim_tick_damage_bounded_to_changed_cells() {
+        let data_dir = std::env::temp_dir().join("forgum_test_damage");
+        let _ = std::fs::create_dir_all(&data_dir);
+        let config = SceneConfig::default();
+        let cow_dna = CowDna::default();
+        let mut sim = SimState::new(&config, 40, 12, cow_dna, 0, None, data_dir.clone());
+
+        let dt = Duration::from_secs_f32(1.0 / 30.0);
+
+        // First tick: initial render. The static cow produces some cells.
+        let frame1 = sim.tick(dt);
+        let total_cells = 40 * 12;
+        assert!(
+            frame1.damage.len() < total_cells,
+            "first tick should have less than full-frame damage ({} vs {total_cells})",
+            frame1.damage.len(),
+        );
+
+        // Second tick: same static cow, no animation change → zero or minimal damage.
+        let frame2 = sim.tick(dt);
+        assert!(
+            frame2.damage.len() < total_cells / 4,
+            "second tick on static cow should have minimal damage, got {} out of {total_cells}",
+            frame2.damage.len(),
+        );
+
+        let _ = std::fs::remove_dir_all(&data_dir);
+    }
+
+    #[test]
+    fn sim_tick_produces_valid_frame() {
+        let data_dir = std::env::temp_dir().join("forgum_test_frame");
+        let _ = std::fs::create_dir_all(&data_dir);
+        let config = SceneConfig::default();
+        let cow_dna = CowDna::default();
+        let mut sim = SimState::new(&config, 40, 12, cow_dna, 0, None, data_dir.clone());
+
+        let frame = sim.tick(Duration::from_secs_f32(1.0 / 30.0));
+        assert_eq!(frame.cols, 40);
+        assert_eq!(frame.rows, 12);
+        assert_eq!(frame.cells.len(), 40 * 12);
+        assert!(
+            !frame.damage.is_empty(),
+            "first tick must produce some damage"
+        );
+
+        let _ = std::fs::remove_dir_all(&data_dir);
     }
 }

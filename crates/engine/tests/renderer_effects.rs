@@ -81,12 +81,13 @@ fn effect_is_done_default_false() {
 fn ansi_renderer_writes_move_and_char() {
     let mut fb = FrameBuffer::new(10, 5);
     let _ = fb.set(3, 2, Cell::new('X', Color::WHITE));
-    fb.swap();
 
     let mut out = Vec::new();
     let mut renderer = AnsiRenderer::default();
     let damage = vec![(3, 2)];
-    renderer.render_damage(&mut out, &fb, &damage).unwrap();
+    renderer
+        .render_damage(&mut out, &fb.back, fb.cols(), &damage)
+        .unwrap();
     let s = String::from_utf8(out).unwrap();
     assert!(s.contains("\x1b[3;4H"), "expected cursor move: {s}");
     assert!(s.contains('X'), "expected char X: {s}");
@@ -97,7 +98,9 @@ fn ansi_renderer_empty_damage_is_noop() {
     let fb = FrameBuffer::new(10, 5);
     let mut out = Vec::new();
     let mut renderer = AnsiRenderer::default();
-    renderer.render_damage(&mut out, &fb, &[]).unwrap();
+    renderer
+        .render_damage(&mut out, &fb.back, fb.cols(), &[])
+        .unwrap();
     assert!(out.is_empty());
 }
 
@@ -105,8 +108,10 @@ fn ansi_renderer_empty_damage_is_noop() {
 fn tmux_renderer_wraps_in_dcs() {
     let fb = FrameBuffer::new(10, 5);
     let mut out = Vec::new();
-    let mut renderer = TmuxPassthroughRenderer;
-    renderer.render_damage(&mut out, &fb, &[]).unwrap();
+    let mut renderer = TmuxPassthroughRenderer::default();
+    renderer
+        .render_damage(&mut out, &fb.back, fb.cols(), &[])
+        .unwrap();
     let s = String::from_utf8(out).unwrap();
     assert!(s.contains("\x1bPtmux;"), "expected tmux DCS start: {s}");
     assert!(s.contains("\x1b\\"), "expected tmux DCS end: {s}");

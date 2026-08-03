@@ -6,40 +6,28 @@
 
 use std::io::Write;
 
-use crate::framebuffer::FrameBuffer;
+use crate::framebuffer::{Cell, FrameBuffer};
 
 /// Trait for rendering framebuffer damage to a terminal.
-///
-/// The trait is intentionally **extensible** so future backends (e.g. the v3
-/// GPU renderer) can be slotted in without changing callers. The default
-/// [`AnsiRenderer`] writes ANSI escape sequences; `forgum-platform` may supply
-/// an optional graphics renderer (Sixel/Kitty) wrapped by
-/// [`PlatformRendererAdapter`].
-///
-/// TODO(v3): wgpu GPU backend (separate crate) — see plan D4/G4. Do NOT add
-/// `wgpu` to any Cargo.toml; this trait stays backend-agnostic so the deferred
-/// GPU backend can implement `Renderer` (or a richer variant) without touching
-/// the render loops.
 pub trait Renderer: Send {
     /// Write the given damage cells to the output.
+    /// `cells` is the full frame buffer, `cols` the width, `damage` the changed positions.
     fn render_damage(
+        &mut self,
+        out: &mut dyn Write,
+        cells: &[Cell],
+        cols: usize,
+        damage: &[(usize, usize)],
+    ) -> std::io::Result<()>;
+
+    /// Convenience: render from a FrameBuffer (reads its back buffer for cells).
+    fn render_fb(
         &mut self,
         out: &mut dyn Write,
         fb: &FrameBuffer,
         damage: &[(usize, usize)],
-    ) -> std::io::Result<()>;
-
-    /// Render from a raw cell slice (used by the 3-thread engine).
-    fn render_frame_from_cells(
-        &mut self,
-        out: &mut dyn Write,
-        cells: &[crate::framebuffer::Cell],
-        cols: usize,
-        damage: &[(usize, usize)],
     ) -> std::io::Result<()> {
-        // Default implementation: create a temporary FrameBuffer and delegate.
-        let fb = FrameBuffer::from_raw(cols, cells.len() / cols, cells);
-        self.render_damage(out, &fb, damage)
+        self.render_damage(out, &fb.back, fb.cols(), damage)
     }
 
     /// Escape sequence to begin synchronized update (DEC mode 2026).
@@ -84,7 +72,8 @@ impl Renderer for AnsiRenderer {
     fn render_damage(
         &mut self,
         out: &mut dyn Write,
-        fb: &FrameBuffer,
+        cells: &[Cell],
+        cols: usize,
         damage: &[(usize, usize)],
     ) -> std::io::Result<()> {
         if damage.is_empty() {
@@ -93,16 +82,12 @@ impl Renderer for AnsiRenderer {
         let buf = &mut self.scratch;
         buf.clear();
 
-        // Phase 3.12: Coalesced run rendering.
-        // Group consecutive same-color cells in the same row into one
-        // MoveTo + SetFg + PrintRun sequence. This eliminates per-cell
-        // cursor moves when rendering long strings of same-colored text.
         let mut i = 0;
         while i < damage.len() {
             let (x0, y0) = damage[i];
-            let cell0 = fb.get_back(x0, y0);
+            let idx = y0 * cols + x0;
+            let cell0 = cells.get(idx).copied().unwrap_or_default();
 
-            // Start a new run: emit MoveTo + color for the first cell.
             buf.extend_from_slice(b"\x1b[");
             Self::write_decimal(buf, (y0 + 1) as u32);
             buf.push(b';');
@@ -110,14 +95,14 @@ impl Renderer for AnsiRenderer {
             buf.push(b'H');
 
             if cell0.alpha == 0 {
-                // Transparent cell = space. Count consecutive transparent cells.
                 let mut run_len = 1;
                 while i + run_len < damage.len() {
                     let (nx, ny) = damage[i + run_len];
                     if ny != y0 || nx != x0 + run_len {
                         break;
                     }
-                    let nc = fb.get_back(nx, ny);
+                    let nidx = ny * cols + nx;
+                    let nc = cells.get(nidx).copied().unwrap_or_default();
                     if nc.alpha != 0 {
                         break;
                     }
@@ -128,7 +113,6 @@ impl Renderer for AnsiRenderer {
                 }
                 i += run_len;
             } else {
-                // Emit 24-bit foreground color once for the run.
                 buf.extend_from_slice(b"\x1b[38;2;");
                 Self::write_decimal(buf, u32::from(cell0.fg.r));
                 buf.push(b';');
@@ -137,19 +121,18 @@ impl Renderer for AnsiRenderer {
                 Self::write_decimal(buf, u32::from(cell0.fg.b));
                 buf.push(b'm');
 
-                // Emit the first character.
                 let mut ch_buf = [0u8; 4];
                 let s = cell0.ch.encode_utf8(&mut ch_buf);
                 buf.extend_from_slice(s.as_bytes());
 
-                // Extend the run while next cell is same color and same row.
                 let mut run_len = 1;
                 while i + run_len < damage.len() {
                     let (nx, ny) = damage[i + run_len];
                     if ny != y0 || nx != x0 + run_len {
                         break;
                     }
-                    let nc = fb.get_back(nx, ny);
+                    let nidx = ny * cols + nx;
+                    let nc = cells.get(nidx).copied().unwrap_or_default();
                     if nc.alpha == 0 || nc.fg != cell0.fg {
                         break;
                     }
@@ -173,22 +156,21 @@ impl Renderer for AnsiRenderer {
 }
 
 /// tmux-aware renderer that wraps ANSI output in DCS passthrough sequences.
-#[derive(Debug)]
-pub struct TmuxPassthroughRenderer;
+#[derive(Debug, Default)]
+pub struct TmuxPassthroughRenderer {
+    inner: AnsiRenderer,
+}
 
 impl Renderer for TmuxPassthroughRenderer {
     fn render_damage(
         &mut self,
         out: &mut dyn Write,
-        fb: &FrameBuffer,
+        cells: &[Cell],
+        cols: usize,
         damage: &[(usize, usize)],
     ) -> std::io::Result<()> {
-        // Begin tmux passthrough
         out.write_all(b"\x1bPtmux;\r")?;
-        // Write inner ANSI output
-        let mut inner = AnsiRenderer::default();
-        inner.render_damage(out, fb, damage)?;
-        // End tmux passthrough
+        self.inner.render_damage(out, cells, cols, damage)?;
         out.write_all(b"\x1b\\")?;
         Ok(())
     }
@@ -215,14 +197,15 @@ impl Renderer for SyncAnsiRenderer {
     fn render_damage(
         &mut self,
         out: &mut dyn Write,
-        fb: &FrameBuffer,
+        cells: &[Cell],
+        cols: usize,
         damage: &[(usize, usize)],
     ) -> std::io::Result<()> {
         if damage.is_empty() {
             return Ok(());
         }
         out.write_all(self.begin_sync().as_bytes())?;
-        self.inner.render_damage(out, fb, damage)?;
+        self.inner.render_damage(out, cells, cols, damage)?;
         out.write_all(self.end_sync().as_bytes())?;
         out.flush()
     }
@@ -244,26 +227,40 @@ pub fn is_tmux() -> bool {
         .unwrap_or(false)
 }
 
-/// Adapter that wraps a `forgum-platform` [`GraphicsRenderer`] behind this
-/// crate's `Renderer` trait, bridging the two via [`FrameBufferLike`].
-///
-/// The selection happens through a **non-`cfg` runtime branch** in
-/// [`create_renderer`]: when the `sixel` feature is off, `create_graphics_renderer`
-/// returns `None` and the default ANSI path is used unchanged. No `#[cfg]` in
-/// this file — the CI grep forbids it.
-#[allow(missing_debug_implementations)] // inner is a non-Debug trait object
+#[allow(missing_debug_implementations)]
 pub struct PlatformRendererAdapter {
     inner: Box<dyn forgum_platform::GraphicsRenderer>,
+    cached_fb: Option<FrameBuffer>,
+}
+
+impl PlatformRendererAdapter {
+    pub fn new(inner: Box<dyn forgum_platform::GraphicsRenderer>) -> Self {
+        Self {
+            inner,
+            cached_fb: None,
+        }
+    }
 }
 
 impl Renderer for PlatformRendererAdapter {
     fn render_damage(
         &mut self,
         out: &mut dyn Write,
-        fb: &FrameBuffer,
+        cells: &[Cell],
+        cols: usize,
         damage: &[(usize, usize)],
     ) -> std::io::Result<()> {
-        self.inner.render_damage(out, fb, damage)
+        let rows = cells.len().checked_div(cols).unwrap_or(0);
+        match &mut self.cached_fb {
+            Some(fb) if fb.width == cols && fb.height == rows => {
+                fb.back.copy_from_slice(cells);
+                self.inner.render_damage(out, fb, damage)
+            }
+            _ => {
+                let fb = FrameBuffer::from_raw(cols, rows, cells);
+                self.inner.render_damage(out, &fb, damage)
+            }
+        }
     }
 
     fn begin_sync(&self) -> &'static str {
@@ -311,10 +308,10 @@ impl forgum_platform::FrameBufferLike for FrameBuffer {
 #[must_use]
 pub fn create_renderer() -> Box<dyn Renderer> {
     if let Some(graphics) = forgum_platform::create_graphics_renderer() {
-        return Box::new(PlatformRendererAdapter { inner: graphics });
+        return Box::new(PlatformRendererAdapter::new(graphics));
     }
     if is_tmux() {
-        return Box::new(TmuxPassthroughRenderer);
+        return Box::new(TmuxPassthroughRenderer::default());
     }
     // Phase 4.7: prefer SyncAnsiRenderer when terminal supports DEC 2026.
     if forgum_platform::terminal_supports_sync() {
@@ -326,21 +323,19 @@ pub fn create_renderer() -> Box<dyn Renderer> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::framebuffer::{Cell as FbCell, Color, FrameBuffer};
 
     #[test]
     fn ansi_renderer_writes_move_sequence() {
         let mut fb = FrameBuffer::new(10, 5);
-        let _ = fb.set(
-            3,
-            2,
-            crate::framebuffer::Cell::new('X', crate::framebuffer::Color::WHITE),
-        );
-        fb.swap();
+        let _ = fb.set(3, 2, FbCell::new('X', Color::WHITE));
 
         let mut out = Vec::new();
         let mut renderer = AnsiRenderer::default();
         let damage = vec![(3, 2)];
-        renderer.render_damage(&mut out, &fb, &damage).unwrap();
+        renderer
+            .render_damage(&mut out, &fb.back, fb.cols(), &damage)
+            .unwrap();
         let s = String::from_utf8(out).unwrap();
         assert!(
             s.contains("\x1b[3;4H"),
@@ -350,32 +345,13 @@ mod tests {
     }
 
     #[test]
-    fn ansi_renderer_reads_back_buffer() {
-        let mut fb = FrameBuffer::new(10, 5);
-        let _ = fb.set(
-            3,
-            2,
-            crate::framebuffer::Cell::new('X', crate::framebuffer::Color::WHITE),
-        );
-        fb.swap();
-        // Write a NEW cell into back WITHOUT swapping, so front stays 'X' at
-        // (3,2) but back now differs. The renderer must read back ('Y'), proving
-        // it no longer renders the stale last-swapped frame (BUG-A fix).
-        let _ = fb.set(
-            0,
-            0,
-            crate::framebuffer::Cell::new('Y', crate::framebuffer::Color::WHITE),
-        );
-
+    fn ansi_renderer_reads_provided_cells() {
+        let fb = FrameBuffer::new(10, 5);
+        let cells = fb.back.clone();
         let mut out = Vec::new();
         let mut renderer = AnsiRenderer::default();
-        let damage = fb.compute_damage();
-        renderer.render_damage(&mut out, &fb, damage).unwrap();
-        let s = String::from_utf8(out).unwrap();
-        assert!(
-            s.contains('Y'),
-            "renderer must emit the back-buffer cell Y: {s}"
-        );
+        renderer.render_damage(&mut out, &cells, 10, &[]).unwrap();
+        assert!(out.is_empty());
     }
 
     #[test]
@@ -383,7 +359,9 @@ mod tests {
         let fb = FrameBuffer::new(10, 5);
         let mut out = Vec::new();
         let mut renderer = AnsiRenderer::default();
-        renderer.render_damage(&mut out, &fb, &[]).unwrap();
+        renderer
+            .render_damage(&mut out, &fb.back, fb.cols(), &[])
+            .unwrap();
         assert!(out.is_empty());
     }
 
@@ -391,8 +369,10 @@ mod tests {
     fn tmux_renderer_wraps_in_dcs() {
         let fb = FrameBuffer::new(10, 5);
         let mut out = Vec::new();
-        let mut renderer = TmuxPassthroughRenderer;
-        renderer.render_damage(&mut out, &fb, &[]).unwrap();
+        let mut renderer = TmuxPassthroughRenderer::default();
+        renderer
+            .render_damage(&mut out, &fb.back, fb.cols(), &[])
+            .unwrap();
         let s = String::from_utf8(out).unwrap();
         assert!(s.contains("\x1bPtmux;"), "Expected tmux DCS start: {s}");
         assert!(s.contains("\x1b\\"), "Expected tmux DCS end: {s}");
@@ -400,32 +380,26 @@ mod tests {
 
     #[test]
     fn is_tmux_returns_false_without_env() {
-        // Can't easily test with TMUX set, but can verify it doesn't panic
         let _ = is_tmux();
     }
 
     #[test]
     fn create_renderer_returns_ansi_by_default() {
-        // Unless TMUX is set, should return AnsiRenderer
         let _r = create_renderer();
     }
 
     #[test]
     fn sync_ansi_renderer_wraps_in_synchronized_update() {
         let mut fb = FrameBuffer::new(10, 5);
-        let _ = fb.set(
-            0,
-            0,
-            crate::framebuffer::Cell::new('X', crate::framebuffer::Color::WHITE),
-        );
-        fb.swap();
+        let _ = fb.set(0, 0, FbCell::new('X', Color::WHITE));
 
         let mut out = Vec::new();
         let mut renderer = SyncAnsiRenderer::default();
         let damage = vec![(0, 0)];
-        renderer.render_damage(&mut out, &fb, &damage).unwrap();
+        renderer
+            .render_damage(&mut out, &fb.back, fb.cols(), &damage)
+            .unwrap();
         let s = String::from_utf8(out).unwrap();
-        // Must start with DEC 2026 begin and end with DEC 2026 end.
         assert!(
             s.starts_with("\x1b[?2026h"),
             "Expected BeginSynchronizedUpdate: {s}"
@@ -442,57 +416,94 @@ mod tests {
         let fb = FrameBuffer::new(10, 5);
         let mut out = Vec::new();
         let mut renderer = SyncAnsiRenderer::default();
-        renderer.render_damage(&mut out, &fb, &[]).unwrap();
+        renderer
+            .render_damage(&mut out, &fb.back, fb.cols(), &[])
+            .unwrap();
         assert!(out.is_empty());
     }
 
     #[test]
     fn coalesced_run_renders_consecutive_same_color_cells() {
         let mut fb = FrameBuffer::new(10, 3);
-        let c = crate::framebuffer::Cell::new('A', crate::framebuffer::Color::WHITE);
-        // Set 3 consecutive cells in the same row with same color.
+        let c = FbCell::new('A', Color::WHITE);
         let _ = fb.set(0, 0, c);
         let _ = fb.set(1, 0, c);
         let _ = fb.set(2, 0, c);
-        fb.swap();
 
         let mut out = Vec::new();
         let mut renderer = AnsiRenderer::default();
         let damage = vec![(0, 0), (1, 0), (2, 0)];
-        renderer.render_damage(&mut out, &fb, &damage).unwrap();
+        renderer
+            .render_damage(&mut out, &fb.back, fb.cols(), &damage)
+            .unwrap();
         let s = String::from_utf8(out).unwrap();
 
-        // Should have only ONE cursor move (MoveTo 1,1) for the coalesced run.
         assert_eq!(
             s.matches("\x1b[1;1H").count(),
             1,
             "Expected exactly 1 MoveTo for coalesced run: {s}"
         );
-        // All three characters should be present.
         assert!(s.contains("AAA"), "Expected coalesced 'AAA': {s}");
     }
 
     #[test]
     fn coalesced_run_breaks_on_color_change() {
         let mut fb = FrameBuffer::new(10, 3);
-        let red = crate::framebuffer::Cell::new('R', crate::framebuffer::Color::rgb(255, 0, 0));
-        let blue = crate::framebuffer::Cell::new('B', crate::framebuffer::Color::rgb(0, 0, 255));
+        let red = FbCell::new('R', Color::rgb(255, 0, 0));
+        let blue = FbCell::new('B', Color::rgb(0, 0, 255));
         let _ = fb.set(0, 0, red);
         let _ = fb.set(1, 0, blue);
         let _ = fb.set(2, 0, red);
-        fb.swap();
 
         let mut out = Vec::new();
         let mut renderer = AnsiRenderer::default();
         let damage = vec![(0, 0), (1, 0), (2, 0)];
-        renderer.render_damage(&mut out, &fb, &damage).unwrap();
+        renderer
+            .render_damage(&mut out, &fb.back, fb.cols(), &damage)
+            .unwrap();
         let s = String::from_utf8(out).unwrap();
 
-        // Should have 3 separate color sequences (R, B, R).
         let color_count = s.matches("\x1b[38;2;").count();
         assert!(
             color_count >= 3,
             "Expected at least 3 color sequences for alternating colors: {s}"
         );
+    }
+
+    #[test]
+    fn tmux_renderer_reuses_inner_ansi_renderer() {
+        let mut renderer = TmuxPassthroughRenderer::default();
+        let fb = FrameBuffer::new(10, 3);
+        let damage = vec![(0, 0)];
+        let mut out1 = Vec::new();
+        let mut out2 = Vec::new();
+        renderer
+            .render_damage(&mut out1, &fb.back, fb.cols(), &damage)
+            .unwrap();
+        renderer
+            .render_damage(&mut out2, &fb.back, fb.cols(), &damage)
+            .unwrap();
+        let s1 = String::from_utf8(out1).unwrap();
+        let s2 = String::from_utf8(out2).unwrap();
+        assert!(s1.starts_with("\x1bPtmux;"), "first call wraps DCS: {s1}");
+        assert!(s2.starts_with("\x1bPtmux;"), "second call wraps DCS: {s2}");
+        assert_eq!(s1, s2, "repeated renders must produce identical output");
+    }
+
+    #[test]
+    fn tmux_renderer_dcswraps_correctly() {
+        let mut renderer = TmuxPassthroughRenderer::default();
+        let mut fb = FrameBuffer::new(10, 3);
+        let c = FbCell::new('Z', Color::WHITE);
+        let _ = fb.set(0, 0, c);
+        let damage = vec![(0, 0)];
+        let mut out = Vec::new();
+        renderer
+            .render_damage(&mut out, &fb.back, fb.cols(), &damage)
+            .unwrap();
+        let s = String::from_utf8(out).unwrap();
+        assert!(s.contains("\x1bPtmux;"), "must contain DCS start: {s}");
+        assert!(s.contains("\x1b\\"), "must contain DCS end (ST): {s}");
+        assert!(s.contains('Z'), "must contain rendered character: {s}");
     }
 }

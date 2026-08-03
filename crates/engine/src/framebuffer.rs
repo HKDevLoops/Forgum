@@ -228,6 +228,11 @@ impl FrameBuffer {
         &self.damage_list
     }
 
+    #[must_use]
+    pub fn cols(&self) -> usize {
+        self.width
+    }
+
     /// Swap buffers: `front` becomes the frame just built in `back`, and `back`
     /// is repopulated as a copy of that displayed frame so the next frame is
     /// built on top of it.
@@ -240,7 +245,6 @@ impl FrameBuffer {
     /// frame (BUG-A).
     pub fn swap(&mut self) {
         std::mem::swap(&mut self.back, &mut self.front);
-        self.back.clone_from(&self.front);
         self.dirty.fill(false);
         self.damage_list.clear();
     }
@@ -408,19 +412,23 @@ mod tests {
         assert_eq!(fb.get(2, 1).ch, ' ', "front should be empty before swap");
         // Swap: back (empty, old front) <-> front (has 'A').
         fb.swap();
-        // After swap: both front and back agree.
-        assert_eq!(fb.get_back(2, 1).ch, 'A');
-        assert_eq!(fb.get(2, 1).ch, 'A');
+        // After swap: front has 'A', back has the old empty front.
+        assert_eq!(fb.get(2, 1).ch, 'A', "front has the swapped content");
+        assert_eq!(fb.get_back(2, 1).ch, ' ', "back has old empty front");
         // Now write a NEW cell to back without swapping.
         fb.set(0, 0, Cell::new('B', Color::WHITE));
-        // back has 'B' at (0,0); front still has 'A' at (2,1) and empty elsewhere.
+        // back has 'B' at (0,0); front has 'A' at (2,1).
         assert_eq!(fb.get_back(0, 0).ch, 'B');
         assert_eq!(
             fb.get(0, 0).ch,
             ' ',
             "front must not see the unswapped back change"
         );
-        assert_eq!(fb.get_back(2, 1).ch, 'A');
+        assert_eq!(
+            fb.get_back(2, 1).ch,
+            ' ',
+            "back no longer has old front's 'A'"
+        );
     }
 
     #[test]
@@ -454,9 +462,9 @@ mod tests {
             'A',
             "after swap, front should have the cell"
         );
-        // Copy-swap: `back` mirrors the displayed frame so the next build
-        // starts from it; it is NOT empty.
-        assert_eq!(fb.back[0].ch, 'A', "after swap, back mirrors front");
+        // After swap, back gets the old front (empty). The next clear()
+        // fills it, and effects render into it. No clone needed.
+        assert_eq!(fb.back[0].ch, ' ', "after swap, back has old front");
     }
 
     #[test]
@@ -465,8 +473,10 @@ mod tests {
         fb.set(0, 0, Cell::new('A', Color::WHITE));
         fb.swap();
         fb.swap();
-        // After two swaps, back should have original content
-        assert_eq!(fb.back[0].ch, 'A');
+        // After two swaps without clone, back has the empty old front from the first swap
+        // and front has what was originally back with 'A'. Then the second swap
+        // exchanges them again.
+        assert_eq!(fb.get(0, 0).ch, ' ');
     }
 
     // ── clear ─────────────────────────────────────────────────────
@@ -734,5 +744,63 @@ mod tests {
         assert_eq!(clone.get(0, 0).ch, 'A');
         // But clone's back has 'B'
         assert_eq!(clone.back[0].ch, 'B');
+    }
+
+    #[test]
+    fn swap_preserves_front_for_next_damage_comparison() {
+        let mut fb = FrameBuffer::new(10, 5);
+
+        // Frame 1: render "A" at (0,0).
+        fb.clear();
+        fb.set(0, 0, Cell::new('A', Color::WHITE));
+        let dmg1 = fb.compute_damage().to_vec();
+        assert!(!dmg1.is_empty(), "frame 1 must produce damage");
+        fb.swap();
+
+        // After swap: front has "A", back has the previous empty front.
+        assert_eq!(fb.get(0, 0).ch, 'A', "front must hold 'A' after swap");
+
+        // Frame 2: render "A" again (no change).
+        fb.clear();
+        fb.set(0, 0, Cell::new('A', Color::WHITE));
+        let dmg2 = fb.compute_damage().to_vec();
+        assert!(
+            dmg2.is_empty(),
+            "identical frame should produce zero damage, got {}",
+            dmg2.len()
+        );
+        fb.swap();
+
+        // Frame 3: change to "B" at (0,0).
+        fb.clear();
+        fb.set(0, 0, Cell::new('B', Color::WHITE));
+        let dmg3 = fb.compute_damage().to_vec();
+        assert_eq!(
+            dmg3.len(),
+            1,
+            "one cell changed, should produce exactly 1 damage"
+        );
+        assert!(dmg3.contains(&(0, 0)));
+    }
+
+    #[test]
+    fn damage_is_empty_for_static_frame_after_multiple_swaps() {
+        let mut fb = FrameBuffer::new(8, 4);
+        fb.clear();
+        fb.set(3, 1, Cell::new('X', Color::WHITE));
+        fb.swap();
+
+        // Render identical frames 5 times.
+        for _ in 0..5 {
+            fb.clear();
+            fb.set(3, 1, Cell::new('X', Color::WHITE));
+            let dmg = fb.compute_damage().to_vec();
+            assert!(
+                dmg.is_empty(),
+                "static frame must produce zero damage after swaps, got {}",
+                dmg.len()
+            );
+            fb.swap();
+        }
     }
 }

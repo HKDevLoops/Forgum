@@ -48,7 +48,8 @@ pub fn render_status_line(max_len: usize) -> String {
     let mut result = String::with_capacity(truncated.len() * 20);
     for (i, ch) in truncated.chars().enumerate() {
         let (r, g, b) = color::lolcat_color(i as f32, 0.0, 0.0, 0.0);
-        result.push_str(&format!("\x1b[38;2;{r};{g};{b}m{ch}"));
+        use std::fmt::Write;
+        let _ = write!(result, "\x1b[38;2;{r};{g};{b}m{ch}");
     }
     result.push_str("\x1b[0m");
 

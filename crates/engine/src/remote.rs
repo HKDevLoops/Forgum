@@ -516,6 +516,46 @@ mod tests {
     }
 
     #[test]
+    fn control_cmd_to_json_injection_resistant() {
+        let payloads = [
+            r#"aurora"}],"injected":true,"x":"#,
+            r#"<script>alert(1)</script>"#,
+            r#"{"cmd":"EFFECT","arg":"../../etc/passwd"}"#,
+            "\n{\"cmd\":\"INJECTED\"}\n",
+            r#"effect\"},{"cmd":"STOP"},"#,
+        ];
+        for payload in &payloads {
+            let json = control_cmd_to_json(&ControlCmd::Effect(payload.to_string()));
+            let parsed: serde_json::Value = serde_json::from_str(&json)
+                .unwrap_or_else(|e| panic!("malicious payload produced invalid JSON: {e}: {json}"));
+            assert_eq!(
+                parsed["cmd"], "EFFECT",
+                "injection test: cmd must remain EFFECT for payload: {payload:?}"
+            );
+            assert_eq!(
+                parsed["arg"], *payload,
+                "injection test: arg must be original payload for: {payload:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn control_cmd_to_json_text_injection_resistant() {
+        let payloads = [
+            r#"true},{"admin":true},"#,
+            "hello\nworld",
+            r#"\u0000\u0001\u0002"#,
+        ];
+        for payload in &payloads {
+            let json = control_cmd_to_json(&ControlCmd::Text(payload.to_string()));
+            let parsed: serde_json::Value = serde_json::from_str(&json)
+                .unwrap_or_else(|e| panic!("text injection produced invalid JSON: {e}: {json}"));
+            assert_eq!(parsed["cmd"], "TEXT");
+            assert_eq!(parsed["arg"], *payload);
+        }
+    }
+
+    #[test]
     fn parse_age_str_seconds() {
         assert_eq!(parse_age_str("30s"), Duration::from_secs(30));
     }

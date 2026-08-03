@@ -184,6 +184,7 @@ impl Effect for FloatEffect {
 #[derive(Debug)]
 pub struct WalkEffect {
     cow_text: String,
+    line_offsets: Vec<usize>,
     _amp: Amplitude,
     easing_fn: fn(f32) -> f32,
     phase: f32,
@@ -194,8 +195,10 @@ pub struct WalkEffect {
 impl WalkEffect {
     pub fn new(cow_text: String, dna: &CowDna, instance_id: u32, color_mode: String) -> Self {
         let phase = instance_phase(dna.phase_seed, instance_id);
+        let line_offsets = compute_line_offsets(&cow_text);
         Self {
             cow_text,
+            line_offsets,
             _amp: dna.amplitude.clone(),
             easing_fn: easing::by_name(&dna.easing.base),
             phase,
@@ -211,18 +214,18 @@ impl Effect for WalkEffect {
     fn render(&self, fb: &mut FrameBuffer, time: f32) {
         let t = (time * self.speed + self.phase) % 1.0;
         let eased = (self.easing_fn)(t);
-        // Alternate between two leg states
         let (leg_l, leg_r) = if eased > 0.5 {
             ('╱', '╲')
         } else {
             ('╲', '╱')
         };
-        let lines: Vec<&str> = self.cow_text.lines().collect();
-        let last_idx = lines.len().saturating_sub(1);
-        for (i, line) in lines.iter().enumerate() {
+        let line_count = self.line_offsets.len();
+        let last_idx = line_count.saturating_sub(1);
+        let mut y = 0usize;
+        for_each_line(&self.cow_text, &self.line_offsets, |line| {
             let mut x = 0usize;
             for ch in line.chars() {
-                let display_ch = if i == last_idx && ch == ' ' {
+                let display_ch = if y == last_idx && ch == ' ' {
                     if x % 2 == 0 {
                         leg_l
                     } else {
@@ -231,14 +234,14 @@ impl Effect for WalkEffect {
                 } else {
                     ch
                 };
-                if i < fb.height && x < fb.width {
-                    let cell_fg = resolve_fg(&self.color_mode, x, i, time, Color::WHITE);
-                    let _ = fb.set(x, i, Cell::new(display_ch, cell_fg));
+                if y < fb.height && x < fb.width {
+                    let cell_fg = resolve_fg(&self.color_mode, x, y, time, Color::WHITE);
+                    let _ = fb.set(x, y, Cell::new(display_ch, cell_fg));
                 }
                 x = x.saturating_add(1);
             }
-            let _ = last_idx; // suppress unused warning
-        }
+            y = y.saturating_add(1);
+        });
     }
 }
 
@@ -485,6 +488,7 @@ impl Effect for FlyEffect {
 #[derive(Debug)]
 pub struct TalkEffect {
     cow_text: String,
+    line_offsets: Vec<usize>,
     _amp: Amplitude,
     easing_fn: fn(f32) -> f32,
     phase: f32,
@@ -495,8 +499,10 @@ pub struct TalkEffect {
 impl TalkEffect {
     pub fn new(cow_text: String, dna: &CowDna, instance_id: u32, color_mode: String) -> Self {
         let phase = instance_phase(dna.phase_seed, instance_id);
+        let line_offsets = compute_line_offsets(&cow_text);
         Self {
             cow_text,
+            line_offsets,
             _amp: dna.amplitude.clone(),
             easing_fn: easing::by_name(&dna.easing.base),
             phase,
@@ -516,10 +522,10 @@ impl Effect for TalkEffect {
         let mouth_idx = (eased * mouth_chars.len() as f32) as usize % mouth_chars.len();
         let mouth_ch = mouth_chars[mouth_idx];
 
-        let lines: Vec<&str> = self.cow_text.lines().collect();
-        for (y, line) in lines.iter().enumerate() {
+        let mut y = 0usize;
+        for_each_line(&self.cow_text, &self.line_offsets, |line| {
             if y >= fb.height {
-                break;
+                return;
             }
             for (x, ch) in line.chars().enumerate() {
                 if x >= fb.width {
@@ -532,7 +538,8 @@ impl Effect for TalkEffect {
                 let cell_fg = resolve_fg(&self.color_mode, x, y, time, Color::WHITE);
                 let _ = fb.set(x, y, Cell::new(display_ch, cell_fg));
             }
-        }
+            y = y.saturating_add(1);
+        });
     }
 }
 
@@ -542,6 +549,7 @@ impl Effect for TalkEffect {
 #[derive(Debug)]
 pub struct SwayEffect {
     cow_text: String,
+    line_offsets: Vec<usize>,
     amp: Amplitude,
     easing_fn: fn(f32) -> f32,
     phase: f32,
@@ -552,8 +560,10 @@ pub struct SwayEffect {
 impl SwayEffect {
     pub fn new(cow_text: String, dna: &CowDna, instance_id: u32, color_mode: String) -> Self {
         let phase = instance_phase(dna.phase_seed, instance_id);
+        let line_offsets = compute_line_offsets(&cow_text);
         Self {
             cow_text,
+            line_offsets,
             amp: dna.amplitude.clone(),
             easing_fn: easing::by_name(&dna.easing.base),
             phase,
@@ -569,9 +579,9 @@ impl Effect for SwayEffect {
     fn render(&self, fb: &mut FrameBuffer, time: f32) {
         let t = (time * self.speed + self.phase) % 1.0;
         let eased = (self.easing_fn)(t);
-        let lines: Vec<&str> = self.cow_text.lines().collect();
-        let total_lines = lines.len().max(1);
-        for (i, line) in lines.iter().enumerate() {
+        let total_lines = self.line_offsets.len().max(1);
+        let mut i = 0usize;
+        for_each_line(&self.cow_text, &self.line_offsets, |line| {
             // Progressive skew: top = max, bottom = 0
             let skew_factor = 1.0 - (i as f32 / total_lines as f32);
             let x_off = ((eased * self.amp.sway * 4.0 - 2.0) * skew_factor) as i32;
@@ -587,7 +597,8 @@ impl Effect for SwayEffect {
                 }
                 x = x.saturating_add(1);
             }
-        }
+            i = i.saturating_add(1);
+        });
     }
 }
 
@@ -690,6 +701,34 @@ impl Effect for DissolveEffect {
 }
 
 // ── Shared helpers ─────────────────────────────────────────────────
+
+/// Pre-compute byte offsets for each line in text (for zero-alloc iteration).
+fn compute_line_offsets(text: &str) -> Vec<usize> {
+    let mut offsets = Vec::with_capacity(16);
+    offsets.push(0);
+    for (i, ch) in text.char_indices() {
+        if ch == '\n' {
+            offsets.push(i + ch.len_utf8());
+        }
+    }
+    offsets
+}
+
+/// Iterate lines without allocating a Vec. Calls `f(line_str)` for each line.
+#[inline]
+fn for_each_line<F: FnMut(&str)>(text: &str, offsets: &[usize], mut f: F) {
+    for window in offsets.windows(2) {
+        let start = window[0];
+        let end = window[1].min(text.len());
+        f(&text[start..end]);
+    }
+    // Last line (may not end with \n)
+    if let Some(&last) = offsets.last() {
+        if last < text.len() {
+            f(&text[last..]);
+        }
+    }
+}
 
 /// Resolve foreground color based on color_mode.
 /// "rainbow" = lolcat per-character HSV rainbow, "solid" or anything else = base color.
@@ -1805,5 +1844,80 @@ mod tests {
         assert!(!breathe.is_done());
         let dissolve = DissolveEffect::new(COW.to_string(), &dna, 0, "static".to_string());
         assert!(!dissolve.is_done());
+    }
+
+    // ── compute_line_offsets ───────────────────────────────────────
+
+    #[test]
+    fn compute_line_offsets_single_line() {
+        let text = "hello";
+        let offsets = compute_line_offsets(text);
+        assert_eq!(offsets, vec![0]);
+    }
+
+    #[test]
+    fn compute_line_offsets_two_lines() {
+        let text = "hello\nworld";
+        let offsets = compute_line_offsets(text);
+        assert_eq!(offsets, vec![0, 6]);
+    }
+
+    #[test]
+    fn compute_line_offsets_empty_string() {
+        let offsets = compute_line_offsets("");
+        assert_eq!(offsets, vec![0]);
+    }
+
+    #[test]
+    fn compute_line_offsets_trailing_newline() {
+        let text = "a\nb\n";
+        let offsets = compute_line_offsets(text);
+        assert_eq!(offsets, vec![0, 2, 4]);
+    }
+
+    // ── for_each_line ─────────────────────────────────────────────
+
+    #[test]
+    fn for_each_line_iterates_all_lines() {
+        let text = "line1\nline2\nline3";
+        let offsets = compute_line_offsets(text);
+        let mut lines = Vec::new();
+        for_each_line(text, &offsets, |line| {
+            lines.push(line.to_string());
+        });
+        assert_eq!(lines, vec!["line1\n", "line2\n", "line3"]);
+    }
+
+    #[test]
+    fn for_each_line_single_line() {
+        let text = "only one";
+        let offsets = compute_line_offsets(text);
+        let mut lines = Vec::new();
+        for_each_line(text, &offsets, |line| {
+            lines.push(line.to_string());
+        });
+        assert_eq!(lines, vec!["only one"]);
+    }
+
+    #[test]
+    fn for_each_line_empty() {
+        let offsets = compute_line_offsets("");
+        let mut lines = Vec::new();
+        for_each_line("", &offsets, |line| {
+            lines.push(line.to_string());
+        });
+        assert!(lines.is_empty(), "empty text should produce no lines");
+    }
+
+    #[test]
+    fn for_each_line_matches_str_lines_count() {
+        let text = "aaa\nbb\ncccc\nd";
+        let offsets = compute_line_offsets(text);
+        let expected_count = text.lines().count();
+        let mut actual_count = 0;
+        for_each_line(text, &offsets, |_| {
+            actual_count += 1;
+        });
+        assert_eq!(actual_count, expected_count);
     }
 }

@@ -98,9 +98,11 @@ fn sync_guard_like_always_emits_end_sync() {
         // Simulate a frame render between begin/end.
         let mut fb = FrameBuffer::new(10, 5);
         fb.set(0, 0, Cell::new('Z', Color::WHITE));
-        let damage = fb.compute_damage();
+        let damage = fb.compute_damage().to_vec();
         let mut inner = AnsiRenderer::default();
-        inner.render_damage(&mut guard.out, &fb, damage).unwrap();
+        inner
+            .render_damage(&mut guard.out, &fb.back, fb.cols(), &damage)
+            .unwrap();
         guard.finish().unwrap();
     }
     let s = String::from_utf8(buf).unwrap();
@@ -114,7 +116,9 @@ fn render_damage_empty_damage_writes_nothing() {
     let fb = FrameBuffer::new(10, 5);
     let mut out = Vec::new();
     let mut renderer = AnsiRenderer::default();
-    renderer.render_damage(&mut out, &fb, &[]).unwrap();
+    renderer
+        .render_damage(&mut out, &fb.back, fb.cols(), &[])
+        .unwrap();
     assert!(
         out.is_empty(),
         "empty damage must write nothing (idempotent)"

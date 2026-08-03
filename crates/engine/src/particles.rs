@@ -50,6 +50,8 @@ impl Default for Particle {
 #[derive(Debug)]
 pub struct ParticlePool {
     particles: slotmap::SlotMap<ParticleKey, Particle>,
+    /// Reusable buffer for dead particle keys — avoids per-frame Vec allocation.
+    dead_keys: Vec<ParticleKey>,
 }
 
 impl ParticlePool {
@@ -57,6 +59,7 @@ impl ParticlePool {
     pub fn new() -> Self {
         Self {
             particles: slotmap::SlotMap::with_capacity_and_key(MAX_PARTICLES),
+            dead_keys: Vec::with_capacity(MAX_PARTICLES),
         }
     }
 
@@ -77,22 +80,17 @@ impl ParticlePool {
     /// Update all active particles by `dt` seconds. Dead particles are
     /// removed from the slotmap automatically.
     pub fn update(&mut self, dt: f32) {
-        let dead: Vec<ParticleKey> = self
-            .particles
-            .iter_mut()
-            .filter_map(|(key, p)| {
-                p.x += p.vx * dt;
-                p.y += p.vy * dt;
-                p.life -= dt;
-                if p.life <= 0.0 {
-                    Some(key)
-                } else {
-                    None
-                }
-            })
-            .collect();
-        for key in dead {
-            self.particles.remove(key);
+        self.dead_keys.clear();
+        for (key, p) in self.particles.iter_mut() {
+            p.x += p.vx * dt;
+            p.y += p.vy * dt;
+            p.life -= dt;
+            if p.life <= 0.0 {
+                self.dead_keys.push(key);
+            }
+        }
+        for key in &self.dead_keys {
+            self.particles.remove(*key);
         }
     }
 
@@ -547,5 +545,74 @@ mod tests {
             "particle with zero vy should stay at spawn Y, got y={}",
             p.y
         );
+    }
+
+    #[test]
+    fn dead_keys_reused_across_ticks() {
+        let mut pool = ParticlePool::new();
+        let mut keys = Vec::new();
+
+        // Fill the pool.
+        for _ in 0..10 {
+            if let Some(k) = pool.spawn(Particle {
+                x: 0.0,
+                y: 0.0,
+                vx: 1.0,
+                vy: 0.0,
+                life: 0.1,
+                max_life: 0.1,
+                ch: '*',
+                color: Color::WHITE,
+            }) {
+                keys.push(k);
+            }
+        }
+
+        // Kill some particles manually.
+        pool.kill(keys[0]);
+        pool.kill(keys[1]);
+        pool.kill(keys[2]);
+
+        // Update to process dead keys.
+        pool.update(0.01);
+
+        // Re-spawn — should reuse the freed slots.
+        for _ in 0..3 {
+            let k = pool.spawn(Particle {
+                x: 5.0,
+                y: 5.0,
+                vx: 0.0,
+                vy: 0.0,
+                life: 100.0,
+                max_life: 100.0,
+                ch: '+',
+                color: Color::WHITE,
+            });
+            assert!(k.is_some(), "reused dead_keys should allow re-spawning");
+        }
+    }
+
+    #[test]
+    fn pool_stays_within_capacity() {
+        let mut pool = ParticlePool::new();
+        let mut count = 0;
+        for _ in 0..MAX_PARTICLES + 10 {
+            if pool
+                .spawn(Particle {
+                    x: 0.0,
+                    y: 0.0,
+                    vx: 0.0,
+                    vy: 0.0,
+                    life: 100.0,
+                    max_life: 100.0,
+                    ch: 'x',
+                    color: Color::WHITE,
+                })
+                .is_some()
+            {
+                count += 1;
+            }
+        }
+        assert_eq!(count, MAX_PARTICLES);
     }
 }
