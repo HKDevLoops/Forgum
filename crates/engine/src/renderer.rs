@@ -92,28 +92,72 @@ impl Renderer for AnsiRenderer {
         }
         let buf = &mut self.scratch;
         buf.clear();
-        for &(x, y) in damage {
-            let cell = fb.get_back(x, y);
-            // Move to (x+1, y+1) in 1-indexed terminal coordinates.
+
+        // Phase 3.12: Coalesced run rendering.
+        // Group consecutive same-color cells in the same row into one
+        // MoveTo + SetFg + PrintRun sequence. This eliminates per-cell
+        // cursor moves when rendering long strings of same-colored text.
+        let mut i = 0;
+        while i < damage.len() {
+            let (x0, y0) = damage[i];
+            let cell0 = fb.get_back(x0, y0);
+
+            // Start a new run: emit MoveTo + color for the first cell.
             buf.extend_from_slice(b"\x1b[");
-            Self::write_decimal(buf, (y + 1) as u32);
+            Self::write_decimal(buf, (y0 + 1) as u32);
             buf.push(b';');
-            Self::write_decimal(buf, (x + 1) as u32);
+            Self::write_decimal(buf, (x0 + 1) as u32);
             buf.push(b'H');
-            if cell.alpha == 0 {
-                buf.push(b' ');
+
+            if cell0.alpha == 0 {
+                // Transparent cell = space. Count consecutive transparent cells.
+                let mut run_len = 1;
+                while i + run_len < damage.len() {
+                    let (nx, ny) = damage[i + run_len];
+                    if ny != y0 || nx != x0 + run_len {
+                        break;
+                    }
+                    let nc = fb.get_back(nx, ny);
+                    if nc.alpha != 0 {
+                        break;
+                    }
+                    run_len += 1;
+                }
+                for _ in 0..run_len {
+                    buf.push(b' ');
+                }
+                i += run_len;
             } else {
-                // 24-bit foreground color: 38;2;r;g;bm
+                // Emit 24-bit foreground color once for the run.
                 buf.extend_from_slice(b"\x1b[38;2;");
-                Self::write_decimal(buf, u32::from(cell.fg.r));
+                Self::write_decimal(buf, u32::from(cell0.fg.r));
                 buf.push(b';');
-                Self::write_decimal(buf, u32::from(cell.fg.g));
+                Self::write_decimal(buf, u32::from(cell0.fg.g));
                 buf.push(b';');
-                Self::write_decimal(buf, u32::from(cell.fg.b));
-                buf.extend_from_slice(b"m");
+                Self::write_decimal(buf, u32::from(cell0.fg.b));
+                buf.push(b'm');
+
+                // Emit the first character.
                 let mut ch_buf = [0u8; 4];
-                let s = cell.ch.encode_utf8(&mut ch_buf);
+                let s = cell0.ch.encode_utf8(&mut ch_buf);
                 buf.extend_from_slice(s.as_bytes());
+
+                // Extend the run while next cell is same color and same row.
+                let mut run_len = 1;
+                while i + run_len < damage.len() {
+                    let (nx, ny) = damage[i + run_len];
+                    if ny != y0 || nx != x0 + run_len {
+                        break;
+                    }
+                    let nc = fb.get_back(nx, ny);
+                    if nc.alpha == 0 || nc.fg != cell0.fg {
+                        break;
+                    }
+                    let s = nc.ch.encode_utf8(&mut ch_buf);
+                    buf.extend_from_slice(s.as_bytes());
+                    run_len += 1;
+                }
+                i += run_len;
             }
         }
         out.write_all(buf)
@@ -326,5 +370,55 @@ mod tests {
     fn create_renderer_returns_ansi_by_default() {
         // Unless TMUX is set, should return AnsiRenderer
         let _r = create_renderer();
+    }
+
+    #[test]
+    fn coalesced_run_renders_consecutive_same_color_cells() {
+        let mut fb = FrameBuffer::new(10, 3);
+        let c = crate::framebuffer::Cell::new('A', crate::framebuffer::Color::WHITE);
+        // Set 3 consecutive cells in the same row with same color.
+        let _ = fb.set(0, 0, c);
+        let _ = fb.set(1, 0, c);
+        let _ = fb.set(2, 0, c);
+        fb.swap();
+
+        let mut out = Vec::new();
+        let mut renderer = AnsiRenderer::default();
+        let damage = vec![(0, 0), (1, 0), (2, 0)];
+        renderer.render_damage(&mut out, &fb, &damage).unwrap();
+        let s = String::from_utf8(out).unwrap();
+
+        // Should have only ONE cursor move (MoveTo 1,1) for the coalesced run.
+        assert_eq!(
+            s.matches("\x1b[1;1H").count(),
+            1,
+            "Expected exactly 1 MoveTo for coalesced run: {s}"
+        );
+        // All three characters should be present.
+        assert!(s.contains("AAA"), "Expected coalesced 'AAA': {s}");
+    }
+
+    #[test]
+    fn coalesced_run_breaks_on_color_change() {
+        let mut fb = FrameBuffer::new(10, 3);
+        let red = crate::framebuffer::Cell::new('R', crate::framebuffer::Color::rgb(255, 0, 0));
+        let blue = crate::framebuffer::Cell::new('B', crate::framebuffer::Color::rgb(0, 0, 255));
+        let _ = fb.set(0, 0, red);
+        let _ = fb.set(1, 0, blue);
+        let _ = fb.set(2, 0, red);
+        fb.swap();
+
+        let mut out = Vec::new();
+        let mut renderer = AnsiRenderer::default();
+        let damage = vec![(0, 0), (1, 0), (2, 0)];
+        renderer.render_damage(&mut out, &fb, &damage).unwrap();
+        let s = String::from_utf8(out).unwrap();
+
+        // Should have 3 separate color sequences (R, B, R).
+        let color_count = s.matches("\x1b[38;2;").count();
+        assert!(
+            color_count >= 3,
+            "Expected at least 3 color sequences for alternating colors: {s}"
+        );
     }
 }
