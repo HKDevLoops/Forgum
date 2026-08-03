@@ -20,7 +20,9 @@
 
 use std::io::Write;
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
+use std::sync::{LazyLock, Mutex, OnceLock};
 use std::time::{Duration, Instant};
 
 use crossbeam_channel::{bounded, unbounded, Receiver, Sender};
@@ -33,6 +35,31 @@ use crate::framebuffer::{Cell, FrameBuffer};
 use crate::protocol::SceneConfig;
 use crate::renderer::{self, Renderer};
 use crate::scheduler::Scheduler;
+
+// ── Global singletons (Phase 1.8) ─────────────────────────────────
+
+/// Global frame counter — no lock, Relaxed ordering.
+pub static FRAME_COUNT: AtomicU64 = AtomicU64::new(0);
+
+/// Global particle spawn counter — no lock, Relaxed ordering.
+pub static SPAWN_COUNT: AtomicU64 = AtomicU64::new(0);
+
+/// Terminal capabilities — probed lazily on first access via OnceLock.
+static TERM_CAPS: OnceLock<forgum_platform::TerminalCapabilities> = OnceLock::new();
+
+/// Resettable particle pool — cleared on resize, taken on shutdown.
+static PARTICLE_POOL: LazyLock<Mutex<Option<crate::particles::ParticlePool>>> =
+    LazyLock::new(|| Mutex::new(None));
+
+/// Get or probe terminal capabilities (DCL via OnceLock).
+pub fn term_caps() -> &'static forgum_platform::TerminalCapabilities {
+    TERM_CAPS.get_or_init(forgum_platform::TerminalCapabilities::probe)
+}
+
+/// Get a reference to the global particle pool.
+pub fn particle_pool() -> &'static Mutex<Option<crate::particles::ParticlePool>> {
+    &PARTICLE_POOL
+}
 
 // ── Channel messages ───────────────────────────────────────────────
 
@@ -138,6 +165,7 @@ impl SimState {
         self.back.clone_from_slice(&fb.back);
 
         self.frame_count = self.frame_count.saturating_add(1);
+        FRAME_COUNT.fetch_add(1, Ordering::Relaxed);
 
         // Ship a snapshot.
         Arc::new(Frame {
