@@ -202,6 +202,40 @@ impl Renderer for TmuxPassthroughRenderer {
     }
 }
 
+/// Phase 4.3: Synchronized ANSI renderer — wraps each frame in
+/// DEC 2026 BeginSynchronizedUpdate / EndSynchronizedUpdate.
+/// The terminal holds the previous frame until the new one is complete,
+/// eliminating partial repaints (tearing).
+#[derive(Debug, Default)]
+pub struct SyncAnsiRenderer {
+    inner: AnsiRenderer,
+}
+
+impl Renderer for SyncAnsiRenderer {
+    fn render_damage(
+        &mut self,
+        out: &mut dyn Write,
+        fb: &FrameBuffer,
+        damage: &[(usize, usize)],
+    ) -> std::io::Result<()> {
+        if damage.is_empty() {
+            return Ok(());
+        }
+        out.write_all(self.begin_sync().as_bytes())?;
+        self.inner.render_damage(out, fb, damage)?;
+        out.write_all(self.end_sync().as_bytes())?;
+        out.flush()
+    }
+
+    fn begin_sync(&self) -> &'static str {
+        "\x1b[?2026h"
+    }
+
+    fn end_sync(&self) -> &'static str {
+        "\x1b[?2026l"
+    }
+}
+
 /// Detect if running inside tmux.
 #[must_use]
 pub fn is_tmux() -> bool {
@@ -269,9 +303,10 @@ impl forgum_platform::FrameBufferLike for FrameBuffer {
 /// 1. An optional `forgum-platform` graphics backend (Sixel/Kitty) when the
 ///    `sixel` feature is enabled AND the terminal capability is detected.
 /// 2. `TmuxPassthroughRenderer` when inside tmux.
-/// 3. The default `AnsiRenderer`.
+/// 3. `SyncAnsiRenderer` when terminal supports DEC 2026.
+/// 4. The default `AnsiRenderer`.
 ///
-/// The default build keeps path 3 unchanged; capability detection is
+/// The default build keeps path 4 unchanged; capability detection is
 /// best-effort and never regresses ANSI.
 #[must_use]
 pub fn create_renderer() -> Box<dyn Renderer> {
@@ -279,10 +314,13 @@ pub fn create_renderer() -> Box<dyn Renderer> {
         return Box::new(PlatformRendererAdapter { inner: graphics });
     }
     if is_tmux() {
-        Box::new(TmuxPassthroughRenderer)
-    } else {
-        Box::new(AnsiRenderer::default())
+        return Box::new(TmuxPassthroughRenderer);
     }
+    // Phase 4.7: prefer SyncAnsiRenderer when terminal supports DEC 2026.
+    if forgum_platform::terminal_supports_sync() {
+        return Box::new(SyncAnsiRenderer::default());
+    }
+    Box::new(AnsiRenderer::default())
 }
 
 #[cfg(test)]
@@ -370,6 +408,42 @@ mod tests {
     fn create_renderer_returns_ansi_by_default() {
         // Unless TMUX is set, should return AnsiRenderer
         let _r = create_renderer();
+    }
+
+    #[test]
+    fn sync_ansi_renderer_wraps_in_synchronized_update() {
+        let mut fb = FrameBuffer::new(10, 5);
+        let _ = fb.set(
+            0,
+            0,
+            crate::framebuffer::Cell::new('X', crate::framebuffer::Color::WHITE),
+        );
+        fb.swap();
+
+        let mut out = Vec::new();
+        let mut renderer = SyncAnsiRenderer::default();
+        let damage = vec![(0, 0)];
+        renderer.render_damage(&mut out, &fb, &damage).unwrap();
+        let s = String::from_utf8(out).unwrap();
+        // Must start with DEC 2026 begin and end with DEC 2026 end.
+        assert!(
+            s.starts_with("\x1b[?2026h"),
+            "Expected BeginSynchronizedUpdate: {s}"
+        );
+        assert!(
+            s.ends_with("\x1b[?2026l"),
+            "Expected EndSynchronizedUpdate: {s}"
+        );
+        assert!(s.contains('X'), "Expected character X: {s}");
+    }
+
+    #[test]
+    fn sync_ansi_renderer_empty_damage_is_noop() {
+        let fb = FrameBuffer::new(10, 5);
+        let mut out = Vec::new();
+        let mut renderer = SyncAnsiRenderer::default();
+        renderer.render_damage(&mut out, &fb, &[]).unwrap();
+        assert!(out.is_empty());
     }
 
     #[test]
