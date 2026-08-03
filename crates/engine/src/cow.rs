@@ -171,11 +171,7 @@ fn wrap_bubble(text: &str, min_width: usize) -> String {
 
     // Content lines: `|  Hello, world |`
     for line in lines.iter() {
-        let pad_target = if lines.len() == 1 {
-            inner_width + 2
-        } else {
-            inner_width + 1
-        };
+        let pad_target = inner_width + 1;
         result.push('|');
         result.push(' ');
         result.push_str(line);
@@ -186,7 +182,7 @@ fn wrap_bubble(text: &str, min_width: usize) -> String {
 
     // Bottom border: `|_______________|`
     result.push('|');
-    for _ in 0..=inner_width {
+    for _ in 0..inner_width {
         result.push('_');
     }
     result.push('|');
@@ -413,6 +409,53 @@ mod tests {
         assert!(
             lines[1].contains(long_text),
             "content must include full text"
+        );
+    }
+
+    #[test]
+    fn bubble_all_rows_same_width() {
+        let cases: Vec<(&str, usize)> = vec![
+            ("", 0),
+            ("x", 0),
+            ("Hello, world!", 0),
+            ("Hello, world!\nSecond line\nThird line", 0),
+        ];
+        for (text, min_width) in cases {
+            let bubble = wrap_bubble(text, min_width);
+            if bubble.is_empty() {
+                continue;
+            }
+            let rows: Vec<&str> = bubble.lines().collect();
+            assert!(rows.len() >= 2, "must have at least top+bottom");
+            let top_width = rows[0].len();
+            for (i, row) in rows.iter().enumerate() {
+                assert_eq!(
+                    row.len(),
+                    top_width,
+                    "row {i} width {} != top width {top_width} for text {:?}",
+                    row.len(),
+                    text
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn bubble_no_trailing_underscore_row() {
+        let bubble = wrap_bubble("Hello", 0);
+        let rows: Vec<&str> = bubble.lines().collect();
+        assert_eq!(rows.len(), 3);
+        // Bottom border should be `|_____|` — ends with `|`, not `_`
+        assert!(
+            rows[2].ends_with('|'),
+            "bottom row must end with '|': {:?}",
+            rows[2]
+        );
+        // Content row should be `| Hello |` — no trailing underscore
+        assert!(
+            !rows[1].chars().last().is_some_and(|c| c == '_'),
+            "content row must not end with '_': {:?}",
+            rows[1]
         );
     }
 

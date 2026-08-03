@@ -76,7 +76,8 @@ who you'll meet:
 ### 🐮 The Cow says:
 
 > "Moo. I am the star of the show — the ANSI cow (or whatever critter) that gets
-> rendered. Set `cow` to pick your beast, and I'll moo it across the terminal."
+> rendered. Set `cow` to pick your beast, and I'll moo it across the terminal.
+> Set `cow` to `"random"` and I'll pick a different cow from `data/Cows/` each time."
 
 ### 💬 The Text says:
 
@@ -225,6 +226,17 @@ See `docs/samples/README.md` for the full tour of each sample.
 cargo build --workspace
 cargo test --workspace
 ```
+
+### Bubble Format
+
+The speech bubble is rendered with a consistent width guarantee: all rows (top,
+content, and bottom) have identical visible width. This ensures the bubble looks
+correct regardless of text length or line count.
+
+### Platform Notes
+
+- **i686 (32-bit Windows)**: Build-only lane — the binary builds but is not
+  tested or packaged for release. Use at your own risk.
 
 ---
 

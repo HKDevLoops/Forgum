@@ -555,3 +555,19 @@ fn detail_rect(area: Rect) -> Rect {
         height: area.height.saturating_sub(2),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn expand_cow_template_different_templates_produce_different_output() {
+        let template_a = "$the_cow = <<EOC;\n        $eyes\n   (oo)\\nEOC;";
+        let template_b = "$the_cow = <<EOC;\n        $eyes\n   xx\\nEOC;";
+        let art_a = ConfigApp::expand_cow_template(template_a, "oo", " ");
+        let art_b = ConfigApp::expand_cow_template(template_b, "xx", " ");
+        assert!(!art_a.is_empty(), "cow art A must not be empty");
+        assert!(!art_b.is_empty(), "cow art B must not be empty");
+        assert_ne!(art_a, art_b, "different templates must produce different art");
+    }
+}
