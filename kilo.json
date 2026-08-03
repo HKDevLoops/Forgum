@@ -29,7 +29,7 @@
       "env": {}
     },
     "markdown": {
-      "command": ["marksman", "server"],
+      "command": ["vscode-markdown-language-server", "--stdio"],
       "extensions": [".md", ".markdown"],
       "env": {}
     },
@@ -41,6 +41,26 @@
     "bash": {
       "command": ["bash-language-server", "start"],
       "extensions": [".sh", ".bash"],
+      "env": {}
+    },
+    "css": {
+      "command": ["vscode-css-language-server", "--stdio"],
+      "extensions": [".css", ".scss", ".less"],
+      "env": {}
+    },
+    "html": {
+      "command": ["vscode-html-language-server", "--stdio"],
+      "extensions": [".html", ".htm"],
+      "env": {}
+    },
+    "typescript": {
+      "command": ["typescript-language-server", "--stdio"],
+      "extensions": [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"],
+      "env": {}
+    },
+    "eslint": {
+      "command": ["vscode-eslint-language-server", "--stdio"],
+      "extensions": [".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs"],
       "env": {}
     }
   },
