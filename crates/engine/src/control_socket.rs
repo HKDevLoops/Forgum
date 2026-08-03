@@ -5,8 +5,10 @@
 
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
-use std::sync::mpsc;
+use std::sync::{Arc, Mutex};
 use std::thread;
+
+use crossbeam_channel;
 
 /// A command received over the control socket.
 #[derive(Debug, Clone)]
@@ -81,6 +83,36 @@ struct ControlRequest {
     arg: Option<String>,
 }
 
+/// Shared engine state that the render loop updates and the control socket reads.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SharedEngineState {
+    pub running: bool,
+    pub paused: bool,
+    pub effect: String,
+    pub fps: u16,
+    pub speed: f32,
+}
+
+impl Default for SharedEngineState {
+    fn default() -> Self {
+        Self {
+            running: true,
+            paused: false,
+            effect: "default".into(),
+            fps: 30,
+            speed: 1.0,
+        }
+    }
+}
+
+/// A thread-safe handle to update engine state from the render loop.
+pub type EngineStateHandle = Arc<Mutex<SharedEngineState>>;
+
+/// Create a new shared engine state handle.
+pub fn new_engine_state_handle() -> EngineStateHandle {
+    Arc::new(Mutex::new(SharedEngineState::default()))
+}
+
 /// Parse a raw line from the control socket into a `ControlCmd`.
 pub fn parse_cmd(line: &str) -> ControlCmd {
     let trimmed = line.trim();
@@ -135,12 +167,24 @@ impl ControlServer {
     /// reads commands from this receiver.
     pub fn start(
         socket_path: PathBuf,
-    ) -> Result<(Self, mpsc::Receiver<ControlCmd>), Box<dyn std::error::Error>> {
-        let (tx, rx) = mpsc::channel();
+    ) -> Result<(Self, crossbeam_channel::Receiver<ControlCmd>), Box<dyn std::error::Error>> {
+        let state = new_engine_state_handle();
+        Self::start_with_state(socket_path, state)
+    }
+
+    /// Bind the control socket and start listening with a shared engine state.
+    ///
+    /// The `state` handle allows the render loop to update status information
+    /// (effect, fps, speed) that will be returned in STATUS responses.
+    pub fn start_with_state(
+        socket_path: PathBuf,
+        state: EngineStateHandle,
+    ) -> Result<(Self, crossbeam_channel::Receiver<ControlCmd>), Box<dyn std::error::Error>> {
+        let (tx, rx) = crossbeam_channel::unbounded();
         let socket = forgum_platform::DaemonSocket::bind(&socket_path)?;
 
         let thread = thread::spawn(move || {
-            Self::accept_loop(socket, tx);
+            Self::accept_loop(socket, tx, state);
         });
 
         Ok((
@@ -152,7 +196,11 @@ impl ControlServer {
         ))
     }
 
-    fn accept_loop(socket: forgum_platform::DaemonSocket, tx: mpsc::Sender<ControlCmd>) {
+    fn accept_loop(
+        socket: forgum_platform::DaemonSocket,
+        tx: crossbeam_channel::Sender<ControlCmd>,
+        state: EngineStateHandle,
+    ) {
         loop {
             match socket.accept() {
                 Ok(Some(mut conn)) => {
@@ -166,16 +214,24 @@ impl ControlServer {
                                 let is_ping = matches!(cmd, ControlCmd::Ping);
 
                                 if is_status {
+                                    // Read actual engine state from shared handle
+                                    let status = {
+                                        let state_guard = state.lock().unwrap_or_else(|e| {
+                                            // If the mutex is poisoned, recover by taking the state
+                                            e.into_inner()
+                                        });
+                                        StatusInfo {
+                                            running: state_guard.running,
+                                            paused: state_guard.paused,
+                                            effect: state_guard.effect.clone(),
+                                            fps: state_guard.fps,
+                                            speed: state_guard.speed,
+                                        }
+                                    };
                                     let resp = ControlResponse {
                                         ok: true,
                                         error: None,
-                                        status: Some(StatusInfo {
-                                            running: true,
-                                            paused: false,
-                                            effect: "unknown".into(),
-                                            fps: 30,
-                                            speed: 1.0,
-                                        }),
+                                        status: Some(status),
                                         peers: None,
                                         claim_leader: None,
                                     };
@@ -196,8 +252,32 @@ impl ControlServer {
                                 }
 
                                 // Send command to render loop.
-                                if tx.send(cmd).is_err() {
+                                if tx.send(cmd.clone()).is_err() {
                                     return; // render loop dropped
+                                }
+
+                                // Update shared state based on command type
+                                {
+                                    let mut state_guard =
+                                        state.lock().unwrap_or_else(|e| e.into_inner());
+                                    match &cmd {
+                                        ControlCmd::Stop => {
+                                            state_guard.running = false;
+                                        }
+                                        ControlCmd::Pause => {
+                                            state_guard.paused = true;
+                                        }
+                                        ControlCmd::Resume => {
+                                            state_guard.paused = false;
+                                        }
+                                        ControlCmd::Effect(name) => {
+                                            state_guard.effect = name.clone();
+                                        }
+                                        ControlCmd::Speed(s) => {
+                                            state_guard.speed = *s;
+                                        }
+                                        _ => {}
+                                    }
                                 }
 
                                 // Send generic OK response.

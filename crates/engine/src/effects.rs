@@ -29,7 +29,9 @@ pub trait Effect: Send + Sync {
 
 // ── Static (no animation) ──────────────────────────────────────────
 
-/// The Phase 0 static cow — no animation, just the text.
+/// The Phase 0 static cow with keep-alive micro-animations (Phase 8.1).
+/// Even "static" cows get a subtle 1px breathing oscillation and periodic
+/// eye-blink to feel alive without consuming significant CPU.
 #[derive(Debug)]
 pub struct StaticEffect {
     cow_text: String,
@@ -49,7 +51,37 @@ impl Effect for StaticEffect {
     fn update(&mut self, _dt: f32, _cols: usize, _rows: usize) {}
 
     fn render(&self, fb: &mut FrameBuffer, time: f32) {
-        render_text(fb, &self.cow_text, Color::WHITE, &self.color_mode, time);
+        // Phase 8.1: Subtle 1px vertical oscillation (~0.15 Hz breathing).
+        let breath = (time * 0.15 * std::f32::consts::TAU).sin();
+        let y_off = if breath > 0.3 { 1 } else { 0 };
+
+        // Phase 8.1: Periodic eye-blink (~every 4.5s, lasts 0.15s).
+        let blink_cycle = time % 4.5;
+        let is_blinking = blink_cycle > 4.35;
+
+        let display_text = if is_blinking {
+            // Replace eyes (oo, OO, xx, XX, @@, $$, etc.) with -- for a blink.
+            self.cow_text
+                .replace("oo", "--")
+                .replace("OO", "--")
+                .replace("xx", "--")
+                .replace("XX", "--")
+                .replace("@@", "--")
+                .replace("$$", "--")
+                .replace("00", "--")
+        } else {
+            self.cow_text.clone()
+        };
+
+        render_text_offset(
+            fb,
+            &display_text,
+            Color::WHITE,
+            0,
+            y_off,
+            &self.color_mode,
+            time,
+        );
     }
 }
 
@@ -569,7 +601,6 @@ pub struct DissolveEffect {
     _easing_fn: fn(f32) -> f32,
     phase: f32,
     speed: f32,
-    _done: bool,
     scatter_offsets: Vec<(f32, f32)>,
     color_mode: String,
 }
@@ -604,7 +635,6 @@ impl DissolveEffect {
             _easing_fn: easing::by_name(&dna.easing.base),
             phase,
             speed: dna.speed,
-            _done: false,
             scatter_offsets,
             color_mode,
         }

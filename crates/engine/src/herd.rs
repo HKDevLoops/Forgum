@@ -155,7 +155,7 @@ pub fn herd_effect(name: &str, filter: &HerdFilter) -> Result<usize, String> {
     let mut count = 0;
     for entry in &entries {
         if entry.alive {
-            let cmd = format!(r#"{{"cmd":"EFFECT","arg":"{}"}}"#, name);
+            let cmd = serde_json::json!({"cmd": "EFFECT", "arg": name}).to_string();
             let resp = send_command(&entry.socket_path, &cmd)?;
             if resp.ok {
                 count += 1;
@@ -170,7 +170,7 @@ pub fn herd_speed(speed: f32, filter: &HerdFilter) -> Result<usize, String> {
     let mut count = 0;
     for entry in &entries {
         if entry.alive {
-            let cmd = format!(r#"{{"cmd":"SPEED","arg":"{}"}}"#, speed);
+            let cmd = serde_json::json!({"cmd": "SPEED", "arg": speed.to_string()}).to_string();
             let resp = send_command(&entry.socket_path, &cmd)?;
             if resp.ok {
                 count += 1;
@@ -213,7 +213,9 @@ pub fn herd_quiet() -> Result<usize, String> {
     let mut count = 0;
     for entry in &entries {
         if entry.alive {
-            let resp = send_command(&entry.socket_path, r#"{"cmd":"STOP"}"#)?;
+            // Set speed to 0.1 for "quiet" mode (low FPS) instead of stopping
+            let cmd = r#"{"cmd":"SPEED","arg":"0.1"}"#;
+            let resp = send_command(&entry.socket_path, cmd)?;
             if resp.ok {
                 count += 1;
             }
@@ -233,7 +235,7 @@ pub fn herd_follow(pane: Option<&str>) -> Result<usize, String> {
         }
         let is_target = target_session.as_ref() == Some(&entry.session_id);
         let speed = if is_target { 1.0 } else { 0.1 };
-        let cmd = format!(r#"{{"cmd":"SPEED","arg":"{}"}}"#, speed);
+        let cmd = serde_json::json!({"cmd": "SPEED", "arg": speed.to_string()}).to_string();
         let resp = send_command(&entry.socket_path, &cmd)?;
         if resp.ok {
             count += 1;

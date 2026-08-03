@@ -15,21 +15,9 @@ pub fn run_say(cmd: &[String]) -> String {
         return "No output.".to_string();
     }
 
-    let data_dir = data_dir().unwrap_or_else(|_| PathBuf::from("."));
+    let data_dir = forgum_platform::data_dir().unwrap_or_else(|_| PathBuf::from("."));
     let cow_text = cow::load_cow("default", &data_dir, "oo", "U", "\\\\");
     cow::compose_scene(&cow_text, &text)
-}
-
-fn data_dir() -> Result<std::path::PathBuf, String> {
-    let home = std::env::var("HOME")
-        .or_else(|_| std::env::var("USERPROFILE"))
-        .map_err(|_| "cannot determine home directory".to_string())?;
-    let data = std::path::PathBuf::from(home).join(".forgum").join("data");
-    if data.exists() {
-        Ok(data)
-    } else {
-        Err(format!("data directory not found: {}", data.display()))
-    }
 }
 
 pub fn wrap_text(text: &str, max_width: usize) -> Vec<String> {

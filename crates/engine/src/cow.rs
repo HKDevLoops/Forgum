@@ -20,7 +20,9 @@ const DEFAULT_COW: &str = r#"        \   ^__^
 /// Load a `.cow` file and expand placeholders.
 ///
 /// Returns the expanded cow text with `$eyes`, `$tongue`, `$thoughts` replaced.
-/// If the file doesn't exist or can't be read, returns the default cow.
+/// Looks in the bundled data directory first, then the user's custom cows
+/// directory (`~/.config/forgum/cows/`). If neither has the file, returns
+/// the default cow.
 pub fn load_cow(
     cow_name: &str,
     data_dir: &Path,
@@ -28,43 +30,75 @@ pub fn load_cow(
     tongue: &str,
     thoughts: &str,
 ) -> String {
+    // 1. Try bundled data directory.
     let cow_path = data_dir.join("Cows").join(format!("{cow_name}.cow"));
-    let raw = match std::fs::read_to_string(&cow_path) {
-        Ok(s) => s,
-        Err(_) => return default_cow_expanded(eyes, tongue, thoughts),
-    };
-    expand_cow(&raw, eyes, tongue, thoughts)
+    if let Ok(raw) = std::fs::read_to_string(&cow_path) {
+        return expand_cow(&raw, eyes, tongue, thoughts);
+    }
+    // 2. Try user's custom cows directory (Phase 8.12: community cow packs).
+    if let Some(custom_path) = custom_cows_dir() {
+        let custom_cow = custom_path.join(format!("{cow_name}.cow"));
+        if let Ok(raw) = std::fs::read_to_string(&custom_cow) {
+            return expand_cow(&raw, eyes, tongue, thoughts);
+        }
+    }
+    default_cow_expanded(eyes, tongue, thoughts)
 }
 
 /// If `cow_name` is `"random"`, pick a random `.cow` file from the data
-/// directory and return its basename. Otherwise return `cow_name` unchanged.
+/// directory and the user's custom cows directory, and return its basename.
+/// Otherwise return `cow_name` unchanged.
 pub fn resolve_cow_name(cow_name: &str, data_dir: &Path) -> String {
     if cow_name != "random" {
         return cow_name.to_string();
     }
+    let mut entries: Vec<String> = Vec::new();
+
+    // Bundled cows.
     let cows_dir = data_dir.join("Cows");
-    let mut entries: Vec<String> = match std::fs::read_dir(&cows_dir) {
-        Ok(rd) => rd
-            .filter_map(|e| e.ok())
-            .filter(|e| {
-                e.path()
-                    .extension()
+    if let Ok(rd) = std::fs::read_dir(&cows_dir) {
+        entries.extend(rd.flatten().filter_map(|e| {
+            let p = e.path();
+            if p.extension()
+                .is_some_and(|ext| ext.eq_ignore_ascii_case("cow"))
+            {
+                p.file_stem().map(|s| s.to_string_lossy().into_owned())
+            } else {
+                None
+            }
+        }));
+    }
+
+    // Phase 8.12: Custom user cows.
+    if let Some(custom_dir) = custom_cows_dir() {
+        if let Ok(rd) = std::fs::read_dir(&custom_dir) {
+            entries.extend(rd.flatten().filter_map(|e| {
+                let p = e.path();
+                if p.extension()
                     .is_some_and(|ext| ext.eq_ignore_ascii_case("cow"))
-            })
-            .filter_map(|e| {
-                e.path()
-                    .file_stem()
-                    .map(|s| s.to_string_lossy().into_owned())
-            })
-            .collect(),
-        Err(_) => return "default".to_string(),
-    };
+                {
+                    p.file_stem().map(|s| s.to_string_lossy().into_owned())
+                } else {
+                    None
+                }
+            }));
+        }
+    }
+
     if entries.is_empty() {
         return "default".to_string();
     }
     let mut rng = rand::thread_rng();
     entries.shuffle(&mut rng);
     entries[0].clone()
+}
+
+/// Return the path to the user's custom cows directory (`~/.config/forgum/cows/`).
+/// Returns `None` if the config path can't be determined.
+fn custom_cows_dir() -> Option<std::path::PathBuf> {
+    forgum_platform::config_path()
+        .ok()
+        .and_then(|p| p.parent().map(|p| p.join("cows")))
 }
 
 /// Load a `.cow` file from an explicit path.

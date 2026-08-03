@@ -66,19 +66,21 @@ fn control_cmd_to_json(cmd: &ControlCmd) -> String {
         ControlCmd::Stop => r#"{"cmd":"STOP"}"#.to_string(),
         ControlCmd::Pause => r#"{"cmd":"PAUSE"}"#.to_string(),
         ControlCmd::Resume => r#"{"cmd":"RESUME"}"#.to_string(),
-        ControlCmd::Effect(e) => format!(r#"{{"cmd":"EFFECT","arg":"{}"}}"#, e),
-        ControlCmd::Speed(s) => format!(r#"{{"cmd":"SPEED","arg":"{}"}}"#, s),
-        ControlCmd::Cow(c) => format!(r#"{{"cmd":"COW","arg":"{}"}}"#, c),
-        ControlCmd::Text(t) => format!(r#"{{"cmd":"TEXT","arg":"{}"}}"#, t),
+        ControlCmd::Effect(e) => serde_json::json!({"cmd": "EFFECT", "arg": e}).to_string(),
+        ControlCmd::Speed(s) => {
+            serde_json::json!({"cmd": "SPEED", "arg": s.to_string()}).to_string()
+        }
+        ControlCmd::Cow(c) => serde_json::json!({"cmd": "COW", "arg": c}).to_string(),
+        ControlCmd::Text(t) => serde_json::json!({"cmd": "TEXT", "arg": t}).to_string(),
         ControlCmd::Status => r#"{"cmd":"STATUS"}"#.to_string(),
         ControlCmd::Ping => r#"{"cmd":"PING"}"#.to_string(),
         ControlCmd::PeerJoin { session_id } => {
-            format!(r#"{{"cmd":"PEER_JOIN","session_id":"{}"}}"#, session_id)
+            serde_json::json!({"cmd": "PEER_JOIN", "session_id": session_id}).to_string()
         }
         ControlCmd::PeerLeave => r#"{"cmd":"PEER_LEAVE"}"#.to_string(),
         ControlCmd::PeerList => r#"{"cmd":"PEER_LIST"}"#.to_string(),
         ControlCmd::ClaimLeader => r#"{"cmd":"CLAIM_LEADER"}"#.to_string(),
-        ControlCmd::Unknown(u) => format!(r#"{{"cmd":"{}"}}"#, u),
+        ControlCmd::Unknown(u) => serde_json::json!({"cmd": u}).to_string(),
     }
 }
 

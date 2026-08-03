@@ -139,6 +139,24 @@ impl FrameBuffer {
         }
     }
 
+    /// Create a FrameBuffer by taking ownership of a cell vector.
+    /// The vector becomes the back buffer; front starts empty.
+    /// Used by the SIM thread to avoid cloning when building frames.
+    #[must_use]
+    pub fn from_raw_owned(width: usize, height: usize, cells: Vec<Cell>) -> Self {
+        let sz = width.saturating_mul(height);
+        let mut back = cells;
+        back.resize(sz, Cell::empty());
+        Self {
+            width,
+            height,
+            back,
+            front: vec![Cell::empty(); sz],
+            dirty: vec![false; sz],
+            damage_list: Vec::with_capacity(sz),
+        }
+    }
+
     /// Replace the back buffer with empty cells (does *not* touch front).
     ///
     /// Marks **nothing** dirty — only cells written via `set()` afterwards

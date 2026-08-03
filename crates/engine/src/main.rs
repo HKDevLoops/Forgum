@@ -14,7 +14,6 @@ use forgum_engine::daemon;
 use forgum_engine::dna;
 use forgum_engine::fortune;
 use forgum_engine::init::Shell;
-use forgum_engine::protocol_io::read_scene;
 use forgum_engine::render;
 use forgum_platform::{data_dir, OutputHandle, ShutdownFlag};
 
@@ -613,17 +612,8 @@ fn main() -> ExitCode {
 }
 
 fn render_subcommand(args: cli::Args) -> ExitCode {
-    // Read scene: --file overrides stdin; if neither, use defaults.
-    let scene_from_file = match read_scene(args.file.as_deref(), false) {
-        Ok(s) => Some(s),
-        Err(e) => {
-            eprintln!("{PROGRAM}: {e}");
-            return ExitCode::from(e.exit_code() as u8);
-        }
-    };
-    let _ = scene_from_file;
-
     // Build merged scene (config auto-discovered if --config not given).
+    // Note: --file is handled by build_scene_config via config merging.
     let mut scene = match build_scene_config(&args) {
         Ok(s) => s,
         Err(e) => {

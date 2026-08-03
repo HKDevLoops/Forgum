@@ -89,9 +89,7 @@ pub struct Frame {
 
 /// State owned exclusively by the SIM thread.
 struct SimState {
-    back: Vec<Cell>,
-    cols: usize,
-    rows: usize,
+    fb: FrameBuffer,
     effect: Box<dyn effects::Effect>,
     scheduler: Scheduler,
     frame_count: u64,
@@ -99,6 +97,10 @@ struct SimState {
     /// Per-frame arena: O(1) mass-dealloc via `reset()` at frame top.
     /// All per-frame scratch (damage lists, temp buffers) go here.
     arena: bumpalo::Bump,
+    data_dir: PathBuf,
+    config: SceneConfig,
+    cow_dna: CowDna,
+    instance_id: u32,
 }
 
 impl SimState {
@@ -109,6 +111,7 @@ impl SimState {
         cow_dna: CowDna,
         instance_id: u32,
         composed_text: Option<&str>,
+        data_dir: PathBuf,
     ) -> Self {
         let cow_display = composed_text.unwrap_or(&config.text);
         let cow_text = if cow_display.is_empty() {
@@ -120,20 +123,22 @@ impl SimState {
         let effect = effects::create_effect(
             cow_dna.base,
             cow_text,
-            cow_dna,
+            cow_dna.clone(),
             instance_id,
             &config.color_mode,
         );
 
         Self {
-            back: vec![Cell::default(); cols * rows],
-            cols,
-            rows,
+            fb: FrameBuffer::new(cols, rows),
             effect,
             scheduler: Scheduler::new(config.fps),
             frame_count: 0,
             elapsed: 0.0,
             arena: bumpalo::Bump::with_capacity(64 * 1024),
+            data_dir,
+            config: config.clone(),
+            cow_dna,
+            instance_id,
         }
     }
 
@@ -146,34 +151,105 @@ impl SimState {
         self.elapsed += dt_f32;
 
         // Clear back buffer.
-        for cell in &mut self.back {
-            *cell = Cell::default();
-        }
+        self.fb.clear();
 
         // Update effect.
-        self.effect.update(dt_f32, self.cols, self.rows);
+        self.effect.update(dt_f32, self.fb.width, self.fb.height);
 
         // Render into back buffer.
-        let mut fb = FrameBuffer::from_raw(self.cols, self.rows, &self.back);
-        self.effect.render(&mut fb, self.elapsed);
+        self.effect.render(&mut self.fb, self.elapsed);
 
-        // Compute damage against the previous front buffer (passed in from render).
-        let damage = fb.compute_damage().to_vec();
+        // Compute damage against the previous front buffer.
+        // Because SimState owns the FrameBuffer persistently, `front` holds
+        // the last frame sent to RENDER — so damage is correct (not always 100%).
+        let damage = self.fb.compute_damage().to_vec();
         self.scheduler.observe(damage.len());
 
-        // Copy rendered cells back.
-        self.back.clone_from_slice(&fb.back);
+        // Ship a snapshot of the rendered cells.
+        let cells = self.fb.back.clone();
+
+        // Swap buffers: front becomes what we just built, back becomes a copy
+        // for the next frame to build on top of.
+        self.fb.swap();
 
         self.frame_count = self.frame_count.saturating_add(1);
         FRAME_COUNT.fetch_add(1, Ordering::Relaxed);
 
-        // Ship a snapshot.
         Arc::new(Frame {
-            cells: self.back.clone(),
+            cells,
             damage,
-            cols: self.cols,
-            rows: self.rows,
+            cols: self.fb.width,
+            rows: self.fb.height,
         })
+    }
+
+    /// Handle hot-swap of effect, cow art, or text from control messages.
+    fn handle_hot_swap(&mut self, msg: &ControlMsg) {
+        match msg {
+            ControlMsg::Effect(name) => {
+                // Reload DNA for the new effect if it exists in animations.json,
+                // otherwise keep the current DNA but change the base animation.
+                let animations = crate::dna::load_animations(&self.data_dir);
+                let new_dna = crate::dna::get_dna(&animations, &self.config.cow);
+                self.config.effect = name.clone();
+                self.cow_dna = new_dna;
+                // Recreate effect with the same cow text
+                let cow_display = &self.config.text;
+                let cow_text = if cow_display.is_empty() {
+                    effects::default_cow_text().to_string()
+                } else {
+                    cow_display.to_string()
+                };
+                self.effect = effects::create_effect(
+                    self.cow_dna.base,
+                    cow_text,
+                    self.cow_dna.clone(),
+                    self.instance_id,
+                    &self.config.color_mode,
+                );
+            }
+            ControlMsg::Cow(name) => {
+                // Reload cow art and recreate the effect.
+                self.config.cow = crate::cow::resolve_cow_name(name, &self.data_dir);
+                let cow_text = crate::cow::load_cow(
+                    &self.config.cow,
+                    &self.data_dir,
+                    &self.config.eyes,
+                    &self.config.tongue,
+                    "\\\\",
+                );
+                let composed = crate::cow::compose_scene(&cow_text, &self.config.text);
+                let animations = crate::dna::load_animations(&self.data_dir);
+                self.cow_dna = crate::dna::get_dna(&animations, &self.config.cow);
+                self.effect = effects::create_effect(
+                    self.cow_dna.base,
+                    composed,
+                    self.cow_dna.clone(),
+                    self.instance_id,
+                    &self.config.color_mode,
+                );
+            }
+            ControlMsg::Text(text) => {
+                // Recompose the scene with new text and recreate the effect.
+                self.config.text = text.clone();
+                let cow_text = crate::cow::load_cow(
+                    &self.config.cow,
+                    &self.data_dir,
+                    &self.config.eyes,
+                    &self.config.tongue,
+                    "\\\\",
+                );
+                let composed = crate::cow::compose_scene(&cow_text, &self.config.text);
+                self.effect = effects::create_effect(
+                    self.cow_dna.base,
+                    composed,
+                    self.cow_dna.clone(),
+                    self.instance_id,
+                    &self.config.color_mode,
+                );
+            }
+            _ => {}
+        }
     }
 }
 
@@ -186,6 +262,9 @@ fn sim_thread(
     max_frames: u64,
 ) {
     let mut last_frame = Instant::now();
+    let mut last_battery_check = Instant::now();
+    let mut user_speed: f32 = 1.0;
+    let mut battery_throttled = false;
 
     loop {
         if shutdown.is_shutdown() {
@@ -193,6 +272,21 @@ fn sim_thread(
         }
         if max_frames > 0 && sim.frame_count >= max_frames {
             break;
+        }
+
+        // Phase 8.5: Battery-reactive throttle. Check every 30 seconds.
+        // Uses platform-specific battery detection with graceful fallback.
+        if last_battery_check.elapsed() >= Duration::from_secs(30) {
+            last_battery_check = Instant::now();
+            if let Some(pct) = forgum_platform::check_battery_percent() {
+                if pct < 20.0 && !battery_throttled {
+                    sim.scheduler.set_speed(0.15);
+                    battery_throttled = true;
+                } else if pct >= 30.0 && battery_throttled {
+                    sim.scheduler.set_speed(user_speed);
+                    battery_throttled = false;
+                }
+            }
         }
 
         // Drain control messages (non-blocking).
@@ -208,23 +302,17 @@ fn sim_thread(
                 }
                 ControlMsg::Resume => {}
                 ControlMsg::Speed(s) => {
-                    sim.scheduler.set_speed(s);
+                    user_speed = s;
+                    if !battery_throttled {
+                        sim.scheduler.set_speed(s);
+                    }
                 }
                 ControlMsg::Resize { cols, rows } => {
-                    sim.cols = cols as usize;
-                    sim.rows = rows as usize;
-                    sim.back
-                        .resize(cols as usize * rows as usize, Cell::default());
+                    sim.fb.resize(cols as usize, rows as usize);
                     sim.effect.on_resize(cols as usize, rows as usize);
                 }
-                ControlMsg::Effect(_name) => {
-                    // Effect hot-swap (future: reload effect by name).
-                }
-                ControlMsg::Cow(_name) => {
-                    // Cow hot-swap (future: reload cow art).
-                }
-                ControlMsg::Text(_text) => {
-                    // Text hot-swap (future: recompose scene).
+                ref msg @ (ControlMsg::Effect(_) | ControlMsg::Cow(_) | ControlMsg::Text(_)) => {
+                    sim.handle_hot_swap(msg);
                 }
             }
         }
@@ -358,8 +446,8 @@ pub fn run_engine(
     composed_text: Option<&str>,
     cow_dna: CowDna,
     instance_id: u32,
-    _data_dir: PathBuf,
-    cmd_rx: Option<Receiver<ControlCmd>>,
+    data_dir: PathBuf,
+    cmd_rx: &Option<crossbeam_channel::Receiver<ControlCmd>>,
     max_frames: u64,
 ) -> Result<(), Box<dyn std::error::Error>> {
     // Probe terminal size.
@@ -386,7 +474,15 @@ pub fn run_engine(
     let (frame_tx, frame_rx) = bounded::<Arc<Frame>>(2);
 
     // Create SIM state.
-    let sim = SimState::new(&config, cols, rows, cow_dna, instance_id, composed_text);
+    let sim = SimState::new(
+        &config,
+        cols,
+        rows,
+        cow_dna,
+        instance_id,
+        composed_text,
+        data_dir.clone(),
+    );
 
     // Create RENDER state.
     let render_state = RenderState::new(cols, rows, out);
@@ -394,6 +490,7 @@ pub fn run_engine(
     // Forward external control commands to the internal channel.
     if let Some(external_rx) = cmd_rx {
         let tx = control_tx.clone();
+        let external_rx = external_rx.clone();
         std::thread::Builder::new()
             .name("control-forward".into())
             .spawn(move || {

@@ -19,7 +19,6 @@
 
 use std::io::Write;
 use std::path::PathBuf;
-use std::sync::mpsc;
 use std::time::Duration;
 
 use forgum_platform::{
@@ -65,7 +64,7 @@ pub fn render_loop_foreground(
     cow_dna: CowDna,
     instance_id: u32,
     data_dir: PathBuf,
-    cmd_rx: &Option<mpsc::Receiver<ControlCmd>>,
+    cmd_rx: &Option<crossbeam_channel::Receiver<ControlCmd>>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let _signals = SignalGuard::install(shutdown.clone())?;
 
@@ -223,7 +222,8 @@ pub fn render_loop_foreground(
     }
 
     // Clear and reset on the way out so the user's shell prompt is clean.
-    let _ = out.write_all(b"\x1b[0m\x1b[H\x1b[2J");
+    // Show cursor (in case it was hidden), reset attributes, move home, clear.
+    let _ = out.write_all(b"\x1b[0m\x1b[?25h\x1b[H\x1b[2J");
     let _ = out.flush();
     Ok(())
 }
@@ -240,7 +240,7 @@ pub fn render_loop_background(
     cow_dna: CowDna,
     instance_id: u32,
     data_dir: PathBuf,
-    cmd_rx: &Option<mpsc::Receiver<ControlCmd>>,
+    cmd_rx: &Option<crossbeam_channel::Receiver<ControlCmd>>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let _signals = SignalGuard::install(shutdown.clone())?;
 
@@ -266,9 +266,26 @@ pub fn render_loop_background(
     let writer_ptr = out.raw_writer_mut();
     let _cur = unsafe { CursorShowGuard::acquire(writer_ptr)? };
 
+    let max_frames = compute_max_frames(config.duration, config.fps);
+
+    // Daemon mode: use the 3-thread engine (SIM/RENDER/CONTROL separation).
+    if cmd_rx.is_some() {
+        return crate::engine_core::run_engine(
+            out,
+            config,
+            shutdown,
+            composed_text,
+            cow_dna,
+            instance_id,
+            data_dir,
+            cmd_rx,
+            max_frames,
+        );
+    }
+
+    // One-shot background mode: single-threaded loop (no control socket).
     let mut fb = FrameBuffer::new(usize::from(cols), usize::from(rows));
     let mut scheduler = Scheduler::new(config.fps);
-    let max_frames = compute_max_frames(config.duration, config.fps);
 
     let cow_text = if cow_display.is_empty() {
         effects::default_cow_text().to_string()

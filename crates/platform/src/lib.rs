@@ -145,6 +145,68 @@ pub fn target_os() -> &'static str {
     return "windows";
 }
 
+/// Check battery charge percentage. Returns `Some(pct)` if a battery is
+/// detected, `None` on desktops or unsupported platforms.
+///
+/// This is used by the engine's battery-reactive throttle (Phase 8.5)
+/// to drop to ~5fps when charge is below 20%.
+#[must_use]
+pub fn check_battery_percent() -> Option<f32> {
+    // Linux: read from sysfs
+    #[cfg(target_os = "linux")]
+    {
+        if let Ok(entries) = std::fs::read_dir("/sys/class/power_supply") {
+            for entry in entries.flatten() {
+                let capacity_path = entry.path().join("capacity");
+                if let Ok(text) = std::fs::read_to_string(&capacity_path) {
+                    if let Ok(pct) = text.trim().parse::<f32>() {
+                        return Some(pct);
+                    }
+                }
+            }
+        }
+        return None;
+    }
+    // macOS: use ioreg to get battery info
+    #[cfg(target_os = "macos")]
+    {
+        use std::process::Command;
+        if let Ok(out) = Command::new("ioreg")
+            .args(["-r", "-c", "AppleSmartBattery"])
+            .output()
+        {
+            let stdout = String::from_utf8_lossy(&out.stdout);
+            for line in stdout.lines() {
+                if line.contains("\"CurrentCapacity\"") {
+                    if let Some(val) = line.split('=').nth(1) {
+                        if let Ok(current) = val.trim().parse::<f32>() {
+                            // Also find MaxCapacity to compute percentage
+                            for line2 in stdout.lines() {
+                                if line2.contains("\"MaxCapacity\"") {
+                                    if let Some(val2) = line2.split('=').nth(1) {
+                                        if let Ok(max) = val2.trim().parse::<f32>() {
+                                            if max > 0.0 {
+                                                return Some(current / max * 100.0);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return None;
+    }
+    // Windows: return None (desktops don't have batteries; laptops
+    // would need windows-sys power status API, deferred).
+    #[cfg(not(any(target_os = "linux", target_os = "macos")))]
+    {
+        None
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
