@@ -55,7 +55,7 @@ pub trait FrameBufferLike {
 ///
 /// Mirrors the engine `Renderer` surface (damage-based + sync markers) so the
 /// engine can wrap any impl behind its own trait without `cfg` in `engine/src`.
-pub trait GraphicsRenderer {
+pub trait GraphicsRenderer: Send {
     /// Render the given damage cells as graphics primitives.
     fn render_damage(
         &mut self,

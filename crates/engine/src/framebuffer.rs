@@ -122,6 +122,23 @@ impl FrameBuffer {
         }
     }
 
+    /// Create a FrameBuffer from a raw cell slice (for the 3-thread engine).
+    /// The `cells` slice becomes the back buffer; front starts empty.
+    #[must_use]
+    pub fn from_raw(width: usize, height: usize, cells: &[Cell]) -> Self {
+        let sz = width.saturating_mul(height);
+        let mut back = cells.to_vec();
+        back.resize(sz, Cell::empty());
+        Self {
+            width,
+            height,
+            back,
+            front: vec![Cell::empty(); sz],
+            dirty: vec![false; sz],
+            damage_list: Vec::with_capacity(sz),
+        }
+    }
+
     /// Replace the back buffer with empty cells (does *not* touch front).
     ///
     /// Marks **nothing** dirty — only cells written via `set()` afterwards

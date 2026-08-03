@@ -20,7 +20,7 @@ use crate::framebuffer::FrameBuffer;
 /// `wgpu` to any Cargo.toml; this trait stays backend-agnostic so the deferred
 /// GPU backend can implement `Renderer` (or a richer variant) without touching
 /// the render loops.
-pub trait Renderer {
+pub trait Renderer: Send {
     /// Write the given damage cells to the output.
     fn render_damage(
         &mut self,
@@ -28,6 +28,19 @@ pub trait Renderer {
         fb: &FrameBuffer,
         damage: &[(usize, usize)],
     ) -> std::io::Result<()>;
+
+    /// Render from a raw cell slice (used by the 3-thread engine).
+    fn render_frame_from_cells(
+        &mut self,
+        out: &mut dyn Write,
+        cells: &[crate::framebuffer::Cell],
+        cols: usize,
+        damage: &[(usize, usize)],
+    ) -> std::io::Result<()> {
+        // Default implementation: create a temporary FrameBuffer and delegate.
+        let fb = FrameBuffer::from_raw(cols, cells.len() / cols, cells);
+        self.render_damage(out, &fb, damage)
+    }
 
     /// Escape sequence to begin synchronized update (DEC mode 2026).
     fn begin_sync(&self) -> &'static str {
