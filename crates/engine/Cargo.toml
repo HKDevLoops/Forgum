@@ -43,6 +43,7 @@ sysinfo = "0.35"
 chrono = "0.4"
 crossbeam-channel = "0.5"
 bumpalo = "3"
+slotmap = "1"
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"

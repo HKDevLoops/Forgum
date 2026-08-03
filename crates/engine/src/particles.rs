@@ -1,8 +1,8 @@
 //! Particle system — 6 themed particle types with pool allocation.
 //!
 //! Particles are spawned by effects, updated each frame, and rendered
-//! into the framebuffer. The pool uses a fixed-size array (no heap alloc
-//! per frame) for the zero-alloc invariant.
+//! into the framebuffer. Phase 1.7: uses `slotmap::SlotMap` for O(1)
+//! spawn/kill with ABA-safe generational keys (replaces O(n) linear scan).
 
 use std::cell::Cell;
 
@@ -12,6 +12,11 @@ use crate::framebuffer::{Cell as FbCell, Color, FrameBuffer};
 
 /// Maximum particles in the pool.
 const MAX_PARTICLES: usize = 512;
+
+slotmap::new_key_type! {
+    /// Generational key for a particle in the pool.
+    pub struct ParticleKey;
+}
 
 /// A single particle.
 #[derive(Debug, Clone)]
@@ -24,7 +29,6 @@ pub struct Particle {
     pub max_life: f32,
     pub ch: char,
     pub color: Color,
-    pub active: bool,
 }
 
 impl Default for Particle {
@@ -38,67 +42,63 @@ impl Default for Particle {
             max_life: 1.0,
             ch: ' ',
             color: Color::WHITE,
-            active: false,
         }
     }
 }
 
-/// Fixed-size particle pool.
+/// Slotmap-backed particle pool. O(1) spawn/kill, ABA-safe.
 #[derive(Debug)]
 pub struct ParticlePool {
-    particles: [Particle; MAX_PARTICLES],
-    count: usize,
-    active_indices: Vec<usize>,
+    particles: slotmap::SlotMap<ParticleKey, Particle>,
 }
 
 impl ParticlePool {
     #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         Self {
-            particles: std::array::from_fn(|_| Particle::default()),
-            count: 0,
-            active_indices: Vec::with_capacity(MAX_PARTICLES),
+            particles: slotmap::SlotMap::with_capacity_and_key(MAX_PARTICLES),
         }
     }
 
-    /// Spawn a particle. Returns false if pool is full.
-    pub fn spawn(&mut self, p: Particle) -> bool {
-        for i in 0..MAX_PARTICLES {
-            if !self.particles[i].active {
-                self.particles[i] = p;
-                self.count += 1;
-                self.active_indices.push(i);
-                return true;
-            }
+    /// Spawn a particle. Returns the key if pool has capacity, None if full.
+    /// O(1) — slotmap reuses dead slots instantly.
+    pub fn spawn(&mut self, p: Particle) -> Option<ParticleKey> {
+        if self.particles.len() >= MAX_PARTICLES {
+            return None;
         }
-        false
+        Some(self.particles.insert(p))
     }
 
-    /// Update all active particles by `dt` seconds.
+    /// Kill a particle by key. O(1).
+    pub fn kill(&mut self, key: ParticleKey) {
+        self.particles.remove(key);
+    }
+
+    /// Update all active particles by `dt` seconds. Dead particles are
+    /// removed from the slotmap automatically.
     pub fn update(&mut self, dt: f32) {
-        self.count = 0;
-        self.active_indices.clear();
-        self.active_indices.reserve(MAX_PARTICLES);
-        for (i, p) in self.particles.iter_mut().enumerate() {
-            if !p.active {
-                continue;
-            }
-            p.x += p.vx * dt;
-            p.y += p.vy * dt;
-            p.life -= dt;
-            if p.life <= 0.0 {
-                p.active = false;
-            } else {
-                self.count += 1;
-                self.active_indices.push(i);
-            }
+        let dead: Vec<ParticleKey> = self
+            .particles
+            .iter_mut()
+            .filter_map(|(key, p)| {
+                p.x += p.vx * dt;
+                p.y += p.vy * dt;
+                p.life -= dt;
+                if p.life <= 0.0 {
+                    Some(key)
+                } else {
+                    None
+                }
+            })
+            .collect();
+        for key in dead {
+            self.particles.remove(key);
         }
     }
 
     /// Render active particles into the framebuffer.
     pub fn render(&self, fb: &mut FrameBuffer, _time: f32, alpha_fn: fn(f32) -> f32) {
-        for &i in &self.active_indices {
-            let p = &self.particles[i];
+        for (_key, p) in self.particles.iter() {
             let xi = p.x as i32;
             let yi = p.y as i32;
             if xi < 0 || yi < 0 {
@@ -129,16 +129,12 @@ impl ParticlePool {
     /// Number of active particles.
     #[must_use]
     pub fn active_count(&self) -> usize {
-        self.count
+        self.particles.len()
     }
 
     /// Clear all particles.
     pub fn clear(&mut self) {
-        for p in &mut self.particles {
-            p.active = false;
-        }
-        self.count = 0;
-        self.active_indices.clear();
+        self.particles.clear();
     }
 }
 
@@ -163,7 +159,6 @@ pub fn spawn_fire(pool: &mut ParticlePool, x: f32, y: f32, palette: &[(u8, u8, u
             max_life: 1.4,
             ch: glyph,
             color: Color::rgb(r, g, b),
-            active: true,
         });
     }
 }
@@ -186,7 +181,6 @@ pub fn spawn_bubbles(pool: &mut ParticlePool, x: f32, y: f32, palette: &[(u8, u8
         max_life: 3.0,
         ch: glyph,
         color: Color::rgb(r, g, b),
-        active: true,
     });
 }
 
@@ -205,7 +199,6 @@ pub fn spawn_stars(pool: &mut ParticlePool, x: f32, y: f32, time: f32) {
         max_life: 0.8,
         ch: glyph,
         color: Color::rgb(r, g, b),
-        active: true,
     });
 }
 
@@ -222,7 +215,6 @@ pub fn spawn_zzz(pool: &mut ParticlePool, x: f32, y: f32, time: f32) {
         max_life: 4.0,
         ch: glyph,
         color: Color::rgb(180, 160, 220),
-        active: true,
     });
 }
 
@@ -237,15 +229,10 @@ pub fn spawn_glitch(pool: &mut ParticlePool, _x: f32, _y: f32, width: usize, hei
         y: ry,
         vx: 0.0,
         vy: 0.0,
-        life: rand_range(0.1, 0.3),
+        life: 0.3,
         max_life: 0.3,
         ch: glyph,
-        color: if rand_01() > 0.5 {
-            Color::rgb(0, 255, 0)
-        } else {
-            Color::rgb(255, 0, 0)
-        },
-        active: true,
+        color: Color::rgb(0, 255, 0),
     });
 }
 
@@ -266,28 +253,25 @@ pub fn spawn_for_type(
         ParticleType::Bubbles => spawn_bubbles(pool, x, y, palette, time),
         ParticleType::Stars => spawn_stars(pool, x, y, time),
         ParticleType::Zzz => spawn_zzz(pool, x, y, time),
-        ParticleType::Pulse => {} // Pulse is color-only, no particles
         ParticleType::Glitch => spawn_glitch(pool, x, y, width, height),
+        ParticleType::Pulse => { /* No particles for pulse — it colors text */ }
     }
 }
 
-// ── Simple PRNG (cell-based, no unsafe) ────────────────────────────
+// ── Internal PRNG ──────────────────────────────────────────────────
 
-/// Simple xorshift32 — not cryptographic, but fast.
-fn xorshift32(state: &mut u32) -> u32 {
+thread_local! {
+    static FRAME_SEED: Cell<u32> = const { Cell::new(0) };
+}
+
+fn xorshift32(state: &mut u32) {
     *state ^= *state << 13;
     *state ^= *state >> 17;
     *state ^= *state << 5;
-    *state
 }
 
-// Thread-local frame seed (no unsafe needed).
-thread_local! {
-    static FRAME_SEED: Cell<u32> = const { Cell::new(0x1234_5678) };
-}
-
-/// Get a pseudo-random f32 in [0.0, 1.0).
-fn rand_01() -> f32 {
+/// Get a pseudo-random f32 in [0, 1).
+pub fn rand_01() -> f32 {
     FRAME_SEED.with(|cell| {
         let mut s = cell.get();
         xorshift32(&mut s);
@@ -313,7 +297,7 @@ mod tests {
     #[test]
     fn pool_spawn_and_update() {
         let mut pool = ParticlePool::new();
-        assert!(pool.spawn(Particle {
+        let key = pool.spawn(Particle {
             x: 5.0,
             y: 3.0,
             vx: 1.0,
@@ -322,8 +306,8 @@ mod tests {
             max_life: 1.0,
             ch: '*',
             color: Color::WHITE,
-            active: true,
-        }));
+        });
+        assert!(key.is_some());
         assert_eq!(pool.active_count(), 1);
         pool.update(0.5);
         assert_eq!(pool.active_count(), 1);
@@ -332,28 +316,19 @@ mod tests {
     }
 
     #[test]
-    fn pool_full_returns_false() {
+    fn pool_full_returns_none() {
         let mut pool = ParticlePool::new();
         for _ in 0..MAX_PARTICLES {
-            let _ = pool.spawn(Particle {
-                active: true,
-                ..Default::default()
-            });
+            let _ = pool.spawn(Particle::default());
         }
-        assert!(!pool.spawn(Particle {
-            active: true,
-            ..Default::default()
-        }));
+        assert!(pool.spawn(Particle::default()).is_none());
     }
 
     #[test]
     fn pool_clear() {
         let mut pool = ParticlePool::new();
         for _ in 0..10 {
-            let _ = pool.spawn(Particle {
-                active: true,
-                ..Default::default()
-            });
+            let _ = pool.spawn(Particle::default());
         }
         pool.clear();
         assert_eq!(pool.active_count(), 0);
@@ -362,29 +337,29 @@ mod tests {
     #[test]
     fn spawn_fire_adds_particles() {
         let mut pool = ParticlePool::new();
-        spawn_fire(&mut pool, 10.0, 5.0, &[], 0.0);
+        let empty: &[(u8, u8, u8)] = &[];
+        spawn_fire(&mut pool, 10.0, 5.0, empty, 0.0);
         assert_eq!(pool.active_count(), 3);
 
-        for p in &pool.particles {
-            if p.active {
-                assert!(
-                    ['*', '^', '.', '~'].contains(&p.ch),
-                    "unexpected char: {:?}",
-                    p.ch
-                );
-                assert!(p.life > 0.0);
-                assert!(p.color.r > 0);
-            }
+        for (_key, p) in pool.particles.iter() {
+            assert!(
+                ['*', '^', '.', '~'].contains(&p.ch),
+                "unexpected char: {:?}",
+                p.ch
+            );
+            assert!(p.life > 0.0);
+            assert!(p.color.r > 0);
         }
     }
 
     #[test]
     fn spawn_bubbles_adds_particles() {
         let mut pool = ParticlePool::new();
-        spawn_bubbles(&mut pool, 10.0, 5.0, &[], 0.0);
+        let empty: &[(u8, u8, u8)] = &[];
+        spawn_bubbles(&mut pool, 10.0, 5.0, empty, 0.0);
         assert_eq!(pool.active_count(), 1);
 
-        let p = pool.particles.iter().find(|p| p.active).unwrap();
+        let (_key, p) = pool.particles.iter().next().unwrap();
         assert!(['o', 'O', '°', '.'].contains(&p.ch));
         assert!(p.life > 0.0);
     }
@@ -395,7 +370,7 @@ mod tests {
         spawn_stars(&mut pool, 10.0, 5.0, 0.0);
         assert_eq!(pool.active_count(), 1);
 
-        let p = pool.particles.iter().find(|p| p.active).unwrap();
+        let (_key, p) = pool.particles.iter().next().unwrap();
         assert!(['*', '+', '✦', '✧'].contains(&p.ch));
         assert!(p.life > 0.0);
     }
@@ -406,7 +381,7 @@ mod tests {
         spawn_zzz(&mut pool, 10.0, 5.0, 0.0);
         assert_eq!(pool.active_count(), 1);
 
-        let p = pool.particles.iter().find(|p| p.active).unwrap();
+        let (_key, p) = pool.particles.iter().next().unwrap();
         assert!(['Z', 'z'].contains(&p.ch));
         assert!(p.vy < 0.0);
     }
@@ -417,7 +392,7 @@ mod tests {
         spawn_glitch(&mut pool, 10.0, 5.0, 80, 24);
         assert_eq!(pool.active_count(), 1);
 
-        let p = pool.particles.iter().find(|p| p.active).unwrap();
+        let (_key, p) = pool.particles.iter().next().unwrap();
         assert!(['0', '1', '#', '@', '█', '▓', '░'].contains(&p.ch));
     }
 
@@ -442,10 +417,9 @@ mod tests {
             max_life: 2.0,
             ch: '*',
             color: Color::WHITE,
-            active: true,
         });
         pool.update(0.5);
-        let p = pool.particles.iter().find(|p| p.active).unwrap();
+        let (_key, p) = pool.particles.iter().next().unwrap();
         assert!((p.x - 5.0).abs() < 0.01);
     }
 
@@ -461,7 +435,6 @@ mod tests {
             max_life: 0.1,
             ch: 'X',
             color: Color::WHITE,
-            active: true,
         });
         assert_eq!(pool.active_count(), 1);
         pool.update(0.2);
@@ -480,7 +453,6 @@ mod tests {
             max_life: 1.0,
             ch: 'Z',
             color: Color::WHITE,
-            active: true,
         });
         let mut fb = FrameBuffer::new(80, 24);
         pool.render(&mut fb, 0.0, |v| v);
@@ -492,7 +464,17 @@ mod tests {
     #[test]
     fn spawn_pulse_type_adds_no_particles() {
         let mut pool = ParticlePool::new();
-        spawn_for_type(&mut pool, ParticleType::Pulse, 10.0, 5.0, &[], 0.0, 80, 24);
+        let empty: &[(u8, u8, u8)] = &[];
+        spawn_for_type(
+            &mut pool,
+            ParticleType::Pulse,
+            10.0,
+            5.0,
+            empty,
+            0.0,
+            80,
+            24,
+        );
         assert_eq!(
             pool.active_count(),
             0,
@@ -505,7 +487,6 @@ mod tests {
         let mut pool = ParticlePool::new();
         for _ in 0..5 {
             let _ = pool.spawn(Particle {
-                active: true,
                 life: 10.0,
                 ..Default::default()
             });
@@ -513,6 +494,23 @@ mod tests {
         assert_eq!(pool.active_count(), 5);
         pool.clear();
         assert_eq!(pool.active_count(), 0);
+    }
+
+    #[test]
+    fn kill_removes_particle_by_key() {
+        let mut pool = ParticlePool::new();
+        let key = pool.spawn(Particle::default()).unwrap();
+        assert_eq!(pool.active_count(), 1);
+        pool.kill(key);
+        assert_eq!(pool.active_count(), 0);
+    }
+
+    #[test]
+    fn spawn_returns_distinct_keys() {
+        let mut pool = ParticlePool::new();
+        let k1 = pool.spawn(Particle::default()).unwrap();
+        let k2 = pool.spawn(Particle::default()).unwrap();
+        assert_ne!(k1, k2);
     }
 
     #[test]
@@ -541,10 +539,9 @@ mod tests {
             max_life: 10.0,
             ch: '*',
             color: Color::WHITE,
-            active: true,
         });
         pool.update(1.0);
-        let p = pool.particles.iter().find(|p| p.active).unwrap();
+        let (_key, p) = pool.particles.iter().next().unwrap();
         assert!(
             (p.y - 5.0).abs() < 0.01,
             "particle with zero vy should stay at spawn Y, got y={}",
