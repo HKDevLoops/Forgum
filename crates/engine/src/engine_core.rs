@@ -69,6 +69,9 @@ struct SimState {
     scheduler: Scheduler,
     frame_count: u64,
     elapsed: f32,
+    /// Per-frame arena: O(1) mass-dealloc via `reset()` at frame top.
+    /// All per-frame scratch (damage lists, temp buffers) go here.
+    arena: bumpalo::Bump,
 }
 
 impl SimState {
@@ -103,11 +106,15 @@ impl SimState {
             scheduler: Scheduler::new(config.fps),
             frame_count: 0,
             elapsed: 0.0,
+            arena: bumpalo::Bump::with_capacity(64 * 1024),
         }
     }
 
     /// Run one simulation step. Returns the frame snapshot to ship to RENDER.
     fn tick(&mut self, dt: Duration) -> Arc<Frame> {
+        // Phase 1.6: O(1) mass-dealloc of last frame's scratch.
+        self.arena.reset();
+
         let dt_f32 = dt.as_secs_f32();
         self.elapsed += dt_f32;
 
