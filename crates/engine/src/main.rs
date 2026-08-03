@@ -202,6 +202,42 @@ fn main() -> ExitCode {
             ExitCode::SUCCESS
         }
 
+        // ── doctor ─────────────────────────────────────────────────
+        Some(cli::Commands::Doctor) => {
+            let caps = forgum_platform::detect_capabilities();
+            let mux = forgum_platform::detect_mux();
+            let engine_path = std::env::current_exe()
+                .ok()
+                .and_then(|p| p.to_str().map(String::from))
+                .unwrap_or_else(|| "forgum-engine".to_string());
+            let config_path = args.config.unwrap_or_default();
+            let cows_dir = forgum_platform::data_dir()
+                .ok()
+                .map(|d| d.join("Cows"))
+                .filter(|d| d.is_dir());
+            let cow_count = cows_dir
+                .as_ref()
+                .and_then(|d| std::fs::read_dir(d).ok())
+                .map(|rd| rd.filter_map(|e| e.ok()).count())
+                .unwrap_or(0);
+
+            println!(
+                "Platform: {} {}",
+                std::env::consts::OS,
+                std::env::consts::ARCH
+            );
+            println!("Engine:   {}", engine_path);
+            println!("Config:   {}", config_path.display());
+            println!("Terminal: {}x{}", caps.width, caps.height);
+            println!("TTY:      {}", caps.is_tty);
+            println!("Color:    {}", caps.color.as_str());
+            println!("Sync:     {}", if caps.sync { "yes" } else { "no" });
+            println!("Graphics: {:?}", caps.graphics);
+            println!("Mux:      {}", mux.name());
+            println!("Cows:     {} loaded", cow_count);
+            ExitCode::SUCCESS
+        }
+
         // ── tmux install ───────────────────────────────────────────
         Some(cli::Commands::Tmux {
             sub: cli::TmuxSub::Install,

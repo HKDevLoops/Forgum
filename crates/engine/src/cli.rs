@@ -111,6 +111,8 @@ pub enum Commands {
     },
     /// Print 'ok' and exit (for daemon health checks).
     Status,
+    /// Diagnose terminal capabilities and configuration.
+    Doctor,
     /// View or edit configuration.
     Config {
         /// Open the interactive config menu.
@@ -332,6 +334,7 @@ pub enum Command {
     Say,
     Timer,
     Battle,
+    Doctor,
     Unknown(String),
 }
 
@@ -420,6 +423,7 @@ pub fn parse_args(argv: Vec<String>) -> Result<(Args, Option<Commands>), CliErro
         Some(Commands::Say { .. }) => Command::Say,
         Some(Commands::Timer { .. }) => Command::Timer,
         Some(Commands::Battle { .. }) => Command::Battle,
+        Some(Commands::Doctor) => Command::Doctor,
     };
 
     let max_len = match &cli.command {

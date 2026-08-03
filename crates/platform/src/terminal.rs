@@ -146,10 +146,18 @@ pub fn detect_sync_support() -> bool {
     if std::env::var_os("WT_SESSION").is_some() {
         return true;
     }
+    if std::env::var_os("KITTY_PID").is_some() {
+        return true;
+    }
     if let Ok(tp) = std::env::var("TERM_PROGRAM") {
         match tp.to_ascii_lowercase().as_str() {
-            "iterm.app" | "wezterm" | "ghostty" | "vscode" => return true,
+            "iterm.app" | "wezterm" | "ghostty" | "vscode" | "tabby" | "hyper" => return true,
             _ => {}
+        }
+    }
+    if let Ok(term) = std::env::var("TERM") {
+        if term.to_ascii_lowercase().contains("ghostty") {
+            return true;
         }
     }
     false
@@ -173,10 +181,14 @@ pub fn detect_graphics_cap() -> GraphicsCaps {
         || term_program.contains("mlterm")
         || term_program.contains("foot")
         || term_program.contains("wezterm")
+        || term_program.contains("tabby")
     {
         return GraphicsCaps::Sixel;
     }
-    if term_program.contains("kitty") || term.contains("kitty") {
+    if term_program.contains("kitty")
+        || term.contains("kitty")
+        || std::env::var_os("KITTY_WINDOW_ID").is_some()
+    {
         return GraphicsCaps::Kitty;
     }
     GraphicsCaps::None
