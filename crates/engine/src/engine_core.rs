@@ -550,7 +550,7 @@ mod tests {
 
     #[test]
     fn control_msg_variants_compile() {
-        let msgs = vec![
+        let msgs = [
             ControlMsg::Stop,
             ControlMsg::Pause,
             ControlMsg::Resume,
