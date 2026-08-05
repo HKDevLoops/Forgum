@@ -9,7 +9,7 @@
 //!
 //! ## Guard stack
 //!
-//! ```ignore
+//! ```text
 //! let _sig  = SignalGuard::install(flag)?;   // first
 //! let _out  = OutputHandle::open()?;
 //! let _raw  = RawModeGuard::acquire()?;      // foreground only

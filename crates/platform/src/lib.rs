@@ -110,7 +110,7 @@ pub use terminal::{
 ///
 /// # Example
 ///
-/// ```ignore
+/// ```text
 /// use forgum_platform::cfg_unix;
 /// let path: &str = cfg_unix! { "/dev/tty" };
 /// ```

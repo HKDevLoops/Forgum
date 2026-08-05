@@ -26,6 +26,10 @@ tui = ["dep:forgum-tui"]
 name = "forgum-engine"
 path = "src/main.rs"
 
+[[bench]]
+name = "engine_benches"
+harness = false
+
 [lints]
 workspace = true
 
