@@ -58,6 +58,11 @@ pub struct SceneConfig {
     /// Color mode: "rainbow" | "solid" | "none". Chameleon picks the paint.
     #[serde(default = "default_color_mode")]
     pub color_mode: String,
+
+    /// Shell attachment mode: "banner" (inline Fastfetch style), "split" (DECSTBM top margin),
+    /// "reactive" (PSReadLine/idle overlay), or "manual" (explicit invocations).
+    #[serde(default = "default_shell_attach_mode")]
+    pub shell_attach_mode: String,
 }
 
 /// Supported configuration file formats.
@@ -164,6 +169,10 @@ fn default_color_mode() -> String {
     "rainbow".to_string()
 }
 
+fn default_shell_attach_mode() -> String {
+    "banner".to_string()
+}
+
 impl Default for SceneConfig {
     fn default() -> Self {
         Self {
@@ -178,6 +187,7 @@ impl Default for SceneConfig {
             default_shell: default_default_shell(),
             auto_render_on_prompt: default_auto_render(),
             color_mode: default_color_mode(),
+            shell_attach_mode: default_shell_attach_mode(),
         }
     }
 }

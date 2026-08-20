@@ -179,11 +179,15 @@ fn main() -> ExitCode {
                         cfg.color_mode = v;
                         None
                     }
+                    "shell_attach_mode" | "attach_mode" => {
+                        cfg.shell_attach_mode = v;
+                        None
+                    }
                     other => {
                         eprintln!("unknown config key: {other}");
                         eprintln!(
                             "supported keys: cow, text, effect, background, duration, \
-                             fps, eyes, tongue, default_shell, auto_render_on_prompt, color_mode"
+                             fps, eyes, tongue, default_shell, auto_render_on_prompt, color_mode, shell_attach_mode"
                         );
                         return ExitCode::from(1);
                     }

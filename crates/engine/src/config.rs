@@ -149,6 +149,11 @@ pub fn merge(base: SceneConfig, overlay: SceneConfig) -> SceneConfig {
         } else {
             overlay.color_mode
         },
+        shell_attach_mode: if overlay.shell_attach_mode.is_empty() {
+            base.shell_attach_mode
+        } else {
+            overlay.shell_attach_mode
+        },
     }
 }
 

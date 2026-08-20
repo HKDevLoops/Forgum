@@ -122,6 +122,19 @@ __forgum_precmd() {{
       rm -f "$state"
     fi
   fi
+
+  if [ -f "$__FORGUM_CONFIG" ]; then
+    local auto; auto=$(grep -o '"auto_render_on_prompt":\s*[^,}}]*' "$__FORGUM_CONFIG" 2>/dev/null | awk '{{print $2}}')
+    local mode; mode=$(grep -o '"shell_attach_mode":\s*"[^"]*"' "$__FORGUM_CONFIG" 2>/dev/null | cut -d'"' -f4)
+    if [ "$auto" != "false" ]; then
+      case "$mode" in
+        banner) "$__FORGUM_ENGINE" render --duration 1 2>/dev/null ;;
+        split) printf '\x1b[9;%dr' "${{LINES:-30}}"; "$__FORGUM_ENGINE" render --background --duration 0 >/dev/null 2>&1 ;;
+        reactive) "$__FORGUM_ENGINE" render --background --duration 0 >/dev/null 2>&1 ;;
+        *) ;;
+      esac
+    fi
+  fi
 }}
 if [[ -v PROMPT_COMMAND ]]; then
   PROMPT_COMMAND="__forgum_precmd${{PROMPT_COMMAND:+;$PROMPT_COMMAND}}"
@@ -165,6 +178,19 @@ __forgum_precmd() {{
       local y=1; while [ "$y" -le "$rows" ]; do printf '\x1b[%d;1H%*s' "$y" "$cols" ''; y=$((y+1)); done
       printf '\x1b8\x1b[0m'
       rm -f "$state"
+    fi
+  fi
+
+  if [ -f "$__FORGUM_CONFIG" ]; then
+    local auto; auto=$(grep -o '"auto_render_on_prompt":\s*[^,}}]*' "$__FORGUM_CONFIG" 2>/dev/null | awk '{{print $2}}')
+    local mode; mode=$(grep -o '"shell_attach_mode":\s*"[^"]*"' "$__FORGUM_CONFIG" 2>/dev/null | cut -d'"' -f4)
+    if [ "$auto" != "false" ]; then
+      case "$mode" in
+        banner) "$__FORGUM_ENGINE" render --duration 1 2>/dev/null ;;
+        split) printf '\x1b[9;%dr' "${{LINES:-30}}"; "$__FORGUM_ENGINE" render --background --duration 0 >/dev/null 2>&1 ;;
+        reactive) "$__FORGUM_ENGINE" render --background --duration 0 >/dev/null 2>&1 ;;
+        *) ;;
+      esac
     fi
   fi
 }}
@@ -228,12 +254,12 @@ function forgum {{
 $global:__ForgumPromptBackup = $function:prompt
 $global:__ForgumEsc = if ($PSVersionTable.PSVersion.Major -ge 7) {{ '`e' }} else {{ [char]27 }}
 function global:prompt {{
+    $esc = $global:__ForgumEsc
     $state = Join-Path $env:TEMP 'Forgum\daemon.json'
     if (Test-Path $state) {{
         try {{
             $info = Get-Content $state -Raw | ConvertFrom-Json
             if ($info.pid -and -not (Get-Process -Id $info.pid -EA SilentlyContinue)) {{
-                $esc = $global:__ForgumEsc
                 [Console]::Write("$esc7")
                 $w = if ($Host.UI.RawUI) {{ $Host.UI.RawUI.WindowSize.Width }} else {{ 80 }}
                 1..$info.ob_y1 | ForEach-Object {{ [Console]::Write("$esc[$($_);1H$(' ' * $w)") }}
@@ -242,6 +268,30 @@ function global:prompt {{
             }}
         }} catch {{ }}
     }}
+
+    # Prompt attachment handler
+    if (Test-Path $__ForgumConfig) {{
+        try {{
+            $cfg = Get-Content $__ForgumConfig -Raw | ConvertFrom-Json
+            if ($cfg.auto_render_on_prompt -ne $false) {{
+                switch ($cfg.shell_attach_mode) {{
+                    'banner' {{
+                        & $__ForgumEngine render --duration 1 2>$null
+                    }}
+                    'split' {{
+                        $h = if ($Host.UI.RawUI) {{ $Host.UI.RawUI.WindowSize.Height }} else {{ 30 }}
+                        [Console]::Write("$esc[9;$($h)r")
+                        & $__ForgumEngine render --background --duration 0 2>$null
+                    }}
+                    'reactive' {{
+                        & $__ForgumEngine render --background --duration 0 2>$null
+                    }}
+                    default {{ }}
+                }}
+            }}
+        }} catch {{ }}
+    }}
+
     & $global:__ForgumPromptBackup
 }}
 # <<< forgum <<<
@@ -287,12 +337,12 @@ function forgum {{
 $global:__ForgumPromptBackup = $function:prompt
 $global:__ForgumEsc = if ($PSVersionTable.PSVersion.Major -ge 7) {{ '`e' }} else {{ [char]27 }}
 function global:prompt {{
+    $esc = $global:__ForgumEsc
     $state = Join-Path $env:TEMP 'Forgum\daemon.json'
     if (Test-Path $state) {{
         try {{
             $info = Get-Content $state -Raw | ConvertFrom-Json
             if ($info.pid -and -not (Get-Process -Id $info.pid -EA SilentlyContinue)) {{
-                $esc = $global:__ForgumEsc
                 [Console]::Write("$esc7")
                 $w = if ($Host.UI.RawUI) {{ $Host.UI.RawUI.WindowSize.Width }} else {{ 80 }}
                 1..$info.ob_y1 | ForEach-Object {{ [Console]::Write("$esc[$($_);1H$(' ' * $w)") }}
@@ -301,6 +351,30 @@ function global:prompt {{
             }}
         }} catch {{ }}
     }}
+
+    # Prompt attachment handler
+    if (Test-Path $__ForgumConfig) {{
+        try {{
+            $cfg = Get-Content $__ForgumConfig -Raw | ConvertFrom-Json
+            if ($cfg.auto_render_on_prompt -ne $false) {{
+                switch ($cfg.shell_attach_mode) {{
+                    'banner' {{
+                        & $__ForgumEngine render --duration 1 2>$null
+                    }}
+                    'split' {{
+                        $h = if ($Host.UI.RawUI) {{ $Host.UI.RawUI.WindowSize.Height }} else {{ 30 }}
+                        [Console]::Write("$esc[9;$($h)r")
+                        & $__ForgumEngine render --background --duration 0 2>$null
+                    }}
+                    'reactive' {{
+                        & $__ForgumEngine render --background --duration 0 2>$null
+                    }}
+                    default {{ }}
+                }}
+            }}
+        }} catch {{ }}
+    }}
+
     & $global:__ForgumPromptBackup
 }}
 # <<< forgum <<<

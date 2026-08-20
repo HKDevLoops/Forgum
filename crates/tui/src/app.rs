@@ -23,6 +23,7 @@ const QUIPS: &[&str] = &[
     "The windows to a nonexistent soul. Try '$$' for greed, 'XX' for dead, 'oo' for innocent.",
     "Sticking its tongue out at compiler errors. 'U' = mocking, ' ' = suppressed screams.",
     "Pick your poison (pwsh, zsh, fish, bash). The engine doesn't judge, but it remembers.",
+    "Symbiosis: 'banner' (Fastfetch burst), 'split' (penthouse pasture), 'reactive' (idle overlay), 'manual' (introvert).",
 ];
 
 /// A dropdown selection backed by a fixed list of string options.
@@ -62,6 +63,7 @@ enum Field {
     Cow,
     Effect,
     ConfigFormat,
+    ShellAttachMode,
     ColorMode,
     Background,
     AutoRenderOnPrompt,
@@ -73,10 +75,11 @@ enum Field {
 }
 
 impl Field {
-    const ALL: [Field; 11] = [
+    const ALL: [Field; 12] = [
         Field::Cow,
         Field::Effect,
         Field::ConfigFormat,
+        Field::ShellAttachMode,
         Field::ColorMode,
         Field::Background,
         Field::AutoRenderOnPrompt,
@@ -92,6 +95,7 @@ impl Field {
             Field::Cow => "cow",
             Field::Effect => "effect",
             Field::ConfigFormat => "config_format",
+            Field::ShellAttachMode => "shell_attach_mode",
             Field::ColorMode => "color_mode",
             Field::Background => "background",
             Field::AutoRenderOnPrompt => "auto_render_on_prompt",
@@ -126,6 +130,7 @@ pub struct ConfigApp {
     edit_buffer: String,
     effect: Dropdown,
     format_dropdown: Dropdown,
+    attach_mode_dropdown: Dropdown,
     color_mode: Dropdown,
     default_shell: Dropdown,
     saved: bool,
@@ -153,6 +158,10 @@ impl ConfigApp {
             &config.effect,
         );
         let format_dropdown = Dropdown::new(vec!["json", "yaml", "toml"], format.extension());
+        let attach_mode_dropdown = Dropdown::new(
+            vec!["banner", "split", "reactive", "manual"],
+            &config.shell_attach_mode,
+        );
         let color_mode = Dropdown::new(vec!["rainbow", "solid", "none"], &config.color_mode);
         let default_shell = Dropdown::new(
             vec!["", "bash", "zsh", "fish", "pwsh", "cmd", "powershell"],
@@ -166,6 +175,7 @@ impl ConfigApp {
             edit_buffer: String::new(),
             effect,
             format_dropdown,
+            attach_mode_dropdown,
             color_mode,
             default_shell,
             saved: false,
@@ -272,6 +282,7 @@ impl ConfigApp {
             // bool / dropdown fields edit directly (toggle/cycle), no buffer.
             Field::Effect
             | Field::ConfigFormat
+            | Field::ShellAttachMode
             | Field::ColorMode
             | Field::Background
             | Field::AutoRenderOnPrompt
@@ -350,6 +361,7 @@ impl ConfigApp {
             }
             Field::Effect => self.cycle_focused(true),
             Field::ConfigFormat => self.cycle_focused(true),
+            Field::ShellAttachMode => self.cycle_focused(true),
             Field::ColorMode => self.cycle_focused(true),
             Field::DefaultShell => self.cycle_focused(true),
             _ => {}
@@ -368,6 +380,10 @@ impl ConfigApp {
                     "Config format switched to {} (will migrate on Save)",
                     self.format_dropdown.current().to_uppercase()
                 );
+            }
+            Field::ShellAttachMode => {
+                self.attach_mode_dropdown.cycle(forward);
+                self.config.shell_attach_mode = self.attach_mode_dropdown.current();
             }
             Field::ColorMode => {
                 self.color_mode.cycle(forward);
@@ -510,6 +526,12 @@ impl ConfigApp {
                 "{} (JSON / YAML / TOML)",
                 self.format_dropdown.current().to_uppercase()
             ),
+            Field::ShellAttachMode => match self.attach_mode_dropdown.current().as_str() {
+                "banner" => "banner (Fastfetch Inline Burst)".to_string(),
+                "split" => "split (DECSTBM Penthouse Pasture)".to_string(),
+                "reactive" => "reactive (PSReadLine Idle Float)".to_string(),
+                _ => "manual (Introverted / CLI only)".to_string(),
+            },
             Field::ColorMode => self.color_mode.current(),
             Field::Background => {
                 if self.config.background {
