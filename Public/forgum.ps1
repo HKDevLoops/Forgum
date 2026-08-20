@@ -36,7 +36,7 @@ function forgum {
     $engineSubcommands = @(
         'init', 'fortune', 'config', 'status', 'completions',
         'tmux', 'status-line', 'herd', 'theme', 'demo', 'showcase',
-        'remote', 'say', 'timer', 'battle', 'render', 'logs', 'doctor', 'help'
+        'remote', 'say', 'timer', 'battle', 'render', 'logs', 'doctor', 'checkhealth', 'health', 'help'
     )
 
     if ($Text -and $Text.Count -gt 0 -and $engineSubcommands -contains $Text[0]) {

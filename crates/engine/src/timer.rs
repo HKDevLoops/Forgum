@@ -1,4 +1,3 @@
-use std::process::Command;
 use std::time::Instant;
 
 #[derive(Debug)]
@@ -12,16 +11,7 @@ pub struct TimerResult {
 
 pub fn run_timer(cmd: &[String]) -> TimerResult {
     let start = Instant::now();
-    let output = Command::new(&cmd[0])
-        .args(&cmd[1..])
-        .output()
-        .or_else(|_| {
-            if cfg!(windows) {
-                Command::new("cmd").arg("/C").args(cmd).output()
-            } else {
-                Command::new("sh").arg("-c").arg(cmd.join(" ")).output()
-            }
-        })
+    let output = forgum_platform::execute_command_with_shell_fallback(cmd)
         .map(|o| {
             (
                 String::from_utf8_lossy(&o.stdout).to_string(),

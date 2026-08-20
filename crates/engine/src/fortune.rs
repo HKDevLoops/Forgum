@@ -78,17 +78,19 @@ const FALLBACK_FORTUNES: &[&str] = &[
 /// Pick a random fortune from the list.
 pub fn pick_fortune(fortunes: &[String]) -> Option<&str> {
     let mut rng = rand::thread_rng();
-    if fortunes.is_empty() {
-        FALLBACK_FORTUNES.choose(&mut rng).copied()
-    } else {
-        fortunes.choose(&mut rng).map(|s| s.as_str())
-    }
+    fortunes.choose(&mut rng).map(|s| s.as_str())
 }
 
 /// Load and pick a single random fortune from the data directory.
+/// Falls back to built-in fortunes if no external files are found.
 pub fn random_fortune(data_dir: &Path) -> Option<String> {
     let fortunes = load_fortunes(data_dir);
-    pick_fortune(&fortunes).map(|s| s.to_string())
+    if fortunes.is_empty() {
+        let mut rng = rand::thread_rng();
+        FALLBACK_FORTUNES.choose(&mut rng).map(|s| s.to_string())
+    } else {
+        pick_fortune(&fortunes).map(|s| s.to_string())
+    }
 }
 
 #[cfg(test)]

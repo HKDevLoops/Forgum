@@ -1,19 +1,9 @@
 use std::path::PathBuf;
-use std::process::Command;
 
 use crate::cow;
 
 pub fn run_say(cmd: &[String]) -> String {
-    let output = Command::new(&cmd[0])
-        .args(&cmd[1..])
-        .output()
-        .or_else(|_| {
-            if cfg!(windows) {
-                Command::new("cmd").arg("/C").args(cmd).output()
-            } else {
-                Command::new("sh").arg("-c").arg(cmd.join(" ")).output()
-            }
-        })
+    let output = forgum_platform::execute_command_with_shell_fallback(cmd)
         .map(|o| {
             let mut out = String::from_utf8_lossy(&o.stdout).to_string();
             if out.trim().is_empty() && !o.stderr.is_empty() {
@@ -21,7 +11,13 @@ pub fn run_say(cmd: &[String]) -> String {
             }
             out
         })
-        .unwrap_or_else(|e| format!("Error running {}: {}", cmd[0], e));
+        .unwrap_or_else(|e| {
+            format!(
+                "Error running {}: {}",
+                cmd.first().map(|s| s.as_str()).unwrap_or(""),
+                e
+            )
+        });
 
     let text = output.trim().to_string();
     let display_text = if text.is_empty() {

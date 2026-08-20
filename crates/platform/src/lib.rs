@@ -77,7 +77,8 @@ pub use sixel::{
 #[cfg(unix)]
 pub use spawn::fork_then_exec_self;
 pub use spawn::{
-    daemon_bootstrap, daemonize, prefer_fork_exec, process_is_alive, spawn_detached, DetachedChild,
+    daemon_bootstrap, daemonize, execute_command_with_shell_fallback, prefer_fork_exec,
+    process_is_alive, spawn_detached, DetachedChild,
 };
 
 /// Returns the current process's open handle/fd count, or `None` if the OS

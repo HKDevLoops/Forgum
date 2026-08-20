@@ -370,6 +370,28 @@ pub fn process_is_alive(pid: u32) -> bool {
     }
 }
 
+/// Execute a command, falling back to OS shell invocation if direct execution fails.
+pub fn execute_command_with_shell_fallback(cmd: &[String]) -> io::Result<std::process::Output> {
+    if cmd.is_empty() {
+        return Err(io::Error::new(io::ErrorKind::InvalidInput, "empty command"));
+    }
+
+    let direct = Command::new(&cmd[0]).args(&cmd[1..]).output();
+    if direct.is_ok() {
+        return direct;
+    }
+
+    #[cfg(windows)]
+    {
+        Command::new("cmd").arg("/C").args(cmd).output()
+    }
+
+    #[cfg(not(windows))]
+    {
+        Command::new("sh").arg("-c").arg(cmd.join(" ")).output()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

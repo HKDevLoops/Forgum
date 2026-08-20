@@ -113,6 +113,13 @@ pub enum Commands {
     Status,
     /// Diagnose terminal capabilities and configuration.
     Doctor,
+    /// Run comprehensive health check on environment, terminal, shell, config, and daemons.
+    #[command(name = "checkhealth", alias = "health")]
+    Checkhealth {
+        /// Output raw JSON report instead of formatted terminal report.
+        #[arg(long)]
+        json: bool,
+    },
     /// View or edit configuration.
     Config {
         /// Open the interactive config menu.
@@ -359,6 +366,7 @@ pub enum Command {
     Timer,
     Battle,
     Doctor,
+    Checkhealth,
     Logs,
     Unknown(String),
 }
@@ -449,6 +457,7 @@ pub fn parse_args(argv: Vec<String>) -> Result<(Args, Option<Commands>), CliErro
         Some(Commands::Timer { .. }) => Command::Timer,
         Some(Commands::Battle { .. }) => Command::Battle,
         Some(Commands::Doctor) => Command::Doctor,
+        Some(Commands::Checkhealth { .. }) => Command::Checkhealth,
         Some(Commands::Logs { .. }) => Command::Logs,
     };
 

@@ -8,6 +8,7 @@
 //! delegated to `forgum-platform`. CI greps `engine/src/` and fails on hits.
 
 pub mod battle;
+pub mod checkhealth;
 pub mod cli;
 pub mod color;
 pub mod completions;

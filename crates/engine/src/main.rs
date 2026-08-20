@@ -367,6 +367,28 @@ fn main() -> ExitCode {
             ExitCode::SUCCESS
         }
 
+        // ── checkhealth ────────────────────────────────────────────
+        Some(cli::Commands::Checkhealth { json }) => {
+            let report = forgum_engine::checkhealth::run_health_check(args.config.as_deref());
+            if json {
+                match serde_json::to_string_pretty(&report) {
+                    Ok(out) => println!("{out}"),
+                    Err(e) => {
+                        eprintln!("{PROGRAM}: failed to serialize health report: {e}");
+                        return ExitCode::from(65);
+                    }
+                }
+            } else {
+                print!("{}", report.format_ansi());
+            }
+
+            if report.error_count > 0 {
+                ExitCode::from(1)
+            } else {
+                ExitCode::SUCCESS
+            }
+        }
+
         // ── tmux install ───────────────────────────────────────────
         Some(cli::Commands::Tmux {
             sub: cli::TmuxSub::Install,
