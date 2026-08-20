@@ -83,7 +83,9 @@ pub fn log(level: LogLevel, target: &str, message: &str) {
         return;
     };
 
-    let _ = fs::create_dir_all(&log_dir);
+    if !log_dir.is_dir() {
+        let _ = fs::create_dir_all(&log_dir);
+    }
 
     // 1. Text log: [2026-08-20 11:00:00.123] [INFO] [target] Message
     let text_path = log_dir.join("forgum.log");

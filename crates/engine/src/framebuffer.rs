@@ -162,9 +162,7 @@ impl FrameBuffer {
     /// Marks **nothing** dirty — only cells written via `set()` afterwards
     /// become damaged (G1). Resets the incremental trackers.
     pub fn clear(&mut self) {
-        for cell in &mut self.back {
-            *cell = Cell::empty();
-        }
+        self.back.fill(Cell::empty());
         self.dirty.fill(false);
         self.damage_list.clear();
     }

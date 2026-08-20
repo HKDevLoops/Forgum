@@ -35,13 +35,23 @@ pub trait Effect: Send + Sync {
 #[derive(Debug)]
 pub struct StaticEffect {
     cow_text: String,
+    blink_text: String,
     color_mode: String,
 }
 
 impl StaticEffect {
     pub fn new(cow_text: String, color_mode: String) -> Self {
+        let blink_text = cow_text
+            .replace("oo", "--")
+            .replace("OO", "--")
+            .replace("xx", "--")
+            .replace("XX", "--")
+            .replace("@@", "--")
+            .replace("$$", "--")
+            .replace("00", "--");
         Self {
             cow_text,
+            blink_text,
             color_mode,
         }
     }
@@ -60,22 +70,14 @@ impl Effect for StaticEffect {
         let is_blinking = blink_cycle > 4.35;
 
         let display_text = if is_blinking {
-            // Replace eyes (oo, OO, xx, XX, @@, $$, etc.) with -- for a blink.
-            self.cow_text
-                .replace("oo", "--")
-                .replace("OO", "--")
-                .replace("xx", "--")
-                .replace("XX", "--")
-                .replace("@@", "--")
-                .replace("$$", "--")
-                .replace("00", "--")
+            &self.blink_text
         } else {
-            self.cow_text.clone()
+            &self.cow_text
         };
 
         render_text_offset(
             fb,
-            &display_text,
+            display_text,
             Color::WHITE,
             0,
             y_off,

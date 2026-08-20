@@ -131,10 +131,14 @@ pub fn expand_cow(cow_template: &str, eyes: &str, tongue: &str, thoughts: &str) 
     };
 
     for line in cow_body.lines() {
-        let line = line.replace("$eyes", eyes);
-        let line = line.replace("$tongue", tongue);
-        let line = line.replace("$thoughts", thoughts);
-        result.push_str(&line);
+        if line.contains('$') {
+            let line = line.replace("$eyes", eyes);
+            let line = line.replace("$tongue", tongue);
+            let line = line.replace("$thoughts", thoughts);
+            result.push_str(&line);
+        } else {
+            result.push_str(line);
+        }
         result.push('\n');
     }
 

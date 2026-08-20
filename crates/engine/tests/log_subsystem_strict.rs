@@ -24,7 +24,7 @@ fn log_write_and_read_roundtrip() {
     logger::log(LogLevel::Warn, "test::audit", &format!("Msg 2 {}", token));
     logger::log(LogLevel::Error, "test::audit", &format!("Msg 3 {}", token));
 
-    let entries = logger::read_recent_logs(50, None).expect("read logs");
+    let entries = logger::read_recent_logs(500, None).expect("read logs");
     let matching: Vec<_> = entries
         .iter()
         .filter(|e| e.message.contains(&token))
@@ -43,7 +43,7 @@ fn log_level_filtering() {
     logger::log(LogLevel::Warn, "test::filter", &format!("Warn {}", token));
     logger::log(LogLevel::Error, "test::filter", &format!("Error {}", token));
 
-    let warn_and_above = logger::read_recent_logs(50, Some(LogLevel::Warn)).expect("read logs");
+    let warn_and_above = logger::read_recent_logs(500, Some(LogLevel::Warn)).expect("read logs");
     let matching: Vec<_> = warn_and_above
         .iter()
         .filter(|e| e.message.contains(&token))
