@@ -64,10 +64,10 @@ pub use guards::{AltScreenGuard, CursorShowGuard, RawModeGuard};
 pub use mux::{detect_mux, Mux};
 pub use output::{open_output, OutputHandle, OutputTarget};
 pub use paths::{
-    config_path, control_socket_path, daemon_state_path, data_dir, detect_session_id, is_canonical,
-    log_dir, runtime_dir, ConfigPaths, ShellKind,
+    config_dir, config_path, control_socket_path, daemon_state_path, data_dir, detect_config_file,
+    detect_session_id, is_canonical, log_dir, runtime_dir, ConfigPaths, ShellKind,
 };
-pub use protocol::SceneConfig;
+pub use protocol::{ConfigFormat, SceneConfig};
 pub use shell::Shell;
 pub use signal::{ShutdownFlag, SignalGuard};
 pub use sixel::{

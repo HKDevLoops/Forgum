@@ -60,6 +60,45 @@ pub struct SceneConfig {
     pub color_mode: String,
 }
 
+/// Supported configuration file formats.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ConfigFormat {
+    Json,
+    Yaml,
+    Toml,
+}
+
+impl ConfigFormat {
+    #[must_use]
+    pub fn from_extension(ext: &str) -> Option<Self> {
+        match ext.to_ascii_lowercase().as_str() {
+            "json" => Some(Self::Json),
+            "yaml" | "yml" => Some(Self::Yaml),
+            "toml" => Some(Self::Toml),
+            _ => None,
+        }
+    }
+
+    #[must_use]
+    pub fn extension(&self) -> &'static str {
+        match self {
+            Self::Json => "json",
+            Self::Yaml => "yaml",
+            Self::Toml => "toml",
+        }
+    }
+
+    #[must_use]
+    pub fn display_name(&self) -> &'static str {
+        match self {
+            Self::Json => "JSON",
+            Self::Yaml => "YAML",
+            Self::Toml => "TOML",
+        }
+    }
+}
+
 impl SceneConfig {
     pub fn validate(&mut self) {
         self.fps = self.fps.clamp(1, 240);
@@ -73,6 +112,24 @@ impl SceneConfig {
             .filter(|c| c.is_alphanumeric() || *c == '-' || *c == '_')
             .collect();
     }
+
+    pub fn parse_with_format(text: &str, format: ConfigFormat) -> Result<Self, String> {
+        let mut cfg: Self = match format {
+            ConfigFormat::Json => serde_json::from_str(text).map_err(|e| e.to_string())?,
+            ConfigFormat::Yaml => serde_yaml::from_str(text).map_err(|e| e.to_string())?,
+            ConfigFormat::Toml => toml::from_str(text).map_err(|e| e.to_string())?,
+        };
+        cfg.validate();
+        Ok(cfg)
+    }
+
+    pub fn serialize_with_format(&self, format: ConfigFormat) -> Result<String, String> {
+        match format {
+            ConfigFormat::Json => serde_json::to_string_pretty(self).map_err(|e| e.to_string()),
+            ConfigFormat::Yaml => serde_yaml::to_string(self).map_err(|e| e.to_string()),
+            ConfigFormat::Toml => toml::to_string_pretty(self).map_err(|e| e.to_string()),
+        }
+    }
 }
 
 fn default_cow() -> String {
@@ -80,7 +137,7 @@ fn default_cow() -> String {
 }
 
 fn default_effect() -> String {
-    "static".to_string()
+    "default".to_string()
 }
 
 fn default_fps() -> u16 {
@@ -133,7 +190,7 @@ mod tests {
     fn defaults_are_sane() {
         let s = SceneConfig::default();
         assert_eq!(s.cow, "default");
-        assert_eq!(s.effect, "static");
+        assert_eq!(s.effect, "default");
         assert_eq!(s.fps, 30);
         assert_eq!(s.eyes, "oo");
         assert!(!s.background);
@@ -165,6 +222,33 @@ mod tests {
         let back = serde_json::to_string(&s).unwrap();
         let s2: SceneConfig = serde_json::from_str(&back).unwrap();
         assert_eq!(s, s2);
+    }
+
+    #[test]
+    fn yaml_round_trip() {
+        let s = SceneConfig {
+            cow: "dragon".into(),
+            effect: "default".into(),
+            fps: 60,
+            ..SceneConfig::default()
+        };
+        let yaml = s.serialize_with_format(ConfigFormat::Yaml).unwrap();
+        let parsed = SceneConfig::parse_with_format(&yaml, ConfigFormat::Yaml).unwrap();
+        assert_eq!(s, parsed);
+    }
+
+    #[test]
+    fn toml_round_trip() {
+        let s = SceneConfig {
+            cow: "nyan".into(),
+            effect: "default".into(),
+            fps: 60,
+            color_mode: "rainbow".into(),
+            ..SceneConfig::default()
+        };
+        let toml_str = s.serialize_with_format(ConfigFormat::Toml).unwrap();
+        let parsed = SceneConfig::parse_with_format(&toml_str, ConfigFormat::Toml).unwrap();
+        assert_eq!(s, parsed);
     }
 
     #[test]

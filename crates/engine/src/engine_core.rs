@@ -120,8 +120,8 @@ impl SimState {
             cow_display.to_string()
         };
 
-        let effect = effects::create_effect(
-            cow_dna.base,
+        let effect = effects::create_scene_effect(
+            &config.effect,
             cow_text,
             cow_dna.clone(),
             instance_id,
@@ -198,8 +198,8 @@ impl SimState {
                 } else {
                     cow_display.to_string()
                 };
-                self.effect = effects::create_effect(
-                    self.cow_dna.base,
+                self.effect = effects::create_scene_effect(
+                    &self.config.effect,
                     cow_text,
                     self.cow_dna.clone(),
                     self.instance_id,
@@ -219,8 +219,8 @@ impl SimState {
                 let composed = crate::cow::compose_scene(&cow_text, &self.config.text);
                 let animations = crate::dna::load_animations(&self.data_dir);
                 self.cow_dna = crate::dna::get_dna(&animations, &self.config.cow);
-                self.effect = effects::create_effect(
-                    self.cow_dna.base,
+                self.effect = effects::create_scene_effect(
+                    &self.config.effect,
                     composed,
                     self.cow_dna.clone(),
                     self.instance_id,
@@ -238,8 +238,8 @@ impl SimState {
                     "\\\\",
                 );
                 let composed = crate::cow::compose_scene(&cow_text, &self.config.text);
-                self.effect = effects::create_effect(
-                    self.cow_dna.base,
+                self.effect = effects::create_scene_effect(
+                    &self.config.effect,
                     composed,
                     self.cow_dna.clone(),
                     self.instance_id,

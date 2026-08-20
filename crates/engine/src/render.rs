@@ -102,8 +102,8 @@ pub fn render_loop_foreground(
     };
 
     // Create the animation effect from DNA
-    let mut effect = effects::create_effect(
-        cow_dna.base,
+    let mut effect = effects::create_scene_effect(
+        &config.effect,
         cow_text.clone(),
         cow_dna.clone(),
         instance_id,
@@ -160,8 +160,8 @@ pub fn render_loop_foreground(
                             "\\\\",
                         );
                         let new_composed = cow::compose_scene(&cow_text, &config.text);
-                        effect = effects::create_effect(
-                            cow_dna.base,
+                        effect = effects::create_scene_effect(
+                            &config.effect,
                             new_composed,
                             cow_dna.clone(),
                             instance_id,
@@ -180,8 +180,8 @@ pub fn render_loop_foreground(
                             "\\\\",
                         );
                         let new_composed = cow::compose_scene(&cow_text, &config.text);
-                        effect = effects::create_effect(
-                            cow_dna.base,
+                        effect = effects::create_scene_effect(
+                            &config.effect,
                             new_composed,
                             cow_dna.clone(),
                             instance_id,
@@ -294,8 +294,8 @@ pub fn render_loop_background(
     };
 
     // Create the animation effect from DNA
-    let mut effect = effects::create_effect(
-        cow_dna.base,
+    let mut effect = effects::create_scene_effect(
+        &config.effect,
         cow_text.clone(),
         cow_dna.clone(),
         instance_id,
@@ -334,7 +334,13 @@ pub fn render_loop_background(
                         // Resume rendering — no-op for now, the loop continues.
                     }
                     ControlCmd::Effect(name) => {
-                        eprintln!("forgum-engine: effect change requested: {name}");
+                        effect = effects::create_scene_effect(
+                            &name,
+                            cow_text.clone(),
+                            cow_dna.clone(),
+                            instance_id,
+                            &config.color_mode,
+                        );
                     }
                     ControlCmd::Speed(s) => {
                         // Scale the scheduler's target FPS from the base rate.
@@ -352,8 +358,8 @@ pub fn render_loop_background(
                             "\\\\",
                         );
                         let new_composed = cow::compose_scene(&cow_text, &config.text);
-                        effect = effects::create_effect(
-                            cow_dna.base,
+                        effect = effects::create_scene_effect(
+                            &config.effect,
                             new_composed,
                             cow_dna.clone(),
                             instance_id,
@@ -372,8 +378,8 @@ pub fn render_loop_background(
                             "\\\\",
                         );
                         let new_composed = cow::compose_scene(&cow_text, &config.text);
-                        effect = effects::create_effect(
-                            cow_dna.base,
+                        effect = effects::create_scene_effect(
+                            &config.effect,
                             new_composed,
                             cow_dna.clone(),
                             instance_id,

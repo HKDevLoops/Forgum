@@ -70,14 +70,53 @@ fn main() -> ExitCode {
         }
 
         // ── config ─────────────────────────────────────────────────
-        Some(cli::Commands::Config { tui, key, value }) => {
-            use forgum_engine::config::read_config_file;
+        Some(cli::Commands::Config {
+            tui,
+            key,
+            value,
+            migrate,
+        }) => {
+            use forgum_engine::config::{
+                migrate_config_format, read_config_file, write_config_file,
+            };
+            use forgum_platform::{config_dir, ConfigFormat};
 
-            let cfg_path = args
-                .config
-                .clone()
-                .or_else(|| forgum_platform::config_path().ok())
-                .unwrap_or_else(|| PathBuf::from("forgum.json"));
+            if let Some(target_fmt_str) = migrate {
+                let Some(target_fmt) = ConfigFormat::from_extension(&target_fmt_str) else {
+                    eprintln!("{PROGRAM}: unsupported format '{target_fmt_str}'. Supported: json, yaml, toml");
+                    return ExitCode::from(1);
+                };
+                let cfg_dir = match config_dir() {
+                    Ok(d) => d,
+                    Err(e) => {
+                        eprintln!("{PROGRAM}: cannot resolve config dir: {e}");
+                        return ExitCode::from(78);
+                    }
+                };
+                match migrate_config_format(&cfg_dir, target_fmt) {
+                    Ok(new_path) => {
+                        println!(
+                            "Successfully migrated configuration to {} ({})",
+                            target_fmt.display_name(),
+                            new_path.display()
+                        );
+                        return ExitCode::SUCCESS;
+                    }
+                    Err(e) => {
+                        eprintln!("{PROGRAM}: migration failed: {e}");
+                        return ExitCode::from(e.exit_code() as u8);
+                    }
+                }
+            }
+
+            let (cfg_path, cfg_format) =
+                match forgum_platform::detect_config_file(args.config.as_deref()) {
+                    Ok(pair) => pair,
+                    Err(e) => {
+                        eprintln!("{PROGRAM}: configuration error: {e}");
+                        return ExitCode::from(e.exit_code() as u8);
+                    }
+                };
 
             if let (Some(k), Some(v)) = (key.clone(), value.clone()) {
                 // Headless `config set <key> <value>`.
@@ -153,18 +192,15 @@ fn main() -> ExitCode {
                     eprintln!("invalid value for `{k}`: {e}");
                     return ExitCode::from(1);
                 }
-                if let Some(parent) = cfg_path.parent() {
-                    if let Err(e) = std::fs::create_dir_all(parent) {
-                        eprintln!("{PROGRAM}: cannot create config dir: {e}");
-                        return ExitCode::from(74);
-                    }
-                }
-                let json = serde_json::to_string_pretty(&cfg).unwrap();
-                if let Err(e) = std::fs::write(&cfg_path, json) {
+                if let Err(e) = write_config_file(&cfg_path, &cfg, cfg_format) {
                     eprintln!("{PROGRAM}: cannot write config: {e}");
-                    return ExitCode::from(74);
+                    return ExitCode::from(e.exit_code() as u8);
                 }
-                println!("set {k} = {printed} in {}", cfg_path.display());
+                println!(
+                    "set {k} = {printed} in {} ({})",
+                    cfg_path.display(),
+                    cfg_format.display_name()
+                );
                 ExitCode::SUCCESS
             } else if tui {
                 // Interactive TUI (only available in tui-enabled builds).
@@ -182,6 +218,45 @@ fn main() -> ExitCode {
                 );
                 ExitCode::from(1)
             }
+        }
+
+        // ── logs ───────────────────────────────────────────────────
+        Some(cli::Commands::Logs {
+            lines,
+            level,
+            json,
+            clear,
+        }) => {
+            if clear {
+                if let Err(e) = forgum_engine::logger::clear_logs() {
+                    eprintln!("{PROGRAM}: cannot clear logs: {e}");
+                    return ExitCode::from(1);
+                }
+                println!("Logs truncated. Pasture is clean.");
+                return ExitCode::SUCCESS;
+            }
+
+            let min_level = level
+                .as_deref()
+                .and_then(forgum_engine::logger::LogLevel::from_str_loose);
+            let entries = match forgum_engine::logger::read_recent_logs(lines, min_level) {
+                Ok(e) => e,
+                Err(err) => {
+                    eprintln!("{PROGRAM}: error reading logs: {err}");
+                    return ExitCode::from(1);
+                }
+            };
+
+            if json {
+                for entry in entries {
+                    if let Ok(line) = serde_json::to_string(&entry) {
+                        println!("{line}");
+                    }
+                }
+            } else {
+                print!("{}", forgum_engine::logger::format_log_table(&entries));
+            }
+            ExitCode::SUCCESS
         }
 
         // ── completions <shell> ──────────────────────────────────────

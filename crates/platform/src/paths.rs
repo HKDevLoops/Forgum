@@ -22,6 +22,7 @@
 use std::path::{Path, PathBuf};
 
 use crate::error::PlatformError;
+use crate::protocol::ConfigFormat;
 
 /// Shell kinds we know how to generate hooks for. Used by `forgum init`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -68,20 +69,19 @@ impl std::str::FromStr for ShellKind {
 }
 
 /// The four standard Forgum paths, resolved.
+/// Path bundle returned by [`resolve_all`].
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ConfigPaths {
-    /// JSON config file (may not exist yet).
+pub struct AppPaths {
     pub config: PathBuf,
-    /// Directory containing cow files and bundled fortunes.
     pub data: PathBuf,
-    /// Per-user runtime dir (PID files, control sockets, daemon JSON).
     pub runtime: PathBuf,
-    /// Logs.
     pub log: PathBuf,
 }
 
-impl ConfigPaths {
-    /// Resolve all four paths. Creates any missing parent directories in best
+pub type ConfigPaths = AppPaths;
+
+impl AppPaths {
+    /// Resolve all standard paths, creating parent directories on a best-
     /// effort (runtime/log/data). Config file is *not* created — only its
     /// parent dir is.
     pub fn resolve() -> Result<Self, PlatformError> {
@@ -98,7 +98,67 @@ pub fn config_path() -> Result<PathBuf, PlatformError> {
     if let Some(p) = std::env::var_os("FORGUM_CONFIG") {
         return Ok(PathBuf::from(p));
     }
-    Ok(default_config_path())
+    let (path, _) = detect_config_file(None)?;
+    Ok(path)
+}
+
+pub fn config_dir() -> Result<PathBuf, PlatformError> {
+    if let Some(p) = std::env::var_os("FORGUM_CONFIG") {
+        let path = PathBuf::from(p);
+        if let Some(parent) = path.parent() {
+            return Ok(parent.to_path_buf());
+        }
+    }
+    Ok(default_config_dir())
+}
+
+/// Detect the active configuration file and its format, enforcing the
+/// strict mutual exclusivity rule (at most one format can exist in config dir).
+pub fn detect_config_file(
+    explicit_path: Option<&Path>,
+) -> Result<(PathBuf, ConfigFormat), PlatformError> {
+    if let Some(p) = explicit_path {
+        let ext = p.extension().and_then(|s| s.to_str()).unwrap_or("json");
+        let format = ConfigFormat::from_extension(ext).unwrap_or(ConfigFormat::Json);
+        return Ok((p.to_path_buf(), format));
+    }
+    if let Some(env_p) = std::env::var_os("FORGUM_CONFIG") {
+        let p = PathBuf::from(env_p);
+        let ext = p.extension().and_then(|s| s.to_str()).unwrap_or("json");
+        let format = ConfigFormat::from_extension(ext).unwrap_or(ConfigFormat::Json);
+        return Ok((p, format));
+    }
+
+    let dir = default_config_dir();
+    let candidates = [
+        ("config.json", ConfigFormat::Json),
+        ("forgum.json", ConfigFormat::Json),
+        ("config.yaml", ConfigFormat::Yaml),
+        ("config.yml", ConfigFormat::Yaml),
+        ("forgum.yaml", ConfigFormat::Yaml),
+        ("forgum.yml", ConfigFormat::Yaml),
+        ("config.toml", ConfigFormat::Toml),
+        ("forgum.toml", ConfigFormat::Toml),
+    ];
+
+    let mut found: Vec<(PathBuf, ConfigFormat)> = Vec::new();
+    for (name, fmt) in candidates {
+        let path = dir.join(name);
+        if path.is_file() && !found.iter().any(|(_, f)| *f == fmt) {
+            found.push((path, fmt));
+        }
+    }
+
+    if found.len() > 1 {
+        let paths: Vec<PathBuf> = found.into_iter().map(|(p, _)| p).collect();
+        return Err(PlatformError::ConfigConflict(paths));
+    }
+
+    if let Some((p, fmt)) = found.into_iter().next() {
+        return Ok((p, fmt));
+    }
+
+    Ok((default_config_path(), ConfigFormat::Json))
 }
 
 pub fn data_dir() -> Result<PathBuf, PlatformError> {
@@ -123,17 +183,19 @@ pub fn log_dir() -> Result<PathBuf, PlatformError> {
 }
 
 #[cfg(unix)]
-fn default_config_path() -> PathBuf {
+fn default_config_dir() -> PathBuf {
     if let Some(home) = std::env::var_os("XDG_CONFIG_HOME") {
-        return PathBuf::from(home).join("Forgum").join("config.json");
+        return PathBuf::from(home).join("Forgum");
     }
     if let Some(home) = std::env::var_os("HOME") {
-        return PathBuf::from(home)
-            .join(".config")
-            .join("Forgum")
-            .join("config.json");
+        return PathBuf::from(home).join(".config").join("Forgum");
     }
-    PathBuf::from("/tmp/Forgum/config.json")
+    PathBuf::from("/tmp/Forgum")
+}
+
+#[cfg(unix)]
+fn default_config_path() -> PathBuf {
+    default_config_dir().join("config.json")
 }
 
 #[cfg(unix)]
@@ -176,11 +238,16 @@ fn default_log_dir() -> PathBuf {
 }
 
 #[cfg(windows)]
-fn default_config_path() -> PathBuf {
+fn default_config_dir() -> PathBuf {
     if let Some(appdata) = std::env::var_os("APPDATA") {
-        return PathBuf::from(appdata).join("Forgum").join("config.json");
+        return PathBuf::from(appdata).join("Forgum");
     }
-    PathBuf::from("C:\\Forgum\\config.json")
+    PathBuf::from("C:\\Forgum")
+}
+
+#[cfg(windows)]
+fn default_config_path() -> PathBuf {
+    default_config_dir().join("config.json")
 }
 
 #[cfg(windows)]

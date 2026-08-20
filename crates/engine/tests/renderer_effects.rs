@@ -137,10 +137,10 @@ fn create_renderer_returns_renderer() {
 }
 
 #[test]
-fn scene_config_default_is_static() {
+fn scene_config_default_is_default() {
     let cfg = forgum_engine::protocol::SceneConfig::default();
     assert_eq!(cfg.cow, "default");
-    assert_eq!(cfg.effect, "static");
+    assert_eq!(cfg.effect, "default");
     assert_eq!(cfg.fps, 30);
     assert!(!cfg.background);
 }

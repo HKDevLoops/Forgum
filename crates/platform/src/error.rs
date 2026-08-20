@@ -22,8 +22,11 @@ pub enum PlatformError {
     #[error("config file is not valid UTF-8: {0}")]
     ConfigEncoding(PathBuf),
 
-    #[error("config file is not valid JSON ({path}): {message}")]
+    #[error("config file is not valid ({path}): {message}")]
     ConfigParse { path: PathBuf, message: String },
+
+    #[error("multiple conflicting configuration files found: {0:?}. Exactly one config format (JSON, YAML, or TOML) is permitted. Please delete or migrate the extra file.")]
+    ConfigConflict(Vec<PathBuf>),
 
     #[error("signal handler registration failed for {signal}: {source}")]
     SignalRegistration {
@@ -45,14 +48,14 @@ pub enum PlatformError {
 impl PlatformError {
     /// Exit code to use when surfacing this error from the engine binary.
     ///
-    /// - I/O, terminal-not-found, path-escape: `78` (`EX_CONFIG` — configuration error).
+    /// - I/O, terminal-not-found, path-escape, config-conflict: `78` (`EX_CONFIG` — configuration error).
     /// - Parse / encoding: `65` (`EX_DATAERR` — input data error).
     /// - Signal / detach: `71` (`EX_OSERR` — OS-level error).
     /// - Invalid argument: `64` (`EX_USAGE`).
     #[must_use]
     pub fn exit_code(&self) -> i32 {
         match self {
-            Self::Io(_) | Self::NoTerminal | Self::PathEscape(_) => 78,
+            Self::Io(_) | Self::NoTerminal | Self::PathEscape(_) | Self::ConfigConflict(_) => 78,
             Self::ConfigEncoding(_) | Self::ConfigParse { .. } => 65,
             Self::SignalRegistration { .. } | Self::Detach(_) => 71,
             Self::Unsupported(_) | Self::InvalidArgument(_) => 64,

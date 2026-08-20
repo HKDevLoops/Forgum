@@ -827,6 +827,184 @@ fn apply_glow(fb: &mut FrameBuffer, cx: f32, cy: f32, radius: f32, color: Color,
     }
 }
 
+/// Compound signature animation: combines body kinematics, particle emitters,
+/// localized glow, and keep-alive eye-blinks tailored to the animal's DNA.
+pub struct CompoundSignatureEffect {
+    dna: CowDna,
+    pool: ParticlePool,
+    spawn_timer: f32,
+    phase: f32,
+    speed: f32,
+    instance_id: u32,
+    base_effect: Box<dyn Effect>,
+}
+
+impl std::fmt::Debug for CompoundSignatureEffect {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("CompoundSignatureEffect")
+            .field("dna", &self.dna)
+            .field("speed", &self.speed)
+            .field("phase", &self.phase)
+            .finish()
+    }
+}
+
+impl CompoundSignatureEffect {
+    pub fn new(cow_text: String, dna: CowDna, instance_id: u32, color_mode: String) -> Self {
+        let phase = instance_phase(dna.phase_seed, instance_id);
+        let speed = dna.speed;
+        let base_effect = create_effect(dna.base, cow_text, dna.clone(), instance_id, &color_mode);
+        Self {
+            dna,
+            pool: ParticlePool::new(),
+            spawn_timer: 0.0,
+            phase,
+            speed,
+            instance_id,
+            base_effect,
+        }
+    }
+}
+
+impl Effect for CompoundSignatureEffect {
+    fn update(&mut self, dt: f32, cols: usize, rows: usize) {
+        self.base_effect.update(dt, cols, rows);
+
+        if self.dna.particles.rate > 0 {
+            seed_frame_rng(self.dna.phase_seed.wrapping_add(self.instance_id));
+            self.spawn_timer += dt * self.speed;
+            let interval = 1.0 / self.dna.particles.rate.max(1) as f32;
+            if self.spawn_timer >= interval {
+                self.spawn_timer -= interval;
+                let palette = color::parse_palette(&self.dna.particles.palette);
+                // Compute emitter position: for fire/bubbles, origin around cow head/mouth
+                let spawn_x = cols as f32 * 0.45;
+                let spawn_y = rows as f32 * 0.35;
+                spawn_for_type(
+                    &mut self.pool,
+                    self.dna.particles.r#type,
+                    spawn_x,
+                    spawn_y,
+                    &palette,
+                    self.phase + dt,
+                    cols,
+                    rows,
+                );
+            }
+            self.pool.update(dt);
+        }
+    }
+
+    fn render(&self, fb: &mut FrameBuffer, time: f32) {
+        self.base_effect.render(fb, time);
+
+        if self.dna.particles.rate > 0 {
+            self.pool.render(fb, time, easing::expo_out);
+        }
+
+        // Apply DNA glow if configured
+        if self.dna.glow.radius > 0.0 && self.dna.glow.color != "#ffffff" {
+            let glow_color = parse_hex(&self.dna.glow.color)
+                .map(|(r, g, b)| Color::rgb(r, g, b))
+                .unwrap_or(Color::WHITE);
+            apply_glow(
+                fb,
+                fb.width as f32 / 2.0,
+                fb.height as f32 / 3.0,
+                self.dna.glow.radius,
+                glow_color,
+                0.4,
+            );
+        }
+    }
+
+    fn on_resize(&mut self, cols: usize, rows: usize) {
+        self.base_effect.on_resize(cols, rows);
+    }
+}
+
+/// Create an effect for a scene configuration and DNA.
+/// - If `effect_name` is `"static"`, returns `StaticEffect`.
+/// - If `effect_name` is `"default"`, returns the animal's unique `CompoundSignatureEffect`.
+/// - If `effect_name` is a specific effect name (e.g. `"breathe"`, `"walk"`, `"pulse"`), overrides with that effect.
+pub fn create_scene_effect(
+    effect_name: &str,
+    cow_text: String,
+    dna: CowDna,
+    instance_id: u32,
+    color_mode: &str,
+) -> Box<dyn Effect> {
+    match effect_name.trim().to_ascii_lowercase().as_str() {
+        "static" => Box::new(StaticEffect::new(cow_text, color_mode.to_string())),
+        "breathe" => Box::new(BreatheEffect::new(
+            cow_text,
+            &dna,
+            instance_id,
+            color_mode.to_string(),
+        )),
+        "float" => Box::new(FloatEffect::new(
+            cow_text,
+            &dna,
+            instance_id,
+            color_mode.to_string(),
+        )),
+        "walk" => Box::new(WalkEffect::new(
+            cow_text,
+            &dna,
+            instance_id,
+            color_mode.to_string(),
+        )),
+        "particles" => Box::new(ParticlesEffect::new(
+            cow_text,
+            dna,
+            instance_id,
+            color_mode.to_string(),
+        )),
+        "pulse" => Box::new(PulseEffect::new(
+            cow_text,
+            &dna,
+            instance_id,
+            color_mode.to_string(),
+        )),
+        "glitch" => Box::new(GlitchEffect::new(
+            cow_text,
+            &dna,
+            instance_id,
+            color_mode.to_string(),
+        )),
+        "fly" => Box::new(FlyEffect::new(
+            cow_text,
+            &dna,
+            instance_id,
+            color_mode.to_string(),
+        )),
+        "talk" => Box::new(TalkEffect::new(
+            cow_text,
+            &dna,
+            instance_id,
+            color_mode.to_string(),
+        )),
+        "sway" => Box::new(SwayEffect::new(
+            cow_text,
+            &dna,
+            instance_id,
+            color_mode.to_string(),
+        )),
+        "dissolve" => Box::new(DissolveEffect::new(
+            cow_text,
+            &dna,
+            instance_id,
+            color_mode.to_string(),
+        )),
+        _ => Box::new(CompoundSignatureEffect::new(
+            cow_text,
+            dna,
+            instance_id,
+            color_mode.to_string(),
+        )),
+    }
+}
+
 /// Create an effect from a base animation type.
 pub fn create_effect(
     base: BaseAnim,

@@ -124,6 +124,24 @@ pub enum Commands {
         /// Value for --key.
         #[arg(value_name = "VALUE")]
         value: Option<String>,
+        /// Migrate configuration to another format (json, yaml, toml).
+        #[arg(long, value_name = "FORMAT")]
+        migrate: Option<String>,
+    },
+    /// View, query, or clear structured engine logs.
+    Logs {
+        /// Number of recent log lines to display.
+        #[arg(short = 'n', long, default_value = "25")]
+        lines: usize,
+        /// Minimum log level filter (TRACE, DEBUG, INFO, WARN, ERROR).
+        #[arg(short = 'l', long)]
+        level: Option<String>,
+        /// Output raw JSON Lines instead of the formatted ANSI table.
+        #[arg(long)]
+        json: bool,
+        /// Clear/truncate existing log files.
+        #[arg(long)]
+        clear: bool,
     },
     /// tmux integration subcommands.
     Tmux {
@@ -335,6 +353,7 @@ pub enum Command {
     Timer,
     Battle,
     Doctor,
+    Logs,
     Unknown(String),
 }
 
@@ -424,6 +443,7 @@ pub fn parse_args(argv: Vec<String>) -> Result<(Args, Option<Commands>), CliErro
         Some(Commands::Timer { .. }) => Command::Timer,
         Some(Commands::Battle { .. }) => Command::Battle,
         Some(Commands::Doctor) => Command::Doctor,
+        Some(Commands::Logs { .. }) => Command::Logs,
     };
 
     let max_len = match &cli.command {
