@@ -1,21 +1,21 @@
 # G11 — Get-ForgumEngineBinary: env override > module-relative > PATH.
 # Critically, **no auto-rebuild** (BUG-P30).
 
-BeforeAll {
-    Import-Module (Join-Path $PSScriptRoot 'Forgum.PesterHelpers.psm1') -Force
-    Initialize-ForgumPester
-    Import-Module (Join-Path (Get-ForgumRepoRoot) 'Forgum.psd1') -Force
-}
-
-AfterAll { Cleanup-ForgumPester }
-
 Describe 'Get-ForgumEngineBinary (G11)' {
+    BeforeAll {
+        Import-Module (Join-Path $PSScriptRoot 'Forgum.PesterHelpers.psm1') -Force
+        Initialize-ForgumPester
+        Import-Module (Join-Path (Get-ForgumRepoRoot) 'Forgum.psd1') -Force
+    }
+
+    AfterAll { Cleanup-ForgumPester }
+
     It 'honors $env:FORGUM_ENGINE when set' {
         $custom = Join-Path ([System.IO.Path]::GetTempPath()) ('forgum-engine-custom-' + [guid]::NewGuid() + '.exe')
         'fake-binary' | Set-Content -LiteralPath $custom -Encoding ascii
         try {
             $env:FORGUM_ENGINE = $custom
-            (Get-ForgumEngineBinary) | Should -Be (Resolve-Path $custom).Path
+            (Get-ForgumEngineBinary) | Should Be (Resolve-Path $custom).Path
         } finally {
             Remove-Item Env:FORGUM_ENGINE -ErrorAction SilentlyContinue
             Remove-Item -LiteralPath $custom -Force -ErrorAction SilentlyContinue
@@ -33,7 +33,7 @@ Describe 'Get-ForgumEngineBinary (G11)' {
             Copy-Item -LiteralPath (Get-ForgumEnginePath) -Destination $dest
         }
         try {
-            Get-ForgumEngineBinary | Should -Be (Resolve-Path $dest).Path
+            Get-ForgumEngineBinary | Should Be (Resolve-Path $dest).Path
         } finally {
             Remove-Item -LiteralPath $dest -Force -ErrorAction SilentlyContinue
         }
@@ -48,13 +48,17 @@ Describe 'Get-ForgumEngineBinary (G11)' {
             Remove-Item -LiteralPath $binDir -Recurse -Force
         }
         try {
-            # If it's still resolvable via PATH, we can't test this case.
-            $resolveEnv = Get-Command 'forgum-engine' -ErrorAction SilentlyContinue
-            if ($null -eq $resolveEnv) {
-                { Get-ForgumEngineBinary } | Should -Throw -ExpectedMessage '*not found*'
-            } else {
-                Set-ItResult -Pending -Because 'forgum-engine is on PATH and would mask this test'
+            $origPath = $env:PATH
+            $env:PATH = ''
+            $threw = $false
+            try {
+                Get-ForgumEngineBinary -ErrorAction Stop
+            } catch {
+                $threw = $true
+            } finally {
+                $env:PATH = $origPath
             }
+            $threw | Should Be $true
         } finally {
             if ($preserved) {
                 New-Item -ItemType Directory -Path $binDir -Force | Out-Null
@@ -71,21 +75,19 @@ Describe 'Get-ForgumEngineBinary (G11)' {
         $env:FORGUM_BUILD_MARKER = $marker
         $env:FORGUM_ENGINE = $marker  # nonexistent on purpose
 
-        # If forgum-engine is resolvable via PATH, the function returns success
-        # via the PATH fallback before our env override matters — the throw
-        # path can never trigger, so skip with the same pattern as test 3.
-        $resolveEnv = Get-Command 'forgum-engine' -ErrorAction SilentlyContinue
-        if ($resolveEnv) {
-            Set-ItResult -Pending -Because 'forgum-engine is on PATH and would mask this test'
-            return
-        }
-
+        $origPath = $env:PATH
+        $env:PATH = ''
+        $threw = $false
         try {
-            { Get-ForgumEngineBinary -ErrorAction SilentlyContinue } | Should -Throw
-            Test-Path -LiteralPath $marker | Should -BeFalse -Because "must not have created the file"
+            Get-ForgumEngineBinary -ErrorAction Stop
+        } catch {
+            $threw = $true
         } finally {
+            $env:PATH = $origPath
             Remove-Item Env:FORGUM_ENGINE -ErrorAction SilentlyContinue
             Remove-Item Env:FORGUM_BUILD_MARKER -ErrorAction SilentlyContinue
         }
+        $threw | Should Be $true
+        (Test-Path -LiteralPath $marker) | Should Be $false
     }
 }

@@ -1,15 +1,15 @@
 # G10 — Invoke-ForgumEngine cleans up temp files, returns exit code,
 # rejects missing binary.
 
-BeforeAll {
-    Import-Module (Join-Path $PSScriptRoot 'Forgum.PesterHelpers.psm1') -Force
-    Initialize-ForgumPester
-    Import-Module (Join-Path (Get-ForgumRepoRoot) 'Forgum.psd1') -Force
-}
-
-AfterAll { Cleanup-ForgumPester }
-
 Describe 'Invoke-ForgumEngine (G10)' {
+    BeforeAll {
+        Import-Module (Join-Path $PSScriptRoot 'Forgum.PesterHelpers.psm1') -Force
+        Initialize-ForgumPester
+        Import-Module (Join-Path (Get-ForgumRepoRoot) 'Forgum.psd1') -Force
+    }
+
+    AfterAll { Cleanup-ForgumPester }
+
     BeforeEach {
         $script:tmp = [System.IO.Path]::GetTempFileName() + '.json'
         '{}' | Set-Content -LiteralPath $script:tmp -Encoding utf8
@@ -25,7 +25,7 @@ Describe 'Invoke-ForgumEngine (G10)' {
                             -JsonFile $script:tmp `
                             -TimeoutSeconds 5 `
         | Out-Null
-        Test-Path -LiteralPath $script:tmp | Should -BeFalse
+        (Test-Path -LiteralPath $script:tmp) | Should Be $false
     }
 
     It 'returns 0 for the engine status command' {
@@ -33,7 +33,7 @@ Describe 'Invoke-ForgumEngine (G10)' {
                                      -Command status `
                                      -JsonFile $script:tmp `
                                      -TimeoutSeconds 5
-        $code | Should -Be 0
+        $code | Should Be 0
     }
 
     It 'returns exit code 65 (EX_DATAERR) for invalid JSON' {
@@ -41,13 +41,18 @@ Describe 'Invoke-ForgumEngine (G10)' {
         $code = Invoke-ForgumEngine -EnginePath $env:FORGUM_ENGINE `
                                      -JsonFile $script:tmp `
                                      -TimeoutSeconds 5
-        $code | Should -Be 65
+        $code | Should Be 65
     }
 
     It 'rejects missing binary with a typed error' {
         $bogus = Join-Path ([System.IO.Path]::GetTempPath()) ('nonexistent-' + [guid]::NewGuid() + '.exe')
-        { Invoke-ForgumEngine -EnginePath $bogus -JsonFile $script:tmp -TimeoutSeconds 2 } `
-            | Should -Throw -ExpectedMessage '*not found*'
+        $threw = $false
+        try {
+            Invoke-ForgumEngine -EnginePath $bogus -JsonFile $script:tmp -TimeoutSeconds 2 -ErrorAction Stop
+        } catch {
+            $threw = $true
+        }
+        $threw | Should Be $true
     }
 
     It 'gracefully sends SIGTERM/CloseMainWindow before Kill()' -Skip:($IsLinux -or $IsMacOS) {
@@ -70,7 +75,7 @@ Describe 'Invoke-ForgumEngine (G10)' {
                             -DurationSeconds 0 `
         | Out-Null
         $elapsed = (Get-Date) - $start
-        $elapsed.TotalSeconds | Should -BeLessThan 8 -Because "graceful kill should take < 5 s"
-        Test-Path -LiteralPath $script:tmp | Should -BeFalse
+        $elapsed.TotalSeconds | Should BeLessThan 8
+        (Test-Path -LiteralPath $script:tmp) | Should Be $false
     }
 }

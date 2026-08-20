@@ -35,22 +35,22 @@ test-renders/
 # Local render dumps (ad-hoc test output)
 graphify-out/
 
-# Kilo config (except skills)
+# AI Agent & Planning Artifacts (LLM transcripts, specs, brain docs, agent harnesses)
+brain/
+docs/superpowers/
 .kilo/
-!.kilo/skills/
-
-brain
-docs
-
-# Local AI tooling / scratch
+kilo.json
 .claude/
+testsprite_tests/
+PR1_*.md
+PR2_*.md
+session*.md
+commit_msg.txt
+
+# Scratch and Node
 package.json
 package-lock.json
 
 # Tests scratch files (local CI run logs)
 Tests/last_clippy_run.txt
 Tests/last_test_run.txt
-
-# Session logs (historical agent context, not source)
-session1.md
-session*.md
