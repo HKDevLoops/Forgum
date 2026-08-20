@@ -139,6 +139,12 @@ pub enum Commands {
         /// Output raw JSON Lines instead of the formatted ANSI table.
         #[arg(long)]
         json: bool,
+        /// Follow / stream live logs in real time.
+        #[arg(long)]
+        follow: bool,
+        /// Print the absolute path to the log files and directory.
+        #[arg(long)]
+        path: bool,
         /// Clear/truncate existing log files.
         #[arg(long)]
         clear: bool,

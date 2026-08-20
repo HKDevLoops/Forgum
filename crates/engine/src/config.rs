@@ -63,19 +63,39 @@ pub fn migrate_config_format(
     config_dir: &Path,
     target_format: ConfigFormat,
 ) -> Result<PathBuf, PlatformError> {
-    let (current_path, _current_format) = forgum_platform::detect_config_file(None)?;
-    let config = if current_path.is_file() {
-        read_config_file(&current_path)?
-    } else {
-        SceneConfig::default()
+    let candidates = [
+        ("config.json", ConfigFormat::Json),
+        ("config.yaml", ConfigFormat::Yaml),
+        ("config.yml", ConfigFormat::Yaml),
+        ("config.toml", ConfigFormat::Toml),
+    ];
+
+    let mut found = Vec::new();
+    for (name, fmt) in candidates {
+        let p = config_dir.join(name);
+        if p.is_file() {
+            found.push((p, fmt));
+        }
+    }
+
+    let config = match found.len() {
+        0 => SceneConfig::default(),
+        1 => read_config_file(&found[0].0)?,
+        _ => {
+            return Err(PlatformError::ConfigConflict(
+                found.into_iter().map(|(p, _)| p).collect(),
+            ));
+        }
     };
 
     let new_path = config_dir.join(format!("config.{}", target_format.extension()));
     write_config_file(&new_path, &config, target_format)?;
 
     // If migrating to a different file/extension, clean up old file to maintain single-format rule
-    if current_path.is_file() && current_path != new_path {
-        let _ = fs::remove_file(&current_path);
+    for (old_p, _) in found {
+        if old_p != new_path && old_p.is_file() {
+            let _ = fs::remove_file(&old_p);
+        }
     }
 
     Ok(new_path)

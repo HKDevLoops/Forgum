@@ -62,10 +62,27 @@ fn parse_fortunes(content: &str, out: &mut Vec<String>) {
     }
 }
 
+/// Built-in fallback fortunes when no external files are installed.
+const FALLBACK_FORTUNES: &[&str] = &[
+    "The cow that never moos has the most to say.",
+    "A bug in production is just an unexpected feature in disguise.",
+    "Your pasture is currently green; beware of memory leaks.",
+    "TrueColor terminal vibes make even compilation errors look artistic.",
+    "Simplicity is prerequisite for reliability. — Edsger W. Dijkstra",
+    "To iterate is human, to recurse divine. — L. Peter Deutsch",
+    "Don't panic! The six-legged cow is always with you in the terminal.",
+    "There are only 10 types of people: those who understand binary and those who don't.",
+    "Computers are fast, but memory leaks are eternal.",
+];
+
 /// Pick a random fortune from the list.
 pub fn pick_fortune(fortunes: &[String]) -> Option<&str> {
     let mut rng = rand::thread_rng();
-    fortunes.choose(&mut rng).map(|s| s.as_str())
+    if fortunes.is_empty() {
+        FALLBACK_FORTUNES.choose(&mut rng).copied()
+    } else {
+        fortunes.choose(&mut rng).map(|s| s.as_str())
+    }
 }
 
 /// Load and pick a single random fortune from the data directory.

@@ -185,6 +185,14 @@ pub fn read_recent_logs(
     Ok(entries)
 }
 
+/// Get the active log file paths.
+pub fn get_log_paths() -> Option<(std::path::PathBuf, std::path::PathBuf, std::path::PathBuf)> {
+    let dir = forgum_platform::log_dir().ok()?;
+    let text = dir.join("forgum.log");
+    let jsonl = dir.join("forgum.jsonl");
+    Some((dir, text, jsonl))
+}
+
 /// Clear / truncate existing log files.
 pub fn clear_logs() -> Result<(), std::io::Error> {
     let log_dir = match forgum_platform::log_dir() {

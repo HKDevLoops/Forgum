@@ -736,4 +736,51 @@ mod tests {
             "different templates must produce different art"
         );
     }
+
+    #[test]
+    fn layout_geometry_bounds_checking() {
+        // Standard 80x24 terminal
+        let area_standard = Rect::new(0, 0, 80, 24);
+        let lr = list_rect(area_standard);
+        let dr = detail_rect(area_standard);
+        assert_eq!(lr.x, 0);
+        assert_eq!(lr.width, 20);
+        assert_eq!(dr.x, 20);
+        assert_eq!(dr.width, 59);
+        assert!(lr.width + dr.width <= area_standard.width);
+
+        // Small 40x12 terminal (ensure saturating arithmetic prevents underflow)
+        let area_small = Rect::new(0, 0, 40, 12);
+        let lr_small = list_rect(area_small);
+        let dr_small = detail_rect(area_small);
+        assert!(lr_small.width > 0);
+        assert!(dr_small.width > 0);
+        assert!(dr_small.height > 0);
+    }
+
+    #[test]
+    fn dropdown_cycling_forward_and_backward() {
+        let mut dd = Dropdown::new(vec!["banner", "split", "reactive", "manual"], "banner");
+        assert_eq!(dd.current(), "banner");
+        dd.cycle(true);
+        assert_eq!(dd.current(), "split");
+        dd.cycle(true);
+        assert_eq!(dd.current(), "reactive");
+        dd.cycle(true);
+        assert_eq!(dd.current(), "manual");
+        dd.cycle(true);
+        assert_eq!(dd.current(), "banner"); // wraps around
+
+        dd.cycle(false);
+        assert_eq!(dd.current(), "manual"); // wraps backward
+    }
+
+    #[test]
+    fn field_count_matches_constants() {
+        assert_eq!(Field::ALL.len(), 12);
+        for f in Field::ALL {
+            assert!(!f.label().is_empty());
+            assert!(!f.quip().is_empty());
+        }
+    }
 }

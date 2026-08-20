@@ -229,8 +229,21 @@ fn main() -> ExitCode {
             lines,
             level,
             json,
+            follow,
+            path,
             clear,
         }) => {
+            if path {
+                if let Some((dir, text, jsonl)) = forgum_engine::logger::get_log_paths() {
+                    println!("Log Directory: {}", dir.display());
+                    println!("Text Log:      {}", text.display());
+                    println!("JSONL Log:     {}", jsonl.display());
+                } else {
+                    eprintln!("{PROGRAM}: cannot determine log directory");
+                }
+                return ExitCode::SUCCESS;
+            }
+
             if clear {
                 if let Err(e) = forgum_engine::logger::clear_logs() {
                     eprintln!("{PROGRAM}: cannot clear logs: {e}");
@@ -252,7 +265,7 @@ fn main() -> ExitCode {
             };
 
             if json {
-                for entry in entries {
+                for entry in &entries {
                     if let Ok(line) = serde_json::to_string(&entry) {
                         println!("{line}");
                     }
@@ -260,6 +273,38 @@ fn main() -> ExitCode {
             } else {
                 print!("{}", forgum_engine::logger::format_log_table(&entries));
             }
+
+            if follow {
+                println!("\x1b[90mStreaming live logs (Ctrl+C to stop)...\x1b[0m");
+                let mut last_seen = entries.len();
+                loop {
+                    std::thread::sleep(std::time::Duration::from_millis(500));
+                    if let Ok(all_entries) = forgum_engine::logger::read_recent_logs(0, min_level) {
+                        if all_entries.len() > last_seen {
+                            for entry in &all_entries[last_seen..] {
+                                if json {
+                                    if let Ok(line) = serde_json::to_string(&entry) {
+                                        println!("{line}");
+                                    }
+                                } else {
+                                    let level_badge = match entry.level.as_str() {
+                                        "ERROR" => "\x1b[1;31m[ERROR]\x1b[0m",
+                                        "WARN" => "\x1b[1;33m[WARN ]\x1b[0m",
+                                        "INFO" => "\x1b[1;32m[INFO ]\x1b[0m",
+                                        _ => "\x1b[1;36m[DEBUG]\x1b[0m",
+                                    };
+                                    println!(
+                                        "{} [{}] {}",
+                                        level_badge, entry.target, entry.message
+                                    );
+                                }
+                            }
+                            last_seen = all_entries.len();
+                        }
+                    }
+                }
+            }
+
             ExitCode::SUCCESS
         }
 
@@ -288,7 +333,12 @@ fn main() -> ExitCode {
                 .ok()
                 .and_then(|p| p.to_str().map(String::from))
                 .unwrap_or_else(|| "forgum-engine".to_string());
-            let config_path = args.config.unwrap_or_default();
+            let config_info = forgum_platform::detect_config_file(args.config.as_deref())
+                .map(|(p, fmt)| format!("{} ({})", p.display(), fmt.display_name()))
+                .unwrap_or_else(|e| format!("(error: {e})"));
+            let log_dir_info = forgum_platform::log_dir()
+                .map(|d| d.display().to_string())
+                .unwrap_or_else(|_| "unknown".to_string());
             let cows_dir = forgum_platform::data_dir()
                 .ok()
                 .map(|d| d.join("Cows"))
@@ -305,7 +355,8 @@ fn main() -> ExitCode {
                 std::env::consts::ARCH
             );
             println!("Engine:   {}", engine_path);
-            println!("Config:   {}", config_path.display());
+            println!("Config:   {}", config_info);
+            println!("Logs:     {}", log_dir_info);
             println!("Terminal: {}x{}", caps.width, caps.height);
             println!("TTY:      {}", caps.is_tty);
             println!("Color:    {}", caps.color.as_str());

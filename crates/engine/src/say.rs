@@ -7,17 +7,32 @@ pub fn run_say(cmd: &[String]) -> String {
     let output = Command::new(&cmd[0])
         .args(&cmd[1..])
         .output()
-        .map(|o| String::from_utf8_lossy(&o.stdout).to_string())
+        .or_else(|_| {
+            if cfg!(windows) {
+                Command::new("cmd").arg("/C").args(cmd).output()
+            } else {
+                Command::new("sh").arg("-c").arg(cmd.join(" ")).output()
+            }
+        })
+        .map(|o| {
+            let mut out = String::from_utf8_lossy(&o.stdout).to_string();
+            if out.trim().is_empty() && !o.stderr.is_empty() {
+                out = String::from_utf8_lossy(&o.stderr).to_string();
+            }
+            out
+        })
         .unwrap_or_else(|e| format!("Error running {}: {}", cmd[0], e));
 
     let text = output.trim().to_string();
-    if text.is_empty() {
-        return "No output.".to_string();
-    }
+    let display_text = if text.is_empty() {
+        "No output.".to_string()
+    } else {
+        text
+    };
 
     let data_dir = forgum_platform::data_dir().unwrap_or_else(|_| PathBuf::from("."));
     let cow_text = cow::load_cow("default", &data_dir, "oo", "U", "\\\\");
-    cow::compose_scene(&cow_text, &text)
+    cow::compose_scene(&cow_text, &display_text)
 }
 
 pub fn wrap_text(text: &str, max_width: usize) -> Vec<String> {
