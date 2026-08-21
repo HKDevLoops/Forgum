@@ -36,15 +36,15 @@ that went to art school and came back with a portfolio.
 
 | Platform / pkg mgr | Command |
 |--------------------|---------|
+| Ubuntu / Debian (apt) | `sudo apt install ./forgum_*.deb` |
+| Kali Linux (apt) | `sudo apt install ./forgum_*.deb` |
+| Fedora (dnf) | `sudo dnf install ./forgum-*.rpm` |
+| openSUSE (zypper) | `sudo zypper install ./forgum-*.rpm` |
+| Nix (Flake / Nixpkgs) | `nix profile install github:HKDevLoops/Forgum` |
 | Windows (winget) | `winget install HKDevLoops.Forgum` |
 | Windows (scoop) | `scoop bucket add extras; scoop install forgum` |
 | Windows (choco) | `choco install forgum` |
 | macOS (Homebrew) | `brew install forgum` |
-| Debian / apt | `sudo apt install forgum` |
-| Fedora (dnf) | `sudo dnf install forgum` |
-| Arch (pacman) | `sudo pacman -S forgum` |
-| Gentoo (emerge) | `sudo emerge forgum` |
-| Nix | `nix-env -iA nixpkgs.forgum` |
 | Any (cargo) | `cargo install forgum` |
 
 > Community-maintained lanes — install at your own risk.

@@ -29,6 +29,18 @@ Welcome to the comprehensive user guide for **Forgum**.
 Install Forgum using your preferred package manager:
 
 ```bash
+# Linux (Ubuntu / Kali Linux / Debian)
+sudo apt install ./forgum_*.deb
+
+# Linux (Fedora)
+sudo dnf install ./forgum-*.rpm
+
+# Linux (openSUSE)
+sudo zypper install ./forgum-*.rpm
+
+# Linux (Nix / NixOS)
+nix profile install github:HKDevLoops/Forgum
+
 # Windows
 winget install HKDevLoops.Forgum
 scoop bucket add extras && scoop install forgum
@@ -37,14 +49,7 @@ choco install forgum
 # macOS
 brew install forgum
 
-# Linux
-sudo apt install forgum      # Debian/Ubuntu (.deb)
-sudo dnf install forgum      # Fedora/RHEL (.rpm)
-sudo pacman -S forgum        # Arch Linux
-sudo emerge forgum           # Gentoo
-nix-env -iA nixpkgs.forgum   # Nix
-
-# Rust / Cargo
+# Cargo (Any)
 cargo install forgum
 ```
 

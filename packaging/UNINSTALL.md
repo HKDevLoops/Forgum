@@ -63,11 +63,11 @@ brew untap HKDevLoops/forgum
 
 ---
 
-### apt / dpkg (Debian / Ubuntu)
+### apt / dpkg (Ubuntu / Kali Linux / Debian)
 
 ```sh
-sudo dpkg -r forgum
-# or, to remove configuration files too:
+sudo apt remove --purge forgum
+# or via dpkg:
 sudo dpkg -P forgum
 ```
 
@@ -76,6 +76,18 @@ sudo dpkg -P forgum
 ### dnf / rpm (Fedora / RHEL)
 
 ```sh
+sudo dnf remove forgum
+# or via rpm:
+sudo rpm -e forgum
+```
+
+---
+
+### zypper / rpm (openSUSE)
+
+```sh
+sudo zypper remove forgum
+# or via rpm:
 sudo rpm -e forgum
 ```
 
