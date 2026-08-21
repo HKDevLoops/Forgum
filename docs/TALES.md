@@ -149,6 +149,42 @@ I am the quiet host of the meadow. Invite me in once and I will set the table fo
 
 ---
 
+## 🐕 The Bloodhound of Checkhealth (`forgum checkhealth`)
+
+I am the Bloodhound, and I do not bark for amusement. I prowl the pasture with a magnifying glass and a trench coat. When you run `forgum checkhealth`, I inspect the soil, the water, and the terminal's soul.
+
+Did you try to feed the engine a malformed YAML file? I will find it. Did your terminal emulator lie about its TrueColor pedigree while choking on 24-bit RGB escape sequences? I will catch it. Do you have 40 dead background daemons rotting in your temporary folder? I will mark them for the Reaper.
+
+Neovim had its `:checkhealth`, and now Forgum has me. With glowing emerald `[OK]` badges and amber `[WARNING]` flares, I tell you the cold, unvarnished truth about your system before your cow dares to take the stage.
+
+---
+
+## 📜 The Three Scrolls & The Holy Sanctuary (`~/.config/forgum`)
+
+In the old days, configs wandered the earth like lost cattle—some nested in `%APPDATA%`, others in `~/.local`, others forgotten in `/tmp`. The Council of Pastures decreed: **`~/.config/forgum` is the one true sanctuary across Windows, macOS, and Linux.**
+
+Within this sanctuary, the engine accepts Three Sacred Scrolls: `JSON` (the architect), `YAML` (the scribe), and `TOML` (the minimalist). But heed the ancient Law of Exclusivity: **Thou shalt not keep two scrolls at once.** 
+
+If you leave both a `config.json` and a `config.toml` in the same room, the engine halts with `PlatformError::ConfigConflict`. Do not panic; run `forgum config --migrate toml` and the Alchemist will convert your scrolls into one harmonious piece of art.
+
+---
+
+## 🛡️ The Wall of Zero-`#[cfg]` (The Platform Seam)
+
+Long ago, platform-specific code (`#[cfg(windows)]` and `#[cfg(unix)]`) ran wild through the engine, biting functions and infesting framebuffers with platform dependencies. 
+
+The Great Refactor built the **Platform Seam** (`crates/platform`). Behind this iron wall live the Win32 Named Pipes, the POSIX signals, and the raw terminal handles. The Engine itself (`crates/engine`) knows only pure mathematics, color geometry, and Verlet physics. It does not know if it runs on a supercomputer or a toaster—it only knows how to make the cow dance.
+
+---
+
+## 🧹 The Ghost Herd & The Precmd Reaper (`forgum sweep`)
+
+Sometimes, an animation daemon loses its master. A terminal window closes abruptly, leaving a lonely process floating in background limbo—a Ghost Cow.
+
+Fear not. Whenever your shell prepares a new prompt, the **Precmd Reaper** awakens. In less than 1 millisecond, it inspects active PID locks, sniffs out orphaned sockets, and sweeps the ghosts into the void. Your terminal stays pristine, fast, and free of memory leaks.
+
+---
+
 <div align="center">
 
 ```
@@ -162,3 +198,4 @@ I am the quiet host of the meadow. Invite me in once and I will set the table fo
 *Back to the [README](../README.md) · [Hacking guide](../ADVANCED.md) · [Contributing](../CONTRIBUTING.md)*
 
 </div>
+

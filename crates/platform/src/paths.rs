@@ -185,12 +185,12 @@ pub fn log_dir() -> Result<PathBuf, PlatformError> {
 #[cfg(unix)]
 fn default_config_dir() -> PathBuf {
     if let Some(home) = std::env::var_os("XDG_CONFIG_HOME") {
-        return PathBuf::from(home).join("Forgum");
+        return PathBuf::from(home).join("forgum");
     }
     if let Some(home) = std::env::var_os("HOME") {
-        return PathBuf::from(home).join(".config").join("Forgum");
+        return PathBuf::from(home).join(".config").join("forgum");
     }
-    PathBuf::from("/tmp/Forgum")
+    PathBuf::from("/tmp/.config/forgum")
 }
 
 #[cfg(unix)]
@@ -201,48 +201,54 @@ fn default_config_path() -> PathBuf {
 #[cfg(unix)]
 fn default_data_dir() -> PathBuf {
     if let Some(home) = std::env::var_os("XDG_DATA_HOME") {
-        return PathBuf::from(home).join("Forgum");
+        return PathBuf::from(home).join("forgum");
     }
     if let Some(home) = std::env::var_os("HOME") {
         return PathBuf::from(home)
             .join(".local")
             .join("share")
-            .join("Forgum");
+            .join("forgum");
     }
-    PathBuf::from("/tmp/Forgum/data")
+    PathBuf::from("/tmp/forgum/data")
 }
 
 #[cfg(unix)]
 fn default_runtime_dir() -> PathBuf {
     if let Some(p) = std::env::var_os("XDG_RUNTIME_DIR") {
-        return PathBuf::from(p).join("Forgum");
+        return PathBuf::from(p).join("forgum");
     }
     if let Some(tmp) = std::env::var_os("TMPDIR") {
-        return PathBuf::from(tmp).join("Forgum");
+        return PathBuf::from(tmp).join("forgum");
     }
-    PathBuf::from("/tmp/Forgum")
+    PathBuf::from("/tmp/forgum")
 }
 
 #[cfg(unix)]
 fn default_log_dir() -> PathBuf {
     if let Some(p) = std::env::var_os("XDG_STATE_HOME") {
-        return PathBuf::from(p).join("Forgum");
+        return PathBuf::from(p).join("forgum");
     }
     if let Some(home) = std::env::var_os("HOME") {
         return PathBuf::from(home)
             .join(".local")
             .join("state")
-            .join("Forgum");
+            .join("forgum");
     }
-    PathBuf::from("/tmp/Forgum/log")
+    PathBuf::from("/tmp/forgum/log")
 }
 
 #[cfg(windows)]
 fn default_config_dir() -> PathBuf {
-    if let Some(appdata) = std::env::var_os("APPDATA") {
-        return PathBuf::from(appdata).join("Forgum");
+    if let Some(userprofile) = std::env::var_os("USERPROFILE") {
+        return PathBuf::from(userprofile).join(".config").join("forgum");
     }
-    PathBuf::from("C:\\Forgum")
+    if let Some(home) = std::env::var_os("HOME") {
+        return PathBuf::from(home).join(".config").join("forgum");
+    }
+    if let Some(appdata) = std::env::var_os("APPDATA") {
+        return PathBuf::from(appdata).join(".config").join("forgum");
+    }
+    PathBuf::from("C:\\.config\\forgum")
 }
 
 #[cfg(windows)]

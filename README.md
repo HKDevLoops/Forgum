@@ -173,36 +173,74 @@ conservative ANSI so it never breaks on an unknown terminal.
 
 ---
 
-## ⚙️ Config File Location
+## 🩺 Check Your Pasture's Health (`checkhealth`)
+
+Got weird rendering? Colors looking like a melted popsicle? Shell hooks misbehaving? Channel your inner Neovim user and run:
+
+```bash
+forgum checkhealth
+```
+
+The health inspector will run 12 diagnostic probes across 7 core systems (System, Configuration, Terminal & TrueColor, Pasture Assets & DNA profiles, Shell hooks, Daemons, and Structured Logs) and give you actionable remediation suggestions.
+
+For CI/CD and scripts, get machine-readable JSON:
+```bash
+forgum checkhealth --json
+```
+
+---
+
+## ⚙️ Config File Location & Multi-Format Support
+
+Forgum has **one unified configuration home across all operating systems**:
 
 | Platform | Path |
 |----------|------|
-| Windows | `%APPDATA%\Forgum\config.json` |
-| macOS | `~/.config/Forgum/config.json` |
-| Linux | `~/.config/Forgum/config.json` |
+| Windows | `~/.config/forgum/config.json` (or `.yaml` / `.toml`) |
+| macOS | `~/.config/forgum/config.json` (or `.yaml` / `.toml`) |
+| Linux | `~/.config/forgum/config.json` (or `.yaml` / `.toml`) |
+
+> **Single-Format Exclusivity:** Forgum supports `JSON`, `YAML`, and `TOML`, but forbids multiple format files in the same directory.
+> Want to switch? Run `forgum config --migrate toml` (or `json`/`yaml`) and let the engine convert it safely!
 
 Override at runtime with the `FORGUM_CONFIG` environment variable.
 
 ---
 
-## 🎛️ Interactive Config
+## 🪵 Structured Logs & Diagnostics
 
-Prefer a menu to hand-editing JSON? If Forgum was built with the `tui` feature:
+Forgum logs all events with microsecond precision to both human-readable text and structured JSONL logs:
 
 ```bash
-forgum-engine config --tui
+# View recent logs in a formatted table
+forgum logs
+
+# Filter by severity
+forgum logs --level warn
+
+# Live follow logs
+forgum logs -f
 ```
 
-That opens the interactive configuration menu — walk the fields, toggle the animals,
-and save. No mouse required.
+---
+
+## 🎛️ Interactive Config TUI
+
+Prefer a funky terminal menu with dark humour to hand-editing files?
+
+```bash
+forgum config --tui
+```
+
+Walk through the pasture options, toggle animal attachments, preview cow DNA signatures, and save directly to your chosen format.
 
 Headless or scripting? Set individual keys directly:
 
 ```bash
-forgum-engine config set <key> <value>
+forgum config set <key> <value>
 ```
 
-For example: `forgum-engine config set color_mode none`.
+For example: `forgum config set color_mode rainbow`.
 
 ---
 

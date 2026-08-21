@@ -17,23 +17,17 @@ function Get-ForgumConfigPath {
         return $env:FORGUM_CONFIG
     }
 
-    if ($IsWindows -or $PSVersionTable.PSEdition -eq 'Desktop') {
-        $appdata = $env:APPDATA
-        if (-not $appdata) {
-            throw "Cannot resolve Forgum config: neither `$env:FORGUM_CONFIG nor `$env:APPDATA is set."
-        }
-        return (Join-Path (Join-Path $appdata 'Forgum') 'config.json')
-    } else {
-        $xdg = $env:XDG_CONFIG_HOME
-        if ($xdg) {
-            return (Join-Path (Join-Path $xdg 'Forgum') 'config.json')
-        }
-        $home = $env:HOME
-        if (-not $home) {
-            throw "Cannot resolve Forgum config: neither `$env:FORGUM_CONFIG nor `$env:XDG_CONFIG_HOME nor `$env:HOME is set."
-        }
-        return (Join-Path (Join-Path (Join-Path $home '.config') 'Forgum') 'config.json')
+    $home = if ($env:USERPROFILE) { $env:USERPROFILE } elseif ($env:HOME) { $env:HOME } else { $env:APPDATA }
+    if ($home) {
+        return (Join-Path (Join-Path (Join-Path $home '.config') 'forgum') 'config.json')
     }
+
+    if ($env:XDG_CONFIG_HOME) {
+        return (Join-Path (Join-Path $env:XDG_CONFIG_HOME 'forgum') 'config.json')
+    }
+
+    $temp = if ($env:TEMP) { $env:TEMP } else { '/tmp' }
+    return (Join-Path (Join-Path (Join-Path $temp '.config') 'forgum') 'config.json')
 }
 
 function Initialize-ForgumConfig {

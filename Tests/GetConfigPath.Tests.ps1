@@ -24,11 +24,7 @@ Describe 'Get-ForgumConfigPath (G12)' {
         Remove-Item Env:FORGUM_CONFIG -ErrorAction SilentlyContinue
         $path = Get-ForgumConfigPath
         $path | Should Not BeNullOrEmpty
-        if ($IsWindows) {
-            $path | Should Match 'Forgum'
-        } else {
-            $path | Should Match 'Forgum'
-        }
+        $path | Should Match '(\.config[\\/]forgum|forgum)'
     }
 }
 
