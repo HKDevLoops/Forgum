@@ -96,7 +96,11 @@ pub fn log(level: LogLevel, target: &str, message: &str) {
             let _ = fs::rename(&text_path, log_dir.join("forgum.log.1"));
         }
     }
-    if let Ok(mut file) = OpenOptions::new().create(true).append(true).open(&text_path) {
+    if let Ok(mut file) = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&text_path)
+    {
         let _ = writeln!(
             file,
             "[{}] [{:<5}] [{}] {}",
