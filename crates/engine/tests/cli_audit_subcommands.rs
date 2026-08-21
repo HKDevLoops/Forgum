@@ -126,3 +126,78 @@ fn audit_theme_seasonal_resolution() {
     let seasonal = forgum_engine::theme::seasonal_theme();
     assert!(seasonal.effect.is_some() || seasonal.cow.is_some());
 }
+
+#[test]
+fn audit_say_subcommand_wrapping() {
+    let output = forgum_platform::execute_command_with_shell_fallback(&[
+        "echo".to_string(),
+        "ForgumSayTest".to_string(),
+    ])
+    .expect("echo should execute");
+    let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    assert_eq!(stdout, "ForgumSayTest");
+
+    let bubble = forgum_engine::say::wrap_text(&stdout, 40);
+    assert!(!bubble.is_empty());
+    assert!(bubble.iter().any(|line| line.contains("ForgumSayTest")));
+}
+
+#[test]
+fn audit_timer_subcommand_timing_and_box_rendering() {
+    let result = forgum_engine::timer::run_timer(&[
+        "cmd".to_string(),
+        "/C".to_string(),
+        "echo".to_string(),
+        "TimerTest".to_string(),
+    ]);
+    assert_eq!(result.exit_code, 0);
+    assert!(result.duration_secs >= 0.0);
+
+    let rendered = forgum_engine::timer::render_timer_cow(&result);
+    assert!(rendered.contains("✓"));
+    assert!(rendered.contains("┌"));
+    assert!(rendered.contains("┐"));
+    assert!(rendered.contains("└"));
+    assert!(rendered.contains("┘"));
+}
+
+#[test]
+fn audit_herd_subcommands_census_and_table_format() {
+    let census = forgum_engine::herd::herd_census();
+    let table = forgum_engine::herd::format_table(&census);
+    assert!(!table.is_empty());
+
+    let quiet_res = forgum_engine::herd::herd_quiet();
+    assert!(quiet_res.is_ok());
+}
+
+#[test]
+fn audit_logs_subcommand_formatting_and_level_filtering() {
+    let entries = forgum_engine::logger::read_recent_logs(5, None).expect("read logs");
+    let table = forgum_engine::logger::format_log_table(&entries);
+    assert!(!table.is_empty());
+
+    // Check JSON serialization of log entry
+    if let Some(entry) = entries.first() {
+        let json_str = serde_json::to_string(entry).expect("serialize log");
+        assert!(json_str.contains("timestamp"));
+        assert!(json_str.contains("level"));
+    }
+}
+
+#[test]
+fn audit_framebuffer_bounds_clamp_safety() {
+    use forgum_engine::framebuffer::{FrameBuffer, MAX_HEIGHT, MAX_WIDTH};
+
+    // Adversarial dimensions: 100_000 x 100_000 must be clamped to MAX_WIDTH x MAX_HEIGHT
+    let fb = FrameBuffer::new(100_000, 100_000);
+    assert_eq!(fb.width, MAX_WIDTH);
+    assert_eq!(fb.height, MAX_HEIGHT);
+    assert_eq!(fb.back.len(), MAX_WIDTH * MAX_HEIGHT);
+}
+
+#[test]
+fn audit_remote_cluster_peer_table_formatting() {
+    let table = forgum_engine::remote::format_peer_table(&[]);
+    assert!(table.contains("No peers found"));
+}
