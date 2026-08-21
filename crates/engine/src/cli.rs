@@ -138,7 +138,7 @@ pub enum Commands {
     /// View, query, or clear structured engine logs.
     Logs {
         /// Number of recent log lines to display.
-        #[arg(short = 'n', long, default_value = "25")]
+        #[arg(short = 'n', long, alias = "limit", default_value = "25")]
         lines: usize,
         /// Minimum log level filter (TRACE, DEBUG, INFO, WARN, ERROR).
         #[arg(short = 'l', long)]
