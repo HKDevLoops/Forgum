@@ -149,12 +149,9 @@ Never put platform `#[cfg]` in engine `src/`; route it through
 
 ---
 
-## 📝 Note on historical docs
+## 📜 License
 
-The file `brain/19-CONTRIBUTING-GUIDE.md` is the original **plan** for this
-guide (historical). It described a fictional crate layout
-(`config`/`tui`/`cli`/`cowsay`/`ai`/`shell` crates) that does **not** exist in
-the current workspace. This `CONTRIBUTING.md` is the current, accurate guide.
+By contributing to Forgum, you agree that your contributions will be licensed under the project's **[MIT License](LICENSE)**.
 
 ---
 

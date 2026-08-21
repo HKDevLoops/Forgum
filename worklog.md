@@ -110,4 +110,4 @@ Running `cargo bench -p forgum-engine` yielded remarkable throughput:
 
 ---
 
-*Worklog updated and locked for Version 0.4.0.*
+*Forgum is actively developed under the MIT License. Versioning is dynamically managed via Cargo.toml.*

@@ -137,3 +137,9 @@ forgum herd list
 
 ### Q: How do I add my own custom cow?
 **A:** Drop any `.cow` ASCII template into `~/.config/forgum/cows/mycow.cow`. Forgum will automatically discover it!
+
+---
+
+## 📜 License
+
+Forgum is free and open-source software released under the **[MIT License](../LICENSE)**. You are free to use, modify, distribute, and embed it in your own terminal configurations and tools.

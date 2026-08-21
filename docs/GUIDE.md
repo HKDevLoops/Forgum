@@ -257,3 +257,11 @@ Add custom cows by dropping any ASCII `.cow` file into `~/.config/forgum/cows/`:
 ```
 
 Forgum will automatically detect your custom creature and apply matching DNA physics profiles (tail wags, breathing oscillation, float, trot, and particle streams).
+
+---
+
+## 📜 License & Community
+
+Forgum is free, open-source software licensed under the **[MIT License](../LICENSE)**.
+
+*Maintained with ❤️ by the Forgum Contributors.*
