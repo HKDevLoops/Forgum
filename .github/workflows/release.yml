@@ -79,7 +79,7 @@ jobs:
 
       - name: Install cross
         if: matrix.cross
-        run: cargo install cross --locked
+        uses: taiki-e/install-action@cross
 
       - name: Build (cross)
         if: matrix.cross
