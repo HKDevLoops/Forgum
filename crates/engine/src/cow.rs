@@ -164,7 +164,12 @@ pub fn compose_scene(cow_text: &str, bubble_text: &str) -> String {
     }
 
     let cow_lines: Vec<&str> = cow_text.lines().collect();
-    let cow_width = cow_lines.iter().map(|l| l.len()).max().unwrap_or(0).max(2);
+    let cow_width = cow_lines
+        .iter()
+        .map(|l| l.chars().count())
+        .max()
+        .unwrap_or(0)
+        .max(2);
 
     let bubble = wrap_bubble(bubble_text, cow_width);
 
@@ -189,10 +194,10 @@ fn wrap_bubble(text: &str, min_width: usize) -> String {
         return String::new();
     }
 
-    // Find the longest line.
+    // Find the longest line in visible characters.
     let text_width = lines
         .iter()
-        .map(|l| l.len())
+        .map(|l| l.chars().count())
         .max()
         .unwrap_or(0)
         .max(min_width.saturating_sub(2));
@@ -229,11 +234,11 @@ fn wrap_bubble(text: &str, min_width: usize) -> String {
     result
 }
 
-/// Pad `result` with spaces until its current line length reaches `target_len`.
+/// Pad `result` with spaces until its current line length in characters reaches `target_len`.
 fn pad_to(result: &mut String, target_len: usize) {
     let current_len = result
         .rsplit_once('\n')
-        .map_or(result.len(), |(_, last)| last.len());
+        .map_or(result.chars().count(), |(_, last)| last.chars().count());
     for _ in current_len..target_len {
         result.push(' ');
     }

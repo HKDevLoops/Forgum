@@ -32,19 +32,30 @@ pub fn run_say(cmd: &[String]) -> String {
 }
 
 pub fn wrap_text(text: &str, max_width: usize) -> Vec<String> {
+    if max_width == 0 {
+        return text.lines().map(|l| l.to_string()).collect();
+    }
     let mut result = Vec::new();
     for line in text.lines() {
-        if line.len() <= max_width {
+        let char_count = line.chars().count();
+        if char_count <= max_width {
             result.push(line.to_string());
         } else {
-            let mut remaining = line.to_string();
-            while remaining.len() > max_width {
-                let break_at = remaining[..max_width].rfind(' ').unwrap_or(max_width);
-                result.push(remaining[..break_at].to_string());
-                remaining = remaining[break_at..].trim_start().to_string();
+            let mut chars: Vec<char> = line.chars().collect();
+            while chars.len() > max_width {
+                let slice = &chars[..max_width];
+                let break_at = slice.iter().rposition(|&c| c == ' ').unwrap_or(max_width);
+                let line_chunk: String = chars[..break_at].iter().collect();
+                result.push(line_chunk);
+                let mut remainder = &chars[break_at..];
+                while let Some(&' ') = remainder.first() {
+                    remainder = &remainder[1..];
+                }
+                chars = remainder.to_vec();
             }
-            if !remaining.is_empty() {
-                result.push(remaining);
+            if !chars.is_empty() {
+                let remaining_chunk: String = chars.into_iter().collect();
+                result.push(remaining_chunk);
             }
         }
     }
@@ -109,6 +120,16 @@ mod tests {
         assert!(!result.is_empty());
         for line in &result {
             assert!(line.len() <= 10);
+        }
+    }
+
+    #[test]
+    fn wrap_text_unicode_emojis() {
+        let crabs = "🦀🦀🦀🦀🦀 🐄🐄🐄🐄🐄 ✨✨✨✨✨";
+        let result = wrap_text(crabs, 7);
+        assert!(!result.is_empty());
+        for line in &result {
+            assert!(line.chars().count() <= 7);
         }
     }
 }

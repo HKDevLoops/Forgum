@@ -201,3 +201,93 @@ fn audit_remote_cluster_peer_table_formatting() {
     let table = forgum_engine::remote::format_peer_table(&[]);
     assert!(table.contains("No peers found"));
 }
+
+#[test]
+fn scenario_unicode_and_emoji_speech_bubble_integrity() {
+    let raw_cow = "   \\   ^__^\n    \\  (oo)\\_______\n       (__)\\       )\\/\n           ||----w |\n           ||     ||";
+    let emojis = "🦀 Hello 🐄 World ✨ 🚀 123";
+    let composed = forgum_engine::cow::compose_scene(raw_cow, emojis);
+
+    // Verify composition contains the speech bubble and the cow
+    assert!(composed.contains("🦀"));
+    assert!(composed.contains("🐄"));
+    assert!(composed.contains("^__^"));
+
+    // Verify bubble borders are aligned
+    let lines: Vec<&str> = composed.lines().collect();
+    let top_border = lines[0];
+    let bottom_border = lines[2];
+
+    assert!(top_border.starts_with(" _"));
+    assert!(bottom_border.starts_with("|_"));
+    assert_eq!(
+        top_border.chars().count(),
+        bottom_border.chars().count(),
+        "Top and bottom border character lengths must be identical for perfect bubble alignment"
+    );
+}
+
+#[test]
+fn scenario_timer_failure_command_reporting_ux() {
+    let failed_result = forgum_engine::timer::TimerResult {
+        command: "false_command --trigger-error".to_string(),
+        duration_secs: 0.042,
+        exit_code: 1,
+        stdout: String::new(),
+        stderr: "Command failed with fatal exit code".to_string(),
+    };
+
+    let rendered = forgum_engine::timer::render_timer_cow(&failed_result);
+
+    // Must show failure symbol ✗ and not success ✓
+    assert!(rendered.contains("✗"), "Failed commands must display ✗");
+    assert!(!rendered.contains("✓"), "Failed commands must never display ✓");
+    assert!(rendered.contains("42.0ms"));
+    assert!(rendered.contains("false_command"));
+}
+
+#[test]
+fn scenario_timer_microsecond_precision_ux() {
+    let instant_result = forgum_engine::timer::TimerResult {
+        command: "noop".to_string(),
+        duration_secs: 0.00005,
+        exit_code: 0,
+        stdout: String::new(),
+        stderr: String::new(),
+    };
+
+    let rendered = forgum_engine::timer::render_timer_cow(&instant_result);
+    assert!(rendered.contains("✓"));
+    assert!(rendered.contains("50μs"));
+}
+
+#[test]
+fn scenario_multiline_and_long_sentence_wrapping_ux() {
+    let long_text = "The quick brown fox jumps over the lazy dog repeatedly until the terminal line exceeds standard eighty column dimensions.";
+    let wrapped = forgum_engine::say::wrap_text(long_text, 30);
+
+    assert!(wrapped.len() >= 3);
+    for line in &wrapped {
+        assert!(line.chars().count() <= 30, "No line may exceed max width: '{}'", line);
+        assert!(!line.starts_with(' '), "Wrapped lines should not start with whitespace: '{}'", line);
+    }
+}
+
+#[test]
+fn scenario_checkhealth_json_telemetry_schema_validation() {
+    let report = forgum_engine::checkhealth::run_health_check(None);
+    let json_str = serde_json::to_string_pretty(&report).expect("Serialize checkhealth report");
+
+    let parsed: serde_json::Value = serde_json::from_str(&json_str).expect("Valid JSON schema");
+    assert!(parsed.get("version").is_some());
+    assert!(parsed.get("timestamp").is_some());
+
+    let sections = parsed["sections"].as_array().expect("Sections array");
+    assert_eq!(sections.len(), 7, "All 7 diagnostic sections must be reported");
+
+    for sec in sections {
+        assert!(sec["name"].as_str().is_some());
+        let checks = sec["items"].as_array().expect("Checks list");
+        assert!(!checks.is_empty(), "Each section must have at least one health check");
+    }
+}
