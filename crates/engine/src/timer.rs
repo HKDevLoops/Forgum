@@ -48,19 +48,32 @@ pub fn format_duration(secs: f64) -> String {
 
 pub fn render_timer_cow(result: &TimerResult) -> String {
     let duration_str = format_duration(result.duration_secs);
-    let status = if result.exit_code == 0 { "✓" } else { "✗" };
+    let status_symbol = if result.exit_code == 0 { "✓" } else { "✗" };
 
-    format!(
-        "  ┌──────────────────────────────┐\n  │  {} {} {:>8}  │\n  │  cmd: {:<22}  │\n  └──────────────────────────────┘",
-        status,
-        result.command,
+    let max_cmd_len = 36;
+    let cmd_chars: Vec<char> = result.command.chars().collect();
+    let display_cmd: String = if cmd_chars.len() > max_cmd_len {
+        let truncated: String = cmd_chars[..max_cmd_len.saturating_sub(3)].iter().collect();
+        format!("{truncated}...")
+    } else {
+        result.command.clone()
+    };
+
+    let inner_width = 46.max(display_cmd.chars().count() + duration_str.chars().count() + 8);
+    let top_border = format!("  ┌{}┐", "─".repeat(inner_width));
+    let bottom_border = format!("  └{}┘", "─".repeat(inner_width));
+    let cmd_width = inner_width.saturating_sub(duration_str.chars().count() + 6);
+
+    let status_line = format!(
+        "  │  {} {:<cmd_width$} {:>dur_len$}  │",
+        status_symbol,
+        display_cmd,
         duration_str,
-        if result.command.len() > 22 {
-            &result.command[..22]
-        } else {
-            &result.command
-        }
-    )
+        cmd_width = cmd_width,
+        dur_len = duration_str.chars().count()
+    );
+
+    format!("{top_border}\n{status_line}\n{bottom_border}")
 }
 
 #[cfg(test)]
