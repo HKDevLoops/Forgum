@@ -72,11 +72,12 @@ In hot animation loops running at 60 frames per second, heap allocations are the
 
 Every layer of the codebase is guarded by strict automated test suites:
 
-- **Unit & Integration Tests:** 397 passing tests across `crates/engine`, `crates/platform`, and `crates/tui`.
+- **Unit & Integration Tests:** 403 passing tests across `crates/engine`, `crates/platform`, and `crates/tui`.
 - **Platform Seam Integrity (`tests/cfg_containment.rs`):** An AST and regex scanner asserting that `engine/src` contains zero platform-targeting `#[cfg]` attributes.
-- **Subcommand & Flag Collision Audit (`tests/cli_audit_subcommands.rs`):** Tests all subcommands, short-flags (`-f`), help text formatting, and exit codes.
+- **Subcommand & Feature Audit (`tests/cli_audit_subcommands.rs`):** Tests all 18 CLI subcommands (`say`, `timer`, `herd`, `logs`, `checkhealth`, `theme`, `doctor`, `battle`, `showcase`, `demo`, `remote`, `fortune`, `config`, etc.), short-flags (`-f`), help text formatting, and exit codes.
+- **Memory Bounds & Framebuffer Safety:** Asserts that adversarial viewport dimensions (e.g. 100,000×100,000) are safely clamped to `MAX_WIDTH` × `MAX_HEIGHT`.
 - **Strict TUI Alignment (`tests/tui_alignment_strict.rs`):** Verifies zero character wrap and boundary overflow across 20+ terminal viewport geometries.
-- **Structured Log Audit (`tests/log_subsystem_strict.rs`):** Multi-threaded concurrency stress test ensuring zero log interleaving.
+- **Structured Log Audit (`tests/log_subsystem_strict.rs`):** Multi-threaded concurrency stress test ensuring zero log interleaving and automated log rotation.
 - **Checkhealth Subsystem Audit (`tests/checkhealth_audit.rs`):** Verifies all 7 diagnostic sections and JSON schema serialization.
 - **PowerShell Pester Suite (`Tests/`):** 25/25 passed across module importing, daemon lifecycle, and CLI parameter forwarding.
 - **Clippy & Formatter:** Zero lints under `cargo clippy --workspace --all-targets -- -D warnings` and 100% compliance with `cargo fmt --check`.
