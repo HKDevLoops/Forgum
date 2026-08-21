@@ -87,19 +87,6 @@ impl OutputHandle {
         }
         self.inner.flush()
     }
-
-    /// Returns a raw pointer to the inner writer. The pointer is valid only
-    /// for as long as `&mut self` is held and the `OutputHandle` is not
-    /// dropped. Used by [`AltScreenGuard::acquire`] and
-    /// [`CursorShowGuard::acquire`] so they can attach cleanup behavior to
-    /// the writer without taking ownership.
-    ///
-    /// # Safety
-    /// Callers must not dereference this pointer after the OutputHandle is
-    /// dropped or after a mutable borrow on `self` ends.
-    pub fn raw_writer_mut(&mut self) -> *mut (dyn Write + Send) {
-        &mut *self.inner as *mut (dyn Write + Send)
-    }
 }
 
 impl Write for OutputHandle {

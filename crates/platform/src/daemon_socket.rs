@@ -162,7 +162,15 @@ impl DaemonSocket {
             let _ = std::fs::remove_file(_path);
         }
     }
+}
 
+impl Drop for DaemonSocket {
+    fn drop(&mut self) {
+        self.cleanup();
+    }
+}
+
+impl DaemonSocket {
     /// Connect to an existing socket as a client.
     ///
     /// On Unix, connects to the Unix domain socket at `path`.

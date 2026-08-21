@@ -15,8 +15,6 @@
 //!    restore terminal state on every exit path including panic.
 //!    (BUG-T2 fix.)
 
-#![allow(unsafe_code)] // guarded raw-pointer usage in RAII guards; see crate-level docs
-
 use std::io::Write;
 use std::path::PathBuf;
 use std::time::Duration;
@@ -87,9 +85,8 @@ pub fn render_loop_foreground(
     }
 
     let _raw = RawModeGuard::acquire()?;
-    let writer_ptr = out.raw_writer_mut();
-    let _alt = unsafe { AltScreenGuard::acquire(writer_ptr)? };
-    let _cur = unsafe { CursorShowGuard::acquire(writer_ptr)? };
+    let _alt = AltScreenGuard::acquire()?;
+    let _cur = CursorShowGuard::acquire()?;
 
     let mut fb = FrameBuffer::new(usize::from(cols), usize::from(rows));
     let mut scheduler = Scheduler::new(config.fps);
@@ -263,8 +260,7 @@ pub fn render_loop_background(
         return Ok(());
     }
 
-    let writer_ptr = out.raw_writer_mut();
-    let _cur = unsafe { CursorShowGuard::acquire(writer_ptr)? };
+    let _cur = CursorShowGuard::acquire()?;
 
     let max_frames = compute_max_frames(config.duration, config.fps);
 

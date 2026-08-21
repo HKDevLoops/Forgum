@@ -87,9 +87,16 @@ pub fn log(level: LogLevel, target: &str, message: &str) {
         let _ = fs::create_dir_all(&log_dir);
     }
 
+    const MAX_LOG_SIZE: u64 = 10 * 1024 * 1024; // 10 MB
+
     // 1. Text log: [2026-08-20 11:00:00.123] [INFO] [target] Message
     let text_path = log_dir.join("forgum.log");
-    if let Ok(mut file) = OpenOptions::new().create(true).append(true).open(text_path) {
+    if let Ok(meta) = fs::metadata(&text_path) {
+        if meta.len() > MAX_LOG_SIZE {
+            let _ = fs::rename(&text_path, log_dir.join("forgum.log.1"));
+        }
+    }
+    if let Ok(mut file) = OpenOptions::new().create(true).append(true).open(&text_path) {
         let _ = writeln!(
             file,
             "[{}] [{:<5}] [{}] {}",
@@ -102,10 +109,15 @@ pub fn log(level: LogLevel, target: &str, message: &str) {
 
     // 2. JSONL log: {"timestamp":"...","level":"...","target":"...","message":"..."}
     let jsonl_path = log_dir.join("forgum.jsonl");
+    if let Ok(meta) = fs::metadata(&jsonl_path) {
+        if meta.len() > MAX_LOG_SIZE {
+            let _ = fs::rename(&jsonl_path, log_dir.join("forgum.jsonl.1"));
+        }
+    }
     if let Ok(mut file) = OpenOptions::new()
         .create(true)
         .append(true)
-        .open(jsonl_path)
+        .open(&jsonl_path)
     {
         if let Ok(json) = serde_json::to_string(&entry) {
             let _ = writeln!(file, "{json}");

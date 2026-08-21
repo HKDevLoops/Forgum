@@ -108,9 +108,14 @@ pub struct FrameBuffer {
     damage_list: Vec<(usize, usize)>,
 }
 
+pub const MAX_WIDTH: usize = 2048;
+pub const MAX_HEIGHT: usize = 2048;
+
 impl FrameBuffer {
     #[must_use]
     pub fn new(width: usize, height: usize) -> Self {
+        let width = width.min(MAX_WIDTH);
+        let height = height.min(MAX_HEIGHT);
         let sz = width.saturating_mul(height);
         Self {
             width,
@@ -126,6 +131,8 @@ impl FrameBuffer {
     /// The `cells` slice becomes the back buffer; front starts empty.
     #[must_use]
     pub fn from_raw(width: usize, height: usize, cells: &[Cell]) -> Self {
+        let width = width.min(MAX_WIDTH);
+        let height = height.min(MAX_HEIGHT);
         let sz = width.saturating_mul(height);
         let mut back = cells.to_vec();
         back.resize(sz, Cell::empty());

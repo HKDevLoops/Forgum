@@ -71,49 +71,29 @@ impl Drop for RawModeGuard {
 /// apps (vim, less, etc.) so the user's previous output is preserved when
 /// the app exits. **Foreground only** — the background overlay uses the
 /// *main* screen so the user can keep scrolling history.
-#[allow(unsafe_code)]
 #[derive(Debug)]
 pub struct AltScreenGuard {
-    // We hold a *mut pointer to the writer rather than owning it, so the
-    // caller can keep using `out` after constructing the guard. The caller
-    // must guarantee the writer outlives the guard.
-    writer: *mut (dyn std::io::Write + Send),
     armed: bool,
 }
 
-// Note: the `*mut dyn Write` field makes these types automatically
-// !Send and !Sync (raw pointers aren't Send/Sync). That matches the
-// render loop's single-threaded usage.
-
-#[allow(unsafe_code)]
 impl AltScreenGuard {
-    /// # Safety
-    /// `writer` must remain valid (live and exclusively borrowed) for as
-    /// long as this guard exists. Callers should hold a `&mut` to the
-    /// writer and not use it while the guard is alive.
-    pub unsafe fn acquire(writer: *mut (dyn std::io::Write + Send)) -> Result<Self, PlatformError> {
-        let mut_ref = unsafe { &mut *writer };
+    pub fn acquire() -> Result<Self, PlatformError> {
         use crossterm::ExecutableCommand;
-        if mut_ref
+        if std::io::stdout()
             .execute(crossterm::terminal::EnterAlternateScreen)
             .is_err()
         {
             return Err(PlatformError::Unsupported("alternate screen"));
         }
-        Ok(Self {
-            writer,
-            armed: true,
-        })
+        Ok(Self { armed: true })
     }
 }
 
-#[allow(unsafe_code)]
 impl Drop for AltScreenGuard {
     fn drop(&mut self) {
         if self.armed {
             use crossterm::ExecutableCommand;
-            let mut_ref = unsafe { &mut *self.writer };
-            let _ = mut_ref.execute(crossterm::terminal::LeaveAlternateScreen);
+            let _ = std::io::stdout().execute(crossterm::terminal::LeaveAlternateScreen);
         }
     }
 }
@@ -123,41 +103,27 @@ impl Drop for AltScreenGuard {
 /// We always hide the cursor while rendering so it doesn't blink in the
 /// middle of an animation. We always show it on drop so the user isn't left
 /// staring at an empty terminal with no cursor.
-#[allow(unsafe_code)]
 #[derive(Debug)]
 pub struct CursorShowGuard {
-    writer: *mut (dyn std::io::Write + Send),
     armed: bool,
 }
 
-// Note: see comment on AltScreenGuard above.
-
-#[allow(unsafe_code)]
 impl CursorShowGuard {
-    /// # Safety
-    /// Same as [`AltScreenGuard::acquire`].
-    pub unsafe fn acquire(writer: *mut (dyn std::io::Write + Send)) -> Result<Self, PlatformError> {
-        let mut_ref = unsafe { &mut *writer };
+    pub fn acquire() -> Result<Self, PlatformError> {
         use crossterm::ExecutableCommand;
-        if mut_ref.execute(crossterm::cursor::Hide).is_err() {
+        if std::io::stdout().execute(crossterm::cursor::Hide).is_err() {
             return Err(PlatformError::Unsupported("hide cursor"));
         }
-        Ok(Self {
-            writer,
-            armed: true,
-        })
+        Ok(Self { armed: true })
     }
 }
 
-#[allow(unsafe_code)]
 impl Drop for CursorShowGuard {
     fn drop(&mut self) {
         if self.armed {
             use crossterm::ExecutableCommand;
-            let mut_ref = unsafe { &mut *self.writer };
-            // Belt + braces: show + show again.
-            let _ = mut_ref.execute(crossterm::cursor::Show);
-            let _ = mut_ref.execute(crossterm::cursor::Show);
+            let _ = std::io::stdout().execute(crossterm::cursor::Show);
+            let _ = std::io::stdout().execute(crossterm::cursor::Show);
         }
     }
 }
