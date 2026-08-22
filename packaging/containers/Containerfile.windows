@@ -3,7 +3,7 @@
 FROM mcr.microsoft.com/powershell:lts-nanoserver-ltsc2022
 
 LABEL maintainer="Forgum Contributors"
-LABEL description="Forgum ANSI animation and cowsay engine in Windows Container"
+LABEL description="Forgum ANSI animation and cowsay engine in Windows Container fully initialized"
 LABEL license="MIT"
 
 # Set unified config directory for Windows container user
@@ -19,18 +19,21 @@ RUN mkdir "C:\\Program Files\\Forgum" && \
     mkdir "C:\\Users\\ContainerUser\\.config\\forgum"
 
 # Copy pre-built release binary and data directory
-COPY target/release/forgum-engine.exe "C:\\ProgramFiles\\Forgum\\forgum-engine.exe"
+COPY target/release/forgum-engine.exe "C:\\Program Files\\Forgum\\forgum-engine.exe"
 COPY data "C:\\ProgramData\\Forgum"
 COPY packaging/containers/configs/windows-config.json "C:\\Users\\ContainerUser\\.config\\forgum\\config.json"
 
 # Add Forgum to system PATH
-RUN setx /M PATH="%PATH %;C:\\Program Files\\Forgum"
+RUN setx /M PATH "%PATH%;C:\\Program Files\\Forgum"
 
 # Switch back to standard user
 USER ContainerUser
 
-# Configure PowerShell profile with Forgum prompt hook
-RUN pwsh -NoProfile -Command "New-Item -ItemType File -Force -Path `$PROFILE; Add-Content -Path `$PROFILE -Value 'forgum-engine init pwsh | Out-String | Invoke-Expression'"
+# Thoroughly configure PowerShell profiles and aliases for Forgum
+RUN pwsh -NoProfile -Command "New-Item -ItemType File -Force -Path $PROFILE; Add-Content -Path $PROFILE -Value 'forgum-engine init pwsh | Out-String | Invoke-Expression'; Add-Content -Path $PROFILE -Value 'Set-Alias -Name cowsay -Value "forgum-engine say"'; Set-Content -Path 'C:\\Users\\ContainerUser\\init-cmd.bat' -Value '@echo off & doskey cowsay=forgum-engine say $* & doskey lolcat=forgum-engine render $*'"
+
+# Copy verification test script
+COPY packaging/containers/scripts/test-all-shells.ps1 "C:\\Users\\ContainerUser\\test-all-shells.ps1"
 
 # Default entrypoint starts interactive PowerShell with Forgum hook
 CMD ["pwsh.exe", "-NoLogo"]
