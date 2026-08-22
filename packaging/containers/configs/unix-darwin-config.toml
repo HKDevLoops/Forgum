@@ -1,0 +1,17 @@
+# Forgum Configuration for Unix / macOS Container Environment
+cow = "daemon"
+effect = "rainbow"
+fps = 60
+color_mode = "truecolor"
+show_status_line = true
+status_line_position = "bottom"
+status_line_format = "host_time"
+speech_mode = "wrap"
+speech_bubble = true
+bubble_width = 50
+cowsay_compat = true
+attach_mode = "daemon"
+clear_screen = false
+eyes = "OO"
+tongue = "U "
+thoughts = "\\"

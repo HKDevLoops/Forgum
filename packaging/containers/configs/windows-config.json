@@ -1,0 +1,20 @@
+{
+  "cow": "tux",
+  "effect": "rainbow",
+  "fps": 30,
+  "color_mode": "truecolor",
+  "show_status_line": true,
+  "status_line_position": "bottom",
+  "status_line_format": "time_weather",
+  "speech_mode": "wrap",
+  "speech_bubble": true,
+  "bubble_width": 45,
+  "cowsay_compat": true,
+  "attach_mode": "split",
+  "split_direction": "horizontal",
+  "split_ratio": 0.35,
+  "clear_screen": false,
+  "eyes": "oo",
+  "tongue": "  ",
+  "thoughts": " "
+}

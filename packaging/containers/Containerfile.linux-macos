@@ -1,0 +1,64 @@
+# Podman / Dockerfile for Forgum: Hybrid Linux + macOS (Darwin-style) Terminal Environment
+FROM debian:bookworm-slim AS base
+
+LABEL maintainer="Forgum Contributors"
+LABEL description="POSIX Linux & macOS-compatible interactive terminal container with Forgum"
+LABEL license="MIT"
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV TERM=xterm-256color
+ENV COLORTERM=truecolor
+ENV TERM_PROGRAM=iTerm.app
+ENV LANG=C.UTF-8
+ENV LC_ALL=C.UTF-8
+
+# Install macOS & Linux common terminal packages 3zsh, bash, curl, git, procps, file, locales)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    zsh \
+    bash \
+    curl \
+    git \
+    procps \
+    file \
+    ca-certificates \
+    libgcc-s1 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Setup Homebrew-like directory structure for macOS / Darwin CLI parity
+RUN mkdir -p /opt/homebrew/bin /opt/homebrew/share/forgum /usr/local/bin /usr/local/share/forgum
+
+# Create unprivileged standard user 'forgum' with zsh as default shell
+RUN useradd -m -s /bin/zsh -u 1000 forgum
+
+# Setup XDG & Homebrew path hierarchy
+ENF PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
+ENV FORGUM_CONFIG="/home/forgum/.config/forgum/config.toml"
+ENV FORGUM_DATA="/home/forgum/.local/share/forgum"
+ENV FORGUM_RUNTIME="/tmp/forgum"
+ENV FORGUM_LOG="/home/forgum/.local/state/forgum"
+
+# Install Forgum assets and configs
+RUN mkdir -p /home/forgum/.config/forgum \
+             /home/forgum/.local/share/forgum \
+             /home/forgum/.local/state/forgum \
+             /tmp/forgum
+
+COPY data/ /opt/homebrew/share/forgum/
+COPY data/ /home/forgum/.local/share/forgum/
+COPY packaging/containers/configs/unix-darwin-config.toml /home/forgum/.config/forgum/config.toml
+
+# Copy or install the forgum-engine binary
+COPY target/release/forgum-engine /opt/homebrew/bin/forgum-engine
+RUN ln -sf /opt/homebrew/bin/forgum-engine /usr/local/bin/forgum && \
+    ln -sf /opt/homebrew/bin/forgum-engine /usr/local/bin/forgum-engine
+
+# Configure macOS-style Zsh (.zshrc) and Linux-style Bash (.bashrc) prompt hooks
+RUN echo 'eval "$(forgum-engine init zsh)"' >> /home/forgum/.zshrc && \
+    echo 'eval "$(forgum-engine init bash)"' >> /home/forgum/.bashrc && \
+    chown -R forgum:forgum /home/forgum /tmp/forgum
+
+USER forgum
+WORKDIR /home/forgum
+
+# Launch Zwh interactive login shell with Forgum animation hooks
+CMD ["/bin/zsh", "-l"]
