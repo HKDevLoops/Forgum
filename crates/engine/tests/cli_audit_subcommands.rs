@@ -145,8 +145,6 @@ fn audit_say_subcommand_wrapping() {
 #[test]
 fn audit_timer_subcommand_timing_and_box_rendering() {
     let result = forgum_engine::timer::run_timer(&[
-        "cmd".to_string(),
-        "/C".to_string(),
         "echo".to_string(),
         "TimerTest".to_string(),
     ]);

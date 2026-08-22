@@ -141,9 +141,13 @@ macro_rules! cfg_windows {
 #[must_use]
 pub fn target_os() -> &'static str {
     #[cfg(unix)]
-    return "unix";
+    {
+        "unix"
+    }
     #[cfg(windows)]
-    return "windows";
+    {
+        "windows"
+    }
 }
 
 /// Check battery charge percentage. Returns `Some(pct)` if a battery is
@@ -166,7 +170,7 @@ pub fn check_battery_percent() -> Option<f32> {
                 }
             }
         }
-        return None;
+        None
     }
     // macOS: use ioreg to get battery info
     #[cfg(target_os = "macos")]
@@ -198,7 +202,7 @@ pub fn check_battery_percent() -> Option<f32> {
                 }
             }
         }
-        return None;
+        None
     }
     // Windows: return None (desktops don't have batteries; laptops
     // would need windows-sys power status API, deferred).

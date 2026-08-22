@@ -79,7 +79,6 @@ pub fn spawn_detached(
     let mut cmd = Command::new(program);
     cmd.args(args).stdin(stdin).stdout(stdout).stderr(stderr);
     #[allow(unsafe_code)]
-    #[allow(unsafe_code)]
     unsafe {
         cmd.pre_exec(|| {
             if libc::setsid() == -1 {

@@ -298,9 +298,13 @@ fn ensure_dir(path: PathBuf) -> Result<PathBuf, PlatformError> {
 #[must_use]
 pub fn home_dir() -> Option<PathBuf> {
     #[cfg(unix)]
-    return std::env::var_os("HOME").map(PathBuf::from);
+    {
+        std::env::var_os("HOME").map(PathBuf::from)
+    }
     #[cfg(windows)]
-    return std::env::var_os("USERPROFILE").map(PathBuf::from);
+    {
+        std::env::var_os("USERPROFILE").map(PathBuf::from)
+    }
 }
 
 /// Return `true` iff `path` resolves (canonicalizing) and the result equals
