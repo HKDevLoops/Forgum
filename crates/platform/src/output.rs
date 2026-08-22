@@ -20,7 +20,6 @@ use crate::error::PlatformError;
 /// We don't use `std::io::BufWriter` because we need to expose a stable raw
 /// pointer to the inner writer so the [`AltScreenGuard`] /
 /// [`CursorShowGuard`] can attach cleanup behavior without taking ownership.
-#[allow(unsafe_code)]
 pub struct OutputHandle {
     /// Hand-rolled buffer. Most writes go here; we flush to `inner` on
     /// `flush()` or when the buffer fills.
