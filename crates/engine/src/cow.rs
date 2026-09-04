@@ -11,8 +11,8 @@ use rand::seq::SliceRandom;
 use crate::framebuffer::{Cell, Color, FrameBuffer};
 
 /// The default cow art when no `.cow` file is found.
-const DEFAULT_COW: &str = r#"        \   ^__^
-         \  (oo)\_______
+const DEFAULT_COW: &str = r#"        $thoughts   ^__^
+         $thoughts  (oo)\_______
             (__)\       )\/\
                 ||----w |
                 ||     ||"#;
@@ -155,10 +155,10 @@ pub fn default_cow_expanded(eyes: &str, tongue: &str, thoughts: &str) -> String 
     expand_cow(DEFAULT_COW, eyes, tongue, thoughts)
 }
 
-/// Wrap text in a speech bubble above the cow art.
+/// Wrap text in a speech or thought bubble above the cow art.
 ///
 /// Returns the combined (bubble + cow) text ready for rendering.
-pub fn compose_scene(cow_text: &str, bubble_text: &str) -> String {
+pub fn compose_scene_with_mode(cow_text: &str, bubble_text: &str, is_thought: bool) -> String {
     if bubble_text.is_empty() {
         return cow_text.to_string();
     }
@@ -171,13 +171,31 @@ pub fn compose_scene(cow_text: &str, bubble_text: &str) -> String {
         .unwrap_or(0)
         .max(2);
 
-    let bubble = wrap_bubble(bubble_text, cow_width);
+    let bubble = if is_thought {
+        wrap_thought_bubble(bubble_text, cow_width)
+    } else {
+        wrap_bubble(bubble_text, cow_width)
+    };
 
     let mut result = String::with_capacity(bubble.len() + cow_text.len() + 1);
     result.push_str(&bubble);
     result.push('\n');
     result.push_str(cow_text);
     result
+}
+
+/// Wrap text in a speech bubble above the cow art.
+///
+/// Returns the combined (bubble + cow) text ready for rendering.
+pub fn compose_scene(cow_text: &str, bubble_text: &str) -> String {
+    compose_scene_with_mode(cow_text, bubble_text, false)
+}
+
+/// Wrap text in a thought bubble above the cow art (cowthink mode).
+///
+/// Returns the combined (thought bubble + cow) text ready for rendering.
+pub fn compose_thought_scene(cow_text: &str, bubble_text: &str) -> String {
+    compose_scene_with_mode(cow_text, bubble_text, true)
 }
 
 /// Return the display width of a Unicode character in terminal cells (0, 1, or 2).
@@ -248,15 +266,14 @@ pub fn str_display_width(s: &str) -> usize {
     s.chars().map(char_display_width).sum()
 }
 
-/// Wrap text in a speech bubble with rounded corners.
+/// Wrap text in a speech bubble with rectangular borders.
 ///
 /// ```text
 ///  _______________
-/// |               |
 /// |  Hello, world |
 /// |_______________|
 /// ```
-fn wrap_bubble(text: &str, min_width: usize) -> String {
+pub fn wrap_bubble(text: &str, min_width: usize) -> String {
     let lines: Vec<&str> = text.lines().collect();
     if lines.is_empty() {
         return String::new();
@@ -297,6 +314,58 @@ fn wrap_bubble(text: &str, min_width: usize) -> String {
         result.push('_');
     }
     result.push('|');
+    result.push('\n');
+
+    result
+}
+
+/// Wrap text in a thought bubble with parentheses borders (cowthink style).
+///
+/// ```text
+///   _______________
+///  (  Hello, world  )
+///  (_______________)
+/// ```
+pub fn wrap_thought_bubble(text: &str, min_width: usize) -> String {
+    let lines: Vec<&str> = text.lines().collect();
+    if lines.is_empty() {
+        return String::new();
+    }
+
+    let text_width = lines
+        .iter()
+        .map(|l| str_display_width(l))
+        .max()
+        .unwrap_or(0)
+        .max(min_width.saturating_sub(2));
+    let inner_width = text_width + 2; // +2 for padding spaces around text
+
+    let mut result = String::with_capacity((inner_width + 4) * (lines.len() + 2));
+
+    // Top border: ` _______________ `
+    result.push(' ');
+    for _ in 0..=inner_width {
+        result.push('_');
+    }
+    result.push('\n');
+
+    // Content lines: `(  Hello, world  )`
+    for line in lines.iter() {
+        let pad_target = inner_width + 1;
+        result.push('(');
+        result.push(' ');
+        result.push_str(line);
+        pad_to(&mut result, pad_target);
+        result.push(')');
+        result.push('\n');
+    }
+
+    // Bottom border: `(_______________)`
+    result.push('(');
+    for _ in 0..inner_width {
+        result.push('_');
+    }
+    result.push(')');
     result.push('\n');
 
     result
@@ -572,6 +641,76 @@ mod tests {
         );
     }
 
+    #[test]
+    fn thought_bubble_structure_single_line() {
+        let bubble = wrap_thought_bubble("I ponder deeply", 10);
+        let lines: Vec<&str> = bubble.lines().collect();
+        assert_eq!(lines.len(), 3, "single-line thought bubble must have 3 lines");
+
+        // Top border: space + underscores
+        assert!(lines[0].starts_with(' '), "top border must start with space");
+        assert!(
+            lines[0].chars().all(|c| c == '_' || c == ' '),
+            "top border must be underscores/spaces only"
+        );
+
+        // Content line: starts with ( and ends with )
+        assert!(lines[1].starts_with('('), "content line must start with (");
+        assert!(lines[1].ends_with(')'), "content line must end with )");
+        assert!(lines[1].contains("I ponder deeply"), "content must contain thought text");
+
+        // Bottom border: (____...___)
+        assert!(lines[2].starts_with('('), "bottom border must start with (");
+        assert!(lines[2].ends_with(')'), "bottom border must end with )");
+        let bottom_inner = &lines[2][1..lines[2].len() - 1];
+        assert!(
+            bottom_inner.chars().all(|c| c == '_'),
+            "bottom inner must be all underscores: {bottom_inner:?}"
+        );
+    }
+
+    #[test]
+    fn thought_bubble_structure_multi_line() {
+        let bubble = wrap_thought_bubble("Line 1\nLine 2", 10);
+        let lines: Vec<&str> = bubble.lines().collect();
+        assert_eq!(lines.len(), 4, "two-line thought bubble must have 4 lines");
+        assert!(lines[1].starts_with('(') && lines[1].ends_with(')'));
+        assert!(lines[2].starts_with('(') && lines[2].ends_with(')'));
+        assert!(lines[1].contains("Line 1"));
+        assert!(lines[2].contains("Line 2"));
+    }
+
+    #[test]
+    fn thought_bubble_empty_text_returns_empty() {
+        assert_eq!(wrap_thought_bubble("", 10), "");
+    }
+
+    #[test]
+    fn thought_bubble_all_rows_same_width() {
+        let cases: Vec<(&str, usize)> = vec![
+            ("", 0),
+            ("x", 0),
+            ("Pondering the universe", 0),
+            ("Pondering\nquantum computing\ntoday", 25),
+        ];
+        for (text, min_width) in cases {
+            let bubble = wrap_thought_bubble(text, min_width);
+            if bubble.is_empty() {
+                continue;
+            }
+            let rows: Vec<&str> = bubble.lines().collect();
+            let top_width = str_display_width(rows[0]);
+            for (i, row) in rows.iter().enumerate() {
+                let w = str_display_width(row);
+                assert_eq!(
+                    w, top_width,
+                    "row {i} width {w} != top width {top_width} for thought {:?}",
+                    text
+                );
+            }
+        }
+    }
+
     // ── compose_scene ─────────────────────────────────────────────
 
     #[test]
@@ -612,6 +751,44 @@ mod tests {
         assert!(scene.contains(long_text), "bubble must contain full text");
         // The bubble should appear before the cow
         assert!(scene.find(long_text).unwrap() < scene.find("cow").unwrap());
+    }
+
+    #[test]
+    fn compose_thought_scene_bubble_before_cow() {
+        let cow = "  cow_line1\n  cow_line2";
+        let scene = compose_thought_scene(cow, "thinking of grass");
+        let cow_pos = scene.find("cow_line1").unwrap();
+        let thought_pos = scene.find("thinking of grass").unwrap();
+        assert!(
+            thought_pos < cow_pos,
+            "thought bubble (at {thought_pos}) must precede cow (at {cow_pos})"
+        );
+        assert!(scene.contains('(') && scene.contains(')'));
+    }
+
+    #[test]
+    fn compose_thought_scene_no_bubble_passthrough() {
+        let cow = "  cow_only";
+        let scene = compose_thought_scene(cow, "");
+        assert_eq!(scene, cow);
+    }
+
+    #[test]
+    fn compose_scene_with_mode_distinguishes_speech_and_thought() {
+        let cow = "  ^__^\n  (oo)";
+        let speech = compose_scene_with_mode(cow, "hello", false);
+        let thought = compose_scene_with_mode(cow, "hello", true);
+
+        let speech_lines: Vec<&str> = speech.lines().collect();
+        let thought_lines: Vec<&str> = thought.lines().collect();
+
+        // Speech bubble content line has | borders
+        assert!(speech_lines[1].starts_with('|'));
+        assert!(speech_lines[1].ends_with('|'));
+
+        // Thought bubble content line has ( ) borders
+        assert!(thought_lines[1].starts_with('('));
+        assert!(thought_lines[1].ends_with(')'));
     }
 
     // ── render_cow ────────────────────────────────────────────────

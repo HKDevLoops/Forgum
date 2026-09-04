@@ -336,3 +336,101 @@ fn expand_cow_preserves_multiline_structure() {
     assert_eq!(lines[1], "line2");
     assert_eq!(lines[2], "line3");
 }
+
+#[test]
+fn test_all_106_cows_expand_with_thought_glyph() {
+    let dd = data_dir();
+    let names = all_cow_names();
+    let mut failures = Vec::new();
+
+    for name in &names {
+        let result =
+            std::panic::catch_unwind(|| forgum_engine::cow::load_cow(name, &dd, "oo", " ", "o"));
+        match result {
+            Ok(cow_text) => {
+                if cow_text.trim().is_empty() {
+                    failures.push(format!("{name}.cow: expanded to empty with thought glyph"));
+                }
+            }
+            Err(_) => {
+                failures.push(format!("{name}.cow: panicked with thought glyph"));
+            }
+        }
+    }
+
+    assert!(
+        failures.is_empty(),
+        "Failed to load/expand {} cows with thought glyph 'o':\n{}",
+        failures.len(),
+        failures.join("\n")
+    );
+}
+
+#[test]
+fn test_thought_bubble_has_parentheses_and_thought_inside() {
+    let thought = "A bug in production is just an unexpected feature in disguise.";
+    let bubble = forgum_engine::cow::wrap_thought_bubble(thought, 0);
+
+    // Verify bubble contains thought
+    assert!(
+        bubble.contains(thought),
+        "Thought bubble must contain the exact thought string"
+    );
+
+    // Verify border lines use parentheses
+    let lines: Vec<&str> = bubble.lines().collect();
+    assert!(lines.len() >= 3, "Bubble must have at least 3 lines");
+
+    // Content line: starts with '(' and ends with ')'
+    assert!(
+        lines[1].starts_with('(') && lines[1].ends_with(')'),
+        "Thought bubble content line must be enclosed in parentheses: '{}'",
+        lines[1]
+    );
+
+    // Bottom border line: starts with '(' and ends with ')'
+    let bottom = lines.last().unwrap();
+    assert!(
+        bottom.starts_with('(') && bottom.ends_with(')'),
+        "Thought bubble bottom border must be enclosed in parentheses: '{}'",
+        bottom
+    );
+}
+
+#[test]
+fn test_compose_thought_scene_preserves_thought_content() {
+    let dd = data_dir();
+    let cow = forgum_engine::cow::load_cow("default", &dd, "oo", " ", "o");
+    let deep_thought = "Simplicity is prerequisite for reliability.\n- Edsger W. Dijkstra";
+
+    let composed = forgum_engine::cow::compose_thought_scene(&cow, deep_thought);
+
+    // 1. Thought bubble is at the top
+    assert!(composed.contains("Simplicity is prerequisite for reliability."));
+    assert!(composed.contains("- Edsger W. Dijkstra"));
+
+    // 2. Cow mascot is present
+    assert!(composed.contains("^__^"));
+    assert!(composed.contains("(oo)"));
+
+    // 3. Connective thought circles 'o' are present
+    assert!(
+        composed.contains(" o ") || composed.contains("o  "),
+        "Cow art must contain connective 'o' thoughts bubble trail"
+    );
+
+    // 4. Bubble borders use '(' and ')'
+    let lines: Vec<&str> = composed.lines().collect();
+    let thought_line_1 = lines
+        .iter()
+        .find(|l| l.contains("Simplicity is prerequisite"))
+        .expect("Line 1 of thought");
+    assert!(thought_line_1.starts_with('(') && thought_line_1.ends_with(')'));
+
+    let thought_line_2 = lines
+        .iter()
+        .find(|l| l.contains("- Edsger W. Dijkstra"))
+        .expect("Line 2 of thought");
+    assert!(thought_line_2.starts_with('(') && thought_line_2.ends_with(')'));
+}
+

@@ -174,6 +174,7 @@ pub fn merge(base: SceneConfig, overlay: SceneConfig) -> SceneConfig {
         } else {
             overlay.shell_attach_mode
         },
+        think: overlay.think || base.think,
     }
 }
 

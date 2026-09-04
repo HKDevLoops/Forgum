@@ -48,6 +48,10 @@ pub struct Cli {
     #[arg(long, short = 't', global = true)]
     pub text: Option<String>,
 
+    /// Render as a thought bubble instead of a speech bubble (cowthink mode).
+    #[arg(long, short = 'T', global = true)]
+    pub think: bool,
+
     /// Effect name.
     #[arg(long, short = 'e', global = true)]
     pub effect: Option<String>,
@@ -91,6 +95,12 @@ pub struct Cli {
 pub enum Commands {
     /// Render a cow (default command).
     Render,
+    /// Render a thought bubble (cowthink mode).
+    Think {
+        /// Optional thought text (defaults to random fortune if omitted).
+        #[arg(num_args = 0..)]
+        thought: Vec<String>,
+    },
     /// Print a random fortune to stdout.
     Fortune,
     /// Generate shell integration hooks.
@@ -350,6 +360,7 @@ impl From<ShellArg> for Shell {
 pub enum Command {
     #[default]
     Render,
+    Think,
     Status,
     Config,
     Fortune,
@@ -405,6 +416,7 @@ pub struct Args {
     pub max_len: Option<usize>,
     pub reduce_motion: bool,
     pub text_only: bool,
+    pub think: bool,
 }
 
 /// Error type returned by `parse_args`, carrying the intended process exit code.
@@ -431,40 +443,59 @@ pub fn parse_args(argv: Vec<String>) -> Result<(Args, Option<Commands>), CliErro
         }
     })?;
 
-    let command = match &cli.command {
-        Some(Commands::Render) | None => Command::Render,
-        Some(Commands::Fortune) => Command::Fortune,
-        Some(Commands::Init { .. }) => Command::Init,
-        Some(Commands::Completions { .. }) => Command::Completions,
-        Some(Commands::Status) => Command::Status,
-        Some(Commands::Config { .. }) => Command::Config,
-        Some(Commands::Tmux { sub }) => match sub {
-            TmuxSub::Install => Command::Tmux,
-            TmuxSub::Zellij => Command::Tmux,
-            TmuxSub::WezTerm => Command::Tmux,
-            TmuxSub::Screen => Command::Tmux,
-        },
-        Some(Commands::StatusLine { .. }) => Command::StatusLine,
-        Some(Commands::Herd { sub }) => match sub {
-            HerdSub::Census => Command::Herd,
-            _ => Command::Herd,
-        },
-        Some(Commands::Theme { .. }) => Command::Theme,
-        Some(Commands::Demo) => Command::Demo,
-        Some(Commands::Showcase) => Command::Showcase,
-        Some(Commands::Remote { .. }) => Command::Remote,
-        Some(Commands::Say { .. }) => Command::Say,
-        Some(Commands::Timer { .. }) => Command::Timer,
-        Some(Commands::Battle { .. }) => Command::Battle,
-        Some(Commands::Doctor) => Command::Doctor,
-        Some(Commands::Checkhealth { .. }) => Command::Checkhealth,
-        Some(Commands::Logs { .. }) => Command::Logs,
+    let (command, extra_text, is_think) = match &cli.command {
+        Some(Commands::Render) | None => (Command::Render, None, false),
+        Some(Commands::Think { thought }) => {
+            let t = if thought.is_empty() {
+                None
+            } else {
+                Some(thought.join(" "))
+            };
+            (Command::Think, t, true)
+        }
+        Some(Commands::Fortune) => (Command::Fortune, None, false),
+        Some(Commands::Init { .. }) => (Command::Init, None, false),
+        Some(Commands::Completions { .. }) => (Command::Completions, None, false),
+        Some(Commands::Status) => (Command::Status, None, false),
+        Some(Commands::Config { .. }) => (Command::Config, None, false),
+        Some(Commands::Tmux { sub }) => (
+            match sub {
+                TmuxSub::Install => Command::Tmux,
+                TmuxSub::Zellij => Command::Tmux,
+                TmuxSub::WezTerm => Command::Tmux,
+                TmuxSub::Screen => Command::Tmux,
+            },
+            None,
+            false,
+        ),
+        Some(Commands::StatusLine { .. }) => (Command::StatusLine, None, false),
+        Some(Commands::Herd { sub }) => (
+            match sub {
+                HerdSub::Census => Command::Herd,
+                _ => Command::Herd,
+            },
+            None,
+            false,
+        ),
+        Some(Commands::Theme { .. }) => (Command::Theme, None, false),
+        Some(Commands::Demo) => (Command::Demo, None, false),
+        Some(Commands::Showcase) => (Command::Showcase, None, false),
+        Some(Commands::Remote { .. }) => (Command::Remote, None, false),
+        Some(Commands::Say { .. }) => (Command::Say, None, false),
+        Some(Commands::Timer { .. }) => (Command::Timer, None, false),
+        Some(Commands::Battle { .. }) => (Command::Battle, None, false),
+        Some(Commands::Doctor) => (Command::Doctor, None, false),
+        Some(Commands::Checkhealth { .. }) => (Command::Checkhealth, None, false),
+        Some(Commands::Logs { .. }) => (Command::Logs, None, false),
     };
 
     let max_len = match &cli.command {
         Some(Commands::StatusLine { max_len }) => Some(*max_len),
         _ => None,
     };
+
+    let text = cli.text.or(extra_text);
+    let think = cli.think || is_think;
 
     let args = Args {
         command,
@@ -474,7 +505,7 @@ pub fn parse_args(argv: Vec<String>) -> Result<(Args, Option<Commands>), CliErro
         duration: cli.duration,
         fps: cli.fps,
         cow: cli.cow,
-        text: cli.text,
+        text,
         effect: cli.effect,
         eyes: cli.eyes,
         tongue: cli.tongue,
@@ -484,6 +515,7 @@ pub fn parse_args(argv: Vec<String>) -> Result<(Args, Option<Commands>), CliErro
         max_len,
         reduce_motion: cli.reduce_motion,
         text_only: cli.text_only,
+        think,
     };
 
     Ok((args, cli.command))
@@ -531,6 +563,9 @@ pub fn build_scene_config(args: &Args) -> Result<SceneConfig, String> {
     }
     if let Some(f) = args.fps {
         cfg.fps = f;
+    }
+    if args.think {
+        cfg.think = true;
     }
 
     // If --background and no explicit duration, default to 0 (infinite).

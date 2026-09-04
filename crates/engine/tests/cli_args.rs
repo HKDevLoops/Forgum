@@ -286,3 +286,34 @@ fn default_command_is_render() {
     assert_eq!(a.command, Command::Render);
     assert!(cmd.is_none());
 }
+
+#[test]
+fn think_flag_sets_think_field_and_config() {
+    let (a, _) = parse_args(argv(&["forgum-engine", "render", "--think"])).unwrap();
+    assert!(a.think);
+    let cfg = build_scene_config(&a).unwrap();
+    assert!(cfg.think);
+}
+
+#[test]
+fn think_subcommand_parses_thought_text() {
+    let (a, cmd) = parse_args(argv(&["forgum-engine", "think", "I", "ponder", "deeply"])).unwrap();
+    assert_eq!(a.command, Command::Think);
+    assert!(a.think);
+    assert_eq!(a.text.as_deref(), Some("I ponder deeply"));
+    assert!(matches!(cmd, Some(Commands::Think { .. })));
+    let cfg = build_scene_config(&a).unwrap();
+    assert!(cfg.think);
+    assert_eq!(cfg.text, "I ponder deeply");
+}
+
+#[test]
+fn think_subcommand_without_args_sets_think() {
+    let (a, cmd) = parse_args(argv(&["forgum-engine", "think"])).unwrap();
+    assert_eq!(a.command, Command::Think);
+    assert!(a.think);
+    assert!(a.text.is_none());
+    assert!(matches!(cmd, Some(Commands::Think { .. })));
+    let cfg = build_scene_config(&a).unwrap();
+    assert!(cfg.think);
+}

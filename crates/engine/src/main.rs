@@ -51,6 +51,9 @@ fn main() -> ExitCode {
             }
         }
 
+        // ── think ───────────────────────────────────────────────────
+        Some(cli::Commands::Think { .. }) => render_subcommand(args),
+
         // ── init <shell> ────────────────────────────────────────────
         Some(cli::Commands::Init {
             shell,
@@ -171,6 +174,13 @@ fn main() -> ExitCode {
                     "auto_render_on_prompt" => match v.parse::<bool>() {
                         Ok(b) => {
                             cfg.auto_render_on_prompt = b;
+                            None
+                        }
+                        Err(e) => Some(format!("{e}")),
+                    },
+                    "think" => match v.parse::<bool>() {
+                        Ok(b) => {
+                            cfg.think = b;
                             None
                         }
                         Err(e) => Some(format!("{e}")),
@@ -824,6 +834,29 @@ fn render_subcommand(args: cli::Args) -> ExitCode {
         return spawn_daemon_parent(&args);
     }
 
+    let data = match data_dir() {
+        Ok(d) => d,
+        Err(e) => {
+            eprintln!("{PROGRAM}: cannot find data directory: {e}");
+            return ExitCode::from(78);
+        }
+    };
+
+    let is_thought = scene.think
+        || args.command == cli::Command::Think
+        || (args.text.is_none() && scene.text.trim().is_empty());
+
+    if scene.text.trim().is_empty() {
+        scene.text = fortune::random_fortune(&data).unwrap_or_else(|| {
+            "The cow that never moos has the most to say.".to_string()
+        });
+    }
+
+    if args.text_only {
+        println!("{}", scene.text);
+        return ExitCode::SUCCESS;
+    }
+
     // ── FOREGROUND MODE ──
     let shutdown = ShutdownFlag::new();
 
@@ -835,16 +868,10 @@ fn render_subcommand(args: cli::Args) -> ExitCode {
         }
     };
 
-    let data = match data_dir() {
-        Ok(d) => d,
-        Err(e) => {
-            eprintln!("{PROGRAM}: cannot find data directory: {e}");
-            return ExitCode::from(78);
-        }
-    };
     scene.cow = cow::resolve_cow_name(&scene.cow, &data);
-    let cow_text = cow::load_cow(&scene.cow, &data, &scene.eyes, &scene.tongue, "\\\\");
-    let composed = cow::compose_scene(&cow_text, &scene.text);
+    let thoughts_glyph = if is_thought { "o" } else { "\\\\" };
+    let cow_text = cow::load_cow(&scene.cow, &data, &scene.eyes, &scene.tongue, thoughts_glyph);
+    let composed = cow::compose_scene_with_mode(&cow_text, &scene.text, is_thought);
 
     let animations = dna::load_animations(&data);
     let cow_dna = dna::get_dna(&animations, &scene.cow);
@@ -991,9 +1018,20 @@ fn run_daemon_child(args: cli::Args) -> ExitCode {
             return ExitCode::from(78);
         }
     };
+    let is_thought = scene.think
+        || args.command == cli::Command::Think
+        || (args.text.is_none() && scene.text.trim().is_empty());
+
+    if scene.text.trim().is_empty() {
+        scene.text = fortune::random_fortune(&data).unwrap_or_else(|| {
+            "The cow that never moos has the most to say.".to_string()
+        });
+    }
+
     scene.cow = cow::resolve_cow_name(&scene.cow, &data);
-    let cow_text = cow::load_cow(&scene.cow, &data, &scene.eyes, &scene.tongue, "\\\\");
-    let composed = cow::compose_scene(&cow_text, &scene.text);
+    let thoughts_glyph = if is_thought { "o" } else { "\\\\" };
+    let cow_text = cow::load_cow(&scene.cow, &data, &scene.eyes, &scene.tongue, thoughts_glyph);
+    let composed = cow::compose_scene_with_mode(&cow_text, &scene.text, is_thought);
     let animations = dna::load_animations(&data);
     let cow_dna = dna::get_dna(&animations, &scene.cow);
     let instance_id = std::process::id();

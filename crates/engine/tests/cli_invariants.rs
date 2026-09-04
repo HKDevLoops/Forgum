@@ -135,3 +135,107 @@ fn unknown_flag_returns_exit_64() {
     // EX_USAGE = 64 per `man sysexits.h`.
     assert_eq!(output.status.code(), Some(64));
 }
+
+#[test]
+fn bare_engine_renders_thought_bubble_and_cow_when_piped() {
+    let bin = binary_path();
+    if !bin.exists() {
+        return;
+    }
+
+    let output = Command::new(&bin)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .output()
+        .expect("spawn forgum-engine");
+
+    assert!(output.status.success(), "bare forgum-engine must exit 0");
+    let stdout = String::from_utf8_lossy(&output.stdout);
+
+    // Verify thought bubble parentheses exist
+    assert!(
+        stdout.contains('(') && stdout.contains(')'),
+        "Default forgum-engine must render a thought bubble with parentheses: {stdout}"
+    );
+
+    // Verify cow mascot exists
+    assert!(
+        stdout.contains("^__^"),
+        "Default forgum-engine must render cow mascot ^__^: {stdout}"
+    );
+
+    // Verify thought connection circles 'o' exist
+    assert!(
+        stdout.contains(" o ") || stdout.contains("o  ") || stdout.contains("  o"),
+        "Default forgum-engine must render thought stem circles 'o': {stdout}"
+    );
+}
+
+#[test]
+fn think_subcommand_renders_thought_bubble_with_custom_text() {
+    let bin = binary_path();
+    if !bin.exists() {
+        return;
+    }
+
+    let custom_thought = "Quantum cows roam the cosmic pastures";
+    let output = Command::new(&bin)
+        .args(["think", custom_thought])
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .output()
+        .expect("spawn forgum-engine think");
+
+    assert!(output.status.success(), "think subcommand must exit 0");
+    let stdout = String::from_utf8_lossy(&output.stdout);
+
+    // Verify thought text is inside the output
+    assert!(
+        stdout.contains(custom_thought),
+        "Thought text must appear in output: {stdout}"
+    );
+
+    // Verify thought bubble parentheses
+    assert!(
+        stdout.contains('(') && stdout.contains(')'),
+        "Output must have parentheses thought bubble borders: {stdout}"
+    );
+
+    // Verify cow mascot and connective circles
+    assert!(stdout.contains("^__^"));
+    assert!(stdout.contains(" o ") || stdout.contains("o  ") || stdout.contains("  o"));
+}
+
+#[test]
+fn render_with_text_renders_speech_bubble() {
+    let bin = binary_path();
+    if !bin.exists() {
+        return;
+    }
+
+    let speech_text = "Classic speech in speech bubble";
+    let output = Command::new(&bin)
+        .args(["render", "--text", speech_text])
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .output()
+        .expect("spawn forgum-engine render --text");
+
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+
+    // Verify text appears
+    assert!(stdout.contains(speech_text));
+
+    // Verify speech bubble pipe borders |
+    assert!(
+        stdout.contains('|'),
+        "Speech bubble must use vertical pipe borders: {stdout}"
+    );
+
+    // Verify speech backslash stem \
+    assert!(
+        stdout.contains('\\'),
+        "Speech bubble must use backslash stem: {stdout}"
+    );
+}

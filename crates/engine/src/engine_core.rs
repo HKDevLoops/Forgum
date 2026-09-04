@@ -209,14 +209,15 @@ impl SimState {
             ControlMsg::Cow(name) => {
                 // Reload cow art and recreate the effect.
                 self.config.cow = crate::cow::resolve_cow_name(name, &self.data_dir);
+                let thoughts_glyph = if self.config.think { "o" } else { "\\\\" };
                 let cow_text = crate::cow::load_cow(
                     &self.config.cow,
                     &self.data_dir,
                     &self.config.eyes,
                     &self.config.tongue,
-                    "\\\\",
+                    thoughts_glyph,
                 );
-                let composed = crate::cow::compose_scene(&cow_text, &self.config.text);
+                let composed = crate::cow::compose_scene_with_mode(&cow_text, &self.config.text, self.config.think);
                 let animations = crate::dna::load_animations(&self.data_dir);
                 self.cow_dna = crate::dna::get_dna(&animations, &self.config.cow);
                 self.effect = effects::create_scene_effect(
@@ -230,14 +231,15 @@ impl SimState {
             ControlMsg::Text(text) => {
                 // Recompose the scene with new text and recreate the effect.
                 self.config.text = text.clone();
+                let thoughts_glyph = if self.config.think { "o" } else { "\\\\" };
                 let cow_text = crate::cow::load_cow(
                     &self.config.cow,
                     &self.data_dir,
                     &self.config.eyes,
                     &self.config.tongue,
-                    "\\\\",
+                    thoughts_glyph,
                 );
-                let composed = crate::cow::compose_scene(&cow_text, &self.config.text);
+                let composed = crate::cow::compose_scene_with_mode(&cow_text, &self.config.text, self.config.think);
                 self.effect = effects::create_scene_effect(
                     &self.config.effect,
                     composed,

@@ -223,6 +223,48 @@ fn scenario_unicode_and_emoji_speech_bubble_integrity() {
 }
 
 #[test]
+fn scenario_unicode_and_emoji_thought_bubble_integrity() {
+    let raw_cow = "        o   ^__^\n         o  (oo)\\_______\n            (__)\\       )\\/\n                ||----w |\n                ||     ||";
+    let deep_thought = "✨ Deep Cow Insights 🧘 Think Big 🚀";
+    let composed = forgum_engine::cow::compose_thought_scene(raw_cow, deep_thought);
+
+    // Verify composition contains the thought bubble and the cow
+    assert!(composed.contains("✨"));
+    assert!(composed.contains("Deep Cow Insights"));
+    assert!(composed.contains("🚀"));
+    assert!(composed.contains("^__^"));
+    assert!(composed.contains("(oo)"));
+
+    // Verify bubble borders are parentheses
+    let lines: Vec<&str> = composed.lines().collect();
+    let top_border = lines[0];
+    let content_line = lines[1];
+    let bottom_border = lines[2];
+
+    assert!(top_border.starts_with(" _"));
+    assert!(content_line.starts_with('(') && content_line.ends_with(')'));
+    assert!(bottom_border.starts_with('(') && bottom_border.ends_with(')'));
+}
+
+#[test]
+fn scenario_cowthink_speech_vs_thought_borders() {
+    let text = "To moo or not to moo";
+    let speech_bubble = forgum_engine::cow::wrap_bubble(text, 0);
+    let thought_bubble = forgum_engine::cow::wrap_thought_bubble(text, 0);
+
+    let speech_lines: Vec<&str> = speech_bubble.lines().collect();
+    let thought_lines: Vec<&str> = thought_bubble.lines().collect();
+
+    // Speech bubble uses vertical pipes |
+    assert!(speech_lines[1].starts_with('|') && speech_lines[1].ends_with('|'));
+    assert!(speech_lines[2].starts_with('|') && speech_lines[2].ends_with('|'));
+
+    // Thought bubble uses parentheses ( )
+    assert!(thought_lines[1].starts_with('(') && thought_lines[1].ends_with(')'));
+    assert!(thought_lines[2].starts_with('(') && thought_lines[2].ends_with(')'));
+}
+
+#[test]
 fn scenario_timer_failure_command_reporting_ux() {
     let failed_result = forgum_engine::timer::TimerResult {
         command: "false_command --trigger-error".to_string(),

@@ -52,7 +52,7 @@ const _PROMPT_GUARD: u16 = PROMPT_GUARD; // keep for Phase 2 overlay region math
 /// back to the Phase 0 static cow rendering.
 #[allow(clippy::too_many_arguments)]
 pub fn render_loop_foreground(
-    mut out: OutputHandle,
+    out: OutputHandle,
     config: SceneConfig,
     shutdown: ShutdownFlag,
     composed_text: Option<&str>,
@@ -68,16 +68,16 @@ pub fn render_loop_foreground(
 
     let cow_display = composed_text.unwrap_or(&config.text);
 
-    // Tiny-terminal guard: print static text and exit.
-    if cols < MIN_COLS || rows < MIN_ROWS {
-        let cow_text = if cow_display.is_empty() {
+    // Tiny-terminal or non-tty pipe guard: print static text and exit.
+    if cols < MIN_COLS || rows < MIN_ROWS || !crossterm::tty::IsTty::is_tty(&std::io::stdout()) {
+        let cow_text = if composed_text.is_some() {
+            cow_display.to_string()
+        } else if cow_display.is_empty() {
             effects::default_cow_text().to_string()
         } else {
             format!("{}\n{}", effects::default_cow_text(), cow_display)
         };
-        let _ = out.write_all(cow_text.as_bytes());
-        let _ = out.write_all(b"\n");
-        let _ = out.flush();
+        println!("{cow_text}");
         return Ok(());
     }
 
@@ -87,7 +87,7 @@ pub fn render_loop_foreground(
 
     let max_frames = compute_max_frames(config.duration, config.fps);
 
-    crate::engine_core::run_engine(
+    let result = crate::engine_core::run_engine(
         out,
         config,
         shutdown,
@@ -97,7 +97,19 @@ pub fn render_loop_foreground(
         data_dir,
         cmd_rx,
         max_frames,
-    )
+    );
+
+    // Drop screen guards to restore the primary terminal screen
+    drop(_cur);
+    drop(_alt);
+    drop(_raw);
+
+    // Leave the composed mascot (thought bubble + cow) in the terminal scrollback
+    if let Some(text) = composed_text {
+        println!("\n{text}\n");
+    }
+
+    result
 }
 
 /// Run the background render loop. Does **not** own the alternate screen or
@@ -123,7 +135,9 @@ pub fn render_loop_background(
 
     // Tiny-terminal guard: print static text and exit.
     if cols < MIN_COLS || rows < MIN_ROWS {
-        let cow_text = if cow_display.is_empty() {
+        let cow_text = if composed_text.is_some() {
+            cow_display.to_string()
+        } else if cow_display.is_empty() {
             effects::default_cow_text().to_string()
         } else {
             format!("{}\n{}", effects::default_cow_text(), cow_display)

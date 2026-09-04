@@ -17,9 +17,13 @@ pub struct SceneConfig {
     #[serde(default = "default_cow")]
     pub cow: String,
 
-    /// Text inside the speech bubble.
+    /// Text inside the speech or thought bubble.
     #[serde(default)]
     pub text: String,
+
+    /// Render as a thought bubble (cowthink mode).
+    #[serde(default)]
+    pub think: bool,
 
     /// Effect name. Phase 0: only `"static"` works.
     #[serde(default = "default_effect")]
@@ -188,6 +192,7 @@ impl Default for SceneConfig {
             auto_render_on_prompt: default_auto_render(),
             color_mode: default_color_mode(),
             shell_attach_mode: default_shell_attach_mode(),
+            think: false,
         }
     }
 }
@@ -204,6 +209,7 @@ mod tests {
         assert_eq!(s.fps, 30);
         assert_eq!(s.eyes, "oo");
         assert!(!s.background);
+        assert!(!s.think);
         assert_eq!(s.duration, 0);
     }
 
