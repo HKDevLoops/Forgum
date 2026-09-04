@@ -135,13 +135,14 @@ $$\Delta x_{\text{scanline}} = \begin{cases} \text{sgn}(\sin(\text{seed})) \cdot
 ```bash
 # 1. Install (pick your lane from above)
 
-# 2. Run Forgum
+# 2. Run Forgum (By default, random thoughts are enabled!)
 forgum-engine
 
-# 3. See the cow. Type `forgum-engine` again anytime to change things.
+# 3. See the cow ponder. Run anytime for a fresh fortune thought, or pass your own thought:
+forgum-engine think "The terminal is my canvas."
 ```
 
-That's it. You do not need to edit any config file. Run `forgum-engine` and follow the cow. On PowerShell, `forgum` is also available as a wrapper via `Forgum.psm1`.
+That's it. You do not need to edit any config file. Run `forgum-engine` and follow the cow. **By default, random thoughts are enabled**—the engine automatically loads a random fortune and wraps it in a thought bubble `( ... )` with `o` connector circles. On PowerShell, `forgum` is also available as a wrapper via `Forgum.psm1`.
 
 ---
 
@@ -157,10 +158,17 @@ who you'll meet:
 > rendered. Set `cow` to pick your beast, and I'll moo it across the terminal.
 > Set `cow` to `"random"` and I'll pick a different cow from `data/Cows/` each time."
 
+### 💭 The Thought says:
+
+> "By default, random thoughts are enabled! Whenever you run `forgum-engine` without
+> explicit speech text, I tap into the pasture fortune cookies and wrap a fresh random
+> fortune inside a `( ... )` thought bubble with `o` connector circles. You can also
+> prompt me directly with `forgum-engine think <words>` or `--think`."
+
 ### 💬 The Text says:
 
-> "I'm the words in the speech bubble. Put your message in `text` and I'll carry it
-> wherever the cow goes."
+> "I'm the words in the speech bubble. When you pass explicit text with `render --text`,
+> I carry your speech inside classical `| ... |` borders with `\` stems."
 
 ### ✨ The Effect says:
 
