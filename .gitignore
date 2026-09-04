@@ -47,6 +47,44 @@ PR2_*.md
 session*.md
 commit_msg.txt
 
+# Out-of-project Works, Scripts, and Prep Helpers
+/scripts/
+/workflows/
+commit_push.ps1
+raise_prs.ps1
+
+# Preps, Ideas, Notes, Worklogs, and Audits
+worklog.md
+worklog*.md
+NOTES.md
+notes.md
+*.prep
+*.prep.*
+prep/
+preps/
+*.ideas
+*.ideas.*
+ideas/
+*.plan
+*.plan.*
+plans/
+*.draft
+*.draft.*
+drafts/
+audit/
+audits/
+reports/
+todos/
+TODO.md
+TODOs.md
+scratch/
+tmp/
+temp/
+*.scratch.*
+*.bak
+*.orig
+*.backup
+
 # Scratch and Node
 package.json
 package-lock.json
