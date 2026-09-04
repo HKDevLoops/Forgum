@@ -191,13 +191,16 @@ impl SimState {
                 let new_dna = crate::dna::get_dna(&animations, &self.config.cow);
                 self.config.effect = name.clone();
                 self.cow_dna = new_dna;
-                // Recreate effect with the same cow text
-                let cow_display = &self.config.text;
-                let cow_text = if cow_display.is_empty() {
-                    effects::default_cow_text().to_string()
-                } else {
-                    cow_display.to_string()
-                };
+                // Recreate effect with the composed cow scene (bubble + cow)
+                let thoughts_glyph = if self.config.think { "o" } else { "\\\\" };
+                let cow_raw = crate::cow::load_cow(
+                    &self.config.cow,
+                    &self.data_dir,
+                    &self.config.eyes,
+                    &self.config.tongue,
+                    thoughts_glyph,
+                );
+                let cow_text = crate::cow::compose_scene_with_mode(&cow_raw, &self.config.text, self.config.think);
                 self.effect = effects::create_scene_effect(
                     &self.config.effect,
                     cow_text,

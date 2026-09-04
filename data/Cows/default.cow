@@ -1,10 +1,7 @@
-##
-## Default Cow - Well-defined, detailed ASCII art
-##
 $the_cow = <<"EOC";
-         $thoughts   ^__^
-          $thoughts  ($eyes)\\_______
-             (__)\\       )\\/\\
-              || ||----w |
-              || ||     ||
+        $thoughts   ^__^
+         $thoughts  ($eyes)\\_______
+            (__)\\       )\\/\\
+                ||----w |
+                ||     ||
 EOC

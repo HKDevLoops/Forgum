@@ -103,9 +103,7 @@ impl KinematicBody {
                 }
 
                 let max_y = rows.saturating_sub(self.height) as f32;
-                if max_y > 0.0 {
-                    self.y = self.y.clamp(0.0, max_y);
-                }
+                self.y = self.y.clamp(0.0, max_y);
             }
             BoundsMode::Bounce => {
                 self.vx += self.ax * dt;

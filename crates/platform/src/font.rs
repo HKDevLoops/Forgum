@@ -4,9 +4,7 @@
 //! Sixel/Kitty graphics backend in `sixel.rs`). Each glyph is an
 //! `[u8; 8]` — 8 rows of 8 bits, MSB = leftmost pixel. Glyphs are best-effort
 //! block patterns, distinguishable but not typographically perfect.
-
-#![cfg(feature = "sixel")]
-
+// Monochrome 8×8 bitmap font for real glyph rasterization.
 /// Glyph width in pixels.
 pub const GLYPH_W: usize = 8;
 /// Glyph height in pixels.

@@ -215,8 +215,10 @@ pub struct WalkEffect {
     line_offsets: Vec<usize>,
     leg_line_idx: usize,
     leg_cols: Vec<usize>,
+    eye_pos: Option<(usize, usize)>,
+    mouth_pos: Option<(usize, usize)>,
+    tail_pos: Option<(usize, usize)>,
     _amp: Amplitude,
-    easing_fn: fn(f32) -> f32,
     phase: f32,
     speed: f32,
     color_mode: String,
@@ -228,10 +230,10 @@ impl WalkEffect {
     pub fn new(cow_text: String, dna: &CowDna, instance_id: u32, color_mode: String) -> Self {
         let phase = instance_phase(dna.phase_seed, instance_id);
         let line_offsets = compute_line_offsets(&cow_text);
+        let lines: Vec<&str> = cow_text.lines().collect();
 
         // Dynamically find the bottom-most non-empty line of the ASCII creature
         let mut leg_line_idx = line_offsets.len().saturating_sub(1);
-        let lines: Vec<&str> = cow_text.lines().collect();
         for (i, line) in lines.iter().enumerate().rev() {
             if line.chars().any(|c| !c.is_whitespace()) {
                 leg_line_idx = i;
@@ -250,17 +252,58 @@ impl WalkEffect {
             }
         }
 
+        // Anatomical cow landmarks detection:
+        let mut eye_pos: Option<(usize, usize)> = None;
+        let mut mouth_pos: Option<(usize, usize)> = None;
+        let mut tail_pos: Option<(usize, usize)> = None;
+
+        let search_start = leg_line_idx.saturating_sub(6);
+        for (i, line) in lines.iter().enumerate().skip(search_start) {
+            // 1. Detect eyes: (oo), (@@), (XX), (..), etc.
+            if eye_pos.is_none() {
+                if let Some(open) = line.find('(') {
+                    if open + 3 <= line.len() && line.as_bytes().get(open + 3) == Some(&b')') {
+                        eye_pos = Some((i, open + 1));
+                    }
+                }
+            } else if mouth_pos.is_none() && i > eye_pos.unwrap().0 {
+                // 2. Detect mouth/muzzle: (__), (..), (==) below eyes
+                if let Some(open) = line.find("(__)") {
+                    mouth_pos = Some((i, open + 1));
+                } else if let Some(open) = line.find('(') {
+                    if open + 3 <= line.len() && line.as_bytes().get(open + 3) == Some(&b')') {
+                        mouth_pos = Some((i, open + 1));
+                    }
+                }
+            }
+
+            // 3. Detect tail: )\/ or )/\ near rear of cow (use rfind to avoid matching muzzle `(__)\`)
+            if tail_pos.is_none() {
+                if let Some(pos) = line.rfind(")\\") {
+                    if !line[..pos].ends_with("(__") {
+                        tail_pos = Some((i, pos));
+                    }
+                } else if let Some(pos) = line.rfind(")/") {
+                    if !line[..pos].ends_with("(__") {
+                        tail_pos = Some((i, pos));
+                    }
+                }
+            }
+        }
+
         let (w, h) = crate::kinematics::ascii_dimensions(&cow_text);
         let mut body = crate::kinematics::KinematicBody::new(w, h, crate::kinematics::BoundsMode::Wrap);
-        body.vx = (dna.speed * 8.0).clamp(4.0, 24.0);
+        body.vx = (dna.speed * 6.0).clamp(3.0, 16.0);
 
         Self {
             cow_text,
             line_offsets,
             leg_line_idx,
             leg_cols,
+            eye_pos,
+            mouth_pos,
+            tail_pos,
             _amp: dna.amplitude.clone(),
-            easing_fn: easing::by_name(&dna.easing.base),
             phase,
             speed: dna.speed,
             color_mode,
@@ -277,34 +320,92 @@ impl Effect for WalkEffect {
     }
 
     fn render(&self, fb: &mut FrameBuffer, time: f32) {
-        let t = if self.body.x.abs() > 0.001 {
+        let stride = if self.body.x.abs() > 0.001 {
             self.body.stride_phase(2.0)
         } else {
             (time * self.speed + self.phase) % 1.0
         };
-        let eased = (self.easing_fn)(t);
-        let (leg_l, leg_r) = if eased > 0.5 {
-            ('╱', '╲')
+
+        // 4-phase natural leg stride coupling using clean ASCII:
+        let (leg_l, leg_r) = if stride < 0.25 || (stride >= 0.50 && stride < 0.75) {
+            ('|', '|')
+        } else if stride < 0.50 {
+            ('/', '\\')
         } else {
-            ('╲', '╱')
+            ('\\', '/')
         };
+
+        // Eye blink cycle: every ~3.5 seconds, blink for ~150ms
+        let blink_cycle = (time * 0.28 + self.phase) % 1.0;
+        let is_blinking = blink_cycle < 0.045 || (blink_cycle > 0.08 && blink_cycle < 0.11);
+
+        // Tail swish cycle: every ~1.6 seconds, swishes back and forth
+        let tail_cycle = (time * 0.62 + self.phase) % 1.0;
+        let tail_frame = (tail_cycle * 4.0) as usize; // 0, 1, 2, 3
+
+        // Cud chew cycle: every ~0.8 seconds
+        let chew_cycle = (time * 1.25) % 1.0;
+        let is_chewing = chew_cycle > 0.35 && chew_cycle < 0.70;
 
         let x_off = self.body.screen_x();
         let y_off = self.body.screen_y();
 
         let mut y = 0usize;
         for_each_line(&self.cow_text, &self.line_offsets, |line| {
+            let line = line.trim_end_matches(['\r', '\n']);
             let mut x = 0usize;
-            for ch in line.chars() {
-                let display_ch = if y == self.leg_line_idx && self.leg_cols.contains(&x) {
-                    if x % 2 == 0 {
-                        leg_l
-                    } else {
-                        leg_r
+            let line_chars: Vec<char> = line.chars().collect();
+            let mut i = 0usize;
+
+            while i < line_chars.len() {
+                let mut display_ch = line_chars[i];
+
+                // 1. Leg stride animation on bottom foot line
+                if y == self.leg_line_idx && self.leg_cols.contains(&x) {
+                    display_ch = if x % 2 == 0 { leg_l } else { leg_r };
+                }
+
+                // 2. Eye blinking animation
+                if let Some((eye_row, eye_col)) = self.eye_pos {
+                    if y == eye_row && is_blinking && (x == eye_col || x == eye_col + 1) {
+                        display_ch = '-';
                     }
-                } else {
-                    ch
-                };
+                }
+
+                // 3. Mouth / cud chewing animation
+                if let Some((mouth_row, mouth_col)) = self.mouth_pos {
+                    if y == mouth_row && is_chewing && (x == mouth_col || x == mouth_col + 1) {
+                        display_ch = if chew_cycle > 0.52 { '=' } else { '.' };
+                    }
+                }
+
+                // 4. Tail swishing animation
+                if let Some((tail_row, tail_col)) = self.tail_pos {
+                    if y == tail_row && x == tail_col && i + 4 <= line_chars.len() {
+                        let swish = match tail_frame {
+                            1 => [')', '/', '\\', '/'],
+                            2 => [')', ' ', '\\', '/'],
+                            3 => [')', '/', '\\', '/'],
+                            _ => [')', '\\', '/', '\\'],
+                        };
+                        for (k, &sc) in swish.iter().enumerate() {
+                            let xi = (x + k) as i32 + x_off;
+                            let yi = y as i32 + y_off;
+                            if yi >= 0 && xi >= 0 {
+                                let uxi = xi as usize;
+                                let uyi = yi as usize;
+                                if uyi < fb.height && uxi < fb.width {
+                                    let cell_fg = resolve_fg(&self.color_mode, uxi, uyi, time, Color::WHITE);
+                                    let _ = fb.set(uxi, uyi, Cell::new(sc, cell_fg));
+                                }
+                            }
+                        }
+                        x += 4;
+                        i += 4;
+                        continue;
+                    }
+                }
+
                 let xi = x as i32 + x_off;
                 let yi = y as i32 + y_off;
                 if yi >= 0 && xi >= 0 {
@@ -315,9 +416,10 @@ impl Effect for WalkEffect {
                         let _ = fb.set(uxi, uyi, Cell::new(display_ch, cell_fg));
                     }
                 }
-                x = x.saturating_add(1);
+                x += 1;
+                i += 1;
             }
-            y = y.saturating_add(1);
+            y += 1;
         });
     }
 }
@@ -628,6 +730,7 @@ impl Effect for TalkEffect {
 
         let mut y = 0usize;
         for_each_line(&self.cow_text, &self.line_offsets, |line| {
+            let line = line.trim_end_matches(['\r', '\n']);
             if y >= fb.height {
                 return;
             }
@@ -686,6 +789,7 @@ impl Effect for SwayEffect {
         let total_lines = self.line_offsets.len().max(1);
         let mut i = 0usize;
         for_each_line(&self.cow_text, &self.line_offsets, |line| {
+            let line = line.trim_end_matches(['\r', '\n']);
             // Progressive skew: top = max, bottom = 0
             let skew_factor = 1.0 - (i as f32 / total_lines as f32);
             let x_off = ((eased * self.amp.sway * 4.0 - 2.0) * skew_factor) as i32;
@@ -871,6 +975,9 @@ fn render_text_offset(
         if ch == '\n' {
             x = 0;
             y = y.saturating_add(1);
+            continue;
+        }
+        if ch == '\r' {
             continue;
         }
         let xi = x as i32 + x_off;
@@ -1485,7 +1592,7 @@ mod tests {
         let legs_b: Vec<char> = (0..fb_b.width).map(|x| fb_b.get(x, last_row).ch).collect();
 
         // At least one leg char must be present
-        let has_slash = |v: &[char]| v.iter().any(|c| *c == '╱' || *c == '╲');
+        let has_slash = |v: &[char]| v.iter().any(|c| *c == '/' || *c == '\\' || *c == '╱' || *c == '╲');
         assert!(
             has_slash(&legs_a),
             "walk t=0.25 must have leg chars: {legs_a:?}"

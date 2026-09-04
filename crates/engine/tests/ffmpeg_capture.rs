@@ -2,7 +2,7 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
-use forgum_engine::cow::{expand_cow, load_cow};
+use forgum_engine::cow::load_cow;
 use forgum_engine::dna;
 use forgum_engine::effects;
 use forgum_engine::framebuffer::{Color, FrameBuffer};
@@ -76,16 +76,32 @@ fn render_cell_to_pixels(
     let fb = (fg.b as f32 * alpha + bg.b as f32 * (1.0 - alpha)) as u8;
     let px_x = cell_x * CELL_W;
     let px_y = cell_y * CELL_H;
-    let (r, g, b) = if cell.ch == ' ' || cell.ch == '\0' {
-        (bg.r, bg.g, bg.b)
-    } else {
-        (fr, fg_g, fb)
-    };
+    let glyph_bits = forgum_platform::font::glyph(cell.ch);
+
     for dy in 0..CELL_H {
+        let font_y = dy * 8 / CELL_H;
         for dx in 0..CELL_W {
             let px = (px_y + dy) * img_width + (px_x + dx);
             let base = px * 4;
             if base + 3 < pixels.len() {
+                let is_fg = match glyph_bits {
+                    Some(bits) => (bits[font_y] >> (7 - (dx.min(7)))) & 1 == 1,
+                    None => {
+                        if cell.ch != ' ' && cell.ch != '\0' && cell.ch != '\r' && cell.ch != '\n' {
+                            // Border box fallback for non-ASCII/unmapped glyphs
+                            dx == 0 || dx == CELL_W - 1 || dy == 0 || dy == CELL_H - 1
+                        } else {
+                            false
+                        }
+                    }
+                };
+
+                let (r, g, b) = if is_fg {
+                    (fr, fg_g, fb)
+                } else {
+                    (bg.r, bg.g, bg.b)
+                };
+
                 pixels[base] = r;
                 pixels[base + 1] = g;
                 pixels[base + 2] = b;
@@ -191,8 +207,12 @@ fn render_anim_frames(
 ) -> Vec<Vec<u8>> {
     let dd = data_dir();
     let anims = dna::load_animations(&dd);
-    let cow_raw = load_cow(cow_name, &dd, "oo", " ", "\\\\");
-    let cow_text = expand_cow(&cow_raw, "oo", " ", "\\\\");
+    let cow_raw = load_cow(cow_name, &dd, "oo", " ", "o");
+    let cow_text = forgum_engine::cow::compose_scene_with_mode(
+        &cow_raw,
+        "Moo! Forgum rules the pasture!",
+        true,
+    );
     let cow_dna = dna::get_dna(&anims, cow_name);
     let base = base_anim.unwrap_or(cow_dna.base);
     let mut effect = effects::create_effect(base, cow_text, cow_dna.clone(), 0, "static");
@@ -485,8 +505,12 @@ fn ffmpeg_whole_output_capture_and_manifest() {
                 let rgba = framebuffer_to_rgba(&{
                     let dd = data_dir();
                     let anims = dna::load_animations(&dd);
-                    let cow_raw = load_cow(name, &dd, "oo", " ", "\\\\");
-                    let cow_text = expand_cow(&cow_raw, "oo", " ", "\\\\");
+                    let cow_raw = load_cow(name, &dd, "oo", " ", "o");
+                    let cow_text = forgum_engine::cow::compose_scene_with_mode(
+                        &cow_raw,
+                        "Moo! Forgum rules the pasture!",
+                        true,
+                    );
                     let cow_dna = dna::get_dna(&anims, name);
                     let mut eff = effects::create_effect(
                         cow_dna.base,

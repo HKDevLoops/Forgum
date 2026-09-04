@@ -117,16 +117,41 @@ pub fn load_cow_from_path(
 pub fn expand_cow(cow_template: &str, eyes: &str, tongue: &str, thoughts: &str) -> String {
     let mut result = String::with_capacity(cow_template.len());
 
-    // Extract the $the_cow = <<EOC; ... EOC; block if present.
-    let cow_body = if let Some(start) = cow_template.find("<<EOC;") {
-        let body_start = start + "<<EOC;".len();
-        if let Some(end) = cow_template[body_start..].find("EOC;") {
-            &cow_template[body_start..body_start + end]
+    // Extract heredoc body if present (e.g. $the_cow = <<"EOC"; ... EOC).
+    let cow_body = if let Some(start) = cow_template.find("<<") {
+        let after_marker = &cow_template[start + 2..];
+        let first_newline = after_marker.find('\n').unwrap_or(after_marker.len());
+        let marker_line = &after_marker[..first_newline];
+        let tag = marker_line
+            .trim_matches(|c: char| c.is_whitespace() || c == '"' || c == '\'' || c == ';')
+            .trim();
+
+        if !tag.is_empty() {
+            let body_content = if first_newline < after_marker.len() {
+                &after_marker[first_newline..]
+            } else {
+                ""
+            };
+            let mut end_pos = None;
+            let mut curr = 0;
+            for line in body_content.lines() {
+                let trimmed = line.trim();
+                let clean = trimmed.trim_end_matches(';');
+                if clean == tag {
+                    end_pos = Some(curr);
+                    break;
+                }
+                curr += line.len() + 1;
+            }
+            if let Some(pos) = end_pos {
+                &body_content[..pos]
+            } else {
+                body_content
+            }
         } else {
-            &cow_template[body_start..]
+            after_marker
         }
     } else {
-        // No heredoc marker — treat the whole file as the cow body.
         cow_template
     };
 

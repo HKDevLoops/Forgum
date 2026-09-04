@@ -427,10 +427,10 @@
     }
   },
   "default": {
-    "base": "Breathe",
+    "base": "Walk",
     "speed": 1.0,
     "amplitude": {
-      "breath": 0.5,
+      "breath": 0.0,
       "sway": 0.0,
       "float": 0.0
     },
@@ -443,8 +443,8 @@
     "phase_seed": 1001,
     "glow": {
       "color": "#ffffff",
-      "radius": 2.0,
-      "falloff": "gaussian"
+      "radius": 0.0,
+      "falloff": "none"
     }
   },
   "docker-whale": {

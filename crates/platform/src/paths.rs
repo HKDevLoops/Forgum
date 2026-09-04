@@ -165,7 +165,27 @@ pub fn data_dir() -> Result<PathBuf, PlatformError> {
     if let Some(p) = std::env::var_os("FORGUM_DATA") {
         return Ok(PathBuf::from(p));
     }
-    Ok(default_data_dir())
+    let def = default_data_dir();
+    if def.join("Cows").is_dir() {
+        return Ok(def);
+    }
+    if let Ok(cwd) = std::env::current_dir() {
+        for ancestor in cwd.ancestors() {
+            let candidate = ancestor.join("data");
+            if candidate.join("Cows").is_dir() {
+                return Ok(candidate);
+            }
+        }
+    }
+    if let Ok(exe) = std::env::current_exe() {
+        for ancestor in exe.ancestors() {
+            let candidate = ancestor.join("data");
+            if candidate.join("Cows").is_dir() {
+                return Ok(candidate);
+            }
+        }
+    }
+    Ok(def)
 }
 
 pub fn runtime_dir() -> Result<PathBuf, PlatformError> {

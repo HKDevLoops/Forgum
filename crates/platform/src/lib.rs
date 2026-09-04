@@ -46,9 +46,7 @@ pub mod sixel;
 pub mod spawn;
 pub mod terminal;
 
-// Built-in 8×8 bitmap font, only needed by the (feature-gated) Sixel/Kitty
-// graphics backend. Gated here so the default build never compiles it.
-#[cfg(feature = "sixel")]
+// Built-in 8×8 bitmap font for real glyph rasterization and video capture.
 pub mod font;
 
 // Platform-specific impls
