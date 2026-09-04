@@ -110,7 +110,7 @@ cargo audit
 ```
 
 CI also checks **version parity**: the `Cargo.toml` version must match the
-version stamped into the 8 packaging manifests.
+version stamped into the 10 packaging manifests (homebrew, winget, rpm, deb, choco, scoop, PKGBUILD, ebuild, nix, msi).
 
 ---
 
@@ -119,7 +119,7 @@ version stamped into the 8 packaging manifests.
 Short pointers (full detail lives in `ADVANCED.md`):
 
 - **Add a config key** → add the field in `crates/engine/src/protocol.rs`
-  (`SceneConfig`, `pub`, `Default`, `deny_unknown_fields`, 11 fields today) →
+  (`SceneConfig`, `pub`, `Default`, `deny_unknown_fields`, 12 fields today) →
   handle it in `merge()` in `crates/engine/src/config.rs` → surface it in
   `cli.rs` (`config set <key> <value>`, `config --tui`) → optionally add a TUI
   widget in `crates/tui` → add a test (incl. round-trip via

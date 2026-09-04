@@ -166,7 +166,7 @@ pub fn compose_scene(cow_text: &str, bubble_text: &str) -> String {
     let cow_lines: Vec<&str> = cow_text.lines().collect();
     let cow_width = cow_lines
         .iter()
-        .map(|l| l.chars().count())
+        .map(|l| str_display_width(l))
         .max()
         .unwrap_or(0)
         .max(2);
@@ -178,6 +178,74 @@ pub fn compose_scene(cow_text: &str, bubble_text: &str) -> String {
     result.push('\n');
     result.push_str(cow_text);
     result
+}
+
+/// Return the display width of a Unicode character in terminal cells (0, 1, or 2).
+pub fn char_display_width(ch: char) -> usize {
+    let u = ch as u32;
+    if u < 0x20 || (0x7F..=0x9F).contains(&u) {
+        return 0;
+    }
+    // Combining characters / zero-width marks
+    if (0x300..=0x36F).contains(&u)
+        || (0x1DC0..=0x1DFF).contains(&u)
+        || (0x200B..=0x200F).contains(&u)
+        || (0x202A..=0x202E).contains(&u)
+        || (0x2060..=0x206F).contains(&u)
+        || (0xFE00..=0xFE0F).contains(&u)
+    {
+        return 0;
+    }
+    // Wide characters: CJK, Fullwidth forms, Emojis, Symbols
+    if (0x1100..=0x115F).contains(&u)
+        || (0x231A..=0x231B).contains(&u)
+        || (0x23E9..=0x23EC).contains(&u)
+        || (0x23F0..=0x23F3).contains(&u)
+        || (0x25FD..=0x25FE).contains(&u)
+        || (0x2614..=0x2615).contains(&u)
+        || (0x2648..=0x2653).contains(&u)
+        || (0x267F..=0x2693).contains(&u)
+        || (0x26A1..=0x26A1).contains(&u)
+        || (0x26AA..=0x26AB).contains(&u)
+        || (0x26BD..=0x26BE).contains(&u)
+        || (0x26C4..=0x26C5).contains(&u)
+        || (0x26CE..=0x26CF).contains(&u)
+        || (0x26D4..=0x26D4).contains(&u)
+        || (0x26EA..=0x26EA).contains(&u)
+        || (0x26F2..=0x26F3).contains(&u)
+        || (0x26F5..=0x26F5).contains(&u)
+        || (0x26FA..=0x26FA).contains(&u)
+        || (0x26FD..=0x26FD).contains(&u)
+        || (0x2705..=0x2705).contains(&u)
+        || (0x270A..=0x270B).contains(&u)
+        || (0x2728..=0x2728).contains(&u)
+        || (0x274C..=0x274C).contains(&u)
+        || (0x274E..=0x274E).contains(&u)
+        || (0x2753..=0x2755).contains(&u)
+        || (0x2757..=0x2757).contains(&u)
+        || (0x2795..=0x2797).contains(&u)
+        || (0x27B0..=0x27B0).contains(&u)
+        || (0x27BF..=0x27BF).contains(&u)
+        || (0x2B1B..=0x2B1C).contains(&u)
+        || (0x2B50..=0x2B50).contains(&u)
+        || (0x2B55..=0x2B55).contains(&u)
+        || (0x2E80..=0x9FFF).contains(&u)
+        || (0xAC00..=0xD7AF).contains(&u)
+        || (0xF900..=0xFAFF).contains(&u)
+        || (0xFE10..=0xFE19).contains(&u)
+        || (0xFE30..=0xFE6F).contains(&u)
+        || (0xFF01..=0xFF60).contains(&u)
+        || (0xFFE0..=0xFFE6).contains(&u)
+        || (0x1F000..=0x1FBFF).contains(&u)
+    {
+        return 2;
+    }
+    1
+}
+
+/// Return the visible display width of a string in terminal cells.
+pub fn str_display_width(s: &str) -> usize {
+    s.chars().map(char_display_width).sum()
 }
 
 /// Wrap text in a speech bubble with rounded corners.
@@ -194,10 +262,10 @@ fn wrap_bubble(text: &str, min_width: usize) -> String {
         return String::new();
     }
 
-    // Find the longest line in visible characters.
+    // Find the longest line in visible display cell columns.
     let text_width = lines
         .iter()
-        .map(|l| l.chars().count())
+        .map(|l| str_display_width(l))
         .max()
         .unwrap_or(0)
         .max(min_width.saturating_sub(2));
@@ -234,12 +302,12 @@ fn wrap_bubble(text: &str, min_width: usize) -> String {
     result
 }
 
-/// Pad `result` with spaces until its current line length in characters reaches `target_len`.
+/// Pad `result` with spaces until its current line display width reaches `target_len`.
 fn pad_to(result: &mut String, target_len: usize) {
-    let current_len = result
+    let current_width = result
         .rsplit_once('\n')
-        .map_or(result.chars().count(), |(_, last)| last.chars().count());
-    for _ in current_len..target_len {
+        .map_or_else(|| str_display_width(result), |(_, last)| str_display_width(last));
+    for _ in current_width..target_len {
         result.push(' ');
     }
 }
@@ -462,6 +530,8 @@ mod tests {
             ("x", 0),
             ("Hello, world!", 0),
             ("Hello, world!\nSecond line\nThird line", 0),
+            ("Hello 🐮 Cow! 🚀", 10),
+            ("CJK testing: 漢字とひらがな\nSecond line", 15),
         ];
         for (text, min_width) in cases {
             let bubble = wrap_bubble(text, min_width);
@@ -470,18 +540,18 @@ mod tests {
             }
             let rows: Vec<&str> = bubble.lines().collect();
             assert!(rows.len() >= 2, "must have at least top+bottom");
-            let top_width = rows[0].len();
+            let top_width = str_display_width(rows[0]);
             for (i, row) in rows.iter().enumerate() {
+                let w = str_display_width(row);
                 assert_eq!(
-                    row.len(),
-                    top_width,
-                    "row {i} width {} != top width {top_width} for text {:?}",
-                    row.len(),
+                    w, top_width,
+                    "row {i} display width {w} != top width {top_width} for text {:?}",
                     text
                 );
             }
         }
     }
+
 
     #[test]
     fn bubble_no_trailing_underscore_row() {
@@ -701,3 +771,5 @@ mod tests {
         let _ = std::fs::remove_dir_all(&tmp);
     }
 }
+
+

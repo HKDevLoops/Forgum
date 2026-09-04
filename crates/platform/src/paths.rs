@@ -323,19 +323,25 @@ fn is_safe_session_id(sid: &str) -> bool {
         && !sid.contains("..")
         && !sid.starts_with('/')
         && !sid.contains(':')
+        && !sid.contains('\\')
         && sid
             .bytes()
-            .all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_')
+            .all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_' || b == b'%' || b == b'{' || b == b'}')
 }
 
-/// Assert that a session ID is safe to use in a filesystem path.
-/// Panics if the session ID is invalid — this should only be called with
-/// IDs derived from detect_session_id() which uses safe fallbacks.
-fn require_safe_session_id(sid: &str) {
-    if !is_safe_session_id(sid) {
-        panic!("BUG: session ID contains unsafe characters: {:?}", sid);
-    }
+fn sanitize_session_id(sid: &str) -> String {
+    sid.chars()
+        .map(|c| {
+            if c.is_ascii_alphanumeric() || c == '-' || c == '_' || c == '%' || c == '{' || c == '}' {
+                c
+            } else {
+                '_'
+            }
+        })
+        .collect()
 }
+
+fn require_safe_session_id(_sid: &str) {}
 
 /// Compute the path to a daemon state file for a given session ID.
 ///
@@ -344,9 +350,14 @@ fn require_safe_session_id(sid: &str) {
 #[must_use]
 pub fn daemon_state_path(session_id: &str) -> PathBuf {
     require_safe_session_id(session_id);
+    let safe = if is_safe_session_id(session_id) {
+        session_id.to_string()
+    } else {
+        sanitize_session_id(session_id)
+    };
     runtime_dir()
         .unwrap_or_else(|_| PathBuf::from("/tmp"))
-        .join(format!("daemon-{}.json", session_id))
+        .join(format!("daemon-{}.json", safe))
 }
 
 /// Compute the path to a control socket for a given session ID.
@@ -356,38 +367,63 @@ pub fn daemon_state_path(session_id: &str) -> PathBuf {
 #[must_use]
 pub fn control_socket_path(session_id: &str) -> PathBuf {
     require_safe_session_id(session_id);
+    let safe = if is_safe_session_id(session_id) {
+        session_id.to_string()
+    } else {
+        sanitize_session_id(session_id)
+    };
     let base = runtime_dir().unwrap_or_else(|_| PathBuf::from("/tmp"));
     if cfg!(unix) {
-        base.join(format!("ctrl-{}.sock", session_id))
+        base.join(format!("ctrl-{}.sock", safe))
     } else {
-        base.join(format!("ctrl-{}.pipe", session_id))
+        base.join(format!("ctrl-{}.pipe", safe))
     }
 }
 
 /// Determine a session identifier from the environment.
 ///
 /// Priority:
-/// 1. `$TMUX_PANE` (tmux)
-/// 2. `$ZELLIJ_SESSION_ID` (zellij)
-/// 3. Parent shell PID
+/// 1. `$FORGUM_DAEMON_SESSION` (explicit caller override)
+/// 2. `$TMUX_PANE` (tmux pane-level isolation)
+/// 3. `$ZELLIJ_PANE_ID` + `$ZELLIJ_SESSION_ID` (zellij pane-level isolation)
+/// 4. `$WEZTERM_PANE` (WezTerm tab/pane isolation)
+/// 5. `$KITTY_WINDOW_ID` (Kitty window/tab isolation)
+/// 6. `$WT_SESSION` (Windows Terminal tab isolation)
+/// 7. `$ITERM_SESSION_ID` (iTerm2 session isolation)
+/// 8. Parent shell PID (per-terminal shell process)
 #[must_use]
 pub fn detect_session_id() -> String {
     if let Ok(pane) = std::env::var("FORGUM_DAEMON_SESSION") {
-        // Lane used by the daemon's `--daemon` parent: it spawns a fresh
-        // child of self to avoid fork UB (single-threaded by construction),
-        // but the child's getppid() is now the engine parent, not the
-        // original shell/test process. Caller (parent) decides the
-        // session-id up front and stamps it here so the child's state
-        // file lands where the caller will poll for it.
         return pane;
     }
     if let Ok(pane) = std::env::var("TMUX_PANE") {
         return pane;
     }
+    if let Ok(pane) = std::env::var("ZELLIJ_PANE_ID") {
+        if let Ok(sess) = std::env::var("ZELLIJ_SESSION_ID") {
+            return format!("{}-pane-{}", sess, pane);
+        }
+        return format!("zellij-pane-{}", pane);
+    }
     if let Ok(session) = std::env::var("ZELLIJ_SESSION_ID") {
         return session;
     }
-    // Fallback: parent PID
+    if let Ok(pane) = std::env::var("WEZTERM_PANE") {
+        return format!("wezterm-{}", pane);
+    }
+    if let Ok(win) = std::env::var("KITTY_WINDOW_ID") {
+        return format!("kitty-{}", win);
+    }
+    if let Ok(wt) = std::env::var("WT_SESSION") {
+        return format!("wt-{}", wt);
+    }
+    if let Ok(iterm) = std::env::var("ITERM_SESSION_ID") {
+        return format!("iterm-{}", iterm);
+    }
+    // Fallback: parent shell PID
+    if let Some(ppid) = crate::parent_pid() {
+        return format!("shell-{}", ppid);
+    }
     #[cfg(unix)]
     #[allow(unsafe_code)]
     {

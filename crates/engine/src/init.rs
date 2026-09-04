@@ -98,6 +98,12 @@ __FORGUM_RUNTIME="${{XDG_RUNTIME_DIR:-/tmp/forgum-$UID}}/forgum"
 mkdir -p "$__FORGUM_RUNTIME" 2>/dev/null
 
 forgum() {{
+  case "$1" in
+    init|fortune|status|config|control|remote|profile|render|clean|preset|doctor|tmux|zellij|wezterm|screen|help)
+      "$__FORGUM_ENGINE" "$@"
+      return
+      ;;
+  esac
   local text="$*"
   if [ -z "$text" ]; then
     text="$("$__FORGUM_ENGINE" fortune 2>/dev/null)"
@@ -106,6 +112,10 @@ forgum() {{
     --config "$__FORGUM_CONFIG" \
     --text "$text" \
     --background --duration 0 "$@"
+}}
+
+forgum-init() {{
+  "$__FORGUM_ENGINE" init "$@"
 }}
 
 __forgum_precmd() {{
@@ -156,6 +166,12 @@ __FORGUM_RUNTIME="${{XDG_RUNTIME_DIR:-/tmp/forgum-$UID}}/forgum"
 mkdir -p "$__FORGUM_RUNTIME" 2>/dev/null
 
 forgum() {{
+  case "$1" in
+    init|fortune|status|config|control|remote|profile|render|clean|preset|doctor|tmux|zellij|wezterm|screen|help)
+      "$__FORGUM_ENGINE" "$@"
+      return
+      ;;
+  esac
   local text="$*"
   if [ -z "$text" ]; then
     text="$("$__FORGUM_ENGINE" fortune 2>/dev/null)"
@@ -164,6 +180,10 @@ forgum() {{
     --config "$__FORGUM_CONFIG" \
     --text "$text" \
     --background --duration 0 "$@"
+}}
+
+forgum-init() {{
+  "$__FORGUM_ENGINE" init "$@"
 }}
 
 __forgum_precmd() {{
@@ -211,11 +231,20 @@ set -g __forgum_runtime (set -q XDG_RUNTIME_DIR; and echo "$XDG_RUNTIME_DIR/forg
 mkdir -p $__forgum_runtime 2>/dev/null
 
 function forgum
+    switch "$argv[1]"
+        case init fortune status config control remote profile render clean preset doctor tmux zellij wezterm screen help
+            $__forgum_engine $argv
+            return
+    end
     set text $argv
     if not set -q argv[1]
         set text ($__forgum_engine fortune 2>/dev/null)
     end
     $__forgum_engine render --config $__forgum_config --text "$text" --background --duration 0 $argv
+end
+
+function forgum-init
+    $__forgum_engine init $argv
 end
 
 function __forgum_sweep --on-event fish_prompt
@@ -247,8 +276,21 @@ $__ForgumConfig = if ($env:FORGUM_CONFIG) {{ $env:FORGUM_CONFIG }} else {{ Join-
 
 function forgum {{
     param([Parameter(ValueFromRemainingArguments)][string[]]$Args)
+    if ($Args -and $Args.Count -gt 0) {{
+        switch ($Args[0]) {{
+            {{ $_ -in 'init','fortune','status','config','control','remote','profile','render','clean','preset','doctor','tmux','zellij','wezterm','screen','help' }} {{
+                & $__ForgumEngine @Args
+                return
+            }}
+        }}
+    }}
     $text = if ($Args) {{ ($Args -join ' ') }} else {{ & $__ForgumEngine fortune 2>$null }}
     & $__ForgumEngine render --config $__ForgumConfig --text $text --background --duration 0 @Args
+}}
+
+function forgum-init {{
+    param([Parameter(ValueFromRemainingArguments)][string[]]$Args)
+    & $__ForgumEngine init @Args
 }}
 
 $global:__ForgumPromptBackup = $function:prompt
@@ -315,6 +357,7 @@ rem (AutoRun persistence is user-opt-in; forgum never mutates the registry.)
 set "_FORGUM_ENGINE={engine}"
 if not defined _FORGUM_OLD_PROMPT set "_FORGUM_OLD_PROMPT=$P$G"
 doskey forgum="{engine}" $*
+doskey forgum-init="{engine}" init $*
 prompt $_FORGUM_OLD_PROMPT$G & "%_FORGUM_ENGINE%" sweep
 rem <<< forgum <<<
 "#
@@ -330,8 +373,21 @@ $__ForgumConfig = if ($env:FORGUM_CONFIG) {{ $env:FORGUM_CONFIG }} else {{ Join-
 
 function forgum {{
     param([Parameter(ValueFromRemainingArguments)][string[]]$Args)
+    if ($Args -and $Args.Count -gt 0) {{
+        switch ($Args[0]) {{
+            {{ $_ -in 'init','fortune','status','config','control','remote','profile','render','clean','preset','doctor','tmux','zellij','wezterm','screen','help' }} {{
+                & $__ForgumEngine @Args
+                return
+            }}
+        }}
+    }}
     $text = if ($Args) {{ ($Args -join ' ') }} else {{ & $__ForgumEngine fortune 2>$null }}
     & $__ForgumEngine render --config $__ForgumConfig --text $text --background --duration 0 @Args
+}}
+
+function forgum-init {{
+    param([Parameter(ValueFromRemainingArguments)][string[]]$Args)
+    & $__ForgumEngine init @Args
 }}
 
 $global:__ForgumPromptBackup = $function:prompt
@@ -530,4 +586,23 @@ mod tests {
         assert!(config.contains("pane-focus-out"));
         assert!(config.contains("/usr/local/bin/forgum-engine"));
     }
+
+    #[test]
+    fn forgum_init_shim_present_in_all_shells() {
+        for shell in [
+            Shell::Bash,
+            Shell::Zsh,
+            Shell::Fish,
+            Shell::Pwsh,
+            Shell::PowerShell,
+            Shell::Cmd,
+        ] {
+            let hook = generate_hook(shell, "/usr/bin/forgum-engine");
+            assert!(
+                hook.contains("forgum-init"),
+                "shell {shell:?} must contain 'forgum-init' alias or function"
+            );
+        }
+    }
 }
+

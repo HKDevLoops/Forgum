@@ -54,6 +54,45 @@ impl Theme {
     }
 }
 
+pub static PRELOADED_THEMES: &[(&str, &str, &str, &str, &str)] = &[
+    ("arcade", "walk", "default", "oo", "U"),
+    ("aurora", "aurora", "default", "oo", "U"),
+    ("cyberpunk", "glitch", "mech-and-cow", "$$", "U"),
+    ("forest", "breathe", "koala", "..", "U"),
+    ("ghost", "portal", "ghost", "xx", "U"),
+    ("inferno", "ember", "dragon", "@@", "U"),
+    ("matrix", "glitch", "telebears", "00", "U"),
+    ("nyan", "float", "nyan", "^^", "U"),
+    ("ocean", "float", "dolphin", "oo", "U"),
+    ("retro", "walk", "default", "oo", "U"),
+    ("stealth", "static", "tux", "--", "  "),
+    ("supernova", "ember", "stegosaurus", "**", "U"),
+    ("valentine", "glitch", "default", "@@", "U"),
+    ("winter", "aurora", "snowman", "**", "U"),
+    ("zen", "breathe", "tux", "==", "U"),
+];
+
+#[must_use]
+pub fn get_preloaded_theme(name: &str) -> Option<Theme> {
+    PRELOADED_THEMES
+        .iter()
+        .find(|(n, _, _, _, _)| n.eq_ignore_ascii_case(name))
+        .map(|(_, effect, cow, eyes, tongue)| Theme {
+            effect: Some((*effect).to_string()),
+            cow: Some((*cow).to_string()),
+            eyes: Some((*eyes).to_string()),
+            tongue: Some((*tongue).to_string()),
+        })
+}
+
+#[must_use]
+pub fn preloaded_theme_names() -> Vec<String> {
+    PRELOADED_THEMES
+        .iter()
+        .map(|(name, _, _, _, _)| (*name).to_string())
+        .collect()
+}
+
 pub fn list_themes(config_dir: &Path) -> Vec<String> {
     let themes_dir = config_dir.join("themes");
     let entries = match fs::read_dir(&themes_dir) {
@@ -79,8 +118,62 @@ pub fn list_themes(config_dir: &Path) -> Vec<String> {
     names
 }
 
+/// List all available themes: custom user themes from `config_dir`, themes in
+/// `data_dir`, and embedded preloaded themes.
+#[must_use]
+pub fn list_all_themes(config_dir: &Path) -> Vec<String> {
+    let mut names = list_themes(config_dir);
+
+    // Also check data directory themes if available
+    if let Ok(data) = forgum_platform::data_dir() {
+        for theme_dir in [data.join("Themes"), data.join("themes")] {
+            if let Ok(entries) = fs::read_dir(theme_dir) {
+                for entry in entries.flatten() {
+                    let path = entry.path();
+                    if path.extension().and_then(|s| s.to_str()) == Some("json") {
+                        if let Some(stem) = path.file_stem().and_then(|s| s.to_str()) {
+                            if !names.contains(&stem.to_string()) {
+                                names.push(stem.to_string());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    for name in preloaded_theme_names() {
+        if !names.contains(&name) {
+            names.push(name);
+        }
+    }
+
+    names.sort();
+    names
+}
+
 pub fn load_theme(config_dir: &Path, name: &str) -> Result<Theme, String> {
+    // 1. User config theme directory
     let path = config_dir.join("themes").join(format!("{name}.json"));
+    if path.exists() {
+        return Theme::load(&path);
+    }
+
+    // 2. Data directory themes
+    if let Ok(data) = forgum_platform::data_dir() {
+        for theme_dir in [data.join("Themes"), data.join("themes")] {
+            let data_path = theme_dir.join(format!("{name}.json"));
+            if data_path.exists() {
+                return Theme::load(&data_path);
+            }
+        }
+    }
+
+    // 3. Built-in preloaded theme fallback
+    if let Some(t) = get_preloaded_theme(name) {
+        return Ok(t);
+    }
+
     Theme::load(&path)
 }
 
@@ -210,4 +303,33 @@ mod tests {
         assert!(theme.cow.is_some());
         assert!(!theme.cow.unwrap().is_empty());
     }
+
+    #[test]
+    fn preloaded_themes_contain_presets() {
+        let names = preloaded_theme_names();
+        assert!(names.contains(&"cyberpunk".to_string()));
+        assert!(names.contains(&"matrix".to_string()));
+        assert!(names.contains(&"inferno".to_string()));
+        assert!(names.contains(&"zen".to_string()));
+        assert!(names.len() >= 10);
+    }
+
+    #[test]
+    fn load_theme_falls_back_to_preloaded() {
+        let dir = TempDir::new().unwrap();
+        let matrix = load_theme(dir.path(), "matrix").expect("matrix theme must load from preloaded");
+        assert_eq!(matrix.effect.as_deref(), Some("glitch"));
+        assert_eq!(matrix.cow.as_deref(), Some("telebears"));
+        assert_eq!(matrix.eyes.as_deref(), Some("00"));
+    }
+
+    #[test]
+    fn list_all_themes_includes_preloaded_themes() {
+        let dir = TempDir::new().unwrap();
+        let all = list_all_themes(dir.path());
+        assert!(all.contains(&"matrix".to_string()));
+        assert!(all.contains(&"cyberpunk".to_string()));
+        assert!(all.contains(&"aurora".to_string()));
+    }
 }
+

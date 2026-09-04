@@ -75,6 +75,10 @@ pub use sixel::{
     GraphicsRenderer,
 };
 #[cfg(unix)]
+pub use platform_unix::parent_pid;
+#[cfg(windows)]
+pub use platform_windows::parent_pid;
+#[cfg(unix)]
 pub use spawn::fork_then_exec_self;
 pub use spawn::{
     daemon_bootstrap, daemonize, execute_command_with_shell_fallback, prefer_fork_exec,

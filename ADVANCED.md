@@ -6,8 +6,7 @@
 
 This guide is for advanced users who want to extend Forgum: add cows, effects,
 shell hooks, or config keys, or hack on the engine internals. Every `file:line`
-reference below points at the **real** workspace code (verified against
-`D:\Projects\Forgum`). Nothing here describes the fictional `brain/19` flow.
+reference below points at the **real** workspace code. Nothing here describes the fictional `brain/19` flow.
 
 - Binary name: `forgum-engine`
 - Real crates: `engine`, `platform`, `tui`

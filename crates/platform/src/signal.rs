@@ -196,6 +196,8 @@ type ConsoleHandlerRoutine = unsafe extern "system" fn(u32) -> i32;
 
 #[cfg(windows)]
 static mut WINDOWS_FLAG: Option<Arc<AtomicBool>> = None;
+#[cfg(windows)]
+static CTRL_C_COUNT: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
 
 #[cfg(windows)]
 #[allow(unsafe_code, static_mut_refs)]
@@ -212,9 +214,14 @@ unsafe extern "system" fn windows_ctrl_handler(event_type: u32) -> i32 {
             | CTRL_SHUTDOWN_EVENT
     );
     if triggered {
+        let count = CTRL_C_COUNT.fetch_add(1, Ordering::SeqCst);
         let flag_opt = unsafe { WINDOWS_FLAG.as_ref() };
         if let Some(flag) = flag_opt {
             flag.store(true, Ordering::Relaxed);
+        }
+        if count > 0 {
+            // Second interrupt signal received: force immediate termination.
+            std::process::exit(130);
         }
     }
     i32::from(triggered)
@@ -224,6 +231,7 @@ unsafe extern "system" fn windows_ctrl_handler(event_type: u32) -> i32 {
 #[allow(unsafe_code)]
 fn install_windows(flag: ShutdownFlag) -> Result<(), PlatformError> {
     use windows_sys::Win32::System::Console::SetConsoleCtrlHandler;
+    CTRL_C_COUNT.store(0, Ordering::SeqCst);
     unsafe {
         WINDOWS_FLAG = Some(flag.shutdown_handle());
         let result = SetConsoleCtrlHandler(Some(windows_ctrl_handler as ConsoleHandlerRoutine), 1);

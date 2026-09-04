@@ -6,11 +6,11 @@
 
 These sample `SceneConfig` files validate against the **v0.4.0** schema.
 The schema uses `#[serde(deny_unknown_fields)]`, so every key must be exactly
-one of the 11 known fields:
+one of the 12 known fields:
 
 `cow`, `text`, `effect`, `background`, `duration`, `fps`, `eyes`, `tongue`,
-`default_shell`, `auto_render_on_prompt`, `color_mode`
-(valid `color_mode`: `rainbow` | `solid` | `none`).
+`default_shell`, `auto_render_on_prompt`, `color_mode`, `shell_attach_mode`
+(valid `color_mode`: `rainbow` | `solid` | `none`; valid `shell_attach_mode`: `banner` | `split` | `reactive` | `manual`).
 
 ---
 
@@ -85,8 +85,8 @@ forgum-engine --config docs/samples/config.rainbow.json say "hello"
 
 Or just copy a sample to your config location:
 
-- **Windows:** `%APPDATA%\Forgum\config.json`
-- **macOS / Linux:** `~/.config/Forgum/config.json`
+- **Windows:** `~/.config/forgum/config.json` (i.e. `%USERPROFILE%\.config\forgum\config.json`)
+- **macOS / Linux:** `~/.config/forgum/config.json`
 
 ---
 

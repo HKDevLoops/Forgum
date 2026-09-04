@@ -62,7 +62,8 @@ pub fn render_timer_cow(result: &TimerResult) -> String {
     let inner_width = 46.max(display_cmd.chars().count() + duration_str.chars().count() + 8);
     let top_border = format!("  ┌{}┐", "─".repeat(inner_width));
     let bottom_border = format!("  └{}┘", "─".repeat(inner_width));
-    let spaces_needed = inner_width.saturating_sub(display_cmd.chars().count() + duration_str.chars().count() + 6);
+    let spaces_needed =
+        inner_width.saturating_sub(display_cmd.chars().count() + duration_str.chars().count() + 6);
     let padding = " ".repeat(spaces_needed);
 
     let status_line = format!("  │  {status_symbol} {display_cmd}{padding} {duration_str}  │");

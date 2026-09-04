@@ -148,13 +148,14 @@ tmux source-file ~/.tmux.conf
 
 ## Testing WSL Integration
 
-Run the WSL test script:
+Run tests directly:
 
 ```bash
-./scripts/test-wsl.sh
+cargo test --workspace
+cargo clippy --workspace -- -D warnings
 ```
 
-This script:
+This will:
 1. Checks Rust installation
 2. Builds Forgum
 3. Runs all tests
@@ -168,7 +169,7 @@ If using Docker Desktop with WSL2 integration:
 ```bash
 # Enable Docker integration in Docker Desktop settings
 # Then test Forgum in Docker
-docker build -t forgum-test -f Dockerfile.test .
+docker build -t forgum-test -f packaging/containers/Containerfile.linux .
 docker run --rm forgum-test
 ```
 
@@ -187,8 +188,8 @@ docker run --rm forgum-test
 
 ### "No cows found"
 
-1. Check data directory: `ls ~/.local/share/Forgum/Cows/` or `$XDG_DATA_HOME/Forgum/Cows/`
-2. If missing, copy from Windows: `cp -r /mnt/c/Program\ Files/Forgum/data/Cows ~/.local/share/Forgum/`
+1. Check data directory: `ls ~/.config/forgum/cows/` or `ls data/Cows/`
+2. If missing, built-in cows are embedded in the binary (109+ creatures)
 
 ### "Terminal does not support sync"
 

@@ -144,10 +144,7 @@ fn audit_say_subcommand_wrapping() {
 
 #[test]
 fn audit_timer_subcommand_timing_and_box_rendering() {
-    let result = forgum_engine::timer::run_timer(&[
-        "echo".to_string(),
-        "TimerTest".to_string(),
-    ]);
+    let result = forgum_engine::timer::run_timer(&["echo".to_string(), "TimerTest".to_string()]);
     assert_eq!(result.exit_code, 0);
     assert!(result.duration_secs >= 0.0);
 
@@ -239,7 +236,10 @@ fn scenario_timer_failure_command_reporting_ux() {
 
     // Must show failure symbol ✗ and not success ✓
     assert!(rendered.contains("✗"), "Failed commands must display ✗");
-    assert!(!rendered.contains("✓"), "Failed commands must never display ✓");
+    assert!(
+        !rendered.contains("✓"),
+        "Failed commands must never display ✓"
+    );
     assert!(rendered.contains("42.0ms"));
     assert!(rendered.contains("false_command"));
 }
@@ -266,8 +266,16 @@ fn scenario_multiline_and_long_sentence_wrapping_ux() {
 
     assert!(wrapped.len() >= 3);
     for line in &wrapped {
-        assert!(line.chars().count() <= 30, "No line may exceed max width: '{}'", line);
-        assert!(!line.starts_with(' '), "Wrapped lines should not start with whitespace: '{}'", line);
+        assert!(
+            line.chars().count() <= 30,
+            "No line may exceed max width: '{}'",
+            line
+        );
+        assert!(
+            !line.starts_with(' '),
+            "Wrapped lines should not start with whitespace: '{}'",
+            line
+        );
     }
 }
 
@@ -281,11 +289,18 @@ fn scenario_checkhealth_json_telemetry_schema_validation() {
     assert!(parsed.get("timestamp").is_some());
 
     let sections = parsed["sections"].as_array().expect("Sections array");
-    assert_eq!(sections.len(), 7, "All 7 diagnostic sections must be reported");
+    assert_eq!(
+        sections.len(),
+        7,
+        "All 7 diagnostic sections must be reported"
+    );
 
     for sec in sections {
         assert!(sec["name"].as_str().is_some());
         let checks = sec["items"].as_array().expect("Checks list");
-        assert!(!checks.is_empty(), "Each section must have at least one health check");
+        assert!(
+            !checks.is_empty(),
+            "Each section must have at least one health check"
+        );
     }
 }

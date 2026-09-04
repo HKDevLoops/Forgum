@@ -263,12 +263,18 @@ fn sim_thread(
     let mut last_battery_check = Instant::now();
     let mut user_speed: f32 = 1.0;
     let mut battery_throttled = false;
+    let mut paused = false;
 
     loop {
         if shutdown.is_shutdown() {
             break;
         }
         if max_frames > 0 && sim.frame_count >= max_frames {
+            shutdown.trigger();
+            break;
+        }
+        if sim.effect.is_done() {
+            shutdown.trigger();
             break;
         }
 
@@ -295,10 +301,11 @@ fn sim_thread(
                     break;
                 }
                 ControlMsg::Pause => {
-                    // Skip simulation tick but keep draining.
-                    continue;
+                    paused = true;
                 }
-                ControlMsg::Resume => {}
+                ControlMsg::Resume => {
+                    paused = false;
+                }
                 ControlMsg::Speed(s) => {
                     user_speed = s;
                     if !battery_throttled {
@@ -317,6 +324,14 @@ fn sim_thread(
 
         if shutdown.is_shutdown() {
             break;
+        }
+
+        if paused {
+            let period = sim.scheduler.frame_period();
+            if !period.is_zero() {
+                std::thread::sleep(period);
+            }
+            continue;
         }
 
         // Fixed-timestep simulation.
@@ -413,6 +428,7 @@ fn render_thread(mut state: RenderState, frame_rx: Receiver<Arc<Frame>>, shutdow
             }
         }
     }
+    shutdown.trigger();
 
     // Clear and restore terminal on exit.
     let _ = state.out.write_all(b"\x1b[0m\x1b[?25h\n");
@@ -518,10 +534,26 @@ pub fn run_engine(
         })?;
 
     // CONTROL thread (main thread): wait for shutdown signal.
-    // In background mode, this is the main thread that handles signals.
-    // No tty reads — only signal-hook and control socket.
+    // In foreground mode, poll keyboard for Ctrl+C (\x03), 'q', 'Q', Esc.
+    // In background mode, strictly no tty reads — only signal-hook and control socket.
     while !shutdown.is_shutdown() {
-        std::thread::sleep(Duration::from_millis(50));
+        if !config.background {
+            if let Ok(true) = crossterm::event::poll(Duration::from_millis(50)) {
+                if let Ok(crossterm::event::Event::Key(key)) = crossterm::event::read() {
+                    use crossterm::event::{KeyCode, KeyModifiers};
+                    if (key.code == KeyCode::Char('c') && key.modifiers.contains(KeyModifiers::CONTROL))
+                        || key.code == KeyCode::Char('q')
+                        || key.code == KeyCode::Char('Q')
+                        || key.code == KeyCode::Esc
+                    {
+                        shutdown.trigger();
+                        break;
+                    }
+                }
+            }
+        } else {
+            std::thread::sleep(Duration::from_millis(50));
+        }
     }
 
     // Join threads.

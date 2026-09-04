@@ -26,6 +26,7 @@ pub mod fortune;
 pub mod framebuffer;
 pub mod herd;
 pub mod init;
+pub mod kinematics;
 pub mod logger;
 pub mod metrics;
 pub mod particles;

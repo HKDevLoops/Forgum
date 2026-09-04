@@ -89,7 +89,7 @@ impl Effect for StaticEffect {
 
 // ── Breathe ────────────────────────────────────────────────────────
 
-/// Subtle chest/belly expansion and contraction.
+/// Subtle chest/belly expansion and contraction with anchored baseline.
 #[derive(Debug)]
 pub struct BreatheEffect {
     cow_text: String,
@@ -144,11 +144,26 @@ pub struct FloatEffect {
     phase: f32,
     speed: f32,
     color_mode: String,
+    body: crate::kinematics::KinematicBody,
+    elapsed: f32,
 }
 
 impl FloatEffect {
     pub fn new(cow_text: String, dna: &CowDna, instance_id: u32, color_mode: String) -> Self {
         let phase = instance_phase(dna.phase_seed, instance_id);
+        let (w, h) = crate::kinematics::ascii_dimensions(&cow_text);
+        let body = crate::kinematics::KinematicBody::new(
+            w,
+            h,
+            crate::kinematics::BoundsMode::Lissajous {
+                amp_x: dna.amplitude.sway * 6.0,
+                amp_y: dna.amplitude.float * 3.0,
+                freq_x: dna.speed * 0.25,
+                freq_y: dna.speed * 0.35,
+                phase_x: phase,
+                phase_y: phase + std::f32::consts::FRAC_PI_4,
+            },
+        );
         Self {
             cow_text,
             amp: dna.amplitude.clone(),
@@ -156,18 +171,28 @@ impl FloatEffect {
             phase,
             speed: dna.speed,
             color_mode,
+            body,
+            elapsed: 0.0,
         }
     }
 }
 
 impl Effect for FloatEffect {
-    fn update(&mut self, _dt: f32, _cols: usize, _rows: usize) {}
+    fn update(&mut self, dt: f32, cols: usize, rows: usize) {
+        self.elapsed += dt;
+        self.body.update(dt, self.elapsed, cols, rows);
+    }
 
     fn render(&self, fb: &mut FrameBuffer, time: f32) {
-        let t = (time * self.speed + self.phase) % 1.0;
-        let intensity = (self.easing_fn)(t);
-        let x_off = ((intensity * self.amp.sway * 4.0) as i32) - 2;
-        let y_off = ((intensity * self.amp.float * 3.0) as i32) - 1;
+        let (x_off, y_off) = if self.elapsed > 0.0 {
+            (self.body.screen_x(), self.body.screen_y())
+        } else {
+            let t = (time * self.speed + self.phase) % 1.0;
+            let intensity = (self.easing_fn)(t);
+            let x = ((intensity * self.amp.sway * 4.0) as i32) - 2;
+            let y = ((intensity * self.amp.float * 3.0) as i32) - 1;
+            (x, y)
+        };
         render_text_offset(
             fb,
             &self.cow_text,
@@ -182,52 +207,96 @@ impl Effect for FloatEffect {
 
 // ── Walk / Trot ────────────────────────────────────────────────────
 
-/// Bottom-row leg character swap.
+/// Bottom-row leg character swap with dynamic pillar detection, whitespace preservation,
+/// and physical kinematic traversal across the terminal pasture.
 #[derive(Debug)]
 pub struct WalkEffect {
     cow_text: String,
     line_offsets: Vec<usize>,
+    leg_line_idx: usize,
+    leg_cols: Vec<usize>,
     _amp: Amplitude,
     easing_fn: fn(f32) -> f32,
     phase: f32,
     speed: f32,
     color_mode: String,
+    pub body: crate::kinematics::KinematicBody,
+    elapsed: f32,
 }
 
 impl WalkEffect {
     pub fn new(cow_text: String, dna: &CowDna, instance_id: u32, color_mode: String) -> Self {
         let phase = instance_phase(dna.phase_seed, instance_id);
         let line_offsets = compute_line_offsets(&cow_text);
+
+        // Dynamically find the bottom-most non-empty line of the ASCII creature
+        let mut leg_line_idx = line_offsets.len().saturating_sub(1);
+        let lines: Vec<&str> = cow_text.lines().collect();
+        for (i, line) in lines.iter().enumerate().rev() {
+            if line.chars().any(|c| !c.is_whitespace()) {
+                leg_line_idx = i;
+                break;
+            }
+        }
+
+        // Detect columns containing structural leg/foot stroke characters
+        let mut leg_cols = Vec::new();
+        if leg_line_idx < lines.len() {
+            let bottom_line = lines[leg_line_idx];
+            for (col, ch) in bottom_line.chars().enumerate() {
+                if matches!(ch, '|' | '/' | '\\' | '!' | 'I' | 'l' | '[' | ']' | '(' | ')' | '1' | ':') {
+                    leg_cols.push(col);
+                }
+            }
+        }
+
+        let (w, h) = crate::kinematics::ascii_dimensions(&cow_text);
+        let mut body = crate::kinematics::KinematicBody::new(w, h, crate::kinematics::BoundsMode::Wrap);
+        body.vx = (dna.speed * 8.0).clamp(4.0, 24.0);
+
         Self {
             cow_text,
             line_offsets,
+            leg_line_idx,
+            leg_cols,
             _amp: dna.amplitude.clone(),
             easing_fn: easing::by_name(&dna.easing.base),
             phase,
             speed: dna.speed,
             color_mode,
+            body,
+            elapsed: 0.0,
         }
     }
 }
 
 impl Effect for WalkEffect {
-    fn update(&mut self, _dt: f32, _cols: usize, _rows: usize) {}
+    fn update(&mut self, dt: f32, cols: usize, rows: usize) {
+        self.elapsed += dt;
+        self.body.update(dt, self.elapsed, cols, rows);
+    }
 
     fn render(&self, fb: &mut FrameBuffer, time: f32) {
-        let t = (time * self.speed + self.phase) % 1.0;
+        let t = if self.body.x.abs() > 0.001 {
+            self.body.stride_phase(2.0)
+        } else {
+            (time * self.speed + self.phase) % 1.0
+        };
         let eased = (self.easing_fn)(t);
         let (leg_l, leg_r) = if eased > 0.5 {
             ('╱', '╲')
         } else {
             ('╲', '╱')
         };
-        let line_count = self.line_offsets.len();
-        let last_idx = line_count.saturating_sub(1);
+
+        let x_off = self.body.screen_x();
+        let y_off = self.body.screen_y();
+
         let mut y = 0usize;
         for_each_line(&self.cow_text, &self.line_offsets, |line| {
             let mut x = 0usize;
             for ch in line.chars() {
-                let display_ch = if y == last_idx && ch == ' ' {
+                let display_ch = if y == self.leg_line_idx && self.leg_cols.contains(&x) {
                     if x % 2 == 0 {
                         leg_l
                     } else {
@@ -236,9 +305,15 @@ impl Effect for WalkEffect {
                 } else {
                     ch
                 };
-                if y < fb.height && x < fb.width {
-                    let cell_fg = resolve_fg(&self.color_mode, x, y, time, Color::WHITE);
-                    let _ = fb.set(x, y, Cell::new(display_ch, cell_fg));
+                let xi = x as i32 + x_off;
+                let yi = y as i32 + y_off;
+                if yi >= 0 && xi >= 0 {
+                    let uxi = xi as usize;
+                    let uyi = yi as usize;
+                    if uyi < fb.height && uxi < fb.width {
+                        let cell_fg = resolve_fg(&self.color_mode, uxi, uyi, time, Color::WHITE);
+                        let _ = fb.set(uxi, uyi, Cell::new(display_ch, cell_fg));
+                    }
                 }
                 x = x.saturating_add(1);
             }
@@ -376,10 +451,11 @@ impl Effect for PulseEffect {
 
 // ── Glitch ─────────────────────────────────────────────────────────
 
-/// Random character swap with binary/hex.
+/// Random character swap with binary/hex within cow body bounds.
 #[derive(Debug)]
 pub struct GlitchEffect {
     cow_text: String,
+    body_coords: Vec<(usize, usize)>,
     phase: f32,
     speed: f32,
     color_mode: String,
@@ -388,8 +464,17 @@ pub struct GlitchEffect {
 impl GlitchEffect {
     pub fn new(cow_text: String, dna: &CowDna, instance_id: u32, color_mode: String) -> Self {
         let phase = instance_phase(dna.phase_seed, instance_id);
+        let mut body_coords = Vec::new();
+        for (y, line) in cow_text.lines().enumerate() {
+            for (x, ch) in line.chars().enumerate() {
+                if !ch.is_whitespace() {
+                    body_coords.push((x, y));
+                }
+            }
+        }
         Self {
             cow_text,
+            body_coords,
             phase,
             speed: dna.speed,
             color_mode,
@@ -402,32 +487,32 @@ impl Effect for GlitchEffect {
 
     fn render(&self, fb: &mut FrameBuffer, time: f32) {
         render_text(fb, &self.cow_text, Color::WHITE, &self.color_mode, time);
-        // Randomly overwrite some cells with glitch chars
+        if self.body_coords.is_empty() || fb.width == 0 || fb.height == 0 {
+            return;
+        }
         let glitch_chars = ['0', '1', '#', '@', '█', '▓'];
         let t = time * self.speed + self.phase;
         let intensity = (t * 3.0).sin() * 0.5 + 0.5;
-        let count = (intensity * 10.0) as usize;
-        if fb.width == 0 || fb.height == 0 {
-            return;
-        }
+        let count = ((intensity * 8.0) as usize).min(self.body_coords.len());
+
         for i in 0..count {
             let seed = (t * 100.0 + i as f32) as u32;
-            let x = ((seed.wrapping_mul(7)) as usize) % fb.width;
-            let y = ((seed.wrapping_mul(13)) as usize) % fb.height;
-            let ch = glitch_chars[(seed as usize) % glitch_chars.len()];
-            let c = if seed % 2 == 0 {
-                Color::rgb(0, 255, 0)
-            } else {
-                Color::rgb(255, 0, 0)
-            };
-            let _ = fb.set(x, y, Cell::new(ch, c));
+            let coord_idx = (seed as usize).wrapping_mul(7) % self.body_coords.len();
+            let (x, y) = self.body_coords[coord_idx];
+            if x < fb.width && y < fb.height {
+                let ch = glitch_chars[(seed as usize) % glitch_chars.len()];
+                let c = if seed % 2 == 0 {
+                    Color::rgb(0, 255, 0)
+                } else {
+                    Color::rgb(255, 0, 0)
+                };
+                let _ = fb.set(x, y, Cell::new(ch, c));
+            }
         }
     }
 }
 
-// ── Fly / Hover ────────────────────────────────────────────────────
-
-/// Fast erratic float + wing flap.
+/// Fast erratic float + wing flap + continuous flight traversal across terminal pasture.
 #[derive(Debug)]
 pub struct FlyEffect {
     cow_text: String,
@@ -436,11 +521,16 @@ pub struct FlyEffect {
     phase: f32,
     speed: f32,
     color_mode: String,
+    body: crate::kinematics::KinematicBody,
+    elapsed: f32,
 }
 
 impl FlyEffect {
     pub fn new(cow_text: String, dna: &CowDna, instance_id: u32, color_mode: String) -> Self {
         let phase = instance_phase(dna.phase_seed, instance_id);
+        let (w, h) = crate::kinematics::ascii_dimensions(&cow_text);
+        let mut body = crate::kinematics::KinematicBody::new(w, h, crate::kinematics::BoundsMode::Wrap);
+        body.vx = (dna.speed * 12.0).clamp(6.0, 32.0);
         Self {
             cow_text,
             amp: dna.amplitude.clone(),
@@ -448,20 +538,32 @@ impl FlyEffect {
             phase,
             speed: dna.speed,
             color_mode,
+            body,
+            elapsed: 0.0,
         }
     }
 }
 
 impl Effect for FlyEffect {
-    fn update(&mut self, _dt: f32, _cols: usize, _rows: usize) {}
+    fn update(&mut self, dt: f32, cols: usize, rows: usize) {
+        self.elapsed += dt;
+        self.body.update(dt, self.elapsed, cols, rows);
+    }
 
     fn render(&self, fb: &mut FrameBuffer, time: f32) {
         let t = (time * self.speed + self.phase) % 1.0;
         let intensity = (self.easing_fn)(t);
-        // Erratic movement: combine sine waves at different frequencies
-        let x_off = ((t * std::f32::consts::TAU * 3.0).sin() * self.amp.sway * 5.0) as i32;
-        let y_off = ((t * std::f32::consts::TAU * 2.0).cos() * self.amp.float * 3.0
-            + (intensity * 2.0 - 1.0)) as i32;
+        let (x_off, y_off) = if self.elapsed > 0.0 {
+            let x = self.body.screen_x();
+            let y_swoop = ((time * std::f32::consts::TAU * 1.5).sin() * self.amp.float * 3.0
+                + (intensity * 2.0 - 1.0)) as i32;
+            (x, y_swoop.max(0))
+        } else {
+            let x = ((t * std::f32::consts::TAU * 3.0).sin() * self.amp.sway * 5.0) as i32;
+            let y = ((t * std::f32::consts::TAU * 2.0).cos() * self.amp.float * 3.0
+                + (intensity * 2.0 - 1.0)) as i32;
+            (x, y)
+        };
         render_text_offset(
             fb,
             &self.cow_text,
@@ -616,6 +718,7 @@ pub struct DissolveEffect {
     speed: f32,
     scatter_offsets: Vec<(f32, f32)>,
     color_mode: String,
+    elapsed: f32,
 }
 
 impl DissolveEffect {
@@ -650,12 +753,15 @@ impl DissolveEffect {
             speed: dna.speed,
             scatter_offsets,
             color_mode,
+            elapsed: 0.0,
         }
     }
 }
 
 impl Effect for DissolveEffect {
-    fn update(&mut self, _dt: f32, _cols: usize, _rows: usize) {}
+    fn update(&mut self, dt: f32, _cols: usize, _rows: usize) {
+        self.elapsed += dt * self.speed;
+    }
 
     fn render(&self, fb: &mut FrameBuffer, time: f32) {
         let cycle = (time * self.speed + self.phase) % 2.0;
@@ -698,7 +804,7 @@ impl Effect for DissolveEffect {
     }
 
     fn is_done(&self) -> bool {
-        false
+        self.elapsed >= 2.0
     }
 }
 
@@ -1409,6 +1515,42 @@ mod tests {
         assert_eq!(fb.get(3, 0).ch, '_', "walk should not modify row 0");
         // Row 1 should also be unchanged
         assert_eq!(fb.get(1, 1).ch, '(', "walk should not modify row 1");
+    }
+
+    #[test]
+    fn walk_translates_across_terminal() {
+        let dna = CowDna::default();
+        let mut effect = WalkEffect::new(COW.to_string(), &dna, 0, "static".to_string());
+        let mut fb = FrameBuffer::new(80, 24);
+
+        assert_eq!(effect.body.screen_x(), 0);
+
+        effect.update(1.0, 80, 24);
+        assert!(effect.body.screen_x() > 0, "walk must translate forward along X axis");
+
+        effect.render(&mut fb, 1.0);
+        fb.swap();
+
+        let initial_x = effect.body.screen_x() as usize;
+        assert_eq!(fb.get(initial_x + 2, 0).ch, '^');
+    }
+
+    #[test]
+    fn fly_translates_across_terminal() {
+        let dna = CowDna::default();
+        let mut effect = FlyEffect::new(COW.to_string(), &dna, 0, "static".to_string());
+        let mut fb = FrameBuffer::new(80, 24);
+
+        assert_eq!(effect.body.screen_x(), 0);
+
+        effect.update(1.0, 80, 24);
+        assert!(effect.body.screen_x() > 0, "fly must translate forward along X axis");
+
+        effect.render(&mut fb, 1.0);
+        fb.swap();
+
+        let initial_x = effect.body.screen_x() as usize;
+        assert_eq!(fb.get(initial_x + 2, 0).ch, '^');
     }
 
     // ── GlitchEffect ──────────────────────────────────────────────

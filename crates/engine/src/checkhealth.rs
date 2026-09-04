@@ -352,7 +352,7 @@ pub fn run_health_check(explicit_config: Option<&Path>) -> HealthReport {
         ),
         details: vec![
             format!("Data Directory: {}", data_dir.display()),
-            format!("Embedded fallback cows: 109+ creatures compiled into binary"),
+            "Embedded fallback cows: 109+ creatures compiled into binary".to_string(),
         ],
         suggestion: None,
     });

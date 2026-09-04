@@ -586,7 +586,7 @@ fn main() -> ExitCode {
                 .ok()
                 .and_then(|p| p.parent().map(|p| p.to_path_buf()))
                 .unwrap_or_else(|| PathBuf::from("."));
-            let themes = forgum_engine::theme::list_themes(&config_dir);
+            let themes = forgum_engine::theme::list_all_themes(&config_dir);
             if themes.is_empty() {
                 println!("No themes found.");
             } else {

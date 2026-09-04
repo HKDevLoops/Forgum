@@ -37,7 +37,7 @@ fn bench_render_region(c: &mut Criterion) {
         b.iter(|| {
             out.clear();
             r.render_damage(&mut out, &fb.back, fb.cols(), &dmg)
-                .unwrap();
+                .expect("render_damage failed");
             criterion::black_box(out.len())
         })
     });
