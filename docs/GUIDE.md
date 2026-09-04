@@ -1,23 +1,30 @@
 # 📖 Master User Guide & Reference
 
+<p align="center">
+  <img src="assets/forgum_jungle_logo.jpg" alt="Forgum Jungle Engine Logo" width="100%" />
+</p>
+
 ```text
-                   🌿  🌴  F O R G U M   J U N G L E   E N G I N E  🌴  🌿
-       .~~.                                                                      .~~.
-      (____)                                                                    (____)
-    .-'    `-.                                                                .-'    `-.
-  .'  / \  //\`.      ███████╗ ██████╗ ██████╗  ██████╗ ██╗   ██╗███╗   ███╗  .'  ^__^     `.
- /|\___/| /   \`\     ██╔════╝██╔═══██╗██╔══██╗██╔════╝ ██║   ██║████╗ ████║ /   /(oo)\____   \
-/ /O   O \/ // \ \    █████╗  ██║   ██║██████╔╝██║  ███╗██║   ██║██╔████╔██║ |  /  (__)     )\ |
-|( @_^_@ ) //   | |   ██╔══╝  ██║   ██║██╔══██╗██║   ██║██║   ██║██║╚██╔╝██║ |     ||---w |   |
- \ \__^_/ //    | /   ██║     ╚██████╔╝██║  ██║╚██████╔╝╚██████╔╝██║ ╚═╝ ██║ \     ||    ||   /
-  `-(_//)//____.-'    ╚═╝      ╚═════╝ ╚═╝  ╚═╝ ╚═════╝  ╚═════╝ ╚═╝     ╚═╝  `-.________..-'
-      //  ||               🌴  ANIMATED TERMINAL ECOSYSTEM  🌴                   ||   ||
-     //   ||            ___                                   ,___.              ||   ||
-    //    ||          {~o_o~}    ( ( (   K I N E M A T I C   {o,o}               ||   ||
-   //     ||           ( Y )      ) ) )   J U N G L E   ) )   )__)               ||   ||
-  //      ||          ()~*~()    ( ( (   M O T I O N   ( ( (   ""                ||   ||
-""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-   🐉 Dragon (Ember)       🐨 Koala (Zen)        🐮 Cow (Pasture)       🦜 Toucan (Sky)
++--------------------------------------------------------------------------------------------------+
+|                              *  ~  *  FORGUM JUNGLE ENGINE  *  ~  *                              |
++==================================================================================================+
+|        .~~.                                                                      .~~.            |
+|       (____)                                                                    (____)           |
+|     .-'    `-.                                                                .-'    `-.         |
+|   .'  / \  //\`.      ███████╗ ██████╗ ██████╗  ██████╗ ██╗   ██╗███╗   ███╗  .'  ^__^     `.    |
+|  /|\___/| /   \`\     ██╔════╝██╔═══██╗██╔══██╗██╔════╝ ██║   ██║████╗ ████║ /   /(oo)\____  \   |
+| / /O   O \/ // \ \    █████╗  ██║   ██║██████╔╝██║  ███╗██║   ██║██╔████╔██║ |  /  (__)    )\ |  |
+| |( @_^_@ ) //   | |   ██╔══╝  ██║   ██║██╔══██╗██║   ██║██║   ██║██║╚██╔╝██║ |     ||---w | | |  |
+|  \ \__^_/ //    | /   ██║     ╚██████╔╝██║  ██║╚██████╔╝╚██████╔╝██║ ╚═╝ ██║ \     ||    || / /  |
+|   `-(_//)//____.-'    ╚═╝      ╚═════╝ ╚═╝  ╚═╝ ╚═════╝  ╚═════╝ ╚═╝     ╚═╝  `-.________..-'    |
+|       //  ||                 * * *  A N I M A T E D   P A S T U R E  * * *       ||   ||         |
+|      //   ||               ___                                   ,___.           ||   ||         |
+|     //    ||             {~o_o~}    ( ( (   K I N E M A T I C   {o,o}            ||   ||         |
+|    //     ||              ( Y )      ) ) )   J U N G L E   ) )   )__)            ||   ||         |
+|   //      ||             ()~*~()    ( ( (   M O T I O N   ( ( (   ""             ||   ||         |
++==================================================================================================+
+|    [Dragon: Ember]          [Koala: Zen]             [Cow: Pasture]          [Toucan: Sky]       |
++--------------------------------------------------------------------------------------------------+
 ```
 
 Welcome to the comprehensive user guide for **Forgum** — the high-performance Rust terminal animation engine featuring 2D kinematics, preloaded themes, and cross-platform terminal isolation.
@@ -93,25 +100,25 @@ forgum-engine --effect rainbow --color-mode rainbow --duration 3
 
 ### Subcommands
 
-| Subcommand | Description | Example |
-| :--- | :--- | :--- |
-| **`render`** | Renders 2D animated scenes with physical kinematics | `forgum-engine render -e walk -c dragon` |
-| **`theme list`** | Lists all 15 preloaded and user themes | `forgum-engine theme list` |
-| **`theme apply <name>`** | Applies a preloaded theme (`matrix`, `cyberpunk`, `inferno`, etc.) | `forgum-engine theme apply matrix` |
-| **`theme rotate`** | Automatically rotates themes on an interval | `forgum-engine theme rotate --interval 5` |
-| **`theme seasonal`** | Applies dynamic real-world seasonal themes (Halloween, Winter, etc.) | `forgum-engine theme seasonal` |
-| **`say <command...>`** | Runs a shell command and displays output inside the cow's speech bubble | `forgum-engine say git status` |
-| **`fortune`** | Prints a humorous terminal fortune | `forgum-engine fortune` |
-| **`timer <command...>`** | Benchmarks command execution and displays elapsed runtime | `forgum-engine timer cargo build` |
-| **`checkhealth`** *(alias: `health`)* | Runs diagnostic audit across 7 layers | `forgum-engine checkhealth` |
-| **`config`** | Inspects or edits configuration options | `forgum-engine config set color_mode rainbow` |
-| **`config --tui`** | Opens the interactive configuration TUI | `forgum-engine config --tui` |
-| **`config --migrate <fmt>`** | Migrates active config to `json`, `yaml`, or `toml` | `forgum-engine config --migrate toml` |
-| **`logs`** | Displays structured system and execution logs | `forgum-engine logs -f` |
-| **`herd`** | Lists or manages cows and background animation daemons | `forgum-engine herd list` |
-| **`control`** | Sends IPC commands to active daemon sessions | `forgum-engine control status` |
-| **`init <shell>`** | Generates shell hook integration scripts with `forgum-init` | `forgum-engine init pwsh` |
-| **`completions <shell>`** | Generates shell auto-completion scripts | `forgum-engine completions zsh` |
+| Subcommand                            | Description                                                             | Example                                       |
+| :------------------------------------ | :---------------------------------------------------------------------- | :-------------------------------------------- |
+| **`render`**                          | Renders 2D animated scenes with physical kinematics                     | `forgum-engine render -e walk -c dragon`      |
+| **`theme list`**                      | Lists all 15 preloaded and user themes                                  | `forgum-engine theme list`                    |
+| **`theme apply <name>`**              | Applies a preloaded theme (`matrix`, `cyberpunk`, `inferno`, etc.)      | `forgum-engine theme apply matrix`            |
+| **`theme rotate`**                    | Automatically rotates themes on an interval                             | `forgum-engine theme rotate --interval 5`     |
+| **`theme seasonal`**                  | Applies dynamic real-world seasonal themes (Halloween, Winter, etc.)    | `forgum-engine theme seasonal`                |
+| **`say <command...>`**                | Runs a shell command and displays output inside the cow's speech bubble | `forgum-engine say git status`                |
+| **`fortune`**                         | Prints a humorous terminal fortune                                      | `forgum-engine fortune`                       |
+| **`timer <command...>`**              | Benchmarks command execution and displays elapsed runtime               | `forgum-engine timer cargo build`             |
+| **`checkhealth`** *(alias: `health`)* | Runs diagnostic audit across 7 layers                                   | `forgum-engine checkhealth`                   |
+| **`config`**                          | Inspects or edits configuration options                                 | `forgum-engine config set color_mode rainbow` |
+| **`config --tui`**                    | Opens the interactive configuration TUI                                 | `forgum-engine config --tui`                  |
+| **`config --migrate <fmt>`**          | Migrates active config to `json`, `yaml`, or `toml`                     | `forgum-engine config --migrate toml`         |
+| **`logs`**                            | Displays structured system and execution logs                           | `forgum-engine logs -f`                       |
+| **`herd`**                            | Lists or manages cows and background animation daemons                  | `forgum-engine herd list`                     |
+| **`control`**                         | Sends IPC commands to active daemon sessions                            | `forgum-engine control status`                |
+| **`init <shell>`**                    | Generates shell hook integration scripts with `forgum-init`             | `forgum-engine init pwsh`                     |
+| **`completions <shell>`**             | Generates shell auto-completion scripts                                 | `forgum-engine completions zsh`               |
 
 ---
 
@@ -310,23 +317,23 @@ forgum-engine theme rotate --interval 10
 forgum-engine theme seasonal
 ```
 
-| Theme | Animation Effect | Cow Mascot | Eyes | Expression | Aesthetic |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| `arcade` | `walk` | `default` | `oo` | `U` | Retro 8-bit pasture walk |
-| `aurora` | `aurora` | `default` | `oo` | `U` | Polar lights shifting colors |
-| `cyberpunk` | `glitch` | `mech-and-cow` | `$$` | `U` | High-tech dystopian scanlines |
-| `forest` | `breathe` | `koala` | `..` | `U` | Gentle bamboo forest breathing |
-| `ghost` | `portal` | `ghost` | `xx` | `U` | Ethereal floating apparition |
-| `inferno` | `ember` | `dragon` | `@@` | `U` | Blazing fire particles and heat |
-| `matrix` | `glitch` | `telebears` | `00` | `U` | Cascading terminal green stream |
-| `nyan` | `float` | `nyan` | `^^` | `U` | Rainbow space orbital drift |
-| `ocean` | `float` | `dolphin` | `oo` | `U` | Underwater buoyancy drift |
-| `retro` | `walk` | `default` | `oo` | `U` | Classical terminal stride |
-| `stealth` | `static` | `tux` | `--` | `  ` | Silent ninja terminal penguin |
-| `supernova` | `ember` | `stegosaurus` | `**` | `U` | Cosmic starburst particle emissions |
-| `valentine` | `glitch` | `default` | `@@` | `U` | Pink & red cyber-heart flutter |
-| `winter` | `aurora` | `snowman` | `**` | `U` | Crisp arctic snowfall breeze |
-| `zen` | `breathe` | `tux` | `==` | `U` | Deep meditative penguin stillness |
+| Theme       | Animation Effect | Cow Mascot     | Eyes | Expression | Aesthetic                           |
+| :---------- | :--------------- | :------------- | :--- | :--------- | :---------------------------------- |
+| `arcade`    | `walk`           | `default`      | `oo` | `U`        | Retro 8-bit pasture walk            |
+| `aurora`    | `aurora`         | `default`      | `oo` | `U`        | Polar lights shifting colors        |
+| `cyberpunk` | `glitch`         | `mech-and-cow` | `$$` | `U`        | High-tech dystopian scanlines       |
+| `forest`    | `breathe`        | `koala`        | `..` | `U`        | Gentle bamboo forest breathing      |
+| `ghost`     | `portal`         | `ghost`        | `xx` | `U`        | Ethereal floating apparition        |
+| `inferno`   | `ember`          | `dragon`       | `@@` | `U`        | Blazing fire particles and heat     |
+| `matrix`    | `glitch`         | `telebears`    | `00` | `U`        | Cascading terminal green stream     |
+| `nyan`      | `float`          | `nyan`         | `^^` | `U`        | Rainbow space orbital drift         |
+| `ocean`     | `float`          | `dolphin`      | `oo` | `U`        | Underwater buoyancy drift           |
+| `retro`     | `walk`           | `default`      | `oo` | `U`        | Classical terminal stride           |
+| `stealth`   | `static`         | `tux`          | `--` | `  `       | Silent ninja terminal penguin       |
+| `supernova` | `ember`          | `stegosaurus`  | `**` | `U`        | Cosmic starburst particle emissions |
+| `valentine` | `glitch`         | `default`      | `@@` | `U`        | Pink & red cyber-heart flutter      |
+| `winter`    | `aurora`         | `snowman`      | `**` | `U`        | Crisp arctic snowfall breeze        |
+| `zen`       | `breathe`        | `tux`          | `==` | `U`        | Deep meditative penguin stillness   |
 
 ---
 

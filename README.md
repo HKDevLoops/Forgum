@@ -1,21 +1,28 @@
+<p align="center">
+  <img src="docs/assets/forgum_jungle_logo.jpg" alt="Forgum Jungle Engine Logo" width="100%" />
+</p>
+
 ```text
-                   🌿  🌴  F O R G U M   J U N G L E   E N G I N E  🌴  🌿
-       .~~.                                                                      .~~.
-      (____)                                                                    (____)
-    .-'    `-.                                                                .-'    `-.
-  .'  / \  //\`.      ███████╗ ██████╗ ██████╗  ██████╗ ██╗   ██╗███╗   ███╗  .'  ^__^     `.
- /|\___/| /   \`\     ██╔════╝██╔═══██╗██╔══██╗██╔════╝ ██║   ██║████╗ ████║ /   /(oo)\____   \
-/ /O   O \/ // \ \    █████╗  ██║   ██║██████╔╝██║  ███╗██║   ██║██╔████╔██║ |  /  (__)     )\ |
-|( @_^_@ ) //   | |   ██╔══╝  ██║   ██║██╔══██╗██║   ██║██║   ██║██║╚██╔╝██║ |     ||---w |   |
- \ \__^_/ //    | /   ██║     ╚██████╔╝██║  ██║╚██████╔╝╚██████╔╝██║ ╚═╝ ██║ \     ||    ||   /
-  `-(_//)//____.-'    ╚═╝      ╚═════╝ ╚═╝  ╚═╝ ╚═════╝  ╚═════╝ ╚═╝     ╚═╝  `-.________..-'
-      //  ||               🌴  ANIMATED TERMINAL ECOSYSTEM  🌴                   ||   ||
-     //   ||            ___                                   ,___.              ||   ||
-    //    ||          {~o_o~}    ( ( (   K I N E M A T I C   {o,o}               ||   ||
-   //     ||           ( Y )      ) ) )   J U N G L E   ) )   )__)               ||   ||
-  //      ||          ()~*~()    ( ( (   M O T I O N   ( ( (   ""                ||   ||
-""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-   🐉 Dragon (Ember)       🐨 Koala (Zen)        🐮 Cow (Pasture)       🦜 Toucan (Sky)
++--------------------------------------------------------------------------------------------------+
+|                              *  ~  *  FORGUM JUNGLE ENGINE  *  ~  *                              |
++==================================================================================================+
+|        .~~.                                                                      .~~.            |
+|       (____)                                                                    (____)           |
+|     .-'    `-.                                                                .-'    `-.         |
+|   .'  / \  //\`.      ███████╗ ██████╗ ██████╗  ██████╗ ██╗   ██╗███╗   ███╗  .'  ^__^     `.    |
+|  /|\___/| /   \`\     ██╔════╝██╔═══██╗██╔══██╗██╔════╝ ██║   ██║████╗ ████║ /   /(oo)\____  \   |
+| / /O   O \/ // \ \    █████╗  ██║   ██║██████╔╝██║  ███╗██║   ██║██╔████╔██║ |  /  (__)    )\ |  |
+| |( @_^_@ ) //   | |   ██╔══╝  ██║   ██║██╔══██╗██║   ██║██║   ██║██║╚██╔╝██║ |     ||---w | | |  |
+|  \ \__^_/ //    | /   ██║     ╚██████╔╝██║  ██║╚██████╔╝╚██████╔╝██║ ╚═╝ ██║ \     ||    || / /  |
+|   `-(_//)//____.-'    ╚═╝      ╚═════╝ ╚═╝  ╚═╝ ╚═════╝  ╚═════╝ ╚═╝     ╚═╝  `-.________..-'    |
+|       //  ||                 * * *  A N I M A T E D   P A S T U R E  * * *       ||   ||         |
+|      //   ||               ___                                   ,___.           ||   ||         |
+|     //    ||             {~o_o~}    ( ( (   K I N E M A T I C   {o,o}            ||   ||         |
+|    //     ||              ( Y )      ) ) )   J U N G L E   ) )   )__)            ||   ||         |
+|   //      ||             ()~*~()    ( ( (   M O T I O N   ( ( (   ""             ||   ||         |
++==================================================================================================+
+|    [Dragon: Ember]          [Koala: Zen]             [Cow: Pasture]          [Toucan: Sky]       |
++--------------------------------------------------------------------------------------------------+
 ```
 
 > **Forgum** is a high-performance Rust terminal animation engine that renders living ANSI creatures in your terminal —
@@ -43,14 +50,14 @@ Today, Forgum is a living, breathing ANSI ecosystem that lives *above* your prom
 
 ## 🦾 Why Forgum Utterly Destroys Legacy Terminal Mascots
 
-| What Legacy Mascots Do (1999) | What Forgum Does (2026) | Why You Should Care |
-|:---|:---|:---|
-| 🧟 **Static Print & Die:** Dumps text into your scrollback buffer. | 🏃 **2D Continuous Kinematics:** Creatures physically traverse the screen, swooping in flight and drifting on orbital paths. | Your terminal becomes a living, animated canvas. |
-| 🪚 **Treadmill Moonwalking:** Characters toggle leg glyphs in place. | 📐 **Stride-Velocity Coupling:** Leg stride phase is mathematically bound to ground velocity ($\omega = v/\lambda$). | Zero moonwalking. If the cow halts, its hooves halt. |
-| 🔥 **CPU-Melting Screen Clears:** Clears the entire terminal every frame (`\x1b[2J`), causing eye-bleeding flicker. | ⚡ **Dirty-Cell Damage Jumps:** Compares front and back buffers at the cell level, emitting only minimal ANSI jumps (`\x1b[y;xH`). | Smooth 60 FPS animation with sub-1% CPU usage. |
-| 🔒 **File Lock Deadlocks:** Multiple shells crash or lock each other out of shared state files. | 🪟 **Zero-Lock Session Nirvana:** Pane-level isolation across `tmux`, `zellij`, `wezterm`, `kitty`, and Windows Terminal. | Run 50 terminal splits concurrently with zero lock contention. |
-| 🦻 **Deaf to Ctrl+C in Raw Mode:** Raw mode suppresses `ISIG`, trapping you forever in a runaway animation. | 🛑 **Sub-Millisecond Fail-Safe Exit:** Non-blocking 50ms event polling intercepts `\x03`, `'q'`, and `Esc` instantly. | When you say stop, it stops in 5 milliseconds flat. Period. |
-| 📄 **Manual JSON Configuration Hell:** Requires hunting down hidden dotfiles to configure anything. | 🎨 **15 Preloaded Themes & Interactive TUI:** Instant out-of-the-box themes (`matrix`, `cyberpunk`, `inferno`, etc.). | Zero-config out of the box; full TUI customizer when you want it. |
+| What Legacy Mascots Do (1999)                                                                                      | What Forgum Does (2026)                                                                                                           | Why You Should Care                                               |
+| :----------------------------------------------------------------------------------------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------- | :---------------------------------------------------------------- |
+| 🧟 **Static Print & Die:** Dumps text into your scrollback buffer.                                                  | 🏃 **2D Continuous Kinematics:** Creatures physically traverse the screen, swooping in flight and drifting on orbital paths.       | Your terminal becomes a living, animated canvas.                  |
+| 🪚 **Treadmill Moonwalking:** Characters toggle leg glyphs in place.                                                | 📐 **Stride-Velocity Coupling:** Leg stride phase is mathematically bound to ground velocity ($\omega = v/\lambda$).               | Zero moonwalking. If the cow halts, its hooves halt.              |
+| 🔥 **CPU-Melting Screen Clears:** Clears the entire terminal every frame (`\x1b[2J`), causing eye-bleeding flicker. | ⚡ **Dirty-Cell Damage Jumps:** Compares front and back buffers at the cell level, emitting only minimal ANSI jumps (`\x1b[y;xH`). | Smooth 60 FPS animation with sub-1% CPU usage.                    |
+| 🔒 **File Lock Deadlocks:** Multiple shells crash or lock each other out of shared state files.                     | 🪟 **Zero-Lock Session Nirvana:** Pane-level isolation across `tmux`, `zellij`, `wezterm`, `kitty`, and Windows Terminal.          | Run 50 terminal splits concurrently with zero lock contention.    |
+| 🦻 **Deaf to Ctrl+C in Raw Mode:** Raw mode suppresses `ISIG`, trapping you forever in a runaway animation.         | 🛑 **Sub-Millisecond Fail-Safe Exit:** Non-blocking 50ms event polling intercepts `\x03`, `'q'`, and `Esc` instantly.              | When you say stop, it stops in 5 milliseconds flat. Period.       |
+| 📄 **Manual JSON Configuration Hell:** Requires hunting down hidden dotfiles to configure anything.                 | 🎨 **15 Preloaded Themes & Interactive TUI:** Instant out-of-the-box themes (`matrix`, `cyberpunk`, `inferno`, etc.).              | Zero-config out of the box; full TUI customizer when you want it. |
 
 ---
 
@@ -105,18 +112,18 @@ $$\Delta x_{\text{scanline}} = \begin{cases} \text{sgn}(\sin(\text{seed})) \cdot
 
 ## ⚡ Quick install
 
-| Platform / pkg mgr | Command |
-|--------------------|---------|
-| Ubuntu / Debian (apt) | `sudo apt install ./forgum_*.deb` |
-| Kali Linux (apt) | `sudo apt install ./forgum_*.deb` |
-| Fedora (dnf) | `sudo dnf install ./forgum-*.rpm` |
-| openSUSE (zypper) | `sudo zypper install ./forgum-*.rpm` |
-| Nix (Flake / Nixpkgs) | `nix profile install github:HKDevLoops/Forgum` |
-| Windows (winget) | `winget install HKDevLoops.Forgum` |
-| Windows (scoop) | `scoop bucket add extras; scoop install forgum` |
-| Windows (choco) | `choco install forgum` |
-| macOS (Homebrew) | `brew install forgum` |
-| Any (cargo) | `cargo install forgum-engine` |
+| Platform / pkg mgr    | Command                                         |
+| :-------------------- | :---------------------------------------------- |
+| Ubuntu / Debian (apt) | `sudo apt install ./forgum_*.deb`               |
+| Kali Linux (apt)      | `sudo apt install ./forgum_*.deb`               |
+| Fedora (dnf)          | `sudo dnf install ./forgum-*.rpm`               |
+| openSUSE (zypper)     | `sudo zypper install ./forgum-*.rpm`            |
+| Nix (Flake / Nixpkgs) | `nix profile install github:HKDevLoops/Forgum`  |
+| Windows (winget)      | `winget install HKDevLoops.Forgum`              |
+| Windows (scoop)       | `scoop bucket add extras; scoop install forgum` |
+| Windows (choco)       | `choco install forgum`                          |
+| macOS (Homebrew)      | `brew install forgum`                           |
+| Any (cargo)           | `cargo install forgum-engine`                   |
 
 > Community-maintained lanes — install at your own risk.
 > The official build is `cargo build --workspace`.
@@ -215,29 +222,29 @@ forgum-engine init <shell>
 
 ### Manual integration
 
-| Shell | Manual snippet |
-|-------|----------------|
-| bash | Add `eval "$(forgum-engine init bash)"` to `~/.bashrc` |
-| zsh | Add `eval "$(forgum-engine init zsh)"` to `~/.zshrc` |
-| fish | `forgum-engine init fish \| source` in `~/.config/fish/config.fish` |
+| Shell                | Manual snippet                                                             |
+| :------------------- | :------------------------------------------------------------------------- |
+| bash                 | Add `eval "$(forgum-engine init bash)"` to `~/.bashrc`                     |
+| zsh                  | Add `eval "$(forgum-engine init zsh)"` to `~/.zshrc`                       |
+| fish                 | `forgum-engine init fish \| source` in `~/.config/fish/config.fish`        |
 | pwsh (PowerShell 7+) | `forgum-engine init pwsh \| Out-String \| Invoke-Expression` in `$PROFILE` |
-| powershell (5.1) | Same as pwsh, in Windows PowerShell's `$PROFILE` |
-| cmd | `forgum-engine init cmd` prints a registry/AutoRun snippet |
+| powershell (5.1)     | Same as pwsh, in Windows PowerShell's `$PROFILE`                           |
+| cmd                  | `forgum-engine init cmd` prints a registry/AutoRun snippet                 |
 
 ---
 
 ## 🖥️ Terminal Compatibility
 
-| Terminal | Sync (DEC 2026) | Graphics | Notes |
-|----------|-----------------|----------|-------|
-| Windows Terminal | ✓ (when supported) | ✗ | sync gated by capability probe |
-| Ghostty | ✓ | ✓ (Sixel) | full modern support |
-| kitty | ✓ | ✓ (Kitty graphics) | native graphics protocol |
-| iTerm2 | ✓ | via imgcat (out of scope) | sync supported |
-| Alacritty | ✓ | ✗ | sync only |
-| Konsole | ✓ | ✓ (Sixel) | sync + sixel |
-| gnome-terminal / xterm | varies | Sixel via xterm sometimes | conservative |
-| Terminal.app (macOS) | ✗ | ✗ | ANSI only |
+| Terminal               | Sync (DEC 2026)    | Graphics                  | Notes                          |
+| :--------------------- | :----------------- | :------------------------ | :----------------------------- |
+| Windows Terminal       | ✓ (when supported) | ✗                         | sync gated by capability probe |
+| Ghostty                | ✓                  | ✓ (Sixel)                 | full modern support            |
+| kitty                  | ✓                  | ✓ (Kitty graphics)        | native graphics protocol       |
+| iTerm2                 | ✓                  | via imgcat (out of scope) | sync supported                 |
+| Alacritty              | ✓                  | ✗                         | sync only                      |
+| Konsole                | ✓                  | ✓ (Sixel)                 | sync + sixel                   |
+| gnome-terminal / xterm | varies             | Sixel via xterm sometimes | conservative                   |
+| Terminal.app (macOS)   | ✗                  | ✗                         | ANSI only                      |
 
 All advanced features are capability-probed and OFF by default; Forgum emits
 conservative ANSI so it never breaks on an unknown terminal.
@@ -265,11 +272,11 @@ forgum-engine checkhealth --json
 
 Forgum has **one unified configuration home across all operating systems**:
 
-| Platform | Path |
-|----------|------|
-| Windows | `~/.config/forgum/config.json` (or `.yaml` / `.toml`) |
-| macOS | `~/.config/forgum/config.json` (or `.yaml` / `.toml`) |
-| Linux | `~/.config/forgum/config.json` (or `.yaml` / `.toml`) |
+| Platform | Path                                                  |
+| :------- | :---------------------------------------------------- |
+| Windows  | `~/.config/forgum/config.json` (or `.yaml` / `.toml`) |
+| macOS    | `~/.config/forgum/config.json` (or `.yaml` / `.toml`) |
+| Linux    | `~/.config/forgum/config.json` (or `.yaml` / `.toml`) |
 
 > **Single-Format Exclusivity:** Forgum supports `JSON`, `YAML`, and `TOML`, but forbids multiple format files in the same directory.
 > Want to switch? Run `forgum-engine config --migrate toml` (or `json`/`yaml`) and let the engine convert it safely!
@@ -329,18 +336,18 @@ forgum-engine theme apply cyberpunk
 forgum-engine theme apply inferno
 ```
 
-| Theme | Effect | Mascot | Eyes | Vibe |
-| :--- | :--- | :--- | :--- | :--- |
-| `arcade` | `walk` | `default` | `oo` | Classic 8-bit pasture walk |
-| `aurora` | `aurora` | `default` | `oo` | Northern lights color shifting |
-| `cyberpunk` | `glitch` | `mech-and-cow` | `$$` | Neo-Tokyo neon scanline distortion |
-| `forest` | `breathe` | `koala` | `..` | Calm bamboo canopy breathing |
-| `ghost` | `portal` | `ghost` | `xx` | Ethereal spectral phasing |
-| `inferno` | `ember` | `dragon` | `@@` | Blazing fire particles & smoke |
-| `matrix` | `glitch` | `telebears` | `00` | Falling terminal green glyphs |
-| `nyan` | `float` | `nyan` | `^^` | 2D cosmic rainbow orbital drift |
-| `ocean` | `float` | `dolphin` | `oo` | Deep ocean buoyancy float |
-| `zen` | `breathe` | `tux` | `==` | Meditative Linux penguin respiration |
+| Theme       | Effect    | Mascot         | Eyes | Vibe                                 |
+| :---------- | :-------- | :------------- | :--- | :----------------------------------- |
+| `arcade`    | `walk`    | `default`      | `oo` | Classic 8-bit pasture walk           |
+| `aurora`    | `aurora`  | `default`      | `oo` | Northern lights color shifting       |
+| `cyberpunk` | `glitch`  | `mech-and-cow` | `$$` | Neo-Tokyo neon scanline distortion   |
+| `forest`    | `breathe` | `koala`        | `..` | Calm bamboo canopy breathing         |
+| `ghost`     | `portal`  | `ghost`        | `xx` | Ethereal spectral phasing            |
+| `inferno`   | `ember`   | `dragon`       | `@@` | Blazing fire particles & smoke       |
+| `matrix`    | `glitch`  | `telebears`    | `00` | Falling terminal green glyphs        |
+| `nyan`      | `float`   | `nyan`         | `^^` | 2D cosmic rainbow orbital drift      |
+| `ocean`     | `float`   | `dolphin`      | `oo` | Deep ocean buoyancy float            |
+| `zen`       | `breathe` | `tux`          | `==` | Meditative Linux penguin respiration |
 
 ### 🏃 2D Kinematics Engine
 Entities in Forgum are driven by continuous 2D kinematics:
@@ -355,11 +362,11 @@ Entities in Forgum are driven by continuous 2D kinematics:
 
 Want a head start? Browse the ready-made scenes in `docs/samples/`:
 
-| Config | Description |
-|--------|-------------|
-| `config.rainbow.json` | Full-color, effect-heavy joy |
-| `config.minimal.json` | Just the cow, nothing else |
-| `config.solid.json` | Solid background, calm and clean |
+| Config                | Description                      |
+| :-------------------- | :------------------------------- |
+| `config.rainbow.json` | Full-color, effect-heavy joy     |
+| `config.minimal.json` | Just the cow, nothing else       |
+| `config.solid.json`   | Solid background, calm and clean |
 
 See `docs/samples/README.md` for the full tour of each sample.
 
@@ -397,12 +404,12 @@ forgum-engine fortune
 
 ## 📚 Further Reading
 
-| Document | What it covers |
-|----------|----------------|
-| `CONTRIBUTING.md` | How to contribute, and the current status of each package-manager lane |
-| `ADVANCED.md` | Deep dives into the engine, daemon, and capability probe |
-| `docs/TALES.md` | Longer stories from the Forgum menagerie |
-| `docs/samples/README.md` | The sample config catalog |
+| Document                 | What it covers                                                         |
+| :----------------------- | :--------------------------------------------------------------------- |
+| `CONTRIBUTING.md`        | How to contribute, and the current status of each package-manager lane |
+| `ADVANCED.md`            | Deep dives into the engine, daemon, and capability probe               |
+| `docs/TALES.md`          | Longer stories from the Forgum menagerie                               |
+| `docs/samples/README.md` | The sample config catalog                                              |
 
 ---
 
