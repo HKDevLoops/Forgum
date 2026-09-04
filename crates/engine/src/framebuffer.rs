@@ -233,6 +233,26 @@ impl FrameBuffer {
         &self.damage_list
     }
 
+    /// Return all changed `(x, y)` cells, including cells that were visible in `front`
+    /// but vacated (cleared to empty) in `back`. This ensures the terminal renderer
+    /// writes whitespace to erase vacated cells, eliminating any ghost trails or residue.
+    #[must_use]
+    pub fn compute_full_damage(&self) -> Vec<(usize, usize)> {
+        let mut damage = self.damage_list.clone();
+        for y in 0..self.height {
+            let row_offset = y * self.width;
+            for x in 0..self.width {
+                let i = row_offset + x;
+                if self.front[i].alpha > 0 && self.back[i].alpha == 0 && !self.dirty[i] {
+                    damage.push((x, y));
+                }
+            }
+        }
+        damage.sort_unstable_by_key(|&(x, y)| (y, x));
+        damage.dedup();
+        damage
+    }
+
     #[must_use]
     pub fn cols(&self) -> usize {
         self.width
@@ -826,5 +846,25 @@ mod tests {
             );
             fb.swap();
         }
+    }
+
+    #[test]
+    fn damage_detects_vacated_cells_preventing_ghost_residue() {
+        let mut fb = FrameBuffer::new(8, 4);
+
+        // Frame 1: character 'X' drawn at (3, 1)
+        fb.clear();
+        fb.set(3, 1, Cell::new('X', Color::WHITE));
+        fb.swap();
+        assert_eq!(fb.get(3, 1).ch, 'X');
+
+        // Frame 2: character vacated (not set in back, cleared to empty)
+        fb.clear();
+        // Nothing drawn at (3, 1)
+        let full_dmg = fb.compute_full_damage();
+        assert!(
+            full_dmg.contains(&(3, 1)),
+            "compute_full_damage must include vacated cell (3, 1) so renderer clears it with space"
+        );
     }
 }

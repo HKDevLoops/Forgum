@@ -27,11 +27,57 @@ pub trait Effect: Send + Sync {
     fn on_resize(&mut self, _cols: usize, _rows: usize) {}
 }
 
+/// Dynamically find where the cow art begins in a potentially composed scene.
+/// If a speech or thought bubble precedes the cow, returns the line index of the
+/// first line of cow art. If no bubble is present, returns 0.
+pub fn find_cow_start_line(text: &str) -> usize {
+    let lines: Vec<&str> = text.lines().collect();
+    if lines.is_empty() {
+        return 0;
+    }
+    let first = lines[0].trim();
+    // A speech or thought bubble starts with a top border of underscores, hyphens, or equals
+    if !(first.chars().all(|c| c == '_' || c == '-' || c == '=') && first.len() >= 3) {
+        return 0; // No bubble at top
+    }
+    // Find bottom border: starts and ends with '|' or '(' and contains border chars
+    let mut bottom_border_idx = None;
+    for (i, line) in lines.iter().enumerate().skip(1) {
+        let trimmed = line.trim();
+        if (trimmed.starts_with('|') && trimmed.ends_with('|') && trimmed.chars().all(|c| c == '|' || c == '_' || c == '-'))
+            || (trimmed.starts_with('(') && trimmed.ends_with(')') && trimmed.chars().all(|c| c == '(' || c == ')' || c == '_' || c == '-'))
+        {
+            bottom_border_idx = Some(i);
+            break;
+        }
+    }
+    let Some(b_idx) = bottom_border_idx else {
+        return 0;
+    };
+    // After bottom border, skip connector lines (lines that contain only whitespace and 'o' or '\' or '/')
+    let mut cow_start = b_idx + 1;
+    while cow_start < lines.len() {
+        let trimmed = lines[cow_start].trim();
+        if trimmed.is_empty()
+            || trimmed == "o"
+            || trimmed == "\\"
+            || trimmed == "/"
+            || trimmed == "o o"
+            || trimmed == "\\ \\"
+        {
+            cow_start += 1;
+        } else {
+            break;
+        }
+    }
+    cow_start
+}
+
 // ── Static (no animation) ──────────────────────────────────────────
 
 /// The Phase 0 static cow with keep-alive micro-animations (Phase 8.1).
-/// Even "static" cows get a subtle 1px breathing oscillation and periodic
-/// eye-blink to feel alive without consuming significant CPU.
+/// Firmly anchored at stagnant position (0, 0) with periodic eye-blink
+/// on the animal so speech bubbles never shift.
 #[derive(Debug)]
 pub struct StaticEffect {
     cow_text: String,
@@ -41,14 +87,25 @@ pub struct StaticEffect {
 
 impl StaticEffect {
     pub fn new(cow_text: String, color_mode: String) -> Self {
-        let blink_text = cow_text
-            .replace("oo", "--")
-            .replace("OO", "--")
-            .replace("xx", "--")
-            .replace("XX", "--")
-            .replace("@@", "--")
-            .replace("$$", "--")
-            .replace("00", "--");
+        let cow_start = find_cow_start_line(&cow_text);
+        let lines: Vec<&str> = cow_text.lines().collect();
+        let mut blink_lines = Vec::with_capacity(lines.len());
+        for (i, line) in lines.iter().enumerate() {
+            if i < cow_start {
+                blink_lines.push(line.to_string());
+            } else {
+                let replaced = line
+                    .replace("oo", "--")
+                    .replace("OO", "--")
+                    .replace("xx", "--")
+                    .replace("XX", "--")
+                    .replace("@@", "--")
+                    .replace("$$", "--")
+                    .replace("00", "--");
+                blink_lines.push(replaced);
+            }
+        }
+        let blink_text = blink_lines.join("\n");
         Self {
             cow_text,
             blink_text,
@@ -61,11 +118,7 @@ impl Effect for StaticEffect {
     fn update(&mut self, _dt: f32, _cols: usize, _rows: usize) {}
 
     fn render(&self, fb: &mut FrameBuffer, time: f32) {
-        // Phase 8.1: Subtle 1px vertical oscillation (~0.15 Hz breathing).
-        let breath = (time * 0.15 * std::f32::consts::TAU).sin();
-        let y_off = if breath > 0.3 { 1 } else { 0 };
-
-        // Phase 8.1: Periodic eye-blink (~every 4.5s, lasts 0.15s).
+        // Periodic eye-blink (~every 4.5s, lasts 0.15s).
         let blink_cycle = time % 4.5;
         let is_blinking = blink_cycle > 4.35;
 
@@ -75,12 +128,13 @@ impl Effect for StaticEffect {
             &self.cow_text
         };
 
+        // Strictly anchored at stagnant position (0, 0)
         render_text_offset(
             fb,
             display_text,
             Color::WHITE,
             0,
-            y_off,
+            0,
             &self.color_mode,
             time,
         );
@@ -89,10 +143,14 @@ impl Effect for StaticEffect {
 
 // ── Breathe ────────────────────────────────────────────────────────
 
-/// Subtle chest/belly expansion and contraction with anchored baseline.
+/// Subtle chest/belly expansion and contraction with anchored baseline at (0, 0).
+/// The thought/speech bubble stays completely stationary while the creature's
+/// flanks and eyes breathe organically in-place.
 #[derive(Debug)]
 pub struct BreatheEffect {
     cow_text: String,
+    line_offsets: Vec<usize>,
+    cow_start_line: usize,
     amp: Amplitude,
     easing_fn: fn(f32) -> f32,
     phase: f32,
@@ -103,8 +161,12 @@ pub struct BreatheEffect {
 impl BreatheEffect {
     pub fn new(cow_text: String, dna: &CowDna, instance_id: u32, color_mode: String) -> Self {
         let phase = instance_phase(dna.phase_seed, instance_id);
+        let line_offsets = compute_line_offsets(&cow_text);
+        let cow_start_line = find_cow_start_line(&cow_text);
         Self {
             cow_text,
+            line_offsets,
+            cow_start_line,
             amp: dna.amplitude.clone(),
             easing_fn: easing::by_name(&dna.easing.base),
             phase,
@@ -120,52 +182,109 @@ impl Effect for BreatheEffect {
     fn render(&self, fb: &mut FrameBuffer, time: f32) {
         let t = (time * self.speed + self.phase) % 1.0;
         let eased = (self.easing_fn)(t);
-        let y_offset = (eased * self.amp.breath * 3.0) as i32;
-        render_text_offset(
-            fb,
-            &self.cow_text,
-            Color::WHITE,
-            0,
-            y_offset,
-            &self.color_mode,
-            time,
-        );
+        let is_inhale = eased > 0.4;
+
+        // Eye-blink cycle (~every 3.8s)
+        let blink_cycle = (time * 0.26 + self.phase) % 1.0;
+        let is_blinking = blink_cycle < 0.04;
+
+        let mut y = 0usize;
+        for_each_line(&self.cow_text, &self.line_offsets, |line| {
+            let line = line.trim_end_matches(['\r', '\n']);
+            if y >= fb.height {
+                return;
+            }
+
+            // Speech/thought bubble lines: strictly anchored at (0, 0), completely untouched
+            if y < self.cow_start_line {
+                for (x, ch) in line.chars().enumerate() {
+                    if x < fb.width {
+                        let cell_fg = resolve_fg(&self.color_mode, x, y, time, Color::WHITE);
+                        let _ = fb.set(x, y, Cell::new(ch, cell_fg));
+                    }
+                }
+                y += 1;
+                return;
+            }
+
+            // Creature lines: subtle chest/flank breathing expansion in place
+            let chars: Vec<char> = line.chars().collect();
+            let mut x = 0usize;
+            while x < chars.len() && x < fb.width {
+                let mut ch = chars[x];
+
+                // Blink eyes: oo -> -- or OO -> --
+                if is_blinking && (ch == 'o' || ch == 'O') && x + 1 < chars.len() && chars[x + 1] == ch {
+                    let cell_fg = resolve_fg(&self.color_mode, x, y, time, Color::WHITE);
+                    let _ = fb.set(x, y, Cell::new('-', cell_fg));
+                    if x + 1 < fb.width {
+                        let _ = fb.set(x + 1, y, Cell::new('-', cell_fg));
+                    }
+                    x += 2;
+                    continue;
+                }
+
+                // Inhale breathing wave on torso/flank lines:
+                if is_inhale && self.amp.breath > 0.05 {
+                    if ch == '_' && (line.contains("___") || line.contains("__")) {
+                        ch = '~';
+                    } else if ch == '-' && (line.contains("---") || line.contains("--")) {
+                        ch = '=';
+                    }
+                }
+
+                let cell_fg = resolve_fg(&self.color_mode, x, y, time, Color::WHITE);
+                let _ = fb.set(x, y, Cell::new(ch, cell_fg));
+                x += 1;
+            }
+            y += 1;
+        });
     }
 }
 
 // ── Float / Bob ────────────────────────────────────────────────────
 
-/// Whole-art vertical/horizontal drift.
+/// Whole-art hovering floating effect with anchored position at (0, 0).
+/// The thought/speech bubble stays completely stationary while the creature
+/// hovers with a subtle levitation shimmer in place.
 #[derive(Debug)]
 pub struct FloatEffect {
     cow_text: String,
+    line_offsets: Vec<usize>,
+    cow_start_line: usize,
     amp: Amplitude,
     easing_fn: fn(f32) -> f32,
     phase: f32,
     speed: f32,
     color_mode: String,
-    body: crate::kinematics::KinematicBody,
+    pub body: crate::kinematics::KinematicBody,
     elapsed: f32,
 }
 
 impl FloatEffect {
     pub fn new(cow_text: String, dna: &CowDna, instance_id: u32, color_mode: String) -> Self {
         let phase = instance_phase(dna.phase_seed, instance_id);
+        let line_offsets = compute_line_offsets(&cow_text);
+        let cow_start_line = find_cow_start_line(&cow_text);
         let (w, h) = crate::kinematics::ascii_dimensions(&cow_text);
-        let body = crate::kinematics::KinematicBody::new(
+        let mut body = crate::kinematics::KinematicBody::new(
             w,
             h,
             crate::kinematics::BoundsMode::Lissajous {
-                amp_x: dna.amplitude.sway * 6.0,
-                amp_y: dna.amplitude.float * 3.0,
-                freq_x: dna.speed * 0.25,
-                freq_y: dna.speed * 0.35,
+                amp_x: 0.0,
+                amp_y: 0.0,
+                freq_x: 0.0,
+                freq_y: 0.0,
                 phase_x: phase,
-                phase_y: phase + std::f32::consts::FRAC_PI_4,
+                phase_y: phase,
             },
         );
+        body.vx = 0.0;
+        body.vy = 0.0;
         Self {
             cow_text,
+            line_offsets,
+            cow_start_line,
             amp: dna.amplitude.clone(),
             easing_fn: easing::by_name(&dna.easing.base),
             phase,
@@ -184,24 +303,65 @@ impl Effect for FloatEffect {
     }
 
     fn render(&self, fb: &mut FrameBuffer, time: f32) {
-        let (x_off, y_off) = if self.elapsed > 0.0 {
-            (self.body.screen_x(), self.body.screen_y())
-        } else {
-            let t = (time * self.speed + self.phase) % 1.0;
-            let intensity = (self.easing_fn)(t);
-            let x = ((intensity * self.amp.sway * 4.0) as i32) - 2;
-            let y = ((intensity * self.amp.float * 3.0) as i32) - 1;
-            (x, y)
-        };
-        render_text_offset(
-            fb,
-            &self.cow_text,
-            Color::WHITE,
-            x_off,
-            y_off,
-            &self.color_mode,
-            time,
-        );
+        let t = (time * self.speed + self.phase) % 1.0;
+        let hover_intensity = (self.easing_fn)(t);
+        let hover_pulse = hover_intensity > 0.5;
+
+        // Periodic eye-blink:
+        let blink_cycle = (time * 0.24 + self.phase) % 1.0;
+        let is_blinking = blink_cycle < 0.04;
+
+        let mut y = 0usize;
+        for_each_line(&self.cow_text, &self.line_offsets, |line| {
+            let line = line.trim_end_matches(['\r', '\n']);
+            if y >= fb.height {
+                return;
+            }
+
+            // Speech/thought bubble: strictly anchored at (0, 0), completely untouched
+            if y < self.cow_start_line {
+                for (x, ch) in line.chars().enumerate() {
+                    if x < fb.width {
+                        let cell_fg = resolve_fg(&self.color_mode, x, y, time, Color::WHITE);
+                        let _ = fb.set(x, y, Cell::new(ch, cell_fg));
+                    }
+                }
+                y += 1;
+                return;
+            }
+
+            // Creature lines: gentle hovering shimmer in place
+            let chars: Vec<char> = line.chars().collect();
+            let mut x = 0usize;
+            while x < chars.len() && x < fb.width {
+                let mut ch = chars[x];
+
+                // Blink eyes:
+                if is_blinking && (ch == 'o' || ch == 'O') && x + 1 < chars.len() && chars[x + 1] == ch {
+                    let cell_fg = resolve_fg(&self.color_mode, x, y, time, Color::WHITE);
+                    let _ = fb.set(x, y, Cell::new('-', cell_fg));
+                    if x + 1 < fb.width {
+                        let _ = fb.set(x + 1, y, Cell::new('-', cell_fg));
+                    }
+                    x += 2;
+                    continue;
+                }
+
+                // Hovering levitation shimmer on horns/ears or back:
+                if hover_pulse && (self.amp.float > 0.0 || self.amp.sway > 0.0) {
+                    if ch == '^' {
+                        ch = '*';
+                    } else if ch == '~' {
+                        ch = '-';
+                    }
+                }
+
+                let cell_fg = resolve_fg(&self.color_mode, x, y, time, Color::WHITE);
+                let _ = fb.set(x, y, Cell::new(ch, cell_fg));
+                x += 1;
+            }
+            y += 1;
+        });
     }
 }
 
@@ -257,7 +417,8 @@ impl WalkEffect {
         let mut mouth_pos: Option<(usize, usize)> = None;
         let mut tail_pos: Option<(usize, usize)> = None;
 
-        let search_start = leg_line_idx.saturating_sub(6);
+        let cow_start = find_cow_start_line(&cow_text);
+        let search_start = leg_line_idx.saturating_sub(6).max(cow_start);
         for (i, line) in lines.iter().enumerate().skip(search_start) {
             // 1. Detect eyes: (oo), (@@), (XX), (..), etc.
             if eye_pos.is_none() {
@@ -563,8 +724,12 @@ pub struct GlitchEffect {
 impl GlitchEffect {
     pub fn new(cow_text: String, dna: &CowDna, instance_id: u32, color_mode: String) -> Self {
         let phase = instance_phase(dna.phase_seed, instance_id);
+        let cow_start = find_cow_start_line(&cow_text);
         let mut body_coords = Vec::new();
         for (y, line) in cow_text.lines().enumerate() {
+            if y < cow_start {
+                continue; // Bubble characters must never be glitched
+            }
             for (x, ch) in line.chars().enumerate() {
                 if !ch.is_whitespace() {
                     body_coords.push((x, y));
@@ -611,29 +776,36 @@ impl Effect for GlitchEffect {
     }
 }
 
-/// Fast erratic float + wing flap + continuous flight traversal across terminal pasture.
+/// In-place hovering flight with flapping wings, stationary at stagnant position (0, 0).
 #[derive(Debug)]
 pub struct FlyEffect {
     cow_text: String,
-    amp: Amplitude,
-    easing_fn: fn(f32) -> f32,
+    line_offsets: Vec<usize>,
+    cow_start_line: usize,
+    _amp: Amplitude,
+    _easing_fn: fn(f32) -> f32,
     phase: f32,
     speed: f32,
     color_mode: String,
-    body: crate::kinematics::KinematicBody,
+    pub body: crate::kinematics::KinematicBody,
     elapsed: f32,
 }
 
 impl FlyEffect {
     pub fn new(cow_text: String, dna: &CowDna, instance_id: u32, color_mode: String) -> Self {
         let phase = instance_phase(dna.phase_seed, instance_id);
+        let line_offsets = compute_line_offsets(&cow_text);
+        let cow_start_line = find_cow_start_line(&cow_text);
         let (w, h) = crate::kinematics::ascii_dimensions(&cow_text);
         let mut body = crate::kinematics::KinematicBody::new(w, h, crate::kinematics::BoundsMode::Wrap);
-        body.vx = (dna.speed * 12.0).clamp(6.0, 32.0);
+        body.vx = 0.0;
+        body.vy = 0.0;
         Self {
             cow_text,
-            amp: dna.amplitude.clone(),
-            easing_fn: easing::by_name(&dna.easing.base),
+            line_offsets,
+            cow_start_line,
+            _amp: dna.amplitude.clone(),
+            _easing_fn: easing::by_name(&dna.easing.base),
             phase,
             speed: dna.speed,
             color_mode,
@@ -650,48 +822,82 @@ impl Effect for FlyEffect {
     }
 
     fn render(&self, fb: &mut FrameBuffer, time: f32) {
-        let t = (time * self.speed + self.phase) % 1.0;
-        let intensity = (self.easing_fn)(t);
-        let (x_off, y_off) = if self.elapsed > 0.0 {
-            let x = self.body.screen_x();
-            let y_swoop = ((time * std::f32::consts::TAU * 1.5).sin() * self.amp.float * 3.0
-                + (intensity * 2.0 - 1.0)) as i32;
-            (x, y_swoop.max(0))
-        } else {
-            let x = ((t * std::f32::consts::TAU * 3.0).sin() * self.amp.sway * 5.0) as i32;
-            let y = ((t * std::f32::consts::TAU * 2.0).cos() * self.amp.float * 3.0
-                + (intensity * 2.0 - 1.0)) as i32;
-            (x, y)
-        };
-        render_text_offset(
-            fb,
-            &self.cow_text,
-            Color::WHITE,
-            x_off,
-            y_off,
-            &self.color_mode,
-            time,
-        );
-        // Wing flap indicator near top
-        let flap_ch = if (time * 12.0) as i32 % 2 == 0 {
-            '~'
-        } else {
-            '^'
-        };
-        if fb.height > 0 && fb.width > 2 {
-            let cell_fg = resolve_fg(&self.color_mode, 1, 0, time, Color::WHITE);
-            let _ = fb.set(1, 0, Cell::new(flap_ch, cell_fg));
-        }
+        // 2-phase in-place wing flap cycle:
+        let flap_cycle = ((time * self.speed * 8.0) as usize) % 2;
+        let is_upstroke = flap_cycle == 0;
+
+        // Periodic eye-blink:
+        let blink_cycle = (time * 0.28 + self.phase) % 1.0;
+        let is_blinking = blink_cycle < 0.04;
+
+        let mut y = 0usize;
+        for_each_line(&self.cow_text, &self.line_offsets, |line| {
+            let line = line.trim_end_matches(['\r', '\n']);
+            if y >= fb.height {
+                return;
+            }
+
+            // Speech/thought bubble: strictly anchored at (0, 0), completely untouched
+            if y < self.cow_start_line {
+                for (x, ch) in line.chars().enumerate() {
+                    if x < fb.width {
+                        let cell_fg = resolve_fg(&self.color_mode, x, y, time, Color::WHITE);
+                        let _ = fb.set(x, y, Cell::new(ch, cell_fg));
+                    }
+                }
+                y += 1;
+                return;
+            }
+
+            // Creature lines: flap wings/horns in place and blink eyes
+            let chars: Vec<char> = line.chars().collect();
+            let mut x = 0usize;
+            while x < chars.len() && x < fb.width {
+                let mut ch = chars[x];
+
+                // Eye blinking:
+                if is_blinking && (ch == 'o' || ch == 'O') && x + 1 < chars.len() && chars[x + 1] == ch {
+                    let cell_fg = resolve_fg(&self.color_mode, x, y, time, Color::WHITE);
+                    let _ = fb.set(x, y, Cell::new('-', cell_fg));
+                    if x + 1 < fb.width {
+                        let _ = fb.set(x + 1, y, Cell::new('-', cell_fg));
+                    }
+                    x += 2;
+                    continue;
+                }
+
+                // In-place wing flap:
+                if is_upstroke {
+                    if ch == 'v' {
+                        ch = '^';
+                    } else if ch == '~' {
+                        ch = '-';
+                    }
+                } else {
+                    if ch == '^' {
+                        ch = 'v';
+                    } else if ch == '-' {
+                        ch = '~';
+                    }
+                }
+
+                let cell_fg = resolve_fg(&self.color_mode, x, y, time, Color::WHITE);
+                let _ = fb.set(x, y, Cell::new(ch, cell_fg));
+                x += 1;
+            }
+            y += 1;
+        });
     }
 }
 
 // ── Talk / Chew ────────────────────────────────────────────────────
 
-/// Mouth + eye region animation.
+/// Mouth + eye region animation on animal only (thought/speech bubble preserved verbatim).
 #[derive(Debug)]
 pub struct TalkEffect {
     cow_text: String,
     line_offsets: Vec<usize>,
+    cow_start_line: usize,
     _amp: Amplitude,
     easing_fn: fn(f32) -> f32,
     phase: f32,
@@ -703,9 +909,11 @@ impl TalkEffect {
     pub fn new(cow_text: String, dna: &CowDna, instance_id: u32, color_mode: String) -> Self {
         let phase = instance_phase(dna.phase_seed, instance_id);
         let line_offsets = compute_line_offsets(&cow_text);
+        let cow_start_line = find_cow_start_line(&cow_text);
         Self {
             cow_text,
             line_offsets,
+            cow_start_line,
             _amp: dna.amplitude.clone(),
             easing_fn: easing::by_name(&dna.easing.base),
             phase,
@@ -731,6 +939,20 @@ impl Effect for TalkEffect {
             if y >= fb.height {
                 return;
             }
+
+            // Speech/thought bubble lines: preserve characters verbatim!
+            if y < self.cow_start_line {
+                for (x, ch) in line.chars().enumerate() {
+                    if x < fb.width {
+                        let cell_fg = resolve_fg(&self.color_mode, x, y, time, Color::WHITE);
+                        let _ = fb.set(x, y, Cell::new(ch, cell_fg));
+                    }
+                }
+                y += 1;
+                return;
+            }
+
+            // Animal body lines: animate mouth characters
             for (x, ch) in line.chars().enumerate() {
                 if x >= fb.width {
                     break;
@@ -749,11 +971,12 @@ impl Effect for TalkEffect {
 
 // ── Sway / Pendulum ────────────────────────────────────────────────
 
-/// Top-half skew, bottom anchored.
+/// Progressive sway with anchored bottom and unskewed speech/thought bubble at (0, 0).
 #[derive(Debug)]
 pub struct SwayEffect {
     cow_text: String,
     line_offsets: Vec<usize>,
+    cow_start_line: usize,
     amp: Amplitude,
     easing_fn: fn(f32) -> f32,
     phase: f32,
@@ -765,9 +988,11 @@ impl SwayEffect {
     pub fn new(cow_text: String, dna: &CowDna, instance_id: u32, color_mode: String) -> Self {
         let phase = instance_phase(dna.phase_seed, instance_id);
         let line_offsets = compute_line_offsets(&cow_text);
+        let cow_start_line = find_cow_start_line(&cow_text);
         Self {
             cow_text,
             line_offsets,
+            cow_start_line,
             amp: dna.amplitude.clone(),
             easing_fn: easing::by_name(&dna.easing.base),
             phase,
@@ -784,16 +1009,29 @@ impl Effect for SwayEffect {
         let t = (time * self.speed + self.phase) % 1.0;
         let eased = (self.easing_fn)(t);
         let total_lines = self.line_offsets.len().max(1);
+        let cow_lines = total_lines.saturating_sub(self.cow_start_line).max(1);
+
         let mut i = 0usize;
         for_each_line(&self.cow_text, &self.line_offsets, |line| {
             let line = line.trim_end_matches(['\r', '\n']);
-            // Progressive skew: top = max, bottom = 0
-            let skew_factor = 1.0 - (i as f32 / total_lines as f32);
-            let x_off = ((eased * self.amp.sway * 4.0 - 2.0) * skew_factor) as i32;
+            if i >= fb.height {
+                return;
+            }
+
+            // Speech/thought bubble: STRICTLY anchored at x_off = 0! NEVER skewed or shifted!
+            let x_off = if i < self.cow_start_line {
+                0
+            } else {
+                let rel_i = i - self.cow_start_line;
+                // Progressive skew on the creature itself: top of creature = max, bottom feet = 0
+                let skew_factor = 1.0 - (rel_i as f32 / cow_lines as f32);
+                ((eased * self.amp.sway * 4.0 - 2.0) * skew_factor) as i32
+            };
+
             let mut x = 0usize;
             for ch in line.chars() {
                 let xi = x as i32 + x_off;
-                if i < fb.height && xi >= 0 {
+                if xi >= 0 {
                     let xi = xi as usize;
                     if xi < fb.width {
                         let cell_fg = resolve_fg(&self.color_mode, xi, i, time, Color::WHITE);
@@ -809,11 +1047,12 @@ impl Effect for SwayEffect {
 
 // ── Dissolve ───────────────────────────────────────────────────────
 
-/// Break art into falling chars, reassemble.
+/// Break art into falling chars, reassemble, with speech bubble preserved at (0, 0).
 #[derive(Debug)]
 pub struct DissolveEffect {
     cow_text: String,
     line_ranges: Vec<(usize, usize)>,
+    cow_start_line: usize,
     _easing_fn: fn(f32) -> f32,
     phase: f32,
     speed: f32,
@@ -825,6 +1064,7 @@ pub struct DissolveEffect {
 impl DissolveEffect {
     pub fn new(cow_text: String, dna: &CowDna, instance_id: u32, color_mode: String) -> Self {
         let phase = instance_phase(dna.phase_seed, instance_id);
+        let cow_start_line = find_cow_start_line(&cow_text);
         let line_ranges: Vec<(usize, usize)> = cow_text
             .lines()
             .map(|line| {
@@ -836,7 +1076,7 @@ impl DissolveEffect {
         for (y, &(start, len)) in line_ranges.iter().enumerate() {
             let line = &cow_text[start..start + len];
             for (x, ch) in line.chars().enumerate() {
-                if ch == ' ' {
+                if ch == ' ' || y < cow_start_line {
                     scatter_offsets.push((f32::MAX, f32::MAX));
                     continue;
                 }
@@ -849,6 +1089,7 @@ impl DissolveEffect {
         Self {
             cow_text,
             line_ranges,
+            cow_start_line,
             _easing_fn: easing::by_name(&dna.easing.base),
             phase,
             speed: dna.speed,
@@ -876,6 +1117,10 @@ impl Effect for DissolveEffect {
                 let (dx_base, dy_base) = self.scatter_offsets[offset_idx];
                 offset_idx += 1;
                 if dx_base == f32::MAX && dy_base == f32::MAX {
+                    if y < self.cow_start_line && ch != ' ' && y < fb.height && x < fb.width {
+                        let cell_fg = resolve_fg(&self.color_mode, x, y, time, Color::WHITE);
+                        let _ = fb.set(x, y, Cell::new(ch, cell_fg));
+                    }
                     continue;
                 }
                 let dx = dx_base * scatter;
@@ -1410,7 +1655,7 @@ mod tests {
     // ── BreatheEffect ─────────────────────────────────────────────
 
     #[test]
-    fn breathe_at_different_times_produces_different_offsets() {
+    fn breathe_remains_anchored_at_stagnant_position() {
         let mut dna = CowDna::default();
         dna.amplitude.breath = 5.0;
         dna.speed = 1.0;
@@ -1420,7 +1665,7 @@ mod tests {
         let mut fb1 = FrameBuffer::new(80, 24);
         effect.render(&mut fb0, 0.0);
         fb0.swap();
-        effect.render(&mut fb1, 0.75);
+        effect.render(&mut fb1, 0.5);
         fb1.swap();
 
         // Find the first non-space cell in each frame
@@ -1439,15 +1684,17 @@ mod tests {
         let pos0 = find_first_char(&fb0);
         let pos1 = find_first_char(&fb1);
         assert!(pos0.is_some(), "breathe at t=0 must render something");
-        assert!(pos1.is_some(), "breathe at t=0.75 must render something");
+        assert!(pos1.is_some(), "breathe at t=0.5 must render something");
 
-        // The Y position should differ due to breath amplitude
+        // The baseline must remain anchored at stagnant position (0, 0), never hopping Y rows
         let (_, y0, _) = pos0.unwrap();
         let (_, y1, _) = pos1.unwrap();
-        assert_ne!(
-            y0, y1,
-            "breathe Y offset should differ between t=0 and t=0.75 (amplitude=5.0)"
-        );
+        assert_eq!(y0, 0, "breathe baseline must remain anchored at row 0");
+        assert_eq!(y1, 0, "breathe baseline must remain anchored at row 0");
+
+        // Flank/chest character breathes organically between resting ('_') and inhale ('~')
+        assert_eq!(fb0.get(3, 0).ch, '_');
+        assert_eq!(fb1.get(3, 0).ch, '~');
     }
 
     #[test]
@@ -1501,7 +1748,9 @@ mod tests {
 
     #[test]
     fn breathe_instance_phase_offsets_multiple_instances() {
-        let dna = CowDna::default();
+        let mut dna = CowDna::default();
+        dna.amplitude.breath = 1.0;
+        dna.speed = 1.0;
         let e0 = BreatheEffect::new(COW.to_string(), &dna, 0, "static".to_string());
         let e1 = BreatheEffect::new(COW.to_string(), &dna, 1, "static".to_string());
 
@@ -1512,28 +1761,15 @@ mod tests {
         e1.render(&mut fb1, 0.3);
         fb1.swap();
 
-        // Two instances with different IDs should render at different offsets
-        let find_y = |fb: &FrameBuffer| -> usize {
-            for y in 0..fb.height {
-                for x in 0..fb.width {
-                    if fb.get(x, y).ch != ' ' {
-                        return y;
-                    }
-                }
-            }
-            fb.height
-        };
-        assert_ne!(
-            find_y(&fb0),
-            find_y(&fb1),
-            "different instance_ids should produce different Y offsets"
-        );
+        // Both instances remain anchored at row 0 (no bouncing)
+        assert_eq!(fb0.get(2, 0).ch, '^');
+        assert_eq!(fb1.get(2, 0).ch, '^');
     }
 
     // ── FloatEffect ───────────────────────────────────────────────
 
     #[test]
-    fn float_produces_horizontal_and_vertical_drift() {
+    fn float_remains_anchored_at_stagnant_position() {
         let mut dna = CowDna::default();
         dna.amplitude.sway = 3.0;
         dna.amplitude.float = 3.0;
@@ -1560,13 +1796,9 @@ mod tests {
 
         let p0 = find_first(&fb0).expect("float t=0 must render");
         let p1 = find_first(&fb1).expect("float t=0.75 must render");
-        // Position should differ in at least one axis
-        assert!(
-            p0.0 != p1.0 || p0.1 != p1.1,
-            "float position should differ: t=0 at {:?}, t=0.75 at {:?}",
-            p0,
-            p1
-        );
+        // Position must remain firmly anchored at stagnant position (2, 0)
+        assert_eq!(p0, (2, 0), "float t=0 must be anchored at (2, 0)");
+        assert_eq!(p1, (2, 0), "float t=0.75 must be anchored at (2, 0)");
     }
 
     // ── WalkEffect ────────────────────────────────────────────────
@@ -1643,7 +1875,7 @@ mod tests {
     }
 
     #[test]
-    fn fly_translates_across_terminal() {
+    fn fly_remains_stationary_at_stagnant_position() {
         let dna = CowDna::default();
         let mut effect = FlyEffect::new(COW.to_string(), &dna, 0, "static".to_string());
         let mut fb = FrameBuffer::new(80, 24);
@@ -1651,13 +1883,16 @@ mod tests {
         assert_eq!(effect.body.screen_x(), 0);
 
         effect.update(1.0, 80, 24);
-        assert!(effect.body.screen_x() > 0, "fly must translate forward along X axis");
+        assert_eq!(
+            effect.body.screen_x(),
+            0,
+            "fly must remain stationary at stagnant position"
+        );
 
         effect.render(&mut fb, 1.0);
         fb.swap();
 
-        let initial_x = effect.body.screen_x() as usize;
-        assert_eq!(fb.get(initial_x + 2, 0).ch, '^');
+        assert_eq!(fb.get(2, 0).ch, '^');
     }
 
     // ── GlitchEffect ──────────────────────────────────────────────
@@ -1713,11 +1948,11 @@ mod tests {
         effect.render(&mut fb, 0.0);
         fb.swap();
 
-        // FlyEffect sets (1,0) to '~' or '^' as wing flap
-        let ch = fb.get(1, 0).ch;
+        // In-place wing flap on creature wing/horn character
+        let ch = fb.get(2, 0).ch;
         assert!(
-            ch == '~' || ch == '^',
-            "fly wing flap at (1,0) must be '~' or '^', got '{ch}'"
+            ch == '^' || ch == 'v',
+            "fly wing flap on creature must be '^' or 'v', got '{ch}'"
         );
     }
 
@@ -1728,21 +1963,17 @@ mod tests {
         let e2 = FlyEffect::new(COW.to_string(), &dna, 0, "static".to_string());
         let mut fb1 = FrameBuffer::new(80, 24);
         let mut fb2 = FrameBuffer::new(80, 24);
+        // t=0.0 is upstroke ('^'), t=0.15 is downstroke ('v')
         e1.render(&mut fb1, 0.0);
         fb1.swap();
-        e2.render(&mut fb2, 0.05);
+        e2.render(&mut fb2, 0.15);
         fb2.swap();
-        // (time * 12.0) as i32 % 2 toggles between 0 and 1
-        // at t=0: 0 % 2 = 0 => '~'; at t=0.05: (0.6) as i32 = 0 => '~' still
-        // need enough time delta to toggle: t=0.1 => (1.2) as i32 = 1 => '^'
-        let e3 = FlyEffect::new(COW.to_string(), &dna, 0, "static".to_string());
-        let mut fb3 = FrameBuffer::new(80, 24);
-        e3.render(&mut fb3, 0.1);
-        fb3.swap();
+        assert_eq!(fb1.get(2, 0).ch, '^');
+        assert_eq!(fb2.get(2, 0).ch, 'v');
         assert_ne!(
-            fb1.get(1, 0).ch,
-            fb3.get(1, 0).ch,
-            "wing flap should toggle between frames"
+            fb1.get(2, 0).ch,
+            fb2.get(2, 0).ch,
+            "wing flap must toggle between upstroke and downstroke in place"
         );
     }
 
@@ -2050,7 +2281,7 @@ mod tests {
         e_slow.render(&mut fb_slow, 0.25);
         fb_slow.swap();
 
-        // Different DNA should produce different visual output
+        // Different DNA should produce different visual output while remaining anchored at row 0
         let find_y = |fb: &FrameBuffer| -> usize {
             for y in 0..fb.height {
                 for x in 0..fb.width {
@@ -2061,10 +2292,12 @@ mod tests {
             }
             fb.height
         };
+        assert_eq!(find_y(&fb_fast), 0, "fast DNA must be anchored at row 0");
+        assert_eq!(find_y(&fb_slow), 0, "slow DNA must be anchored at row 0");
         assert_ne!(
-            find_y(&fb_fast),
-            find_y(&fb_slow),
-            "different DNA (speed/amplitude) should produce different Y offsets"
+            fb_fast.get(3, 0).ch,
+            fb_slow.get(3, 0).ch,
+            "different DNA (speed/amplitude) should produce different breathing phase characters"
         );
     }
 
@@ -2192,13 +2425,14 @@ mod tests {
         );
         fb.swap();
 
+        let mut fb_float = FrameBuffer::new(40, 10);
         let effect = FloatEffect::new(COW.to_string(), &dna, 0, "static".to_string());
-        effect.render(&mut fb, 999.0);
+        effect.render(&mut fb_float, 999.0);
         assert!(
-            !fb.compute_damage().is_empty(),
+            !fb_float.compute_damage().is_empty(),
             "float at extreme time should still produce damage (non-space cells)"
         );
-        fb.swap();
+        fb_float.swap();
     }
 
     // ── Invariants: render count ───────────────────────────────────
@@ -2348,5 +2582,103 @@ mod tests {
             actual_count += 1;
         });
         assert_eq!(actual_count, expected_count);
+    }
+
+    // ── Stagnant Position & Bubble Preservation Tests ─────────────
+
+    #[test]
+    fn find_cow_start_line_detects_bubbles_correctly() {
+        let cow_raw = "   ^__^\n   (oo)\\_______\n   (__)\\       )\\/\\";
+        // 1. Without bubble
+        assert_eq!(find_cow_start_line(cow_raw), 0);
+
+        // 2. With speech bubble
+        let speech_scene = crate::cow::compose_scene_with_mode(cow_raw, "Hello", false);
+        let speech_start = find_cow_start_line(&speech_scene);
+        assert!(speech_start > 0, "speech scene must detect bubble lines");
+        let lines: Vec<&str> = speech_scene.lines().collect();
+        assert!(lines[speech_start].contains("^__^"));
+
+        // 3. With thought bubble
+        let thought_scene = crate::cow::compose_scene_with_mode(cow_raw, "Thinking", true);
+        let thought_start = find_cow_start_line(&thought_scene);
+        assert!(thought_start > 0, "thought scene must detect bubble lines");
+        let lines_t: Vec<&str> = thought_scene.lines().collect();
+        assert!(lines_t[thought_start].contains("^__^"));
+    }
+
+    #[test]
+    fn all_effects_maintain_stagnant_position_and_unmoved_speech_bubble() {
+        let cow_raw = "   ^__^\n   (oo)\\_______\n   (__)\\       )\\/\\\n       ||----w |\n       ||     ||";
+        let scene = crate::cow::compose_scene_with_mode(cow_raw, "Forgum In-Place Animation", true);
+        let effects_to_test = [
+            "static",
+            "breathe",
+            "float",
+            "walk",
+            "particles",
+            "pulse",
+            "glitch",
+            "fly",
+            "talk",
+            "sway",
+            "dissolve",
+            "default",
+        ];
+
+        let dna = CowDna::default();
+
+        for effect_name in effects_to_test {
+            let mut eff = create_scene_effect(effect_name, scene.clone(), dna.clone(), 0, "solid");
+            let mut fb0 = FrameBuffer::new(80, 24);
+            let mut fb1 = FrameBuffer::new(80, 24);
+
+            // Render at t=0.0
+            eff.render(&mut fb0, 0.0);
+            fb0.swap();
+
+            // Advance time and update
+            eff.update(0.5, 80, 24);
+            eff.render(&mut fb1, 0.5);
+            fb1.swap();
+
+            // The speech/thought bubble top border is at row 0:
+            // It MUST remain at row 0 in both frames with no hopping or shifting
+            assert_eq!(
+                fb0.get(2, 0).ch,
+                '_',
+                "{effect_name}: bubble top border at (2,0) must be '_' at t=0"
+            );
+            assert_eq!(
+                fb1.get(2, 0).ch,
+                '_',
+                "{effect_name}: bubble top border at (2,0) must be '_' at t=0.5 (must not hop or shift)"
+            );
+
+            // Row 1 contains bubble content "( Forgum In-Place Animation )"
+            // The opening '(' must stay firmly at (0, 1)
+            assert_eq!(
+                fb0.get(0, 1).ch,
+                '(',
+                "{effect_name}: bubble border at (0,1) must be '(' at t=0"
+            );
+            assert_eq!(
+                fb1.get(0, 1).ch,
+                '(',
+                "{effect_name}: bubble border at (0,1) must be '(' at t=0.5 (must not skew or move)"
+            );
+
+            // The 'F' in "Forgum" must stay at (2, 1) and NOT be corrupted or moved
+            assert_eq!(
+                fb0.get(2, 1).ch,
+                'F',
+                "{effect_name}: bubble text at (2,1) must be 'F' at t=0"
+            );
+            assert_eq!(
+                fb1.get(2, 1).ch,
+                'F',
+                "{effect_name}: bubble text at (2,1) must be 'F' at t=0.5"
+            );
+        }
     }
 }

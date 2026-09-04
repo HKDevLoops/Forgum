@@ -160,7 +160,9 @@ impl SimState {
         self.effect.render(&mut self.fb, self.elapsed);
 
         // Compute damage against the previous front buffer (BEFORE swap clears it).
-        let damage = self.fb.compute_damage().to_vec();
+        // compute_full_damage() includes both newly modified cells and cells vacated/cleared
+        // from the previous frame, ensuring AnsiRenderer writes spaces to erase them with zero ghost residue.
+        let damage = self.fb.compute_full_damage();
         self.scheduler.observe(damage.len());
 
         // Swap buffers: front ← back (just-rendered), back ← front (previous).
