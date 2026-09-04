@@ -1,4 +1,25 @@
 {
+  "default": {
+    "base": "Walk",
+    "speed": 1.0,
+    "amplitude": {
+      "breath": 0.3,
+      "sway": 0.2,
+      "float": 0.0
+    },
+    "palette": [
+      "#ffffff"
+    ],
+    "easing": {
+      "base": "linear"
+    },
+    "phase_seed": 1001,
+    "glow": {
+      "color": "#ffffff",
+      "radius": 0.0,
+      "falloff": "none"
+    }
+  },
   "armadillo": {
     "base": "Walk",
     "speed": 1.0,

@@ -293,7 +293,8 @@ impl WalkEffect {
 
         let (w, h) = crate::kinematics::ascii_dimensions(&cow_text);
         let mut body = crate::kinematics::KinematicBody::new(w, h, crate::kinematics::BoundsMode::Wrap);
-        body.vx = (dna.speed * 6.0).clamp(3.0, 16.0);
+        body.vx = 0.0;
+        body.vy = 0.0;
 
         Self {
             cow_text,
@@ -320,11 +321,7 @@ impl Effect for WalkEffect {
     }
 
     fn render(&self, fb: &mut FrameBuffer, time: f32) {
-        let stride = if self.body.x.abs() > 0.001 {
-            self.body.stride_phase(2.0)
-        } else {
-            (time * self.speed + self.phase) % 1.0
-        };
+        let stride = (time * self.speed + self.phase) % 1.0;
 
         // 4-phase natural leg stride coupling using clean ASCII:
         let (leg_l, leg_r) = if stride < 0.25 || (stride >= 0.50 && stride < 0.75) {
@@ -383,9 +380,9 @@ impl Effect for WalkEffect {
                 if let Some((tail_row, tail_col)) = self.tail_pos {
                     if y == tail_row && x == tail_col && i + 4 <= line_chars.len() {
                         let swish = match tail_frame {
-                            1 => [')', '/', '\\', '/'],
-                            2 => [')', ' ', '\\', '/'],
-                            3 => [')', '/', '\\', '/'],
+                            1 => [')', '|', '/', '\\'],
+                            2 => [')', '/', '\\', '/'],
+                            3 => [')', '|', '\\', '/'],
                             _ => [')', '\\', '/', '\\'],
                         };
                         for (k, &sc) in swish.iter().enumerate() {
@@ -1625,7 +1622,7 @@ mod tests {
     }
 
     #[test]
-    fn walk_translates_across_terminal() {
+    fn walk_remains_stationary_at_stagnant_position() {
         let dna = CowDna::default();
         let mut effect = WalkEffect::new(COW.to_string(), &dna, 0, "static".to_string());
         let mut fb = FrameBuffer::new(80, 24);
@@ -1633,13 +1630,16 @@ mod tests {
         assert_eq!(effect.body.screen_x(), 0);
 
         effect.update(1.0, 80, 24);
-        assert!(effect.body.screen_x() > 0, "walk must translate forward along X axis");
+        assert_eq!(
+            effect.body.screen_x(),
+            0,
+            "walk must remain stationary at stagnant position"
+        );
 
         effect.render(&mut fb, 1.0);
         fb.swap();
 
-        let initial_x = effect.body.screen_x() as usize;
-        assert_eq!(fb.get(initial_x + 2, 0).ch, '^');
+        assert_eq!(fb.get(2, 0).ch, '^');
     }
 
     #[test]

@@ -573,6 +573,25 @@ mod tests {
     }
 
     #[test]
+    fn damage_detects_erased_cells_preventing_ghost_residue() {
+        let mut fb = FrameBuffer::new(4, 4);
+        // Frame 1: draw character at (2, 2)
+        fb.set(2, 2, Cell::new('x', Color::WHITE));
+        fb.swap();
+        // Frame 2: clear back buffer (cow moves or character disappears)
+        fb.clear();
+        // Cow draws at (1, 1), and explicitly sets (2, 2) to empty space
+        fb.set(1, 1, Cell::new('y', Color::WHITE));
+        fb.set(2, 2, Cell::empty());
+
+        let dmg = fb.compute_damage();
+        // BOTH the new cell (1, 1) and the erased cell (2, 2) must be in damage!
+        assert!(dmg.contains(&(1, 1)), "new cell must be damaged");
+        assert!(dmg.contains(&(2, 2)), "erased cell must be damaged so renderer clears it with space");
+        assert_eq!(dmg.len(), 2);
+    }
+
+    #[test]
     fn damage_after_set_and_swap() {
         let mut fb = FrameBuffer::new(4, 4);
         fb.set(1, 1, Cell::new('a', Color::WHITE));

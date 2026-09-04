@@ -14,9 +14,9 @@ use serde::Deserialize;
 #[serde(rename_all = "PascalCase")]
 pub enum BaseAnim {
     #[default]
+    Walk,
     Breathe,
     Float,
-    Walk,
     Particles,
     Pulse,
     Glitch,
@@ -200,7 +200,7 @@ fn default_phase_seed() -> u32 {
 impl Default for CowDna {
     fn default() -> Self {
         Self {
-            base: BaseAnim::Breathe,
+            base: BaseAnim::default(),
             particles: ParticleDna::default(),
             speed: default_speed(),
             amplitude: Amplitude::default(),
@@ -254,7 +254,7 @@ mod tests {
     #[test]
     fn default_dna_all_fields() {
         let dna = CowDna::default();
-        assert_eq!(dna.base, BaseAnim::Breathe);
+        assert_eq!(dna.base, BaseAnim::Walk);
         assert_eq!(dna.speed, 1.0);
         assert_eq!(dna.particles.rate, 10);
         assert_eq!(dna.particles.r#type, ParticleType::Fire);
