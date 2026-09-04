@@ -68,6 +68,10 @@ pub struct Cli {
     #[arg(long, short = 'b', global = true)]
     pub background: bool,
 
+    /// Render inline as an animated banner above the prompt without taking over the screen.
+    #[arg(long, short = 'B', global = true)]
+    pub banner: bool,
+
     /// Duration in seconds. 0 = infinite (with --background).
     #[arg(long, short = 'd', global = true)]
     pub duration: Option<u32>,
@@ -389,6 +393,7 @@ pub struct Args {
     pub file: Option<PathBuf>,
     pub config: Option<PathBuf>,
     pub background: bool,
+    pub banner: bool,
     pub duration: Option<u32>,
     pub fps: Option<u16>,
     pub cow: Option<String>,
@@ -502,6 +507,7 @@ pub fn parse_args(argv: Vec<String>) -> Result<(Args, Option<Commands>), CliErro
         file: cli.file,
         config: cli.config,
         background: cli.background,
+        banner: cli.banner,
         duration: cli.duration,
         fps: cli.fps,
         cow: cli.cow,
@@ -567,6 +573,9 @@ pub fn build_scene_config(args: &Args) -> Result<SceneConfig, String> {
     if args.think {
         cfg.think = true;
     }
+    if args.banner {
+        cfg.shell_attach_mode = "banner".to_string();
+    }
 
     // If --background and no explicit duration, default to 0 (infinite).
     if cfg.background && args.duration.is_none() && cfg.duration == 0 {
@@ -619,6 +628,17 @@ mod tests {
         assert_eq!(a.cow.as_deref(), Some("tux"));
         assert_eq!(a.text.as_deref(), Some("hi"));
         assert!(a.background);
+    }
+
+    #[test]
+    fn render_banner_flag() {
+        let (a, _cmd) = parse(&["forgum-engine", "--banner"]);
+        assert!(a.banner);
+        let cfg = build_scene_config(&a).unwrap();
+        assert_eq!(cfg.shell_attach_mode, "banner");
+
+        let (a2, _cmd) = parse(&["forgum-engine", "-B"]);
+        assert!(a2.banner);
     }
 
     #[test]

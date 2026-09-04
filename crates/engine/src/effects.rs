@@ -615,19 +615,23 @@ impl Effect for ParticlesEffect {
     fn update(&mut self, dt: f32, cols: usize, rows: usize) {
         seed_frame_rng(self.dna.phase_seed.wrapping_add(self.instance_id));
         self.spawn_timer += dt;
-        let interval = if self.dna.particles.rate > 0 {
-            1.0 / self.dna.particles.rate as f32
+        let rate = if self.dna.particles.rate > 0 {
+            self.dna.particles.rate
         } else {
-            1.0
+            10
         };
+        let interval = 1.0 / rate as f32;
         if self.spawn_timer >= interval {
             self.spawn_timer -= interval;
             let palette = color::parse_palette(&self.dna.particles.palette);
+            let cow_start = find_cow_start_line(&self.cow_text);
+            let spawn_x = 14.0f32.min(cols.saturating_sub(1) as f32);
+            let spawn_y = ((cow_start + 2) as f32).min(rows.saturating_sub(1) as f32);
             spawn_for_type(
                 &mut self.pool,
                 self.dna.particles.r#type,
-                cols as f32 / 2.0,
-                rows as f32 * 0.3,
+                spawn_x,
+                spawn_y,
                 &palette,
                 self.phase + dt,
                 cols,
@@ -1287,6 +1291,7 @@ fn apply_glow(fb: &mut FrameBuffer, cx: f32, cy: f32, radius: f32, color: Color,
 /// Compound signature animation: combines body kinematics, particle emitters,
 /// localized glow, and keep-alive eye-blinks tailored to the animal's DNA.
 pub struct CompoundSignatureEffect {
+    cow_text: String,
     dna: CowDna,
     pool: ParticlePool,
     spawn_timer: f32,
@@ -1310,8 +1315,10 @@ impl CompoundSignatureEffect {
     pub fn new(cow_text: String, dna: CowDna, instance_id: u32, color_mode: String) -> Self {
         let phase = instance_phase(dna.phase_seed, instance_id);
         let speed = dna.speed;
+        let cow_text_clone = cow_text.clone();
         let base_effect = create_effect(dna.base, cow_text, dna.clone(), instance_id, &color_mode);
         Self {
+            cow_text: cow_text_clone,
             dna,
             pool: ParticlePool::new(),
             spawn_timer: 0.0,
@@ -1334,9 +1341,10 @@ impl Effect for CompoundSignatureEffect {
             if self.spawn_timer >= interval {
                 self.spawn_timer -= interval;
                 let palette = color::parse_palette(&self.dna.particles.palette);
-                // Compute emitter position: for fire/bubbles, origin around cow head/mouth
-                let spawn_x = cols as f32 * 0.45;
-                let spawn_y = rows as f32 * 0.35;
+                // Compute emitter position: origin around creature mouth/head
+                let cow_start = find_cow_start_line(&self.cow_text);
+                let spawn_x = 14.0f32.min(cols.saturating_sub(1) as f32);
+                let spawn_y = ((cow_start + 2) as f32).min(rows.saturating_sub(1) as f32);
                 spawn_for_type(
                     &mut self.pool,
                     self.dna.particles.r#type,

@@ -138,7 +138,7 @@ __forgum_precmd() {{
     local mode; mode=$(grep -o '"shell_attach_mode":\s*"[^"]*"' "$__FORGUM_CONFIG" 2>/dev/null | cut -d'"' -f4)
     if [ "$auto" != "false" ]; then
       case "$mode" in
-        banner) "$__FORGUM_ENGINE" render --duration 1 2>/dev/null ;;
+        banner) "$__FORGUM_ENGINE" render --banner --duration 1 2>/dev/null ;;
         split) printf '\x1b[9;%dr' "${{LINES:-30}}"; "$__FORGUM_ENGINE" render --background --duration 0 >/dev/null 2>&1 ;;
         reactive) "$__FORGUM_ENGINE" render --background --duration 0 >/dev/null 2>&1 ;;
         *) ;;
@@ -206,7 +206,7 @@ __forgum_precmd() {{
     local mode; mode=$(grep -o '"shell_attach_mode":\s*"[^"]*"' "$__FORGUM_CONFIG" 2>/dev/null | cut -d'"' -f4)
     if [ "$auto" != "false" ]; then
       case "$mode" in
-        banner) "$__FORGUM_ENGINE" render --duration 1 2>/dev/null ;;
+        banner) "$__FORGUM_ENGINE" render --banner --duration 1 2>/dev/null ;;
         split) printf '\x1b[9;%dr' "${{LINES:-30}}"; "$__FORGUM_ENGINE" render --background --duration 0 >/dev/null 2>&1 ;;
         reactive) "$__FORGUM_ENGINE" render --background --duration 0 >/dev/null 2>&1 ;;
         *) ;;
@@ -318,7 +318,7 @@ function global:prompt {{
             if ($cfg.auto_render_on_prompt -ne $false) {{
                 switch ($cfg.shell_attach_mode) {{
                     'banner' {{
-                        & $__ForgumEngine render --duration 1 2>$null
+                        & $__ForgumEngine render --banner --duration 1 2>$null
                     }}
                     'split' {{
                         $h = if ($Host.UI.RawUI) {{ $Host.UI.RawUI.WindowSize.Height }} else {{ 30 }}
@@ -415,7 +415,7 @@ function global:prompt {{
             if ($cfg.auto_render_on_prompt -ne $false) {{
                 switch ($cfg.shell_attach_mode) {{
                     'banner' {{
-                        & $__ForgumEngine render --duration 1 2>$null
+                        & $__ForgumEngine render --banner --duration 1 2>$null
                     }}
                     'split' {{
                         $h = if ($Host.UI.RawUI) {{ $Host.UI.RawUI.WindowSize.Height }} else {{ 30 }}

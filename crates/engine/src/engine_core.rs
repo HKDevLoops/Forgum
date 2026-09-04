@@ -369,6 +369,8 @@ struct RenderState {
     front: Vec<Cell>,
     renderer: Box<dyn Renderer>,
     out: OutputHandle,
+    is_banner: bool,
+    banner_rows: usize,
 }
 
 impl RenderState {
@@ -377,6 +379,18 @@ impl RenderState {
             front: vec![Cell::default(); cols * rows],
             renderer: renderer::create_renderer(),
             out,
+            is_banner: false,
+            banner_rows: rows,
+        }
+    }
+
+    fn new_banner(cols: usize, rows: usize, out: OutputHandle) -> Self {
+        Self {
+            front: vec![Cell::default(); cols * rows],
+            renderer: renderer::create_banner_renderer(),
+            out,
+            is_banner: true,
+            banner_rows: rows,
         }
     }
 
@@ -438,7 +452,13 @@ fn render_thread(mut state: RenderState, frame_rx: Receiver<Arc<Frame>>, shutdow
     shutdown.trigger();
 
     // Clear and restore terminal on exit.
-    let _ = state.out.write_all(b"\x1b[0m\x1b[?25h\n");
+    if state.is_banner {
+        let _ = state.out.write_all(
+            format!("\x1b8\x1b[{}B\r\x1b[0m\x1b[?25h\n", state.banner_rows).as_bytes(),
+        );
+    } else {
+        let _ = state.out.write_all(b"\x1b[0m\x1b[?25h\n");
+    }
     let _ = state.out.flush();
 }
 
@@ -564,6 +584,102 @@ pub fn run_engine(
     }
 
     // Join threads.
+    let _ = sim_handle.join();
+    let _ = render_handle.join();
+
+    Ok(())
+}
+
+/// Run the 3-thread engine in banner mode (inline above prompt without alternate screen).
+#[allow(clippy::too_many_arguments)]
+pub fn run_engine_banner(
+    mut out: OutputHandle,
+    config: SceneConfig,
+    shutdown: ShutdownFlag,
+    composed_text: Option<&str>,
+    cow_dna: CowDna,
+    instance_id: u32,
+    data_dir: PathBuf,
+    cmd_rx: &Option<crossbeam_channel::Receiver<ControlCmd>>,
+    max_frames: u64,
+    banner_rows: usize,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let caps = forgum_platform::detect_capabilities();
+    let cols = caps.width.max(20) as usize;
+    let rows = banner_rows.max(1);
+
+    if cols < 20 || rows < 1 {
+        let cow_display = composed_text.unwrap_or(&config.text);
+        let cow_text = if cow_display.is_empty() {
+            effects::default_cow_text().to_string()
+        } else {
+            cow_display.to_string()
+        };
+        let _ = out.write_all(cow_text.as_bytes());
+        let _ = out.write_all(b"\n");
+        let _ = out.flush();
+        return Ok(());
+    }
+
+    let (control_tx, control_rx) = unbounded::<ControlMsg>();
+    let (frame_tx, frame_rx) = bounded::<Arc<Frame>>(2);
+
+    let sim = SimState::new(
+        &config,
+        cols,
+        rows,
+        cow_dna,
+        instance_id,
+        composed_text,
+        data_dir.clone(),
+    );
+
+    let render_state = RenderState::new_banner(cols, rows, out);
+
+    if let Some(external_rx) = cmd_rx {
+        let tx = control_tx.clone();
+        let external_rx = external_rx.clone();
+        std::thread::Builder::new()
+            .name("control-forward".into())
+            .spawn(move || {
+                while let Ok(cmd) = external_rx.recv() {
+                    let msg = match cmd {
+                        ControlCmd::Stop => ControlMsg::Stop,
+                        ControlCmd::Pause => ControlMsg::Pause,
+                        ControlCmd::Resume => ControlMsg::Resume,
+                        ControlCmd::Effect(name) => ControlMsg::Effect(name),
+                        ControlCmd::Speed(s) => ControlMsg::Speed(s),
+                        ControlCmd::Cow(name) => ControlMsg::Cow(name),
+                        ControlCmd::Text(text) => ControlMsg::Text(text),
+                        _ => continue,
+                    };
+                    if tx.send(msg).is_err() {
+                        break;
+                    }
+                }
+            })?;
+    }
+
+    let sim_shutdown = shutdown.clone();
+    let render_shutdown = shutdown.clone();
+
+    let sim_handle = std::thread::Builder::new()
+        .name("sim".into())
+        .spawn(move || {
+            sim_thread(sim, control_rx, frame_tx, sim_shutdown, max_frames);
+        })?;
+
+    let render_handle = std::thread::Builder::new()
+        .name("render".into())
+        .spawn(move || {
+            render_thread(render_state, frame_rx, render_shutdown);
+        })?;
+
+    // In banner mode, strictly no tty reads — wait for frames or signal
+    while !shutdown.is_shutdown() {
+        std::thread::sleep(Duration::from_millis(50));
+    }
+
     let _ = sim_handle.join();
     let _ = render_handle.join();
 

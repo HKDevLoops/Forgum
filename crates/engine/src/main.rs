@@ -888,6 +888,17 @@ fn render_subcommand(args: cli::Args) -> ExitCode {
             data,
             &None,
         )
+    } else if args.banner || scene.shell_attach_mode == "banner" {
+        render::render_loop_banner(
+            out,
+            scene,
+            shutdown,
+            Some(&composed),
+            cow_dna,
+            instance_id,
+            data,
+            &None,
+        )
     } else {
         render::render_loop_foreground(
             out,

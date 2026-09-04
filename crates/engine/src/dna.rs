@@ -55,7 +55,7 @@ pub struct ParticleDna {
 }
 
 fn default_particle_rate() -> u32 {
-    10
+    0
 }
 fn default_particle_life() -> [f32; 2] {
     [0.5, 1.5]
@@ -256,7 +256,7 @@ mod tests {
         let dna = CowDna::default();
         assert_eq!(dna.base, BaseAnim::Walk);
         assert_eq!(dna.speed, 1.0);
-        assert_eq!(dna.particles.rate, 10);
+        assert_eq!(dna.particles.rate, 0);
         assert_eq!(dna.particles.r#type, ParticleType::Fire);
         assert_eq!(dna.particles.life, [0.5, 1.5]);
         assert_eq!(dna.particles.speed, [0.3, 0.8]);

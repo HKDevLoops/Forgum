@@ -48,9 +48,21 @@ pub trait Renderer: Send {
 #[derive(Debug, Default)]
 pub struct AnsiRenderer {
     scratch: Vec<u8>,
+    is_banner: bool,
 }
 
 impl AnsiRenderer {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn new_banner() -> Self {
+        Self {
+            scratch: Vec::with_capacity(1024),
+            is_banner: true,
+        }
+    }
+
     /// Write a single decimal `u32` into `buf` (no per-call allocation).
     fn write_decimal(buf: &mut Vec<u8>, mut n: u32) {
         if n == 0 {
@@ -82,17 +94,42 @@ impl Renderer for AnsiRenderer {
         let buf = &mut self.scratch;
         buf.clear();
 
+        if self.is_banner {
+            buf.extend_from_slice(b"\x1b8");
+        }
+
+        let mut cur_y = 0;
         let mut i = 0;
         while i < damage.len() {
             let (x0, y0) = damage[i];
             let idx = y0 * cols + x0;
             let cell0 = cells.get(idx).copied().unwrap_or_default();
 
-            buf.extend_from_slice(b"\x1b[");
-            Self::write_decimal(buf, (y0 + 1) as u32);
-            buf.push(b';');
-            Self::write_decimal(buf, (x0 + 1) as u32);
-            buf.push(b'H');
+            if self.is_banner {
+                if y0 > cur_y {
+                    buf.extend_from_slice(b"\x1b[");
+                    Self::write_decimal(buf, (y0 - cur_y) as u32);
+                    buf.push(b'B');
+                    cur_y = y0;
+                } else if y0 < cur_y {
+                    buf.extend_from_slice(b"\x1b8");
+                    if y0 > 0 {
+                        buf.extend_from_slice(b"\x1b[");
+                        Self::write_decimal(buf, y0 as u32);
+                        buf.push(b'B');
+                    }
+                    cur_y = y0;
+                }
+                buf.extend_from_slice(b"\x1b[");
+                Self::write_decimal(buf, (x0 + 1) as u32);
+                buf.push(b'G');
+            } else {
+                buf.extend_from_slice(b"\x1b[");
+                Self::write_decimal(buf, (y0 + 1) as u32);
+                buf.push(b';');
+                Self::write_decimal(buf, (x0 + 1) as u32);
+                buf.push(b'H');
+            }
 
             if cell0.alpha == 0 {
                 let mut run_len = 1;
@@ -161,6 +198,18 @@ pub struct TmuxPassthroughRenderer {
     inner: AnsiRenderer,
 }
 
+impl TmuxPassthroughRenderer {
+    pub fn new(inner: Box<AnsiRenderer>) -> Self {
+        Self { inner: *inner }
+    }
+
+    pub fn new_banner() -> Self {
+        Self {
+            inner: AnsiRenderer::new_banner(),
+        }
+    }
+}
+
 impl Renderer for TmuxPassthroughRenderer {
     fn render_damage(
         &mut self,
@@ -191,6 +240,14 @@ impl Renderer for TmuxPassthroughRenderer {
 #[derive(Debug, Default)]
 pub struct SyncAnsiRenderer {
     inner: AnsiRenderer,
+}
+
+impl SyncAnsiRenderer {
+    pub fn new_banner() -> Self {
+        Self {
+            inner: AnsiRenderer::new_banner(),
+        }
+    }
 }
 
 impl Renderer for SyncAnsiRenderer {
@@ -320,6 +377,18 @@ pub fn create_renderer() -> Box<dyn Renderer> {
     Box::new(AnsiRenderer::default())
 }
 
+/// Create a banner renderer for rendering inline above the prompt without alternate screen.
+#[must_use]
+pub fn create_banner_renderer() -> Box<dyn Renderer> {
+    if is_tmux() {
+        return Box::new(TmuxPassthroughRenderer::new_banner());
+    }
+    if forgum_platform::terminal_supports_sync() {
+        return Box::new(SyncAnsiRenderer::new_banner());
+    }
+    Box::new(AnsiRenderer::new_banner())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -363,6 +432,29 @@ mod tests {
             .render_damage(&mut out, &fb.back, fb.cols(), &[])
             .unwrap();
         assert!(out.is_empty());
+    }
+
+    #[test]
+    fn ansi_renderer_banner_mode_uses_relative_cursor_moves() {
+        let mut fb = FrameBuffer::new(20, 10);
+        let _ = fb.set(5, 2, FbCell::new('B', Color::WHITE));
+
+        let mut out = Vec::new();
+        let mut renderer = AnsiRenderer::new_banner();
+        let damage = vec![(5, 2)];
+        renderer
+            .render_damage(&mut out, &fb.back, fb.cols(), &damage)
+            .unwrap();
+        let s = String::from_utf8(out).unwrap();
+        // Must restore cursor to saved banner origin (\x1b8)
+        assert!(s.starts_with("\x1b8"), "Banner render must start with DECRC: {s}");
+        // Must move down 2 lines (\x1b[2B)
+        assert!(s.contains("\x1b[2B"), "Banner render must move down relative lines: {s}");
+        // Must move to column 6 (\x1b[6G)
+        assert!(s.contains("\x1b[6G"), "Banner render must move horizontally: {s}");
+        // Must NOT contain absolute row cursor move like \x1b[3;6H
+        assert!(!s.contains("\x1b[3;6H"), "Banner mode must not use absolute coordinates: {s}");
+        assert!(s.contains("B"), "Banner render must output character: {s}");
     }
 
     #[test]

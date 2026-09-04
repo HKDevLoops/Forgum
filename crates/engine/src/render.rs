@@ -164,6 +164,75 @@ pub fn render_loop_background(
     )
 }
 
+/// Run the banner render loop. Renders inline directly in the terminal scrollback
+/// without taking over the screen or clearing history, and positions the cursor
+/// cleanly below the finished mascot for the prompt.
+#[allow(clippy::too_many_arguments)]
+pub fn render_loop_banner(
+    mut out: OutputHandle,
+    mut config: SceneConfig,
+    shutdown: ShutdownFlag,
+    composed_text: Option<&str>,
+    cow_dna: CowDna,
+    instance_id: u32,
+    data_dir: PathBuf,
+    cmd_rx: &Option<crossbeam_channel::Receiver<ControlCmd>>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let _signals = SignalGuard::install(shutdown.clone())?;
+
+    let caps = TerminalCapabilities::probe();
+    let (cols, rows) = (caps.width.max(1), caps.height.max(1));
+
+    let cow_display = composed_text.unwrap_or(&config.text);
+
+    // Tiny-terminal or non-tty pipe guard: print static text and exit.
+    if cols < MIN_COLS || rows < MIN_ROWS || !crossterm::tty::IsTty::is_tty(&std::io::stdout()) {
+        let cow_text = if composed_text.is_some() {
+            cow_display.to_string()
+        } else if cow_display.is_empty() {
+            effects::default_cow_text().to_string()
+        } else {
+            format!("{}\n{}", effects::default_cow_text(), cow_display)
+        };
+        let _ = out.write_all(cow_text.as_bytes());
+        let _ = out.write_all(b"\n");
+        let _ = out.flush();
+        return Ok(());
+    }
+
+    let _cur = CursorShowGuard::acquire()?;
+
+    let line_count = cow_display.lines().count().max(1);
+    let banner_rows = line_count.min((rows as usize).saturating_sub(1)).max(1);
+
+    // In banner mode, default duration to 2s burst if 0
+    if config.duration == 0 {
+        config.duration = 2;
+    }
+
+    let max_frames = compute_max_frames(config.duration, config.fps);
+
+    // Reserve space inline: print banner_rows newlines, then move up and save origin
+    for _ in 0..banner_rows {
+        let _ = out.write_all(b"\n");
+    }
+    let _ = out.write_all(format!("\x1b[{}A\r\x1b7", banner_rows).as_bytes());
+    let _ = out.flush();
+
+    crate::engine_core::run_engine_banner(
+        out,
+        config,
+        shutdown,
+        composed_text,
+        cow_dna,
+        instance_id,
+        data_dir,
+        cmd_rx,
+        max_frames,
+        banner_rows,
+    )
+}
+
 fn compute_max_frames(duration_secs: u32, fps: u16) -> u64 {
     // BUG-D7: u64 + saturating_mul to avoid overflow on huge inputs.
     if duration_secs == 0 {
