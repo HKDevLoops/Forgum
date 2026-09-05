@@ -62,6 +62,27 @@ fn parse_fortunes(content: &str, out: &mut Vec<String>) {
     }
 }
 
+use serde::{Deserialize, Serialize};
+
+/// State of the persistent thought deck to ensure 100% fair uniform distribution.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ThoughtDeckState {
+    pub corpus_hash: u64,
+    pub deck: Vec<usize>,
+    pub cursor: usize,
+    pub last_drawn: Option<String>,
+}
+
+fn compute_corpus_hash(fortunes: &[String]) -> u64 {
+    use std::hash::{Hash, Hasher};
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    fortunes.len().hash(&mut hasher);
+    for f in fortunes {
+        f.hash(&mut hasher);
+    }
+    hasher.finish()
+}
+
 /// Built-in fallback fortunes when no external files are installed.
 const FALLBACK_FORTUNES: &[&str] = &[
     "The cow that never moos has the most to say.",
@@ -75,21 +96,82 @@ const FALLBACK_FORTUNES: &[&str] = &[
     "Computers are fast, but memory leaks are eternal.",
 ];
 
-/// Pick a random fortune from the list.
+/// Pick a random fortune from the list (legacy independent sampling).
 pub fn pick_fortune(fortunes: &[String]) -> Option<&str> {
     let mut rng = rand::thread_rng();
     fortunes.choose(&mut rng).map(|s| s.as_str())
 }
 
-/// Load and pick a single random fortune from the data directory.
+/// Pick a fortune using the persistent Fisher-Yates shuffled deck cycle.
+///
+/// Guarantees:
+/// 1. 100% of all thoughts in the corpus are presented before any thought repeats.
+/// 2. Uniform coverage without nearby duplicate clustering.
+/// 3. Boundary duplicate protection across reshuffles.
+pub fn pick_fortune_distributed(fortunes: &[String], data_dir: &Path) -> Option<String> {
+    if fortunes.is_empty() {
+        return None;
+    }
+
+    let corpus_hash = compute_corpus_hash(fortunes);
+    let state_file = if data_dir.join("Cows").exists() {
+        forgum_platform::runtime_dir()
+            .unwrap_or_else(|_| data_dir.to_path_buf())
+            .join("thought_state.json")
+    } else {
+        data_dir.join("thought_state.json")
+    };
+
+    let mut state: ThoughtDeckState = std::fs::read_to_string(&state_file)
+        .ok()
+        .and_then(|raw| serde_json::from_str(&raw).ok())
+        .filter(|s: &ThoughtDeckState| {
+            s.corpus_hash == corpus_hash && s.deck.len() == fortunes.len()
+        })
+        .unwrap_or_else(|| {
+            let mut deck: Vec<usize> = (0..fortunes.len()).collect();
+            let mut rng = rand::thread_rng();
+            deck.shuffle(&mut rng);
+            ThoughtDeckState {
+                corpus_hash,
+                deck,
+                cursor: 0,
+                last_drawn: None,
+            }
+        });
+
+    if state.cursor >= state.deck.len() {
+        let mut rng = rand::thread_rng();
+        state.deck.shuffle(&mut rng);
+        if let Some(ref last) = state.last_drawn {
+            if state.deck.len() > 1 && &fortunes[state.deck[0]] == last {
+                state.deck.swap(0, 1);
+            }
+        }
+        state.cursor = 0;
+    }
+
+    let chosen_idx = state.deck[state.cursor];
+    let chosen = fortunes[chosen_idx].clone();
+    state.cursor += 1;
+    state.last_drawn = Some(chosen.clone());
+
+    if let Ok(json) = serde_json::to_string(&state) {
+        let _ = std::fs::write(&state_file, json);
+    }
+
+    Some(chosen)
+}
+
+/// Load and pick a fortune from the data directory using fair deck distribution.
 /// Falls back to built-in fortunes if no external files are found.
 pub fn random_fortune(data_dir: &Path) -> Option<String> {
     let fortunes = load_fortunes(data_dir);
     if fortunes.is_empty() {
-        let mut rng = rand::thread_rng();
-        FALLBACK_FORTUNES.choose(&mut rng).map(|s| s.to_string())
+        let fallback_vec: Vec<String> = FALLBACK_FORTUNES.iter().map(|s| s.to_string()).collect();
+        pick_fortune_distributed(&fallback_vec, data_dir)
     } else {
-        pick_fortune(&fortunes).map(|s| s.to_string())
+        pick_fortune_distributed(&fortunes, data_dir)
     }
 }
 
@@ -140,5 +222,52 @@ mod tests {
     fn load_fortunes_missing_dir() {
         let fortunes = load_fortunes(Path::new("/tmp/no-such-forgum-dir"));
         assert!(fortunes.is_empty());
+    }
+
+    #[test]
+    fn distributed_deck_covers_all_items_before_repeat() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let fortunes = vec![
+            "Alpha".to_string(),
+            "Beta".to_string(),
+            "Gamma".to_string(),
+            "Delta".to_string(),
+            "Epsilon".to_string(),
+        ];
+
+        let mut first_cycle = Vec::new();
+        for _ in 0..fortunes.len() {
+            let item = pick_fortune_distributed(&fortunes, temp_dir.path()).unwrap();
+            assert!(
+                !first_cycle.contains(&item),
+                "duplicate before deck exhaustion: {item}"
+            );
+            first_cycle.push(item);
+        }
+        assert_eq!(first_cycle.len(), 5);
+
+        // Next draw should start a new cycle and not be empty
+        let next_item = pick_fortune_distributed(&fortunes, temp_dir.path()).unwrap();
+        assert!(fortunes.contains(&next_item));
+    }
+
+    #[test]
+    fn distributed_deck_boundary_protection() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let fortunes = vec!["A".to_string(), "B".to_string()];
+
+        let mut draws = Vec::new();
+        for _ in 0..10 {
+            draws.push(pick_fortune_distributed(&fortunes, temp_dir.path()).unwrap());
+        }
+
+        // Check that no consecutive draws are identical across deck reshuffles
+        for window in draws.windows(2) {
+            assert_ne!(
+                window[0], window[1],
+                "consecutive duplicate at boundary: {:?}",
+                window
+            );
+        }
     }
 }

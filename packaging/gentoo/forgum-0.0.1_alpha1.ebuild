@@ -21,4 +21,5 @@ src_compile() {
 }
 src_install() {
 	dobin "target/release/forgum-engine" || die
+	dobin "target/release/forgum" || die
 }

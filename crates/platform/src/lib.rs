@@ -38,6 +38,7 @@ pub mod error;
 pub mod guards;
 pub mod mux;
 pub mod output;
+pub mod package_manager;
 pub mod paths;
 pub mod protocol;
 pub mod shell;
@@ -61,21 +62,25 @@ pub use error::PlatformError;
 pub use guards::{AltScreenGuard, CursorShowGuard, RawModeGuard};
 pub use mux::{detect_mux, Mux};
 pub use output::{open_output, OutputHandle, OutputTarget};
+pub use package_manager::{
+    detect_available_package_managers, detect_installation_source, detect_source_from_path,
+    execute_package_manager_action, PackageManager,
+};
 pub use paths::{
     config_dir, config_path, control_socket_path, daemon_state_path, data_dir, detect_config_file,
     detect_session_id, is_canonical, log_dir, runtime_dir, ConfigPaths, ShellKind,
-};
-pub use protocol::{ConfigFormat, SceneConfig};
-pub use shell::Shell;
-pub use signal::{ShutdownFlag, SignalGuard};
-pub use sixel::{
-    create_graphics_renderer, graphics_renderer_available, CellView, FrameBufferLike,
-    GraphicsRenderer,
 };
 #[cfg(unix)]
 pub use platform_unix::parent_pid;
 #[cfg(windows)]
 pub use platform_windows::parent_pid;
+pub use protocol::{ConfigFormat, SceneConfig};
+pub use shell::{update_delimited_block, write_file_if_changed, Shell};
+pub use signal::{ShutdownFlag, SignalGuard};
+pub use sixel::{
+    create_graphics_renderer, graphics_renderer_available, CellView, FrameBufferLike,
+    GraphicsRenderer,
+};
 #[cfg(unix)]
 pub use spawn::fork_then_exec_self;
 pub use spawn::{
@@ -100,8 +105,22 @@ pub fn handle_count() -> Option<usize> {
         platform_windows::handle_count()
     }
 }
+
+/// Check if stdin has data available to read without blocking indefinitely.
+#[must_use]
+pub fn stdin_has_data() -> bool {
+    #[cfg(unix)]
+    {
+        platform_unix::stdin_has_data()
+    }
+    #[cfg(windows)]
+    {
+        platform_windows::stdin_has_data()
+    }
+}
 pub use terminal::{
-    detect_capabilities, terminal_supports_sync, ColorLevel, GraphicsCaps, TerminalCapabilities,
+    detect_capabilities, terminal_size, terminal_supports_sync, ColorLevel, GraphicsCaps,
+    TerminalCapabilities,
 };
 /// Expand to the contained code only when compiling on a Unix-like target.
 ///

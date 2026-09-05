@@ -312,17 +312,44 @@ pub fn daemon_bootstrap<F: FnOnce() -> std::process::ExitCode>(
     std::process::exit(0);
 }
 
-/// Windows variant: no portable exec-stable on Windows so we run the
-/// supplied closure inline. `session_id` is accepted but unused on this
-/// path (the engine derives its own via `FORGUM_DAEMON_SESSION` if
-/// present, falling back to `shell-<pid>`).
 #[cfg(windows)]
 pub fn daemon_bootstrap<F: FnOnce() -> std::process::ExitCode>(
-    _session_id: &str,
-    _argv: &[String],
+    session_id: &str,
+    argv: &[String],
     fallback: F,
 ) -> std::process::ExitCode {
-    fallback()
+    use std::io::Write;
+    use std::os::windows::process::CommandExt;
+    use windows_sys::Win32::System::Threading::{CREATE_NEW_PROCESS_GROUP, DETACHED_PROCESS};
+
+    if std::env::args().any(|a| a == "--internal-daemon-runner") {
+        return fallback();
+    }
+
+    let self_exe: std::path::PathBuf = std::env::current_exe()
+        .ok()
+        .filter(|p| p.exists())
+        .or_else(|| std::env::args().next().map(std::path::PathBuf::from))
+        .unwrap_or_else(|| std::path::PathBuf::from("forgum.exe"));
+
+    let mut cmd = std::process::Command::new(&self_exe);
+    cmd.args(argv);
+    cmd.env("FORGUM_DAEMON_SESSION", session_id);
+    cmd.stdin(Stdio::null());
+    cmd.stdout(Stdio::null());
+    cmd.stderr(Stdio::null());
+    cmd.creation_flags(DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP);
+
+    let child_pid = match cmd.spawn() {
+        Ok(child) => child.id(),
+        Err(_) => return fallback(),
+    };
+
+    let stdout = std::io::stdout();
+    let mut lock = stdout.lock();
+    let _ = writeln!(lock, "{child_pid}");
+    let _ = lock.flush();
+    std::process::exit(0);
 }
 
 /// Backwards-compatible alias: lets older call-sites that don't derive a

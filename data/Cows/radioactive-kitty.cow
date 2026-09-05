@@ -1,0 +1,11 @@
+##
+## Radioactive Kitty
+##
+$the_cow = <<EOC;
+   $thoughts
+    $thoughts      /\_ /\   (☢)
+     $thoughts    ( $eyes ) _/
+          (  $tongue )
+           |   |--.
+           ||  ||  |~
+EOC

@@ -59,7 +59,7 @@ pub struct SceneConfig {
     #[serde(default = "default_auto_render")]
     pub auto_render_on_prompt: bool,
 
-    /// Color mode: "rainbow" | "solid" | "none". Chameleon picks the paint.
+    /// Color mode: "animal" | "rainbow" | "solid" | "none". Chameleon picks the paint.
     #[serde(default = "default_color_mode")]
     pub color_mode: String,
 
@@ -67,6 +67,38 @@ pub struct SceneConfig {
     /// "reactive" (PSReadLine/idle overlay), or "manual" (explicit invocations).
     #[serde(default = "default_shell_attach_mode")]
     pub shell_attach_mode: String,
+
+    /// Environment scenery theme: "pasture", "inferno", "ocean", etc., or "none", or "auto".
+    #[serde(default)]
+    pub environment: Option<String>,
+
+    /// Road / ground scenery style: "dirt", "magma", "ice", etc., or "none", or "auto".
+    #[serde(default)]
+    pub road: Option<String>,
+
+    /// Mountain / horizon scenery style: "hills", "volcano", "iceberg", etc., or "none", or "auto".
+    #[serde(default)]
+    pub mountain: Option<String>,
+
+    /// Custom color palette hex values.
+    #[serde(default)]
+    pub palette: Option<String>,
+
+    /// Interval in seconds for thought rotation in background mode. 0 = permanent until exit.
+    #[serde(default = "default_thought_interval")]
+    pub thought_interval: u32,
+
+    /// Split scroll mode using DECSTBM margins to preserve background rows from scrolling.
+    #[serde(default)]
+    pub split_scroll: bool,
+
+    /// Animation mode: "static" | "dynamic".
+    #[serde(default)]
+    pub animation: Option<String>,
+
+    /// Specific animation type: "walk" | "breathe" | "float" | "particles" | "pulse" | etc.
+    #[serde(default)]
+    pub animation_type: Option<String>,
 }
 
 /// Supported configuration file formats.
@@ -170,7 +202,11 @@ fn default_auto_render() -> bool {
 }
 
 fn default_color_mode() -> String {
-    "rainbow".to_string()
+    "animal".to_string()
+}
+
+fn default_thought_interval() -> u32 {
+    60
 }
 
 fn default_shell_attach_mode() -> String {
@@ -193,6 +229,14 @@ impl Default for SceneConfig {
             color_mode: default_color_mode(),
             shell_attach_mode: default_shell_attach_mode(),
             think: false,
+            environment: None,
+            road: None,
+            mountain: None,
+            palette: None,
+            thought_interval: default_thought_interval(),
+            split_scroll: false,
+            animation: None,
+            animation_type: None,
         }
     }
 }

@@ -1,0 +1,11 @@
+##
+## Bighorn Ram (Ovis canadensis)
+##
+$the_cow = <<EOC;
+   $thoughts
+    $thoughts    (@@)   (@@)
+     $thoughts  ( $eyes )___
+         ( $tongue )   )\/\
+          ||---w |
+          ||    ||
+EOC

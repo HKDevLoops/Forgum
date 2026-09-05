@@ -27,3 +27,21 @@ fn completions_pwsh_writes() {
     let mut cmd = Cli::command();
     assert!(generate_completions(Shell::Pwsh, &mut cmd).is_ok());
 }
+
+#[test]
+fn completions_all_shells_write() {
+    for shell in [
+        Shell::Elvish,
+        Shell::Nushell,
+        Shell::Carapace,
+        Shell::Xonsh,
+        Shell::Tcsh,
+        Shell::Ksh,
+        Shell::Ion,
+        Shell::Oil,
+        Shell::Yash,
+    ] {
+        let mut cmd = Cli::command();
+        assert!(generate_completions(shell, &mut cmd).is_ok(), "failed for {shell}");
+    }
+}

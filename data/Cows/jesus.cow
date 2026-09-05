@@ -1,0 +1,11 @@
+##
+## Sacred Bovine with Halo
+##
+$the_cow = <<EOC;
+   $thoughts
+    $thoughts     (  +  )
+     $thoughts    ( $eyes )
+         ( $tongue )______
+          /    |      \
+         * ||--|  ||  ||
+EOC

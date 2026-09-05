@@ -317,3 +317,250 @@ fn think_subcommand_without_args_sets_think() {
     let cfg = build_scene_config(&a).unwrap();
     assert!(cfg.think);
 }
+
+#[test]
+fn animal_list_arg_parses_list_value() {
+    let (a, _) = parse_args(argv(&["forgum-engine", "--animal", "list"])).unwrap();
+    assert_eq!(a.cow.as_deref(), Some("list"));
+}
+
+#[test]
+fn effect_list_arg_parses_list_value() {
+    let (a, _) = parse_args(argv(&["forgum-engine", "--effect", "list"])).unwrap();
+    assert_eq!(a.effect.as_deref(), Some("list"));
+}
+
+#[test]
+fn mountain_list_arg_parses_list_value() {
+    let (a, _) = parse_args(argv(&["forgum-engine", "--mountain", "list"])).unwrap();
+    assert_eq!(a.mountain.as_deref(), Some("list"));
+}
+
+#[test]
+fn road_list_arg_parses_list_value() {
+    let (a, _) = parse_args(argv(&["forgum-engine", "--road", "list"])).unwrap();
+    assert_eq!(a.road.as_deref(), Some("list"));
+}
+
+#[test]
+fn env_list_arg_parses_list_value() {
+    let (a, _) = parse_args(argv(&["forgum-engine", "--env", "list"])).unwrap();
+    assert_eq!(a.environment.as_deref(), Some("list"));
+}
+
+#[test]
+fn color_mode_list_arg_parses_list_value() {
+    let (a, _) = parse_args(argv(&["forgum-engine", "--color-mode", "list"])).unwrap();
+    assert_eq!(a.color_mode.as_deref(), Some("list"));
+}
+
+#[test]
+fn completions_list_and_default_subcommand() {
+    let (a, cmd) = parse_args(argv(&["forgum-engine", "completions", "list"])).unwrap();
+    assert_eq!(a.command, Command::Completions);
+    assert!(matches!(
+        cmd,
+        Some(Commands::Completions {
+            shell: forgum_engine::cli::ShellArg::List
+        })
+    ));
+
+    let (a_def, cmd_def) = parse_args(argv(&["forgum-engine", "completions"])).unwrap();
+    assert_eq!(a_def.command, Command::Completions);
+    assert!(matches!(
+        cmd_def,
+        Some(Commands::Completions {
+            shell: forgum_engine::cli::ShellArg::List
+        })
+    ));
+}
+
+#[test]
+fn init_list_and_default_subcommand() {
+    let (a, cmd) = parse_args(argv(&["forgum-engine", "init", "list"])).unwrap();
+    assert_eq!(a.command, Command::Init);
+    assert!(matches!(
+        cmd,
+        Some(Commands::Init {
+            shell: forgum_engine::cli::ShellArg::List,
+            ..
+        })
+    ));
+
+    let (a_def, cmd_def) = parse_args(argv(&["forgum-engine", "init"])).unwrap();
+    assert_eq!(a_def.command, Command::Init);
+    assert!(matches!(
+        cmd_def,
+        Some(Commands::Init {
+            shell: forgum_engine::cli::ShellArg::List,
+            ..
+        })
+    ));
+}
+
+#[test]
+fn config_list_flag_and_key_query() {
+    let (a, cmd) = parse_args(argv(&["forgum-engine", "config", "--list"])).unwrap();
+    assert_eq!(a.command, Command::Config);
+    assert!(matches!(cmd, Some(Commands::Config { list: true, .. })));
+
+    let (a2, cmd2) = parse_args(argv(&["forgum-engine", "config", "list"])).unwrap();
+    assert_eq!(a2.command, Command::Config);
+    assert!(matches!(
+        cmd2,
+        Some(Commands::Config {
+            key: Some(ref k),
+            ..
+        }) if k == "list"
+    ));
+}
+
+#[test]
+fn tmux_list_subcommand_parses() {
+    let (a, cmd) = parse_args(argv(&["forgum-engine", "tmux", "list"])).unwrap();
+    assert_eq!(a.command, Command::Tmux);
+    assert!(matches!(
+        cmd,
+        Some(Commands::Tmux {
+            sub: forgum_engine::cli::TmuxSub::List
+        })
+    ));
+}
+
+#[test]
+fn remote_list_subcommand_parses() {
+    let (a, cmd) = parse_args(argv(&["forgum-engine", "remote", "list"])).unwrap();
+    assert_eq!(a.command, Command::Remote);
+    assert!(matches!(
+        cmd,
+        Some(Commands::Remote {
+            sub: forgum_engine::cli::RemoteSub::List
+        })
+    ));
+}
+
+#[test]
+fn list_subcommand_and_options_aliases() {
+    let (a, cmd) = parse_args(argv(&["forgum-engine", "list", "effects"])).unwrap();
+    assert_eq!(a.command, Command::List);
+    assert!(matches!(
+        cmd,
+        Some(Commands::List { ref category }) if category == "effects"
+    ));
+
+    let (a2, cmd2) = parse_args(argv(&["forgum-engine", "options", "scenery"])).unwrap();
+    assert_eq!(a2.command, Command::List);
+    assert!(matches!(
+        cmd2,
+        Some(Commands::List { ref category }) if category == "scenery"
+    ));
+}
+
+#[test]
+fn options_table_renders_all_categories() {
+    let categories = [
+        "all",
+        "animals",
+        "effects",
+        "mountains",
+        "roads",
+        "environments",
+        "colors",
+        "shells",
+        "config",
+        "multiplexers",
+        "eyes",
+        "tongue",
+        "scenery",
+    ];
+
+    for cat in categories {
+        let table = forgum_engine::options_table::render_options(cat);
+        assert!(
+            !table.is_empty(),
+            "Table for category '{cat}' must not be empty"
+        );
+        assert!(
+            table.contains('┌') && table.contains('┐'),
+            "Table for category '{cat}' must contain box borders"
+        );
+    }
+}
+
+#[test]
+fn top_level_list_flag_and_category() {
+    let (a, _) = parse_args(argv(&["forgum-engine", "--list"])).unwrap();
+    assert_eq!(a.list.as_deref(), Some("all"));
+
+    let (a2, _) = parse_args(argv(&["forgum-engine", "--list", "animals"])).unwrap();
+    assert_eq!(a2.list.as_deref(), Some("animals"));
+}
+
+#[test]
+fn typo_suggestions_produced_for_invalid_options() {
+    let err = parse_args(argv(&["forgum-engine", "renderr"])).unwrap_err();
+    assert!(err.message.contains("Did you mean 'render'?"));
+
+    let err_opt = parse_args(argv(&["forgum-engine", "--animall"])).unwrap_err();
+    assert!(err_opt.message.contains("Did you mean '--animal'?"));
+
+    let candidates = &["walk", "run", "fly", "float", "ember", "aurora"];
+    assert_eq!(
+        forgum_engine::cli::find_closest_match("walkk", candidates),
+        Some("walk")
+    );
+    assert_eq!(
+        forgum_engine::cli::find_closest_match("flly", candidates),
+        Some("fly")
+    );
+}
+
+#[test]
+fn animal_signature_defaults_apply_automatically() {
+    let (a, _) = parse_args(argv(&["forgum-engine", "--animal", "nyan"])).unwrap();
+    let cfg = build_scene_config(&a).unwrap();
+    assert_eq!(cfg.cow, "nyan");
+    assert_eq!(cfg.environment.as_deref(), Some("space"));
+    assert_eq!(cfg.road.as_deref(), Some("grid"));
+    assert_eq!(cfg.mountain.as_deref(), Some("crater"));
+    assert_eq!(cfg.effect, "fly");
+    assert!(cfg.palette.as_ref().unwrap().contains("#ff0033"));
+}
+
+#[test]
+fn dynamic_scenario_adaptation_adapts_road_mountain_and_motion() {
+    // When environment is overridden to ocean for walking animal (tux):
+    // road adapts to seabed, mountain to seamount, motion adapts to float (swimming)
+    let (a, _) = parse_args(argv(&["forgum-engine", "--animal", "tux", "--env", "ocean"])).unwrap();
+    let cfg = build_scene_config(&a).unwrap();
+    assert_eq!(cfg.cow, "tux");
+    assert_eq!(cfg.environment.as_deref(), Some("ocean"));
+    assert_eq!(cfg.road.as_deref(), Some("seabed"));
+    assert_eq!(cfg.mountain.as_deref(), Some("seamount"));
+    assert_eq!(cfg.effect, "float");
+}
+
+#[test]
+fn install_subcommand_parses_cleanly() {
+    let (a, cmd) = parse_args(argv(&["forgum", "install"])).unwrap();
+    assert_eq!(a.command, Command::Install);
+    assert!(matches!(cmd, Some(Commands::Install)));
+
+    let (a_wizard, _) = parse_args(argv(&["forgum", "setup"])).unwrap();
+    assert_eq!(a_wizard.command, Command::Install);
+}
+
+#[test]
+fn update_subcommand_parses_cleanly() {
+    let (a, cmd) = parse_args(argv(&["forgum", "update"])).unwrap();
+    assert_eq!(a.command, Command::Update);
+    assert!(matches!(cmd, Some(Commands::Update { check: false })));
+
+    let (a_check, cmd_check) = parse_args(argv(&["forgum", "update", "--check"])).unwrap();
+    assert_eq!(a_check.command, Command::Update);
+    assert!(matches!(cmd_check, Some(Commands::Update { check: true })));
+
+    let (a_upgrade, _) = parse_args(argv(&["forgum", "upgrade"])).unwrap();
+    assert_eq!(a_upgrade.command, Command::Update);
+}
+

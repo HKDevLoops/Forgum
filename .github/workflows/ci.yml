@@ -51,6 +51,18 @@ jobs:
         run: cargo clippy --workspace --all-targets -- -D warnings
       - name: Format check
         run: cargo fmt --check
+      - name: CLI Discovery & Options Verification
+        run: |
+          cargo run -p forgum-engine --bin forgum -- --version
+          cargo run -p forgum-engine --bin forgum-engine -- --version
+          cargo run -p forgum-engine --bin forgum -- list
+          cargo run -p forgum-engine --bin forgum -- --animal list
+          cargo run -p forgum-engine --bin forgum -- --effect list
+          cargo run -p forgum-engine --bin forgum -- --mountain list
+          cargo run -p forgum-engine --bin forgum -- --road list
+          cargo run -p forgum-engine --bin forgum -- --env list
+          cargo run -p forgum-engine --bin forgum -- completions list
+          cargo run -p forgum-engine --bin forgum -- config list
 
   coverage:
     name: Coverage
@@ -503,8 +515,8 @@ jobs:
           $docs = $raw -split '(?m)^---+\s*$' | Where-Object { $_.Trim().Length -gt 0 }
           $installer = $docs | Where-Object { $_ -match 'ManifestType:\s*installer' }
           if (-not $installer) { throw "winget installer document not found" }
-          if ($installer -notmatch 'PackageVersion:\s*0\.\d+\.\d+') { throw "winget PackageVersion invalid" }
-          if ($installer -notmatch 'forgum-0\.4\.0-windows-(x64|arm64)\.zip') { throw "winget installer url invalid" }
+          $ver = $scoop.version
+          if ($installer -notmatch "forgum-$ver-windows-(x64|arm64)\.zip") { throw "winget installer url invalid" }
           Write-Host "winget manifest OK"
 
           Write-Host "All Windows package manifests validated."

@@ -1,0 +1,16 @@
+##
+## Welsh Corgi with perky ears and short legs
+##
+$the_cow = <<EOC;
+   $thoughts
+    $thoughts   /\     /\
+     $thoughts /  \___/  \
+      |  $eyes   |
+     /    $tongue  \
+    /  /     \  \
+   (  (       )  )
+    \  \_   _/  /
+     \___\_/__/
+      ||    ||
+      ""    ""
+EOC

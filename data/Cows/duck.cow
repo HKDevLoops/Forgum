@@ -1,0 +1,12 @@
+##
+## Duck (Anas platyrhynchos)
+##
+$the_cow = <<EOC;
+   $thoughts
+    $thoughts     __
+     $thoughts  >( $eyes)>
+         (  $tongue )
+          `---'===c
+           / \
+          (_/_)
+EOC

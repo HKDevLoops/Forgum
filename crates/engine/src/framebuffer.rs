@@ -607,7 +607,10 @@ mod tests {
         let dmg = fb.compute_damage();
         // BOTH the new cell (1, 1) and the erased cell (2, 2) must be in damage!
         assert!(dmg.contains(&(1, 1)), "new cell must be damaged");
-        assert!(dmg.contains(&(2, 2)), "erased cell must be damaged so renderer clears it with space");
+        assert!(
+            dmg.contains(&(2, 2)),
+            "erased cell must be damaged so renderer clears it with space"
+        );
         assert_eq!(dmg.len(), 2);
     }
 

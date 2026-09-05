@@ -44,8 +44,14 @@ pub fn find_cow_start_line(text: &str) -> usize {
     let mut bottom_border_idx = None;
     for (i, line) in lines.iter().enumerate().skip(1) {
         let trimmed = line.trim();
-        if (trimmed.starts_with('|') && trimmed.ends_with('|') && trimmed.chars().all(|c| c == '|' || c == '_' || c == '-'))
-            || (trimmed.starts_with('(') && trimmed.ends_with(')') && trimmed.chars().all(|c| c == '(' || c == ')' || c == '_' || c == '-'))
+        if (trimmed.starts_with('|')
+            && trimmed.ends_with('|')
+            && trimmed.chars().all(|c| c == '|' || c == '_' || c == '-'))
+            || (trimmed.starts_with('(')
+                && trimmed.ends_with(')')
+                && trimmed
+                    .chars()
+                    .all(|c| c == '(' || c == ')' || c == '_' || c == '-'))
         {
             bottom_border_idx = Some(i);
             break;
@@ -71,6 +77,26 @@ pub fn find_cow_start_line(text: &str) -> usize {
         }
     }
     cow_start
+}
+
+#[inline]
+pub(crate) fn is_eye_glyph(ch: char) -> bool {
+    matches!(ch, 'o' | 'O' | '@' | '^' | '*' | '$' | 'x' | 'X' | '.' | '=' | '0' | 'e' | '+' | 'v')
+}
+
+/// Dynamically find the bottom-most non-empty line of the cow/animal art.
+/// This corresponds to the row where the creature's feet / legs touch the ground.
+pub fn find_cow_foot_y(text: &str) -> usize {
+    let lines: Vec<&str> = text.lines().collect();
+    if lines.is_empty() {
+        return 0;
+    }
+    for (i, line) in lines.iter().enumerate().rev() {
+        if line.chars().any(|c| !c.is_whitespace()) {
+            return i;
+        }
+    }
+    lines.len().saturating_sub(1)
 }
 
 // ── Static (no animation) ──────────────────────────────────────────
@@ -129,15 +155,7 @@ impl Effect for StaticEffect {
         };
 
         // Strictly anchored at stagnant position (0, 0)
-        render_text_offset(
-            fb,
-            display_text,
-            Color::WHITE,
-            0,
-            0,
-            &self.color_mode,
-            time,
-        );
+        render_text_offset(fb, display_text, Color::WHITE, 0, 0, &self.color_mode, time);
     }
 }
 
@@ -156,6 +174,7 @@ pub struct BreatheEffect {
     phase: f32,
     speed: f32,
     color_mode: String,
+    palette: Vec<(u8, u8, u8)>,
 }
 
 impl BreatheEffect {
@@ -163,6 +182,7 @@ impl BreatheEffect {
         let phase = instance_phase(dna.phase_seed, instance_id);
         let line_offsets = compute_line_offsets(&cow_text);
         let cow_start_line = find_cow_start_line(&cow_text);
+        let palette = crate::color::parse_palette(&dna.palette);
         Self {
             cow_text,
             line_offsets,
@@ -172,6 +192,7 @@ impl BreatheEffect {
             phase,
             speed: dna.speed,
             color_mode,
+            palette,
         }
     }
 }
@@ -213,9 +234,13 @@ impl Effect for BreatheEffect {
             while x < chars.len() && x < fb.width {
                 let mut ch = chars[x];
 
-                // Blink eyes: oo -> -- or OO -> --
-                if is_blinking && (ch == 'o' || ch == 'O') && x + 1 < chars.len() && chars[x + 1] == ch {
-                    let cell_fg = resolve_fg(&self.color_mode, x, y, time, Color::WHITE);
+                // Blink eyes: oo, OO, @@, ^^, **, $$, .., etc. -> --
+                if is_blinking
+                    && is_eye_glyph(ch)
+                    && x + 1 < chars.len()
+                    && chars[x + 1] == ch
+                {
+                    let cell_fg = resolve_fg_palette(&self.color_mode, &self.palette, x, y, time, Color::WHITE);
                     let _ = fb.set(x, y, Cell::new('-', cell_fg));
                     if x + 1 < fb.width {
                         let _ = fb.set(x + 1, y, Cell::new('-', cell_fg));
@@ -233,7 +258,7 @@ impl Effect for BreatheEffect {
                     }
                 }
 
-                let cell_fg = resolve_fg(&self.color_mode, x, y, time, Color::WHITE);
+                let cell_fg = resolve_fg_palette(&self.color_mode, &self.palette, x, y, time, Color::WHITE);
                 let _ = fb.set(x, y, Cell::new(ch, cell_fg));
                 x += 1;
             }
@@ -257,6 +282,8 @@ pub struct FloatEffect {
     phase: f32,
     speed: f32,
     color_mode: String,
+    palette: Vec<(u8, u8, u8)>,
+    is_marine: bool,
     pub body: crate::kinematics::KinematicBody,
     elapsed: f32,
 }
@@ -281,6 +308,16 @@ impl FloatEffect {
         );
         body.vx = 0.0;
         body.vy = 0.0;
+        let lower = cow_text.to_ascii_lowercase();
+        let is_marine = lower.contains("whale")
+            || lower.contains("dolphin")
+            || lower.contains("octopus")
+            || lower.contains("jellyfish")
+            || lower.contains("lobster")
+            || lower.contains("seahorse")
+            || lower.contains("turtle")
+            || lower.contains("ebi_furai");
+        let palette = crate::color::parse_palette(&dna.palette);
         Self {
             cow_text,
             line_offsets,
@@ -290,6 +327,8 @@ impl FloatEffect {
             phase,
             speed: dna.speed,
             color_mode,
+            palette,
+            is_marine,
             body,
             elapsed: 0.0,
         }
@@ -330,34 +369,48 @@ impl Effect for FloatEffect {
                 return;
             }
 
-            // Creature lines: gentle hovering shimmer in place
+            // Creature lines: gentle hovering shimmer in place or aquatic wave
             let chars: Vec<char> = line.chars().collect();
             let mut x = 0usize;
-            while x < chars.len() && x < fb.width {
-                let mut ch = chars[x];
+            let aquatic_wave_x = if self.is_marine {
+                ((time * 2.5 + y as f32 * 0.4 + self.phase).sin() * 0.8) as i32
+            } else {
+                0
+            };
 
-                // Blink eyes:
-                if is_blinking && (ch == 'o' || ch == 'O') && x + 1 < chars.len() && chars[x + 1] == ch {
-                    let cell_fg = resolve_fg(&self.color_mode, x, y, time, Color::WHITE);
-                    let _ = fb.set(x, y, Cell::new('-', cell_fg));
-                    if x + 1 < fb.width {
-                        let _ = fb.set(x + 1, y, Cell::new('-', cell_fg));
+            while x < chars.len() {
+                let xi = x as i32 + aquatic_wave_x;
+                if xi >= 0 && (xi as usize) < fb.width {
+                    let uxi = xi as usize;
+                    let mut ch = chars[x];
+
+                    // Blink eyes:
+                    if is_blinking
+                        && is_eye_glyph(ch)
+                        && x + 1 < chars.len()
+                        && chars[x + 1] == ch
+                    {
+                        let cell_fg = resolve_fg_palette(&self.color_mode, &self.palette, uxi, y, time, Color::WHITE);
+                        let _ = fb.set(uxi, y, Cell::new('-', cell_fg));
+                        if uxi + 1 < fb.width {
+                            let _ = fb.set(uxi + 1, y, Cell::new('-', cell_fg));
+                        }
+                        x += 2;
+                        continue;
                     }
-                    x += 2;
-                    continue;
-                }
 
-                // Hovering levitation shimmer on horns/ears or back:
-                if hover_pulse && (self.amp.float > 0.0 || self.amp.sway > 0.0) {
-                    if ch == '^' {
-                        ch = '*';
-                    } else if ch == '~' {
-                        ch = '-';
+                    // Hovering levitation shimmer on horns/ears or back:
+                    if hover_pulse && (self.amp.float > 0.0 || self.amp.sway > 0.0) {
+                        if ch == '^' {
+                            ch = '*';
+                        } else if ch == '~' {
+                            ch = '-';
+                        }
                     }
-                }
 
-                let cell_fg = resolve_fg(&self.color_mode, x, y, time, Color::WHITE);
-                let _ = fb.set(x, y, Cell::new(ch, cell_fg));
+                    let cell_fg = resolve_fg_palette(&self.color_mode, &self.palette, uxi, y, time, Color::WHITE);
+                    let _ = fb.set(uxi, y, Cell::new(ch, cell_fg));
+                }
                 x += 1;
             }
             y += 1;
@@ -382,6 +435,7 @@ pub struct WalkEffect {
     phase: f32,
     speed: f32,
     color_mode: String,
+    palette: Vec<(u8, u8, u8)>,
     pub body: crate::kinematics::KinematicBody,
     elapsed: f32,
 }
@@ -406,7 +460,10 @@ impl WalkEffect {
         if leg_line_idx < lines.len() {
             let bottom_line = lines[leg_line_idx];
             for (col, ch) in bottom_line.chars().enumerate() {
-                if matches!(ch, '|' | '/' | '\\' | '!' | 'I' | 'l' | '[' | ']' | '(' | ')' | '1' | ':') {
+                if matches!(
+                    ch,
+                    '|' | '/' | '\\' | '!' | 'I' | 'l' | '[' | ']' | '(' | ')' | '1' | ':'
+                ) {
                     leg_cols.push(col);
                 }
             }
@@ -418,28 +475,55 @@ impl WalkEffect {
         let mut tail_pos: Option<(usize, usize)> = None;
 
         let cow_start = find_cow_start_line(&cow_text);
-        let search_start = leg_line_idx.saturating_sub(6).max(cow_start);
-        for (i, line) in lines.iter().enumerate().skip(search_start) {
-            // 1. Detect eyes: (oo), (@@), (XX), (..), etc.
-            if eye_pos.is_none() {
-                if let Some(open) = line.find('(') {
-                    if open + 3 <= line.len() && line.as_bytes().get(open + 3) == Some(&b')') {
-                        eye_pos = Some((i, open + 1));
+        for (i, line) in lines.iter().enumerate().skip(cow_start) {
+            let chars: Vec<char> = line.chars().collect();
+
+            // 1. Detect eyes: (oo), [oo], (@@), (XX), (..), or standalone pairs oo, @@, ^^, **, $$
+            if eye_pos.is_none() && i < leg_line_idx {
+                // Check parenthesized/bracketed eye patterns first
+                for (c_idx, &c) in chars.iter().enumerate() {
+                    if (c == '(' || c == '[') && c_idx + 3 < chars.len() {
+                        let c1 = chars[c_idx + 1];
+                        let c2 = chars[c_idx + 2];
+                        let close = chars[c_idx + 3];
+                        if (close == ')' || close == ']') && is_eye_glyph(c1) && is_eye_glyph(c2) {
+                            eye_pos = Some((i, c_idx + 1));
+                            break;
+                        }
                     }
                 }
-            } else if mouth_pos.is_none() && i > eye_pos.unwrap().0 {
-                // 2. Detect mouth/muzzle: (__), (..), (==) below eyes
+                // Fallback: search for adjacent eye pair in the line
+                if eye_pos.is_none() {
+                    for col in 0..chars.len().saturating_sub(1) {
+                        if is_eye_glyph(chars[col]) && chars[col] == chars[col + 1] {
+                            eye_pos = Some((i, col));
+                            break;
+                        }
+                    }
+                }
+            } else if mouth_pos.is_none() && eye_pos.is_some_and(|ep| i >= ep.0) {
+                // 2. Detect mouth/muzzle: (__), (..), (==), \__/, or U / V tongue
                 if let Some(open) = line.find("(__)") {
                     mouth_pos = Some((i, open + 1));
-                } else if let Some(open) = line.find('(') {
-                    if open + 3 <= line.len() && line.as_bytes().get(open + 3) == Some(&b')') {
+                } else {
+                    for (c_idx, &c) in chars.iter().enumerate() {
+                        if c == '(' && c_idx + 3 < chars.len() && chars[c_idx + 3] == ')' {
+                            mouth_pos = Some((i, c_idx + 1));
+                            break;
+                        }
+                    }
+                }
+                if mouth_pos.is_none() {
+                    if let Some(open) = line.find("\\__/") {
                         mouth_pos = Some((i, open + 1));
+                    } else if let Some(open) = line.find("U ").or_else(|| line.find("V ")) {
+                        mouth_pos = Some((i, open));
                     }
                 }
             }
 
-            // 3. Detect tail: )\/ or )/\ near rear of cow (use rfind to avoid matching muzzle `(__)\`)
-            if tail_pos.is_none() {
+            // 3. Detect tail: )\/ or )/\ or ~ or S near rear of animal
+            if tail_pos.is_none() && i < leg_line_idx {
                 if let Some(pos) = line.rfind(")\\") {
                     if !line[..pos].ends_with("(__") {
                         tail_pos = Some((i, pos));
@@ -453,9 +537,11 @@ impl WalkEffect {
         }
 
         let (w, h) = crate::kinematics::ascii_dimensions(&cow_text);
-        let mut body = crate::kinematics::KinematicBody::new(w, h, crate::kinematics::BoundsMode::Wrap);
+        let mut body =
+            crate::kinematics::KinematicBody::new(w, h, crate::kinematics::BoundsMode::Wrap);
         body.vx = 0.0;
         body.vy = 0.0;
+        let palette = crate::color::parse_palette(&dna.palette);
 
         Self {
             cow_text,
@@ -469,6 +555,7 @@ impl WalkEffect {
             phase,
             speed: dna.speed,
             color_mode,
+            palette,
             body,
             elapsed: 0.0,
         }
@@ -485,7 +572,7 @@ impl Effect for WalkEffect {
         let stride = (time * self.speed + self.phase) % 1.0;
 
         // 4-phase natural leg stride coupling using clean ASCII:
-        let (leg_l, leg_r) = if stride < 0.25 || (stride >= 0.50 && stride < 0.75) {
+        let (leg_l, leg_r) = if stride < 0.25 || (0.50..0.75).contains(&stride) {
             ('|', '|')
         } else if stride < 0.50 {
             ('/', '\\')
@@ -501,9 +588,9 @@ impl Effect for WalkEffect {
         let tail_cycle = (time * 0.62 + self.phase) % 1.0;
         let tail_frame = (tail_cycle * 4.0) as usize; // 0, 1, 2, 3
 
-        // Cud chew cycle: every ~0.8 seconds
-        let chew_cycle = (time * 1.25) % 1.0;
-        let is_chewing = chew_cycle > 0.35 && chew_cycle < 0.70;
+        // Cud chew cycle: natural bovine rhythm every ~2.8 seconds
+        let chew_cycle = (time * 0.36 + self.phase) % 1.0;
+        let is_chewing = chew_cycle > 0.40 && chew_cycle < 0.65;
 
         let x_off = self.body.screen_x();
         let y_off = self.body.screen_y();
@@ -514,6 +601,10 @@ impl Effect for WalkEffect {
             let mut x = 0usize;
             let line_chars: Vec<char> = line.chars().collect();
             let mut i = 0usize;
+
+            // Bounding hull for occlusion masking
+            let hull_start = line_chars.iter().position(|c| *c != ' ');
+            let hull_end = line_chars.iter().rposition(|c| *c != ' ');
 
             while i < line_chars.len() {
                 let mut display_ch = line_chars[i];
@@ -553,7 +644,8 @@ impl Effect for WalkEffect {
                                 let uxi = xi as usize;
                                 let uyi = yi as usize;
                                 if uyi < fb.height && uxi < fb.width {
-                                    let cell_fg = resolve_fg(&self.color_mode, uxi, uyi, time, Color::WHITE);
+                                    let cell_fg =
+                                        resolve_fg_palette(&self.color_mode, &self.palette, uxi, uyi, time, Color::WHITE);
                                     let _ = fb.set(uxi, uyi, Cell::new(sc, cell_fg));
                                 }
                             }
@@ -570,8 +662,15 @@ impl Effect for WalkEffect {
                     let uxi = xi as usize;
                     let uyi = yi as usize;
                     if uyi < fb.height && uxi < fb.width {
-                        let cell_fg = resolve_fg(&self.color_mode, uxi, uyi, time, Color::WHITE);
-                        let _ = fb.set(uxi, uyi, Cell::new(display_ch, cell_fg));
+                        if display_ch != ' ' {
+                            let cell_fg = resolve_fg_palette(&self.color_mode, &self.palette, uxi, uyi, time, Color::WHITE);
+                            let _ = fb.set(uxi, uyi, Cell::new(display_ch, cell_fg));
+                        } else if let (Some(hs), Some(he)) = (hull_start, hull_end) {
+                            if x >= hs && x <= he {
+                                // Opaque blank inside hull — occlude scenery
+                                let _ = fb.set(uxi, uyi, Cell::new(' ', Color::WHITE));
+                            }
+                        }
                     }
                 }
                 x += 1;
@@ -723,6 +822,7 @@ pub struct GlitchEffect {
     phase: f32,
     speed: f32,
     color_mode: String,
+    palette: Vec<(u8, u8, u8)>,
 }
 
 impl GlitchEffect {
@@ -740,12 +840,14 @@ impl GlitchEffect {
                 }
             }
         }
+        let palette = crate::color::parse_palette(&dna.palette);
         Self {
             cow_text,
             body_coords,
             phase,
             speed: dna.speed,
             color_mode,
+            palette,
         }
     }
 }
@@ -754,7 +856,7 @@ impl Effect for GlitchEffect {
     fn update(&mut self, _dt: f32, _cols: usize, _rows: usize) {}
 
     fn render(&self, fb: &mut FrameBuffer, time: f32) {
-        render_text(fb, &self.cow_text, Color::WHITE, &self.color_mode, time);
+        render_text_palette(fb, &self.cow_text, Color::WHITE, &self.color_mode, &self.palette, time);
         if self.body_coords.is_empty() || fb.width == 0 || fb.height == 0 {
             return;
         }
@@ -780,7 +882,8 @@ impl Effect for GlitchEffect {
     }
 }
 
-/// In-place hovering flight with flapping wings, stationary at stagnant position (0, 0).
+/// In-place hovering flight with flapping wings, stationary at stagnant position (0, 0),
+/// or authentic Nyan Cat rainbow wave propulsion and twinkling starfield.
 #[derive(Debug)]
 pub struct FlyEffect {
     cow_text: String,
@@ -791,6 +894,8 @@ pub struct FlyEffect {
     phase: f32,
     speed: f32,
     color_mode: String,
+    palette: Vec<(u8, u8, u8)>,
+    is_nyan: bool,
     pub body: crate::kinematics::KinematicBody,
     elapsed: f32,
 }
@@ -801,9 +906,13 @@ impl FlyEffect {
         let line_offsets = compute_line_offsets(&cow_text);
         let cow_start_line = find_cow_start_line(&cow_text);
         let (w, h) = crate::kinematics::ascii_dimensions(&cow_text);
-        let mut body = crate::kinematics::KinematicBody::new(w, h, crate::kinematics::BoundsMode::Wrap);
+        let mut body =
+            crate::kinematics::KinematicBody::new(w, h, crate::kinematics::BoundsMode::Wrap);
         body.vx = 0.0;
         body.vy = 0.0;
+        let lower = cow_text.to_ascii_lowercase();
+        let is_nyan = cow_text.contains("-_-_") || lower.contains("nyan");
+        let palette = crate::color::parse_palette(&dna.palette);
         Self {
             cow_text,
             line_offsets,
@@ -813,9 +922,118 @@ impl FlyEffect {
             phase,
             speed: dna.speed,
             color_mode,
+            palette,
+            is_nyan,
             body,
             elapsed: 0.0,
         }
+    }
+
+    fn render_nyan(&self, fb: &mut FrameBuffer, time: f32) {
+        let wave_phase = ((time * 12.0) as usize) % 2;
+        let bob_y = ((time * 7.0).sin() * 0.6) as i32;
+
+        let mut y = 0usize;
+        for_each_line(&self.cow_text, &self.line_offsets, |line| {
+            let line = line.trim_end_matches(['\r', '\n']);
+            if y >= fb.height {
+                return;
+            }
+
+            // Speech/thought bubble: strictly anchored at (0, 0), completely untouched
+            if y < self.cow_start_line {
+                for (x, ch) in line.chars().enumerate() {
+                    if x < fb.width {
+                        let cell_fg = resolve_fg(&self.color_mode, x, y, time, Color::WHITE);
+                        let _ = fb.set(x, y, Cell::new(ch, cell_fg));
+                    }
+                }
+                y += 1;
+                return;
+            }
+
+            // Vertical flight bobbing for creature lines
+            let target_y = (y as i32 + bob_y).max(self.cow_start_line as i32);
+            if target_y < 0 || target_y as usize >= fb.height {
+                y += 1;
+                return;
+            }
+            let draw_y = target_y as usize;
+
+            let is_trail_row = line.contains("-_-_") || line.contains("_-_-");
+            let chars: Vec<char> = line.chars().collect();
+
+            // Detect where the pop-tart pastry starts (first ',' or '|' on rainbow line)
+            let pastry_start = line.find(',').or_else(|| line.find('|')).unwrap_or(chars.len());
+
+            for (x, mut ch) in chars.into_iter().enumerate() {
+                if x >= fb.width || ch == ' ' {
+                    continue;
+                }
+
+                // Starfield twinkling:
+                if (ch == '+' || ch == 'o' || ch == '*' || ch == '·') && !is_trail_row {
+                    let star_seed = (x * 13 + y * 7 + (time * 6.0) as usize) % 4;
+                    let star_glyph = match star_seed {
+                        0 => '✦',
+                        1 => '*',
+                        2 => '+',
+                        _ => '·',
+                    };
+                    let star_color = match star_seed {
+                        0 => Color::rgb(128, 216, 255), // star cyan
+                        1 => Color::rgb(255, 255, 255), // diamond white
+                        2 => Color::rgb(255, 245, 157), // pale gold
+                        _ => Color::rgb(225, 190, 231), // lavender
+                    };
+                    let _ = fb.set(x, draw_y, Cell::new(star_glyph, star_color));
+                    continue;
+                }
+
+                // Rainbow propulsion trail:
+                if is_trail_row && x < pastry_start && (ch == '-' || ch == '_' || ch == '~') {
+                    ch = if wave_phase == 0 {
+                        if ch == '~' { '-' } else { ch }
+                    } else if ch == '-' || ch == '~' {
+                        '_'
+                    } else {
+                        '-'
+                    };
+
+                    // 6-band chromatic rainbow bands
+                    let trail_row = y.saturating_sub(self.cow_start_line);
+                    let rainbow_color = match trail_row % 4 {
+                        0 => Color::rgb(255, 0, 51),   // Red
+                        1 => Color::rgb(255, 153, 0),  // Orange / Yellow
+                        2 => Color::rgb(51, 255, 0),   // Green
+                        _ => Color::rgb(153, 51, 255),  // Indigo / Purple
+                    };
+                    let _ = fb.set(x, draw_y, Cell::new(ch, rainbow_color));
+                    continue;
+                }
+
+                // Pop-Tart Pastry & Cat Body:
+                let fg_color = if ch == ',' || (ch == '-' && x >= pastry_start) || ch == '|' || ch == '_' {
+                    // Golden pastry crust
+                    Color::rgb(230, 162, 108)
+                } else if ch == '/' || ch == '\\' || ch == '(' || ch == ')' || ch == '\'' {
+                    // Soft gray cat head and paws
+                    Color::rgb(160, 160, 160)
+                } else if ch == '.' {
+                    // Rosy pink nose
+                    Color::rgb(255, 64, 129)
+                } else if ch == '^' {
+                    // Cat eyes
+                    Color::rgb(20, 20, 20)
+                } else {
+                    resolve_fg_palette(&self.color_mode, &self.palette, x, draw_y, time, Color::WHITE)
+                };
+
+                let _ = fb.set(x, draw_y, Cell::new(ch, fg_color));
+            }
+
+            y += 1;
+        });
     }
 }
 
@@ -826,6 +1044,11 @@ impl Effect for FlyEffect {
     }
 
     fn render(&self, fb: &mut FrameBuffer, time: f32) {
+        if self.is_nyan {
+            self.render_nyan(fb, time);
+            return;
+        }
+
         // 2-phase in-place wing flap cycle:
         let flap_cycle = ((time * self.speed * 8.0) as usize) % 2;
         let is_upstroke = flap_cycle == 0;
@@ -860,8 +1083,12 @@ impl Effect for FlyEffect {
                 let mut ch = chars[x];
 
                 // Eye blinking:
-                if is_blinking && (ch == 'o' || ch == 'O') && x + 1 < chars.len() && chars[x + 1] == ch {
-                    let cell_fg = resolve_fg(&self.color_mode, x, y, time, Color::WHITE);
+                if is_blinking
+                    && is_eye_glyph(ch)
+                    && x + 1 < chars.len()
+                    && chars[x + 1] == ch
+                {
+                    let cell_fg = resolve_fg_palette(&self.color_mode, &self.palette, x, y, time, Color::WHITE);
                     let _ = fb.set(x, y, Cell::new('-', cell_fg));
                     if x + 1 < fb.width {
                         let _ = fb.set(x + 1, y, Cell::new('-', cell_fg));
@@ -870,22 +1097,16 @@ impl Effect for FlyEffect {
                     continue;
                 }
 
-                // In-place wing flap:
+                // In-place wing flap (carets '^' <-> 'v'):
                 if is_upstroke {
                     if ch == 'v' {
                         ch = '^';
-                    } else if ch == '~' {
-                        ch = '-';
                     }
-                } else {
-                    if ch == '^' {
-                        ch = 'v';
-                    } else if ch == '-' {
-                        ch = '~';
-                    }
+                } else if ch == '^' {
+                    ch = 'v';
                 }
 
-                let cell_fg = resolve_fg(&self.color_mode, x, y, time, Color::WHITE);
+                let cell_fg = resolve_fg_palette(&self.color_mode, &self.palette, x, y, time, Color::WHITE);
                 let _ = fb.set(x, y, Cell::new(ch, cell_fg));
                 x += 1;
             }
@@ -902,11 +1123,14 @@ pub struct TalkEffect {
     cow_text: String,
     line_offsets: Vec<usize>,
     cow_start_line: usize,
+    eye_pos: Option<(usize, usize)>,
+    mouth_pos: Option<(usize, usize)>,
     _amp: Amplitude,
     easing_fn: fn(f32) -> f32,
     phase: f32,
     speed: f32,
     color_mode: String,
+    palette: Vec<(u8, u8, u8)>,
 }
 
 impl TalkEffect {
@@ -914,15 +1138,45 @@ impl TalkEffect {
         let phase = instance_phase(dna.phase_seed, instance_id);
         let line_offsets = compute_line_offsets(&cow_text);
         let cow_start_line = find_cow_start_line(&cow_text);
+        let lines: Vec<&str> = cow_text.lines().collect();
+
+        let mut eye_pos: Option<(usize, usize)> = None;
+        let mut mouth_pos: Option<(usize, usize)> = None;
+
+        for (i, line) in lines.iter().enumerate().skip(cow_start_line) {
+            // 1. Detect eyes: (oo), (@@), (XX), (..), etc.
+            if eye_pos.is_none() {
+                if let Some(open) = line.find('(') {
+                    if open + 3 <= line.len() && line.as_bytes().get(open + 3) == Some(&b')') {
+                        eye_pos = Some((i, open + 1));
+                    }
+                }
+            } else if mouth_pos.is_none() && eye_pos.is_some_and(|ep| i > ep.0) {
+                // 2. Detect mouth/muzzle: (__), (..), (==) below eyes
+                if let Some(open) = line.find("(__)") {
+                    mouth_pos = Some((i, open + 1));
+                } else if let Some(open) = line.find('(') {
+                    if open + 3 <= line.len() && line.as_bytes().get(open + 3) == Some(&b')') {
+                        mouth_pos = Some((i, open + 1));
+                    }
+                }
+            }
+        }
+
+        let palette = crate::color::parse_palette(&dna.palette);
+
         Self {
             cow_text,
             line_offsets,
             cow_start_line,
+            eye_pos,
+            mouth_pos,
             _amp: dna.amplitude.clone(),
             easing_fn: easing::by_name(&dna.easing.base),
             phase,
             speed: dna.speed,
             color_mode,
+            palette,
         }
     }
 }
@@ -931,11 +1185,17 @@ impl Effect for TalkEffect {
     fn update(&mut self, _dt: f32, _cols: usize, _rows: usize) {}
 
     fn render(&self, fb: &mut FrameBuffer, time: f32) {
-        let t = (time * self.speed + self.phase) % 1.0;
+        let t = (time * (self.speed * 0.4) + self.phase) % 1.0;
         let eased = (self.easing_fn)(t);
-        let mouth_chars = ['o', 'O', '0', 'o'];
+        let mouth_chars = ['_', '.', 'o', 'O', 'w', 'W', '='];
         let mouth_idx = (eased * mouth_chars.len() as f32) as usize % mouth_chars.len();
         let mouth_ch = mouth_chars[mouth_idx];
+
+        // Periodic eye-blink (~every 3.8s)
+        let blink_cycle = (time * 0.26 + self.phase) % 1.0;
+        let is_blinking = blink_cycle < 0.04;
+
+        let eye_line = self.eye_pos.map(|(row, _)| row);
 
         let mut y = 0usize;
         for_each_line(&self.cow_text, &self.line_offsets, |line| {
@@ -956,17 +1216,40 @@ impl Effect for TalkEffect {
                 return;
             }
 
-            // Animal body lines: animate mouth characters
-            for (x, ch) in line.chars().enumerate() {
-                if x >= fb.width {
-                    break;
+            // Animal body lines:
+            let line_chars: Vec<char> = line.chars().collect();
+            let mut x = 0usize;
+            while x < line_chars.len() && x < fb.width {
+                let mut display_ch = line_chars[x];
+
+                // 1. Natural eye preservation and blinking
+                if let Some((eye_row, eye_col)) = self.eye_pos {
+                    if y == eye_row {
+                        if is_blinking && (x == eye_col || x == eye_col + 1) {
+                            display_ch = '-';
+                        }
+                        let cell_fg = resolve_fg_palette(&self.color_mode, &self.palette, x, y, time, Color::WHITE);
+                        let _ = fb.set(x, y, Cell::new(display_ch, cell_fg));
+                        x += 1;
+                        continue;
+                    }
                 }
-                let display_ch = match ch {
-                    'o' | 'O' | '0' | '@' => mouth_ch,
-                    _ => ch,
-                };
-                let cell_fg = resolve_fg(&self.color_mode, x, y, time, Color::WHITE);
+
+                // 2. Mouth / jaw animation below eyes:
+                if let Some((mouth_row, mouth_col)) = self.mouth_pos {
+                    if y == mouth_row && (x == mouth_col || x == mouth_col + 1) {
+                        display_ch = mouth_ch;
+                    }
+                } else if eye_line.is_none() || eye_line.is_some_and(|el| y > el) {
+                    // Fallback for creatures without landmarks: animate only rows below eyes
+                    if matches!(display_ch, '_' | '-' | '=' | 'w' | 'W' | '.') {
+                        display_ch = mouth_ch;
+                    }
+                }
+
+                let cell_fg = resolve_fg_palette(&self.color_mode, &self.palette, x, y, time, Color::WHITE);
                 let _ = fb.set(x, y, Cell::new(display_ch, cell_fg));
+                x += 1;
             }
             y = y.saturating_add(1);
         });
@@ -986,6 +1269,7 @@ pub struct SwayEffect {
     phase: f32,
     speed: f32,
     color_mode: String,
+    palette: Vec<(u8, u8, u8)>,
 }
 
 impl SwayEffect {
@@ -993,6 +1277,7 @@ impl SwayEffect {
         let phase = instance_phase(dna.phase_seed, instance_id);
         let line_offsets = compute_line_offsets(&cow_text);
         let cow_start_line = find_cow_start_line(&cow_text);
+        let palette = crate::color::parse_palette(&dna.palette);
         Self {
             cow_text,
             line_offsets,
@@ -1002,6 +1287,7 @@ impl SwayEffect {
             phase,
             speed: dna.speed,
             color_mode,
+            palette,
         }
     }
 }
@@ -1038,7 +1324,7 @@ impl Effect for SwayEffect {
                 if xi >= 0 {
                     let xi = xi as usize;
                     if xi < fb.width {
-                        let cell_fg = resolve_fg(&self.color_mode, xi, i, time, Color::WHITE);
+                        let cell_fg = resolve_fg_palette(&self.color_mode, &self.palette, xi, i, time, Color::WHITE);
                         let _ = fb.set(xi, i, Cell::new(ch, cell_fg));
                     }
                 }
@@ -1062,6 +1348,7 @@ pub struct DissolveEffect {
     speed: f32,
     scatter_offsets: Vec<(f32, f32)>,
     color_mode: String,
+    palette: Vec<(u8, u8, u8)>,
     elapsed: f32,
 }
 
@@ -1090,6 +1377,7 @@ impl DissolveEffect {
                 scatter_offsets.push((dx, dy));
             }
         }
+        let palette = crate::color::parse_palette(&dna.palette);
         Self {
             cow_text,
             line_ranges,
@@ -1099,6 +1387,7 @@ impl DissolveEffect {
             speed: dna.speed,
             scatter_offsets,
             color_mode,
+            palette,
             elapsed: 0.0,
         }
     }
@@ -1136,7 +1425,7 @@ impl Effect for DissolveEffect {
                     let fy = final_y as usize;
                     if fy < fb.height && fx < fb.width {
                         let alpha = (t * 255.0) as u8;
-                        let cell_fg = resolve_fg(&self.color_mode, fx, fy, time, Color::WHITE);
+                        let cell_fg = resolve_fg_palette(&self.color_mode, &self.palette, fx, fy, time, Color::WHITE);
                         let _ = fb.set(
                             fx,
                             fy,
@@ -1188,21 +1477,70 @@ fn for_each_line<F: FnMut(&str)>(text: &str, offsets: &[usize], mut f: F) {
     }
 }
 
-/// Resolve foreground color based on color_mode.
-/// "rainbow" = lolcat per-character HSV rainbow, "solid" or anything else = base color.
-pub(crate) fn resolve_fg(color_mode: &str, x: usize, y: usize, time: f32, base: Color) -> Color {
+/// Resolve foreground color based on color_mode and animal DNA palette.
+pub(crate) fn resolve_fg_palette(
+    color_mode: &str,
+    palette: &[(u8, u8, u8)],
+    x: usize,
+    y: usize,
+    time: f32,
+    base: Color,
+) -> Color {
     match color_mode {
         "rainbow" => {
             let (r, g, b) = crate::color::lolcat_color(x as f32, y as f32, time, 0.0);
             Color { r, g, b, a: 255 }
         }
-        _ => base,
+        "animal" => {
+            if !palette.is_empty() {
+                let (r, g, b) = crate::color::palette_gradient(palette, x as f32, y as f32, time);
+                Color { r, g, b, a: 255 }
+            } else {
+                base
+            }
+        }
+        "solid" => Color::WHITE,
+        "none" => base,
+        _ => {
+            if color_mode.starts_with('#') {
+                let hexes: Vec<String> = color_mode
+                    .split(',')
+                    .map(|s| s.trim().to_string())
+                    .collect();
+                let custom_palette = crate::color::parse_palette(&hexes);
+                let (r, g, b) =
+                    crate::color::palette_gradient(&custom_palette, x as f32, y as f32, time);
+                Color { r, g, b, a: 255 }
+            } else if !palette.is_empty() {
+                let (r, g, b) = crate::color::palette_gradient(palette, x as f32, y as f32, time);
+                Color { r, g, b, a: 255 }
+            } else {
+                base
+            }
+        }
     }
+}
+
+/// Resolve foreground color based on color_mode.
+pub(crate) fn resolve_fg(color_mode: &str, x: usize, y: usize, time: f32, base: Color) -> Color {
+    resolve_fg_palette(color_mode, &[], x, y, time, base)
 }
 
 /// Render text into the framebuffer at row 0.
 fn render_text(fb: &mut FrameBuffer, text: &str, fg: Color, color_mode: &str, time: f32) {
     render_text_offset(fb, text, fg, 0, 0, color_mode, time);
+}
+
+/// Render text into the framebuffer at row 0 with wildlife palette.
+fn render_text_palette(
+    fb: &mut FrameBuffer,
+    text: &str,
+    fg: Color,
+    color_mode: &str,
+    palette: &[(u8, u8, u8)],
+    time: f32,
+) {
+    render_text_offset_palette(fb, text, fg, 0, 0, color_mode, palette, time);
 }
 
 /// Render text with x/y offset into the framebuffer.
@@ -1215,28 +1553,71 @@ fn render_text_offset(
     color_mode: &str,
     time: f32,
 ) {
-    let mut x = 0usize;
-    let mut y = 0usize;
-    for ch in text.chars() {
-        if ch == '\n' {
-            x = 0;
-            y = y.saturating_add(1);
-            continue;
-        }
-        if ch == '\r' {
-            continue;
-        }
-        let xi = x as i32 + x_off;
+    render_text_offset_palette(fb, text, fg, x_off, y_off, color_mode, &[], time);
+}
+
+/// Render text with x/y offset into the framebuffer using palette.
+/// Applies bounding-hull occlusion: for each line, spaces between the first
+/// and last non-space columns are written as opaque cells so background
+/// scenery does not bleed through the animal's interior.
+#[allow(clippy::too_many_arguments)]
+fn render_text_offset_palette(
+    fb: &mut FrameBuffer,
+    text: &str,
+    fg: Color,
+    x_off: i32,
+    y_off: i32,
+    color_mode: &str,
+    palette: &[(u8, u8, u8)],
+    time: f32,
+) {
+    // Pre-compute per-line bounding hulls for occlusion masking.
+    let lines: Vec<&str> = text.lines().collect();
+
+    for (y, line) in lines.iter().enumerate() {
         let yi = y as i32 + y_off;
-        if yi >= 0 && xi >= 0 {
-            let xi = xi as usize;
-            let yi = yi as usize;
-            if yi < fb.height && xi < fb.width {
-                let cell_fg = resolve_fg(color_mode, xi, yi, time, fg);
-                let _ = fb.set(xi, yi, Cell::new(ch, cell_fg));
-            }
+        if yi < 0 {
+            continue;
         }
-        x = x.saturating_add(1);
+        let uyi = yi as usize;
+        if uyi >= fb.height {
+            break;
+        }
+
+        let chars: Vec<char> = line.chars().collect();
+        if chars.is_empty() {
+            continue;
+        }
+
+        // Compute bounding hull: first and last non-space column in this line.
+        let first_non_ws = chars.iter().position(|c| *c != ' ');
+        let last_non_ws = chars.iter().rposition(|c| *c != ' ');
+
+        let (hull_start, hull_end) = match (first_non_ws, last_non_ws) {
+            (Some(s), Some(e)) => (s, e),
+            _ => continue, // Entirely whitespace line — skip
+        };
+
+        for (x, &ch) in chars.iter().enumerate() {
+            let xi = x as i32 + x_off;
+            if xi < 0 {
+                continue;
+            }
+            let uxi = xi as usize;
+            if uxi >= fb.width {
+                break;
+            }
+
+            if ch != ' ' {
+                // Visible character — always draw
+                let cell_fg = resolve_fg_palette(color_mode, palette, uxi, uyi, time, fg);
+                let _ = fb.set(uxi, uyi, Cell::new(ch, cell_fg));
+            } else if x >= hull_start && x <= hull_end {
+                // Space inside bounding hull — write opaque blank to occlude scenery
+                let _ = fb.set(uxi, uyi, Cell::new(' ', Color::WHITE));
+            }
+            // Space outside hull — leave transparent (background shows through edges)
+        }
     }
 }
 
@@ -1829,7 +2210,10 @@ mod tests {
         let legs_b: Vec<char> = (0..fb_b.width).map(|x| fb_b.get(x, last_row).ch).collect();
 
         // At least one leg char must be present
-        let has_slash = |v: &[char]| v.iter().any(|c| *c == '/' || *c == '\\' || *c == '╱' || *c == '╲');
+        let has_slash = |v: &[char]| {
+            v.iter()
+                .any(|c| *c == '/' || *c == '\\' || *c == '╱' || *c == '╲')
+        };
         assert!(
             has_slash(&legs_a),
             "walk t=0.25 must have leg chars: {legs_a:?}"
@@ -1985,29 +2369,106 @@ mod tests {
         );
     }
 
+    #[test]
+    fn nyan_flying_wave_propulsion_alternates() {
+        let nyan_art = "      (  )\n       (oo)\n+    o    +\n-_-_-_-_,------,\n_-_-_-_-| /\\_/\\\n-_-_-_-~|__( ^ .^)\n_-_-_-_-''  ''\n+    o    +";
+        let dna = CowDna::default();
+        let effect = FlyEffect::new(nyan_art.to_string(), &dna, 0, "animal".to_string());
+        assert!(effect.is_nyan);
+
+        let mut fb1 = FrameBuffer::new(80, 24);
+        let mut fb2 = FrameBuffer::new(80, 24);
+        // wave_phase = ((time * 12.0) as usize) % 2;
+        // time = 0.0 -> wave_phase = 0
+        // time = 0.1 -> wave_phase = (1.2 as usize) % 2 = 1
+        effect.render(&mut fb1, 0.0);
+        fb1.swap();
+        effect.render(&mut fb2, 0.1);
+        fb2.swap();
+
+        // Rainbow row has both '-' and '_' in phase 0 and phase 1
+        let mut row_chars_1 = Vec::new();
+        let mut row_chars_2 = Vec::new();
+        for y in 0..fb1.height {
+            for x in 0..8 {
+                let ch1 = fb1.get(x, y).ch;
+                let ch2 = fb2.get(x, y).ch;
+                if ch1 == '-' || ch1 == '_' {
+                    row_chars_1.push((x, y, ch1));
+                }
+                if ch2 == '-' || ch2 == '_' {
+                    row_chars_2.push((x, y, ch2));
+                }
+            }
+        }
+        assert!(!row_chars_1.is_empty(), "nyan trail must have '-' and '_' characters");
+        assert_eq!(row_chars_1.len(), row_chars_2.len(), "trail lengths match");
+        // Check that at least some characters toggled between '-' and '_'
+        let toggled = row_chars_1
+            .iter()
+            .zip(row_chars_2.iter())
+            .any(|(a, b)| a.2 != b.2);
+        assert!(toggled, "nyan rainbow wave must alternate characters between frames");
+    }
+
+    #[test]
+    fn marine_aquatic_wave_swimming() {
+        let whale_art = "      (  )\n       (oo)\n  .-'\"'-.\n / #     \\\n| # # # # |\n \\       /\n  `'---'`";
+        let dna = CowDna {
+            palette: vec!["#0288d1".to_string(), "#29b6f6".to_string()],
+            ..Default::default()
+        };
+        let effect = FloatEffect::new(format!("whale\n{}", whale_art), &dna, 0, "animal".to_string());
+        assert!(effect.is_marine);
+
+        let mut fb = FrameBuffer::new(80, 24);
+        effect.render(&mut fb, 0.5);
+        fb.swap();
+
+        // Ensure colored cells were drawn using the whale's palette
+        let mut colored_cells = 0;
+        for y in 0..fb.height {
+            for x in 0..fb.width {
+                let cell = fb.get(x, y);
+                if cell.ch != ' ' && cell.fg != Color::WHITE {
+                    colored_cells += 1;
+                }
+            }
+        }
+        assert!(colored_cells > 0, "marine creature must render in authentic wildlife colors");
+    }
+
     // ── TalkEffect ────────────────────────────────────────────────
 
     #[test]
     fn talk_replaces_and_cycles_mouth_chars() {
         let dna = CowDna::default();
-        let mouth_chars = ['o', 'O', '0', 'o'];
+        let mouth_chars = ['_', '.', 'o', 'O', 'w', 'W', '='];
 
         // Render at 4 different times: verify mouth chars are replaced AND cycle
         let mut seen = std::collections::HashSet::new();
         for i in 0..4 {
             let effect = TalkEffect::new(COW.to_string(), &dna, 0, "static".to_string());
             let mut fb = FrameBuffer::new(80, 24);
-            let t = i as f32 / 4.0;
+            let t = (i + 1) as f32 / 4.0; // t > 0 to avoid t=0 blink window for eye check
             effect.render(&mut fb, t);
             fb.swap();
 
-            // COW = "  ^__^  \n (oo)   \n(__)    " → first 'o' at (2,1)
-            let ch = fb.get(2, 1).ch;
+            // COW = "  ^__^  \n (oo)   \n(__)    "
+            // Eyes at row 1, col 2: must be preserved as eye char ('o' or '-' when blinking)
+            let eye_ch = fb.get(2, 1).ch;
             assert!(
-                mouth_chars.contains(&ch),
-                "talk must replace 'o' with mouth char, got '{ch}' at t={t}"
+                eye_ch == 'o' || eye_ch == '-',
+                "talk must preserve eyes at (2,1), got '{eye_ch}' at t={t}"
             );
-            seen.insert(ch);
+
+            // Mouth at row 2, col 2: " (__)"
+            let mouth_ch = fb.get(2, 2).ch;
+            assert!(
+                mouth_chars.contains(&mouth_ch),
+                "talk must replace mouth char at (2,2), got '{mouth_ch}' at t={t}"
+            );
+            seen.insert(mouth_ch);
         }
         assert!(
             seen.len() >= 2,
@@ -2617,7 +3078,8 @@ mod tests {
 
     #[test]
     fn all_effects_maintain_stagnant_position_and_unmoved_speech_bubble() {
-        let cow_raw = "   ^__^\n   (oo)\\_______\n   (__)\\       )\\/\\\n       ||----w |\n       ||     ||";
+        let cow_raw =
+            "   ^__^\n   (oo)\\_______\n   (__)\\       )\\/\\\n       ||----w |\n       ||     ||";
         let scene = crate::cow::compose_scene_with_mode(cow_raw, "Forgum In-Place Animation", true);
         let effects_to_test = [
             "static",

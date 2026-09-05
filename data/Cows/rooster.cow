@@ -1,0 +1,13 @@
+##
+## Rooster (Gallus gallus domesticus)
+##
+$the_cow = <<EOC;
+   $thoughts
+    $thoughts      /\/\
+     $thoughts   >( $eyes)
+           ( $tongue )\/
+          /   /
+         / /| |
+          / | |
+           / \
+EOC

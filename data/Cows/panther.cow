@@ -1,0 +1,11 @@
+##
+## Black Panther (Panthera onca)
+##
+$the_cow = <<EOC;
+   $thoughts
+    $thoughts    /\___/\
+     $thoughts  ( $eyes  )______
+        (  $tongue  )      \_
+         /|||/|---/\ \   \
+        (_)(_)   (_/(_)~~~
+EOC

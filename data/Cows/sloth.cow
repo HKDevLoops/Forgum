@@ -1,0 +1,12 @@
+##
+## Three-Toed Sloth (Bradypus)
+##
+$the_cow = <<EOC;
+   $thoughts
+    $thoughts     ---\-------/---
+     $thoughts       ( $eyes )
+            (  $tongue )
+             /   \
+            (o   o)
+             `---'
+EOC

@@ -1,0 +1,11 @@
+##
+## Three-Eyed Alien Bovine
+##
+$the_cow = <<EOC;
+   $thoughts
+    $thoughts     o  o  o
+     $thoughts   ( $eyes )
+          ( $tongue )______
+          /    |      \
+         * ||--|  ||  ||
+EOC

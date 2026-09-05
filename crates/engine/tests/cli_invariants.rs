@@ -6,12 +6,27 @@ use std::io::Write;
 use std::process::{Command, Stdio};
 
 fn binary_path() -> std::path::PathBuf {
+    if let Ok(bin) = std::env::var("CARGO_BIN_EXE_forgum") {
+        return std::path::PathBuf::from(bin);
+    }
     let mut p = std::env::current_exe().unwrap();
     p.pop();
-    if cfg!(windows) {
-        p.push("forgum-engine.exe");
+    if p.file_name().is_some_and(|n| n == "deps") {
+        p.pop();
+    }
+    let name = if cfg!(windows) {
+        "forgum.exe"
     } else {
-        p.push("forgum-engine");
+        "forgum"
+    };
+    p.push(name);
+    if !p.exists() {
+        p.pop();
+        p.push(if cfg!(windows) {
+            "forgum-engine.exe"
+        } else {
+            "forgum-engine"
+        });
     }
     p
 }
@@ -35,7 +50,9 @@ fn huge_stdin_rejected() {
     let stdin = child.stdin.as_mut().unwrap();
     let chunk = vec![b' '; 64 * 1024];
     for _ in 0..(5 * 1024 / 64 + 1) {
-        stdin.write_all(&chunk).unwrap();
+        if stdin.write_all(&chunk).is_err() {
+            break;
+        }
     }
     drop(child.stdin.take());
 
@@ -115,7 +132,7 @@ fn version_command_works() {
 
     assert!(output.status.success());
     let stdout = String::from_utf8_lossy(&output.stdout);
-    assert!(stdout.contains("forgum-engine"));
+    assert!(stdout.contains("forgum"));
 }
 
 #[test]
@@ -143,7 +160,12 @@ fn bare_engine_renders_thought_bubble_and_cow_when_piped() {
         return;
     }
 
+    let tmp = tempfile::tempdir().unwrap();
+    let cfg_path = tmp.path().join("config.json");
+    std::fs::write(&cfg_path, "{}").unwrap();
+
     let output = Command::new(&bin)
+        .env("FORGUM_CONFIG", &cfg_path)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .output()
@@ -178,8 +200,13 @@ fn think_subcommand_renders_thought_bubble_with_custom_text() {
         return;
     }
 
+    let tmp = tempfile::tempdir().unwrap();
+    let cfg_path = tmp.path().join("config.json");
+    std::fs::write(&cfg_path, "{}").unwrap();
+
     let custom_thought = "Quantum cows roam the cosmic pastures";
     let output = Command::new(&bin)
+        .env("FORGUM_CONFIG", &cfg_path)
         .args(["think", custom_thought])
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -189,9 +216,9 @@ fn think_subcommand_renders_thought_bubble_with_custom_text() {
     assert!(output.status.success(), "think subcommand must exit 0");
     let stdout = String::from_utf8_lossy(&output.stdout);
 
-    // Verify thought text is inside the output
+    // Verify thought text is inside the output (wrapped to stay within cow width)
     assert!(
-        stdout.contains(custom_thought),
+        stdout.contains("Quantum cows") && stdout.contains("cosmic pastures"),
         "Thought text must appear in output: {stdout}"
     );
 

@@ -405,8 +405,10 @@ fn test_compose_thought_scene_preserves_thought_content() {
 
     let composed = forgum_engine::cow::compose_thought_scene(&cow, deep_thought);
 
-    // 1. Thought bubble is at the top
-    assert!(composed.contains("Simplicity is prerequisite for reliability."));
+    // 1. Thought bubble is at the top with words preserved within cow width
+    assert!(composed.contains("Simplicity is"));
+    assert!(composed.contains("prerequisite"));
+    assert!(composed.contains("reliability."));
     assert!(composed.contains("- Edsger W. Dijkstra"));
 
     // 2. Cow mascot is present
@@ -423,14 +425,136 @@ fn test_compose_thought_scene_preserves_thought_content() {
     let lines: Vec<&str> = composed.lines().collect();
     let thought_line_1 = lines
         .iter()
-        .find(|l| l.contains("Simplicity is prerequisite"))
+        .find(|l| l.contains("Simplicity is"))
         .expect("Line 1 of thought");
     assert!(thought_line_1.starts_with('(') && thought_line_1.ends_with(')'));
 
-    let thought_line_2 = lines
+    let thought_line_author = lines
         .iter()
         .find(|l| l.contains("- Edsger W. Dijkstra"))
-        .expect("Line 2 of thought");
-    assert!(thought_line_2.starts_with('(') && thought_line_2.ends_with(')'));
+        .expect("Author line of thought");
+    assert!(thought_line_author.starts_with('(') && thought_line_author.ends_with(')'));
+}
+
+#[test]
+fn all_cows_have_zero_lingering_placeholders() {
+    let dd = data_dir();
+    let names = all_cow_names();
+
+    let mut unexpanded = Vec::new();
+    for name in &names {
+        let cow = forgum_engine::cow::load_cow(name, &dd, "oo", " ", "\\");
+        for placeholder in ["$eyes", "${eyes}", "$eye", "${eye}", "$tongue", "${tongue}", "$thoughts", "${thoughts}"] {
+            if cow.contains(placeholder) {
+                unexpanded.push(format!("{name}.cow: contains unexpanded placeholder '{placeholder}'"));
+            }
+        }
+    }
+
+    assert!(
+        unexpanded.is_empty(),
+        "Cow files with unexpanded placeholders:\n{}",
+        unexpanded.join("\n")
+    );
+}
+
+#[test]
+fn all_cows_have_dna_in_animations_json() {
+    let dd = data_dir();
+    let map = forgum_engine::dna::load_animations(&dd);
+    let names = all_cow_names();
+
+    let mut missing = Vec::new();
+    for name in &names {
+        if !map.contains_key(name) {
+            missing.push(format!("{name} missing from animations.json"));
+        }
+    }
+
+    assert!(
+        missing.is_empty(),
+        "Animals missing from animations.json:\n{}",
+        missing.join("\n")
+    );
+}
+
+#[test]
+fn all_cows_have_scenery_profiles() {
+    let names = all_cow_names();
+
+    for name in &names {
+        let profile = forgum_engine::scenery::get_animal_profile(name);
+        if name != "default" {
+            assert_eq!(
+                profile.name, name,
+                "Animal '{name}' did not match its specific profile; fell back to '{}'",
+                profile.name
+            );
+        }
+    }
+}
+
+#[test]
+fn all_cows_can_instantiate_and_render_all_effects() {
+    use forgum_engine::effects::create_scene_effect;
+    use forgum_engine::framebuffer::FrameBuffer;
+
+    let dd = data_dir();
+    let names = all_cow_names();
+    let animations = forgum_engine::dna::load_animations(&dd);
+
+    for name in &names {
+        let raw = forgum_engine::cow::load_cow(name, &dd, "oo", " ", "\\");
+        let composed = forgum_engine::cow::compose_scene(&raw, "Animation Test");
+        let dna = forgum_engine::dna::get_dna(&animations, name);
+
+        for effect_name in ["walk", "breathe", "float", "fly", "pulse", "static"] {
+            let effect = create_scene_effect(effect_name, composed.clone(), dna.clone(), 42, "animal");
+
+            // Render 3 frames to verify physics and kinematic cycles execute cleanly
+            for frame in 0..3 {
+                let mut fb = FrameBuffer::new(80, 24);
+                effect.render(&mut fb, frame as f32 * 0.033);
+                fb.swap();
+
+                let mut non_space = 0;
+                for y in 0..fb.height {
+                    for x in 0..fb.width {
+                        if fb.get(x, y).ch != ' ' {
+                            non_space += 1;
+                        }
+                    }
+                }
+                assert!(
+                    non_space > 0,
+                    "Effect {effect_name} on {name} rendered zero non-space characters on frame {frame}"
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn thought_bubble_has_exactly_three_connective_circles() {
+    let dd = data_dir();
+    let names = all_cow_names();
+
+    for name in &names {
+        let cow = forgum_engine::cow::load_cow(name, &dd, "oo", " ", "o");
+        let composed = forgum_engine::cow::compose_scene_with_mode(&cow, "I ponder the cosmos.", true);
+        
+        let lines: Vec<&str> = composed.lines().collect();
+        // Find circles between the bottom of the bubble and the mascot body
+        let bubble_end = lines.iter().position(|l| l.starts_with('(') && l.ends_with(')') && l.contains("___")).unwrap_or(0);
+        let circles_count = lines[bubble_end + 1..]
+            .iter()
+            .take(5)
+            .filter(|l| l.trim() == "o" || l.trim() == "o ")
+            .count();
+        assert_eq!(
+            circles_count, 3,
+            "Animal {name} must have strictly 3 circles below thought bubble, found {circles_count}"
+        );
+    }
 }
 

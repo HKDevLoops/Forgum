@@ -137,6 +137,22 @@ pub fn parse_palette(hexes: &[String]) -> Vec<(u8, u8, u8)> {
     hexes.iter().filter_map(|h| parse_hex(h)).collect()
 }
 
+/// Compute a smooth spatial and temporal gradient across an animal's palette.
+///
+/// If palette is empty, returns white (255, 255, 255).
+/// If palette has 1 color, returns that exact RGB color.
+/// If palette has >= 2 colors, interpolates in OKLCH/Oklab space across (x, y) coordinates and time.
+pub fn palette_gradient(palette: &[(u8, u8, u8)], x: f32, y: f32, t: f32) -> (u8, u8, u8) {
+    if palette.is_empty() {
+        return (255, 255, 255);
+    }
+    if palette.len() == 1 {
+        return palette[0];
+    }
+    let wave = (x * 0.08 + y * 0.15 + t * 0.8).sin() * 0.5 + 0.5;
+    lerp_palette(palette, wave)
+}
+
 // ── Lolcat rainbow ─────────────────────────────────────────────────
 
 /// Classic lolcat HSV-based rainbow color.

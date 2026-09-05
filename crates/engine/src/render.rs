@@ -87,7 +87,7 @@ pub fn render_loop_foreground(
 
     let max_frames = compute_max_frames(config.duration, config.fps);
 
-    let result = crate::engine_core::run_engine(
+    let exit_result = crate::engine_core::run_engine(
         out,
         config,
         shutdown,
@@ -104,12 +104,16 @@ pub fn render_loop_foreground(
     drop(_alt);
     drop(_raw);
 
-    // Leave the composed mascot (thought bubble + cow) in the terminal scrollback
-    if let Some(text) = composed_text {
-        println!("\n{text}\n");
+    match exit_result {
+        Ok(final_text) => {
+            // Leave the latest active composed mascot (thought bubble + cow) in the terminal scrollback
+            if !final_text.is_empty() {
+                println!("\n{final_text}\n");
+            }
+            Ok(())
+        }
+        Err(e) => Err(e),
     }
-
-    result
 }
 
 /// Run the background render loop. Does **not** own the alternate screen or
@@ -117,7 +121,7 @@ pub fn render_loop_foreground(
 /// elapses. With `duration=0`, runs forever.
 #[allow(clippy::too_many_arguments)]
 pub fn render_loop_background(
-    mut out: OutputHandle,
+    out: OutputHandle,
     config: SceneConfig,
     shutdown: ShutdownFlag,
     composed_text: Option<&str>,
@@ -142,16 +146,19 @@ pub fn render_loop_background(
         } else {
             format!("{}\n{}", effects::default_cow_text(), cow_display)
         };
-        let _ = out.write_all(cow_text.as_bytes());
-        let _ = out.write_all(b"\n");
-        let _ = out.flush();
+        println!("{cow_text}");
         return Ok(());
     }
 
-    let _cur = CursorShowGuard::acquire()?;
+    // Notice: In overlay background mode, we do NOT hide the cursor so the shell prompt
+    // cursor remains completely visible and interactive.
     let max_frames = compute_max_frames(config.duration, config.fps);
 
-    crate::engine_core::run_engine(
+    let cow_foot = effects::find_cow_foot_y(cow_display);
+    let line_count = (cow_foot + 2).max(cow_display.lines().count()).max(1);
+    let overlay_rows = line_count.min((rows as usize).saturating_sub(3)).max(1);
+
+    crate::engine_core::run_engine_overlay(
         out,
         config,
         shutdown,
@@ -161,6 +168,7 @@ pub fn render_loop_background(
         data_dir,
         cmd_rx,
         max_frames,
+        overlay_rows,
     )
 }
 
@@ -194,15 +202,14 @@ pub fn render_loop_banner(
         } else {
             format!("{}\n{}", effects::default_cow_text(), cow_display)
         };
-        let _ = out.write_all(cow_text.as_bytes());
-        let _ = out.write_all(b"\n");
-        let _ = out.flush();
+        println!("{cow_text}");
         return Ok(());
     }
 
     let _cur = CursorShowGuard::acquire()?;
 
-    let line_count = cow_display.lines().count().max(1);
+    let cow_foot = effects::find_cow_foot_y(cow_display);
+    let line_count = (cow_foot + 2).max(cow_display.lines().count()).max(1);
     let banner_rows = line_count.min((rows as usize).saturating_sub(1)).max(1);
 
     // In banner mode, default duration to 2s burst if 0

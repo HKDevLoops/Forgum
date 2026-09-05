@@ -76,15 +76,25 @@ impl OutputHandle {
     /// Flush any buffered bytes to the underlying writer.
     pub fn flush(&mut self) -> io::Result<()> {
         while !self.buf.is_empty() {
-            let written = self.inner.write(&self.buf)?;
-            if written == 0 {
-                // Writer refuses more data — drop the rest to avoid spinning.
-                self.buf.clear();
-                break;
+            match self.inner.write(&self.buf) {
+                Ok(0) => {
+                    self.buf.clear();
+                    break;
+                }
+                Ok(written) => {
+                    self.buf.drain(..written);
+                }
+                Err(e) if e.kind() == io::ErrorKind::WouldBlock => {
+                    // Non-blocking terminal output buffer is full/busy — clear buffer
+                    // to prevent blocking the engine's animation tick.
+                    self.buf.clear();
+                    break;
+                }
+                Err(e) => return Err(e),
             }
-            self.buf.drain(..written);
         }
-        self.inner.flush()
+        let _ = self.inner.flush();
+        Ok(())
     }
 }
 
@@ -124,9 +134,14 @@ fn can_open_tty() -> bool {
 #[cfg(unix)]
 fn open_tty() -> Result<Box<dyn Write + Send>, PlatformError> {
     use std::os::unix::fs::OpenOptionsExt;
+    #[allow(unsafe_code)]
+    unsafe {
+        libc::signal(libc::SIGTTOU, libc::SIG_IGN);
+        libc::signal(libc::SIGTTIN, libc::SIG_IGN);
+    }
     let f: std::fs::File = std::fs::OpenOptions::new()
         .write(true)
-        .custom_flags(libc::O_NOCTTY)
+        .custom_flags(libc::O_NOCTTY | libc::O_NONBLOCK)
         .open("/dev/tty")
         .map_err(|e| {
             if e.kind() == io::ErrorKind::NotFound || e.kind() == io::ErrorKind::PermissionDenied {

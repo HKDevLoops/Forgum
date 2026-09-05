@@ -75,8 +75,10 @@ impl KinematicBody {
                 let center_x = (max_x / 2.0).max(0.0);
                 let center_y = (max_y / 2.0).max(0.0);
 
-                let offset_x = (total_time * freq_x * std::f32::consts::TAU + phase_x).sin() * amp_x;
-                let offset_y = (total_time * freq_y * std::f32::consts::TAU + phase_y).cos() * amp_y;
+                let offset_x =
+                    (total_time * freq_x * std::f32::consts::TAU + phase_x).sin() * amp_x;
+                let offset_y =
+                    (total_time * freq_y * std::f32::consts::TAU + phase_y).cos() * amp_y;
 
                 self.x = (center_x + offset_x).clamp(0.0, max_x.max(0.0));
                 self.y = (center_y + offset_y).clamp(0.0, max_y.max(0.0));
@@ -163,7 +165,11 @@ impl KinematicBody {
     /// Eliminates treadmill slipping.
     #[must_use]
     pub fn stride_phase(&self, step_length: f32) -> f32 {
-        let step = if step_length.abs() < 0.001 { 1.0 } else { step_length.abs() };
+        let step = if step_length.abs() < 0.001 {
+            1.0
+        } else {
+            step_length.abs()
+        };
         let phase = (self.x.abs() / step) % 1.0;
         if phase < 0.0 {
             phase + 1.0

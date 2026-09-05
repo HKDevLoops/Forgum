@@ -38,7 +38,7 @@
   and/or registry + RemoveFile) per Component, not raw layout.
 -->
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
-  <Product Id="*" Name="Forgum" Language="1033" Version="0.4.0" Manufacturer="HKDevLoops" UpgradeCode="AE18D640-560C-4B78-9E7F-557CF387312F">
+  <Product Id="*" Name="Forgum" Language="1033" Version="0.0.1" Manufacturer="HKDevLoops" UpgradeCode="AE18D640-560C-4B78-9E7F-557CF387312F">
     <Package InstallerVersion="500" Compressed="yes" InstallScope="perMachine" Platform="x64" />
     <MajorUpgrade DowngradeErrorMessage="A newer version of Forgum is already installed." />
     <MediaTemplate />

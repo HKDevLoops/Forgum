@@ -1,5 +1,4 @@
 # happy whale
-#
 # modified from http://www.chris.com/ascii/index.php?art=animals/other%20(water)
 $the_cow = <<EOC;
    $thoughts
@@ -9,11 +8,8 @@ $the_cow = <<EOC;
        /  \\ | /  \\
            \\|/
        _.---v---.,_
-      /            \\  /\\__/\\
-     /              \\ \\_  _/
-     |__ @           |_/ /
-      _/                / 
-      \\       \\__,     /  
-   ~~~~\\~~~~~~~~~~~~~~`~~~
-
+      /            \\  /\__/\
+     /              \\ \_  _/
+     |__ $eye           |_/ /
+      _/                /
 EOC

@@ -1,12 +1,21 @@
 ##
-## Moose (well-defined)
+## Majestic North American Moose (Alces alces)
 ##
 $the_cow = <<EOC;
    $thoughts
-    $thoughts   \\_\\_    _/_/
-     $thoughts      \\__/
-            ($eyes)\\_______
-            (__)\\       )\\/\\
-             $tongue ||----- |
-                ||     ||
+    $thoughts      _         _
+     $thoughts    c==\\      /==o
+         /___ \\    / ___\\
+             \\ \\  / /
+              \\ \\/ /
+         _     \\  /
+        / \\_____\\/___
+       (  $eyes        \\______
+        \\  ($tongue)          \\
+         \\             ____   /
+          \\           /    | |
+          /  /\\   /\\  \\    | |
+         /  /  \\ /  \\  \\   | |
+        /__/   /_/   \\__\\ /__/
 EOC
+

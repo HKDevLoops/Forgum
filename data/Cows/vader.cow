@@ -1,0 +1,14 @@
+##
+## Darth Vader
+##
+$the_cow = <<EOC;
+   $thoughts
+    $thoughts      .-.
+     $thoughts    |_:_|
+         /($eyes)\
+        |  $tongue  |
+       /| .-. |\
+      (_|_|_|_|_)
+        ||   ||
+        ()   ()
+EOC

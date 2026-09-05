@@ -100,25 +100,33 @@ forgum-engine --effect rainbow --color-mode rainbow --duration 3
 
 ### Subcommands
 
-| Subcommand                            | Description                                                             | Example                                       |
-| :------------------------------------ | :---------------------------------------------------------------------- | :-------------------------------------------- |
-| **`render`**                          | Renders 2D animated scenes with physical kinematics                     | `forgum-engine render -e walk -c dragon`      |
-| **`theme list`**                      | Lists all 15 preloaded and user themes                                  | `forgum-engine theme list`                    |
-| **`theme apply <name>`**              | Applies a preloaded theme (`matrix`, `cyberpunk`, `inferno`, etc.)      | `forgum-engine theme apply matrix`            |
-| **`theme rotate`**                    | Automatically rotates themes on an interval                             | `forgum-engine theme rotate --interval 5`     |
-| **`theme seasonal`**                  | Applies dynamic real-world seasonal themes (Halloween, Winter, etc.)    | `forgum-engine theme seasonal`                |
-| **`say <command...>`**                | Runs a shell command and displays output inside the cow's speech bubble | `forgum-engine say git status`                |
-| **`fortune`**                         | Prints a humorous terminal fortune                                      | `forgum-engine fortune`                       |
-| **`timer <command...>`**              | Benchmarks command execution and displays elapsed runtime               | `forgum-engine timer cargo build`             |
-| **`checkhealth`** *(alias: `health`)* | Runs diagnostic audit across 7 layers                                   | `forgum-engine checkhealth`                   |
-| **`config`**                          | Inspects or edits configuration options                                 | `forgum-engine config set color_mode rainbow` |
-| **`config --tui`**                    | Opens the interactive configuration TUI                                 | `forgum-engine config --tui`                  |
-| **`config --migrate <fmt>`**          | Migrates active config to `json`, `yaml`, or `toml`                     | `forgum-engine config --migrate toml`         |
-| **`logs`**                            | Displays structured system and execution logs                           | `forgum-engine logs -f`                       |
-| **`herd`**                            | Lists or manages cows and background animation daemons                  | `forgum-engine herd list`                     |
-| **`control`**                         | Sends IPC commands to active daemon sessions                            | `forgum-engine control status`                |
-| **`init <shell>`**                    | Generates shell hook integration scripts with `forgum-init`             | `forgum-engine init pwsh`                     |
-| **`completions <shell>`**             | Generates shell auto-completion scripts                                 | `forgum-engine completions zsh`               |
+| Subcommand | Aliases | Parameters / Syntax | Description | Example |
+| :--- | :--- | :--- | :--- | :--- |
+| **`render`** | *(default)* | `[OPTIONS] [TEXT]...` | Renders 2D animated scenes with physical kinematics & scenery | `forgum render -E walk -c dragon --mountain alpine` |
+| **`think`** | `ponder` | `[OPTIONS] [TEXT]...` | Thought bubble `( ... )` with circular `o` connectors | `forgum think "Deep thoughts"` |
+| **`say`** | `speak` | `[OPTIONS] [TEXT]...` | Classic cowsay speech bubble `\| ... \|` with `\` stems | `forgum say git status` |
+| **`fortune`** | `quote` | *(none)* | Prints a humorous terminal fortune quote | `forgum fortune` |
+| **`list`** | `options`, `ls`, `show` | `[category]` | Displays formatted table of options for any parameter | `forgum list effects` |
+| **`theme list`** | *(none)* | *(none)* | Lists all 15 preloaded and user themes | `forgum theme list` |
+| **`theme apply <name>`** | *(none)* | `<name>` | Applies a preloaded theme (`matrix`, `cyberpunk`, etc.) | `forgum theme apply matrix` |
+| **`theme rotate`** | *(none)* | `[--interval <s\>]` | Automatically rotates themes on an interval | `forgum theme rotate --interval 5` |
+| **`theme seasonal`** | *(none)* | *(none)* | Applies dynamic real-world seasonal themes | `forgum theme seasonal` |
+| **`timer <cmd...>`** | `stopwatch` | `<dur\> [cmd...]` | Benchmarks command execution and displays elapsed runtime | `forgum timer 10s cargo build` |
+| **`checkhealth`** | `doctor`, `health` | `[--json]` | Runs diagnostic audit across 12 probes | `forgum checkhealth` |
+| **`config`** | `cfg` | `[key] [val] [--list]` | Inspects, sets, or lists configuration options | `forgum config list` |
+| **`config --tui`** | *(none)* | *(none)* | Opens the interactive configuration TUI | `forgum config --tui` |
+| **`config --migrate <fmt>`** | *(none)* | `<json\|yaml\|toml>` | Migrates active config to `json`, `yaml`, or `toml` | `forgum config --migrate toml` |
+| **`logs`** | `log` | `[-f] [-l <level\>]` | Displays structured system and execution logs | `forgum logs -f` |
+| **`herd`** | `cluster` | `[list\|spawn\|kill]` | Lists or manages cows and background animation daemons | `forgum herd list` |
+| **`tmux`** | `mux` | `[list\|install\|status]`| Configures tmux, zellij, or wezterm status lines | `forgum tmux list` |
+| **`remote`** | `peers` | `[list\|who\|ping]` | Discovers pasture peers over network clusters | `forgum remote list` |
+| **`battle`** | `arena` | `[f1] [f2]` | Turn-based ASCII battle between two critters | `forgum battle "Tux" "Dragon"` |
+| **`status-line`** | *(none)* | `[--max-len <len\>]` | Compact ANSI status bar reporter for `$RPROMPT` | `forgum status-line --max-len 80` |
+| **`control`** | `ctl` | `<status\|stop>` | Sends IPC commands to active daemon sessions | `forgum control status` |
+| **`daemon`** | *(none)* | `<start\|stop>` | Manages background animation daemon | `forgum daemon start` |
+| **`init <shell>`** | `hook` | `[shell]` | Generates shell hook integration scripts | `forgum init pwsh` |
+| **`completions <shell>`** | `complete` | `[shell]` | Generates shell auto-completion scripts | `forgum completions zsh` |
+| **`sweep`** | `clean` | *(none)* | Terminal emergency state recovery and cleanup | `forgum sweep` |
 
 ---
 

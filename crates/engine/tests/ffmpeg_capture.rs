@@ -304,6 +304,205 @@ fn ffmpeg_single_cow_smoke_capture() {
 }
 
 #[test]
+fn ffmpeg_scenery_capture() {
+    if !ffmpeg_available() || !ffprobe_available() {
+        eprintln!("SKIP no ffmpeg");
+        return;
+    }
+    let dd = data_dir();
+    let anims = dna::load_animations(&dd);
+    let cow_name = "default";
+    let cow_raw = load_cow(cow_name, &dd, "oo", " ", "\\\\");
+    let cow_text = forgum_engine::cow::compose_scene_with_mode(
+        &cow_raw,
+        "Testing scenery layout: mountain, animal, and road.",
+        false,
+    );
+    let road_y = effects::find_cow_foot_y(&cow_text) + 1;
+    let cow_dna = dna::get_dna(&anims, cow_name);
+    let mut effect = effects::create_effect(cow_dna.base, cow_text, cow_dna.clone(), 0, "animal");
+    let (mtn_style, road_style, env_style) = forgum_engine::scenery::resolve_archetype(cow_name);
+
+    let mut fb = FrameBuffer::new(CANVAS_COLS, CANVAS_ROWS);
+    let mut frames = Vec::with_capacity(FRAMES_PER_ANIM);
+    for frame in 0..FRAMES_PER_ANIM {
+        let time = frame as f32 / FPS as f32;
+        let dt = 1.0 / FPS as f32;
+        fb.clear();
+        forgum_engine::scenery::render_scenery(
+            &mut fb, mtn_style, road_style, env_style, road_y, time,
+        );
+
+        effect.update(dt, CANVAS_COLS, CANVAS_ROWS);
+        effect.render(&mut fb, time);
+        fb.swap();
+        frames.push(framebuffer_to_rgba(&fb));
+    }
+
+    let w = CANVAS_COLS * CELL_W;
+    let h = CANVAS_ROWS * CELL_H;
+    let mp4_out = video_dir().join("scenery_issue.mp4");
+    let png_out = video_dir().join("scenery_issue.png");
+    encode_rgba_frames_to_mp4(&frames, w, h, FPS, &mp4_out).expect("encode failed");
+    let st = Command::new("ffmpeg")
+        .args([
+            "-y",
+            "-i",
+            &mp4_out.to_string_lossy(),
+            "-vf",
+            "select=eq(n\\,10)",
+            "-vframes",
+            "1",
+            &png_out.to_string_lossy(),
+        ])
+        .output()
+        .unwrap();
+    assert!(st.status.success());
+    println!("Scenery capture saved to {}", png_out.display());
+}
+
+#[test]
+fn ffmpeg_nyan_and_wildlife_capture() {
+    if !ffmpeg_available() || !ffprobe_available() {
+        eprintln!("SKIP no ffmpeg");
+        return;
+    }
+    let dd = data_dir();
+    let anims = dna::load_animations(&dd);
+    let showcases = [
+        ("nyan-cat", "Nyanyanyanyanyanyanya!"),
+        ("pterodactyl", "Soaring above prehistoric cliffs"),
+        ("octopus", "Gliding through the deep sapphire trench"),
+        ("charlie", "Golden retriever on a sunny mountain path"),
+    ];
+
+    let w = CANVAS_COLS * CELL_W;
+    let h = CANVAS_ROWS * CELL_H;
+
+    for (cow_name, thought) in showcases {
+        let profile = forgum_engine::scenery::get_animal_profile(cow_name);
+        let cow_raw = load_cow(cow_name, &dd, profile.eyes, profile.tongue, "o");
+        let cow_text = forgum_engine::cow::compose_scene_with_mode(&cow_raw, thought, true);
+        let road_y = effects::find_cow_foot_y(&cow_text) + 1;
+        let cow_dna = dna::get_dna(&anims, cow_name);
+        let mut effect = effects::create_effect(profile.base_anim, cow_text, cow_dna, 0, "animal");
+
+        let mut fb = FrameBuffer::new(CANVAS_COLS, CANVAS_ROWS);
+        let mut frames = Vec::with_capacity(FRAMES_PER_ANIM);
+        for frame in 0..FRAMES_PER_ANIM {
+            let time = frame as f32 / FPS as f32;
+            let dt = 1.0 / FPS as f32;
+            fb.clear();
+            forgum_engine::scenery::render_scenery(
+                &mut fb,
+                profile.mountain,
+                profile.road,
+                profile.environment,
+                road_y,
+                time,
+            );
+            effect.update(dt, CANVAS_COLS, CANVAS_ROWS);
+            effect.render(&mut fb, time);
+            fb.swap();
+            frames.push(framebuffer_to_rgba(&fb));
+        }
+
+        let tag = format!("{cow_name}_showcase");
+        let mp4_out = video_dir().join(format!("{tag}.mp4"));
+        let png_out = video_dir().join(format!("{tag}.png"));
+        encode_rgba_frames_to_mp4(&frames, w, h, FPS, &mp4_out).expect("encode failed");
+        let st = Command::new("ffmpeg")
+            .args([
+                "-y",
+                "-i",
+                &mp4_out.to_string_lossy(),
+                "-vf",
+                "select=eq(n\\,30)",
+                "-vframes",
+                "1",
+                &png_out.to_string_lossy(),
+            ])
+            .output()
+            .unwrap();
+        assert!(st.status.success());
+        println!("Saved showcase video {} and image {}", mp4_out.display(), png_out.display());
+    }
+}
+
+#[test]
+fn ffmpeg_new_animals_showcase_capture() {
+    if !ffmpeg_available() || !ffprobe_available() {
+        eprintln!("SKIP no ffmpeg");
+        return;
+    }
+    let dd = data_dir();
+    let anims = dna::load_animations(&dd);
+    let showcases = [
+        ("corgi", "A cheerful corgi trotting along cobblestone hills!"),
+        ("duck", "Quack! Floating peacefully across misty wetlands."),
+        ("wolf", "Howling through the moonlit pines and rocky crags."),
+        ("tiger", "Prowling through the amber savanna grass."),
+        ("vader", "The dark side of the terminal is a pathway to many abilities..."),
+        ("moose", "Majestic northern moose commanding the boreal forest."),
+        ("moofasa", "The sun will never set on our kingdom."),
+        ("minotaur", "Guardian of the labyrinth."),
+        ("tux", "Powered by Linux and written in pure Rust."),
+    ];
+
+    let w = CANVAS_COLS * CELL_W;
+    let h = CANVAS_ROWS * CELL_H;
+
+    for (cow_name, thought) in showcases {
+        let profile = forgum_engine::scenery::get_animal_profile(cow_name);
+        let cow_raw = load_cow(cow_name, &dd, profile.eyes, profile.tongue, "o");
+        let cow_text = forgum_engine::cow::compose_scene_with_mode(&cow_raw, thought, true);
+        let road_y = effects::find_cow_foot_y(&cow_text) + 1;
+        let cow_dna = dna::get_dna(&anims, cow_name);
+        let mut effect = effects::create_effect(profile.base_anim, cow_text, cow_dna, 0, "animal");
+
+        let mut fb = FrameBuffer::new(CANVAS_COLS, CANVAS_ROWS);
+        let mut frames = Vec::with_capacity(FRAMES_PER_ANIM);
+        for frame in 0..FRAMES_PER_ANIM {
+            let time = frame as f32 / FPS as f32;
+            let dt = 1.0 / FPS as f32;
+            fb.clear();
+            forgum_engine::scenery::render_scenery(
+                &mut fb,
+                profile.mountain,
+                profile.road,
+                profile.environment,
+                road_y,
+                time,
+            );
+            effect.update(dt, CANVAS_COLS, CANVAS_ROWS);
+            effect.render(&mut fb, time);
+            fb.swap();
+            frames.push(framebuffer_to_rgba(&fb));
+        }
+
+        let tag = format!("{cow_name}_showcase");
+        let mp4_out = video_dir().join(format!("{tag}.mp4"));
+        let png_out = video_dir().join(format!("{tag}.png"));
+        encode_rgba_frames_to_mp4(&frames, w, h, FPS, &mp4_out).expect("encode failed");
+        let st = Command::new("ffmpeg")
+            .args([
+                "-y",
+                "-i",
+                &mp4_out.to_string_lossy(),
+                "-vf",
+                "select=eq(n\\,30)",
+                "-vframes",
+                "1",
+                &png_out.to_string_lossy(),
+            ])
+            .output()
+            .unwrap();
+        assert!(st.status.success());
+        println!("Saved showcase video {} and image {}", mp4_out.display(), png_out.display());
+    }
+}
+
+#[test]
 fn ffmpeg_all_effects_capture() {
     if !ffmpeg_available() || !ffprobe_available() {
         eprintln!("SKIP no ffmpeg");

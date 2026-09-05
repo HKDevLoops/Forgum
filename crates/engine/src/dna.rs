@@ -26,6 +26,39 @@ pub enum BaseAnim {
     Dissolve,
 }
 
+impl BaseAnim {
+    pub fn parse(s: &str) -> Option<Self> {
+        match s.trim().to_ascii_lowercase().as_str() {
+            "walk" | "walks" | "walking" => Some(Self::Walk),
+            "breathe" | "breath" | "breathing" => Some(Self::Breathe),
+            "float" | "floating" | "hover" | "levitate" => Some(Self::Float),
+            "particles" | "particle" | "ember" | "stars" => Some(Self::Particles),
+            "pulse" | "pulsing" | "throb" | "radiate" => Some(Self::Pulse),
+            "glitch" | "glitching" | "vhs" | "distort" => Some(Self::Glitch),
+            "fly" | "flying" | "flight" | "wings" => Some(Self::Fly),
+            "talk" | "talking" | "speak" | "speech" => Some(Self::Talk),
+            "sway" | "swaying" | "pendulum" => Some(Self::Sway),
+            "dissolve" | "dissolving" | "fade" => Some(Self::Dissolve),
+            _ => None,
+        }
+    }
+
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Walk => "walk",
+            Self::Breathe => "breathe",
+            Self::Float => "float",
+            Self::Particles => "particles",
+            Self::Pulse => "pulse",
+            Self::Glitch => "glitch",
+            Self::Fly => "fly",
+            Self::Talk => "talk",
+            Self::Sway => "sway",
+            Self::Dissolve => "dissolve",
+        }
+    }
+}
+
 /// The 6 particle types.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "PascalCase")]

@@ -9,7 +9,7 @@ fn daemon_lifecycle_ping_stop() {
     use std::thread;
     use std::time::{Duration, Instant};
 
-    let exe = env!("CARGO_BIN_EXE_forgum-engine");
+    let exe = env!("CARGO_BIN_EXE_forgum");
 
     // We deliberately do NOT use `Command::output()` here. It blocks
     // until the engine parent's stdout AND stderr pipes are closed —
@@ -24,8 +24,13 @@ fn daemon_lifecycle_ping_stop() {
     // engine parent is still alive. This decouples liveness polling from
     // the parent-blocking `.output()` call.
 
+    let session = format!("shell-{}", std::process::id());
+    let state_path = forgum_platform::daemon_state_path(&session);
+    let socket_path = forgum_platform::control_socket_path(&session);
+
     let mut child = Command::new(exe)
         .args(["--background", "--duration", "30", "--daemon"])
+        .env("FORGUM_DAEMON_SESSION", &session)
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -52,16 +57,6 @@ fn daemon_lifecycle_ping_stop() {
             .for_each(|l| eprintln!("[engine stderr] {l}"));
         s
     });
-
-    // Build the state-file and socket paths from the test process's PID.
-    // The engine parent's `detect_session_id()` honors `FORGUM_DAEMON_SESSION`
-    // (we don't set it; config defaults hold), falling through to
-    // `shell-<ppid>` on Unix, where ppid == THIS test process's PID.
-    // Therefore the spawned daemon writes `daemon-shell-{test_pid}.json`
-    // — the exact path we poll for below.
-    let session = format!("shell-{}", std::process::id());
-    let state_path = forgum_platform::daemon_state_path(&session);
-    let socket_path = forgum_platform::control_socket_path(&session);
 
     // Poll for the daemon to come up: ready iff the state file exists with
     // a valid `pid` AND the control socket is bound.

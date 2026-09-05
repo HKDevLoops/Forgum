@@ -1,0 +1,11 @@
+##
+## APT Package Super Cow
+##
+$the_cow = <<EOC;
+   $thoughts
+    $thoughts           (__)
+     $thoughts   ( $eyes )~~\
+          ( $tongue )    \
+         /|---w  |
+        * ||    ||
+EOC

@@ -114,6 +114,27 @@ pub fn parent_comm() -> Option<String> {
     }
 }
 
+/// Check if stdin has data available to read without blocking indefinitely.
+#[cfg(target_family = "unix")]
+#[allow(unsafe_code)]
+pub fn stdin_has_data() -> bool {
+    use std::io;
+    use std::os::unix::io::AsRawFd;
+
+    if crossterm::tty::IsTty::is_tty(&io::stdin()) {
+        return false;
+    }
+
+    let fd = io::stdin().as_raw_fd();
+    let mut pfd = libc::pollfd {
+        fd,
+        events: libc::POLLIN,
+        revents: 0,
+    };
+    let ret = unsafe { libc::poll(&mut pfd, 1, 0) };
+    ret > 0 && (pfd.revents & libc::POLLIN) != 0
+}
+
 #[cfg(test)]
 #[cfg(target_family = "unix")]
 mod tests {

@@ -1,0 +1,14 @@
+##
+## Eye of Sauron / Barad-dûr
+##
+$the_cow = <<EOC;
+   $thoughts
+    $thoughts      /\     /\
+     $thoughts    /  \___/  \
+         /  ( $eyes )  \
+         \____$tongue___/
+             /   \
+            /     \
+           /   |   \
+          /____|____\
+EOC

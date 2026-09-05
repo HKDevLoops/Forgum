@@ -12,6 +12,12 @@ fn shell_parse_all_variants() {
     assert_eq!(Shell::parse("pwsh"), Some(Shell::Pwsh));
     assert_eq!(Shell::parse("powershell"), Some(Shell::PowerShell));
     assert_eq!(Shell::parse("cmd"), Some(Shell::Cmd));
+    assert_eq!(Shell::parse("xonsh"), Some(Shell::Xonsh));
+    assert_eq!(Shell::parse("tcsh"), Some(Shell::Tcsh));
+    assert_eq!(Shell::parse("ksh"), Some(Shell::Ksh));
+    assert_eq!(Shell::parse("ion"), Some(Shell::Ion));
+    assert_eq!(Shell::parse("oil"), Some(Shell::Oil));
+    assert_eq!(Shell::parse("yash"), Some(Shell::Yash));
     assert_eq!(Shell::parse("nonsense"), None);
 }
 
@@ -24,6 +30,12 @@ fn every_shell_hook_is_nonempty_and_contains_engine_path() {
         Shell::Pwsh,
         Shell::Cmd,
         Shell::PowerShell,
+        Shell::Xonsh,
+        Shell::Tcsh,
+        Shell::Ksh,
+        Shell::Ion,
+        Shell::Oil,
+        Shell::Yash,
     ] {
         let hook = generate_hook(shell, ENGINE);
         assert!(!hook.is_empty(), "hook for {shell} must not be empty");
@@ -43,6 +55,12 @@ fn every_shell_hook_has_header_and_footer() {
         Shell::Pwsh,
         Shell::Cmd,
         Shell::PowerShell,
+        Shell::Xonsh,
+        Shell::Tcsh,
+        Shell::Ksh,
+        Shell::Ion,
+        Shell::Oil,
+        Shell::Yash,
     ] {
         let hook = generate_hook(shell, ENGINE);
         assert!(hook.contains(">>> forgum"), "shell {shell} missing header");
@@ -108,9 +126,9 @@ fn shell_display_and_config_path() {
     assert_eq!(Shell::Pwsh.to_string(), "pwsh");
     assert_eq!(Shell::Cmd.to_string(), "cmd");
     assert_eq!(Shell::PowerShell.to_string(), "powershell");
-    assert!(Shell::Pwsh.default_config_path().contains("APPDATA"));
-    assert!(Shell::Cmd.default_config_path().contains("APPDATA"));
-    assert!(Shell::PowerShell.default_config_path().contains("APPDATA"));
+    assert!(Shell::Pwsh.default_config_path().contains(".config/forgum/config.json"));
+    assert!(Shell::Cmd.default_config_path().contains(".config/forgum/config.json"));
+    assert!(Shell::PowerShell.default_config_path().contains(".config/forgum/config.json"));
 }
 
 #[test]

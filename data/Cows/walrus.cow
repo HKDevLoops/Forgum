@@ -1,0 +1,14 @@
+##
+## Walrus (Odobenus rosmarus)
+##
+$the_cow = <<EOC;
+   $thoughts
+    $thoughts    .---.
+     $thoughts  / $eyes \
+       ( $tongue  )
+       /| | |\
+      / | | | \______
+     (  | | |        )
+      `-' '-' ------'
+        ~   ~
+EOC

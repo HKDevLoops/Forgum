@@ -14,71 +14,263 @@ use crate::protocol::SceneConfig;
 /// Forgum animation engine — renders cowsay+fortune+lolcat with effects.
 #[derive(Debug, Parser)]
 #[command(
-    name = "forgum-engine",
+    name = "forgum",
     version,
-    about = "Forgum animation engine — renders cowsay+fortune+lolcat with effects",
+    about = "Forgum — cowsay+fortune+lolcat with a Rust ANSI animation engine",
     long_about = None,
-    after_help = "Run `forgum-engine init <shell>` to set up shell integration."
+    after_help = "Run `forgum init <shell>` to set up shell integration."
 )]
 pub struct Cli {
     #[command(subcommand)]
     pub command: Option<Commands>,
 
-    /// Path to config JSON file.
-    #[arg(long, global = true, env = "FORGUM_CONFIG")]
+    /// Path to config JSON, TOML, or YAML file.
+    #[arg(
+        long,
+        global = true,
+        env = "FORGUM_CONFIG",
+        value_name = "PATH",
+        help = "Path to config file [env: FORGUM_CONFIG]",
+        long_help = "Path to custom JSON, TOML, or YAML configuration file. Overrides default platform config paths."
+    )]
     pub config: Option<PathBuf>,
 
     /// Disable animated effects (gentle fades only).
-    #[arg(long, global = true)]
+    #[arg(
+        long,
+        global = true,
+        help = "Disable animations; keep gentle fades only (accessibility)",
+        long_help = "Disable animated motions and particle effects for accessibility / reduced motion preferences."
+    )]
     pub reduce_motion: bool,
 
     /// Print just the fortune text (no cow art).
-    #[arg(long, global = true)]
+    #[arg(
+        long,
+        global = true,
+        help = "Print just the fortune text without ASCII mascot art",
+        long_help = "Bypass ASCII cow art generation and print the speech bubble text directly to stdout."
+    )]
     pub text_only: bool,
 
     /// Path to scene JSON file (alternative to stdin).
-    #[arg(long, short = 'f', global = true)]
+    #[arg(
+        long,
+        short = 'f',
+        global = true,
+        value_name = "FILE",
+        help = "Path to scene JSON file (alternative to stdin)",
+        long_help = "Load a full scene specification from a JSON file, specifying animal, text, effects, and scenery together."
+    )]
     pub file: Option<PathBuf>,
 
-    /// Cow file basename (without .cow).
-    #[arg(long, short = 'c', global = true)]
+    /// Cow file basename (without .cow). Alias: --animal.
+    #[arg(
+        long,
+        short = 'c',
+        visible_alias = "animal",
+        global = true,
+        value_name = "NAME",
+        help = "Animal mascot name (default, tux, dragon...). Run 'forgum list animals'",
+        long_help = "Animal mascot name to render (e.g. default, tux, dragon, stegosaurus, bunny, corgi, ghost, elephant, octopus, random). Run 'forgum list animals' to inspect all 106 available mascots."
+    )]
     pub cow: Option<String>,
 
+    /// Animation mode: static (stationary mascot) or dynamic (motion).
+    #[arg(
+        long,
+        global = true,
+        value_name = "MODE",
+        help = "Animation mode: 'static' (stationary) or 'dynamic' (motion)",
+        long_help = "Animation mode: 'static' anchors the mascot at a fixed location with subtle eye-blink keep-alive; 'dynamic' enables full multi-frame motion and walking cycles."
+    )]
+    pub animation: Option<String>,
+
+    /// Specific animation type (e.g. static, walk, breathe, float, etc.).
+    #[arg(
+        long,
+        global = true,
+        value_name = "TYPE",
+        help = "Specific animation type (walk, breathe, float...). Run 'forgum list effects'",
+        long_help = "Specific animation motion to apply (walk, breathe, float, fly, talk, sway, pulse, glitch, particles, dissolve). Run 'forgum list effects' for detailed physics descriptions."
+    )]
+    pub animation_type: Option<String>,
+
+    /// Thematic environment particles (e.g. pasture, inferno, ocean, arctic, space, none).
+    #[arg(
+        long,
+        visible_alias = "env",
+        global = true,
+        value_name = "ENVIRONMENT",
+        help = "Thematic particle environment (pasture, inferno...). Run 'forgum list scenery'",
+        long_help = "Atmospheric particle emitter (pasture, inferno, ocean, arctic, city, forest, savanna, swamp, space, cyber, graveyard, jurassic, hive, throne, none). Run 'forgum list scenery' for all environments."
+    )]
+    pub environment: Option<String>,
+
+    /// Thematic ground/road style (e.g. dirt, cobblestone, magma, ice, seabed, grid, none).
+    #[arg(
+        long,
+        global = true,
+        value_name = "ROAD",
+        help = "Ground/road terrain style (dirt, cobblestone...). Run 'forgum list scenery'",
+        long_help = "Ground and terrain surface style (dirt, cobblestone, magma, ice, seabed, sidewalk, roof, grid, crypt, savanna, mud, tracks, checkerboard, none). Run 'forgum list scenery' for details."
+    )]
+    pub road: Option<String>,
+
+    /// Thematic mountain/horizon style (e.g. hills, peaks, volcano, iceberg, skyline, none).
+    #[arg(
+        long,
+        global = true,
+        value_name = "MOUNTAIN",
+        help = "Procedural mountain horizon (hills, peaks...). Run 'forgum list scenery'",
+        long_help = "Procedural mountain horizon style (hills, peaks, volcano, iceberg, skyline, seamount, plateau, crater, gothic, castle, garden, none). Uses multi-harmonic procedural generation unique each session. Run 'forgum list scenery' for details."
+    )]
+    pub mountain: Option<String>,
+
+    /// Color mode (animal, rainbow, solid, none). Defaults to animal.
+    #[arg(
+        long,
+        global = true,
+        value_name = "MODE",
+        help = "Color styling mode (animal, rainbow, solid, none). Defaults to animal",
+        long_help = "Color styling mode: 'animal' (thematic authentic creature colors), 'rainbow' (lolcat chromatic wave), 'solid' (uniform highlight), 'none' (monochrome ASCII). Run 'forgum list colors' for details."
+    )]
+    pub color_mode: Option<String>,
+
+    /// Custom hex palette (comma-separated hex codes, e.g. "#ff0000,#00ff00").
+    #[arg(
+        long,
+        global = true,
+        value_name = "HEX_LIST",
+        help = "Custom hex palette gradient (e.g. '#ff007f,#00f0ff'). Run 'forgum list colors'",
+        long_help = "Comma-separated list of 24-bit hex colors to interpolate as a smooth custom gradient (e.g. '#ff5555,#50fa7b,#8be9fd'). Run 'forgum list colors' for built-in palettes."
+    )]
+    pub palette: Option<String>,
+
+    /// Interval in seconds for thought rotation in background mode (0 = infinite).
+    #[arg(
+        long,
+        global = true,
+        value_name = "SECONDS",
+        help = "Interval in seconds to rotate fortunes (default: 60, 0 = infinite)",
+        long_help = "Interval in seconds between rotating fortunes and thoughts in persistent background mode. Set to 0 to keep the initial thought indefinitely."
+    )]
+    pub thought_interval: Option<u32>,
+
+    /// Lock terminal scroll margins below the background animation (DECSTBM).
+    #[arg(
+        long,
+        global = true,
+        help = "Lock terminal scroll margins below background animation (DECSTBM)",
+        long_help = "Configure DECSTBM terminal scroll margins so terminal output scrolls cleanly beneath the persistent animation banner without pushing it off screen."
+    )]
+    pub split_scroll: bool,
+
     /// Text inside the speech bubble.
-    #[arg(long, short = 't', global = true)]
+    #[arg(
+        long,
+        short = 't',
+        global = true,
+        value_name = "MESSAGE",
+        help = "Text inside the speech bubble",
+        long_help = "Text message to display inside the speech or thought bubble. Supports multiline strings and responsive word wrapping."
+    )]
     pub text: Option<String>,
 
     /// Render as a thought bubble instead of a speech bubble (cowthink mode).
-    #[arg(long, short = 'T', global = true)]
+    #[arg(
+        long,
+        short = 'T',
+        global = true,
+        help = "Render thought bubble instead of speech bubble (cowthink mode)",
+        long_help = "Render thought bubbles (circles: 'o') instead of speech bubble lines ('\\\\'). Also accessible via the 'forgum think' subcommand."
+    )]
     pub think: bool,
 
     /// Effect name.
-    #[arg(long, short = 'e', global = true)]
+    #[arg(
+        long,
+        short = 'e',
+        global = true,
+        value_name = "NAME",
+        help = "Animation effect name. Run 'forgum list effects' for all options",
+        long_help = "Animation effect to apply (walk, breathe, float, fly, talk, sway, pulse, glitch, particles, dissolve). Run 'forgum list effects' for complete options."
+    )]
     pub effect: Option<String>,
 
     /// Eye string (e.g. "oo", "$$").
-    #[arg(long, global = true)]
+    #[arg(
+        long,
+        global = true,
+        value_name = "GLYPHS",
+        help = "Custom eyes string (e.g. 'oo', '$$', '@@', 'xx')",
+        long_help = "Custom eye glyphs for the animal mascot (e.g. 'oo', '$$', '@@', 'xx', '==', '--')."
+    )]
     pub eyes: Option<String>,
 
     /// Tongue string (e.g. "U").
-    #[arg(long, global = true)]
+    #[arg(
+        long,
+        global = true,
+        value_name = "GLYPH",
+        help = "Custom tongue string (e.g. 'U', 'V', 'p')",
+        long_help = "Custom tongue glyph for the animal mascot (e.g. 'U', 'V', 'p', ' ')."
+    )]
     pub tongue: Option<String>,
 
     /// Render above prompt as a non-blocking overlay.
-    #[arg(long, short = 'b', global = true)]
+    #[arg(
+        long,
+        short = 'b',
+        global = true,
+        help = "Run animation in background mode above the shell prompt",
+        long_help = "Run the animated scene continuously above your shell prompt. Updates smoothly in the background without blocking terminal input."
+    )]
     pub background: bool,
 
     /// Render inline as an animated banner above the prompt without taking over the screen.
-    #[arg(long, short = 'B', global = true)]
+    #[arg(
+        long,
+        short = 'B',
+        global = true,
+        help = "Render inline animated banner without taking over screen",
+        long_help = "Render an animated banner inline within terminal text flow without switching to alternate screen buffer."
+    )]
     pub banner: bool,
 
     /// Duration in seconds. 0 = infinite (with --background).
-    #[arg(long, short = 'd', global = true)]
+    #[arg(
+        long,
+        short = 'd',
+        global = true,
+        value_name = "SECONDS",
+        help = "Playback duration in seconds (0 = infinite in background)",
+        long_help = "Number of seconds to animate before cleanly exiting. Defaults to 0 (infinite) when --background is enabled."
+    )]
     pub duration: Option<u32>,
 
     /// Target FPS.
-    #[arg(long, global = true)]
+    #[arg(
+        long,
+        global = true,
+        value_name = "RATE",
+        help = "Target rendering frame rate (1-120, default: 30)",
+        long_help = "Target frames per second. Forgum uses delta-time interpolation and sub-millisecond timer pacing."
+    )]
     pub fps: Option<u16>,
+
+    /// List available options (animals, effects, scenery, colors, shells) and exit.
+    #[arg(
+        short = 'l',
+        long = "list",
+        visible_alias = "options",
+        value_name = "CATEGORY",
+        num_args = 0..=1,
+        default_missing_value = "all",
+        help = "List available options (animals, effects, scenery, colors, shells)",
+        long_help = "Open structured responsive tables showing available options for animals, effects, scenery, colors, and shells. Run 'forgum list [category]' for specific categories."
+    )]
+    pub list: Option<String>,
 
     /// (Phase 1) Spawn as daemon.
     #[arg(long, global = true, hide = true)]
@@ -107,21 +299,48 @@ pub enum Commands {
     },
     /// Print a random fortune to stdout.
     Fortune,
+    /// Launch the interactive terminal UI & studio.
+    #[command(alias = "menu", alias = "ui", alias = "studio")]
+    Tui {
+        /// Initial tab to focus: mascots, scenery, effects, installer, config
+        #[arg(default_value = "")]
+        tab: String,
+    },
+    /// First-time setup wizard & shell installer with host diagnostics.
+    #[command(alias = "setup", alias = "wizard", alias = "installer")]
+    Install,
+    /// Check for updates or upgrade Forgum using the detected package manager.
+    #[command(alias = "upgrade")]
+    Update {
+        /// Only check for updates without modifying the system.
+        #[arg(long)]
+        check: bool,
+    },
     /// Generate shell integration hooks.
     Init {
-        /// Target shell.
-        #[arg(value_enum)]
+        /// Target shell, or 'list' to view supported shells.
+        #[arg(value_enum, default_value = "list")]
         shell: ShellArg,
         /// Only print the generated hook (CI validation); identical output to a
         /// normal `init` but explicit about the use-case.
         #[arg(long)]
         check: bool,
+        /// Additional render arguments forwarded to the background engine.
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        render_args: Vec<String>,
     },
-    /// Generate shell completion scripts.
+    /// Generate shell completion scripts and attach to shell profile.
     Completions {
-        /// Target shell.
-        #[arg(value_enum)]
+        /// Target shell, or 'list' to view supported shells.
+        #[arg(value_enum, default_value = "list")]
         shell: ShellArg,
+    },
+    /// List available options for animals, effects, scenery, colors, or shells in structured tables.
+    #[command(name = "list", alias = "options", alias = "ls", alias = "show")]
+    List {
+        /// Category to inspect: animals, effects, scenery, colors, shells, or all (default: all).
+        #[arg(default_value = "all", value_name = "CATEGORY")]
+        category: String,
     },
     /// Print 'ok' and exit (for daemon health checks).
     Status,
@@ -136,10 +355,13 @@ pub enum Commands {
     },
     /// View or edit configuration.
     Config {
+        /// List all configuration keys, data types, and current values.
+        #[arg(short = 'l', long)]
+        list: bool,
         /// Open the interactive config menu.
         #[arg(long)]
         tui: bool,
-        /// Set a key to a value (headless).
+        /// Set a key to a value (headless), or 'list' to view options.
         #[arg(value_name = "KEY")]
         key: Option<String>,
         /// Value for --key.
@@ -233,6 +455,8 @@ pub enum TmuxSub {
     WezTerm,
     /// Print screen config block to stdout.
     Screen,
+    /// List supported multiplexer integration options.
+    List,
 }
 
 #[derive(Debug, Subcommand)]
@@ -315,6 +539,8 @@ pub enum RemoteSub {
     },
     /// List active remote peers.
     Who,
+    /// List remote synchronization options and active peers.
+    List,
 }
 
 #[derive(Debug, Subcommand)]
@@ -344,17 +570,37 @@ pub enum ShellArg {
     Pwsh,
     Cmd,
     PowerShell,
+    Elvish,
+    Nushell,
+    Carapace,
+    Xonsh,
+    Tcsh,
+    Ksh,
+    Ion,
+    Oil,
+    Yash,
+    /// List all supported shells and their configuration paths.
+    List,
 }
 
 impl From<ShellArg> for Shell {
     fn from(arg: ShellArg) -> Self {
         match arg {
-            ShellArg::Bash => Shell::Bash,
+            ShellArg::Bash | ShellArg::List => Shell::Bash,
             ShellArg::Zsh => Shell::Zsh,
             ShellArg::Fish => Shell::Fish,
             ShellArg::Pwsh => Shell::Pwsh,
             ShellArg::Cmd => Shell::Cmd,
             ShellArg::PowerShell => Shell::PowerShell,
+            ShellArg::Elvish => Shell::Elvish,
+            ShellArg::Nushell => Shell::Nushell,
+            ShellArg::Carapace => Shell::Carapace,
+            ShellArg::Xonsh => Shell::Xonsh,
+            ShellArg::Tcsh => Shell::Tcsh,
+            ShellArg::Ksh => Shell::Ksh,
+            ShellArg::Ion => Shell::Ion,
+            ShellArg::Oil => Shell::Oil,
+            ShellArg::Yash => Shell::Yash,
         }
     }
 }
@@ -367,9 +613,12 @@ pub enum Command {
     Think,
     Status,
     Config,
+    Tui,
     Fortune,
     Init,
     Completions,
+    Options,
+    List,
     Tmux,
     StatusLine,
     Herd,
@@ -383,6 +632,8 @@ pub enum Command {
     Doctor,
     Checkhealth,
     Logs,
+    Install,
+    Update,
     Unknown(String),
 }
 
@@ -397,6 +648,15 @@ pub struct Args {
     pub duration: Option<u32>,
     pub fps: Option<u16>,
     pub cow: Option<String>,
+    pub animation: Option<String>,
+    pub animation_type: Option<String>,
+    pub environment: Option<String>,
+    pub road: Option<String>,
+    pub mountain: Option<String>,
+    pub color_mode: Option<String>,
+    pub palette: Option<String>,
+    pub thought_interval: Option<u32>,
+    pub split_scroll: bool,
     pub text: Option<String>,
     pub effect: Option<String>,
     pub eyes: Option<String>,
@@ -404,24 +664,14 @@ pub struct Args {
     pub daemon: bool,
     pub control_socket: Option<PathBuf>,
     /// (Internal) Marker set by the parent on respawn so the child knows
-    /// it is THE daemon (no second fork). End users should never pass
-    /// this; it exists because fork()-based daemonization breaks under
-    ///
-    /// - multi-threaded parents (UB: held mutexes stay locked forever in
-    ///   the child, which then deadlocks on its first allocation); and
-    /// - QEMU user-mode emulation (CI's `cross` runner for arm64), which
-    ///   rejects `fork()` with EINVAL/ENOSYS.
-    ///
-    /// Instead, the parent uses `Command::spawn` (posix_spawn under the
-    /// hood, single-threaded by construction) of itself with this flag,
-    /// then waits for the state file to appear, prints the child PID,
-    /// and exits 0. The spawned process sees this flag and runs the
-    /// daemon body directly.
+    /// it is THE daemon (no second fork). See `Args::internal_daemon_runner`
+    /// for the rationale. End users should never pass this.
     pub internal_daemon_runner: bool,
     pub max_len: Option<usize>,
     pub reduce_motion: bool,
     pub text_only: bool,
     pub think: bool,
+    pub list: Option<String>,
 }
 
 /// Error type returned by `parse_args`, carrying the intended process exit code.
@@ -433,23 +683,64 @@ pub struct CliError {
 
 /// Parse CLI args (backward-compatible wrapper around clap).
 pub fn parse_args(argv: Vec<String>) -> Result<(Args, Option<Commands>), CliError> {
-    let cli = Cli::try_parse_from(&argv).map_err(|e| {
-        // clap prints help/version itself and wants to exit 0; real parse
-        // errors (UnknownArgument, etc.) should exit 64 (EX_USAGE).
-        let exit_code = match e.kind() {
-            clap::error::ErrorKind::DisplayHelp
-            | clap::error::ErrorKind::DisplayVersion
-            | clap::error::ErrorKind::DisplayHelpOnMissingArgumentOrSubcommand => 0,
-            _ => 64,
-        };
-        CliError {
-            exit_code,
-            message: e.to_string(),
+    let cli = match Cli::try_parse_from(&argv) {
+        Ok(c) => c,
+        Err(e) => {
+            // clap prints help/version itself and wants to exit 0; real parse
+            // errors (UnknownArgument, etc.) should exit 64 (EX_USAGE).
+            let exit_code = match e.kind() {
+                clap::error::ErrorKind::DisplayHelp
+                | clap::error::ErrorKind::DisplayVersion
+                | clap::error::ErrorKind::DisplayHelpOnMissingArgumentOrSubcommand => 0,
+                _ => 64,
+            };
+            let mut message = e.to_string();
+            if exit_code != 0 {
+                for arg in argv.iter().skip(1) {
+                    if let Some(suggestion) = generate_command_suggestion(arg) {
+                        message.push_str("\n\n");
+                        message.push_str(&suggestion);
+                        break;
+                    }
+                }
+            }
+            return Err(CliError { exit_code, message });
         }
-    })?;
+    };
+
+    // Validate animation static vs dynamic consistency
+    if cli.animation.as_deref() == Some("static") {
+        if let Some(at) = &cli.animation_type {
+            if at != "static" {
+                return Err(CliError {
+                    exit_code: 64,
+                    message: format!(
+                        "Cannot specify dynamic animation type '{at}' when animation is static"
+                    ),
+                });
+            }
+        }
+    }
+    if cli.animation.as_deref() == Some("dynamic") {
+        if let Some(at) = &cli.animation_type {
+            if at == "static" {
+                return Err(CliError {
+                    exit_code: 64,
+                    message: "Cannot specify animation type 'static' when animation is dynamic"
+                        .to_string(),
+                });
+            }
+        }
+    }
 
     let (command, extra_text, is_think) = match &cli.command {
-        Some(Commands::Render) | None => (Command::Render, None, false),
+        Some(Commands::Render) | None => {
+            if cli.list.is_some() {
+                (Command::List, None, false)
+            } else {
+                (Command::Render, None, false)
+            }
+        }
         Some(Commands::Think { thought }) => {
             let t = if thought.is_empty() {
                 None
@@ -459,6 +750,7 @@ pub fn parse_args(argv: Vec<String>) -> Result<(Args, Option<Commands>), CliErro
             (Command::Think, t, true)
         }
         Some(Commands::Fortune) => (Command::Fortune, None, false),
+        Some(Commands::Tui { .. }) => (Command::Tui, None, false),
         Some(Commands::Init { .. }) => (Command::Init, None, false),
         Some(Commands::Completions { .. }) => (Command::Completions, None, false),
         Some(Commands::Status) => (Command::Status, None, false),
@@ -469,6 +761,7 @@ pub fn parse_args(argv: Vec<String>) -> Result<(Args, Option<Commands>), CliErro
                 TmuxSub::Zellij => Command::Tmux,
                 TmuxSub::WezTerm => Command::Tmux,
                 TmuxSub::Screen => Command::Tmux,
+                TmuxSub::List => Command::Tmux,
             },
             None,
             false,
@@ -492,6 +785,9 @@ pub fn parse_args(argv: Vec<String>) -> Result<(Args, Option<Commands>), CliErro
         Some(Commands::Doctor) => (Command::Doctor, None, false),
         Some(Commands::Checkhealth { .. }) => (Command::Checkhealth, None, false),
         Some(Commands::Logs { .. }) => (Command::Logs, None, false),
+        Some(Commands::List { .. }) => (Command::List, None, false),
+        Some(Commands::Install) => (Command::Install, None, false),
+        Some(Commands::Update { .. }) => (Command::Update, None, false),
     };
 
     let max_len = match &cli.command {
@@ -511,6 +807,15 @@ pub fn parse_args(argv: Vec<String>) -> Result<(Args, Option<Commands>), CliErro
         duration: cli.duration,
         fps: cli.fps,
         cow: cli.cow,
+        animation: cli.animation,
+        animation_type: cli.animation_type,
+        environment: cli.environment,
+        road: cli.road,
+        mountain: cli.mountain,
+        color_mode: cli.color_mode,
+        palette: cli.palette,
+        thought_interval: cli.thought_interval,
+        split_scroll: cli.split_scroll,
         text,
         effect: cli.effect,
         eyes: cli.eyes,
@@ -522,6 +827,7 @@ pub fn parse_args(argv: Vec<String>) -> Result<(Args, Option<Commands>), CliErro
         reduce_motion: cli.reduce_motion,
         text_only: cli.text_only,
         think,
+        list: cli.list,
     };
 
     Ok((args, cli.command))
@@ -548,6 +854,83 @@ pub fn build_scene_config(args: &Args) -> Result<SceneConfig, String> {
     // CLI overrides.
     if let Some(c) = &args.cow {
         cfg.cow = c.clone();
+    }
+
+    // Auto-apply animal profile defaults if custom cow was provided or configured
+    if args.cow.is_some() || cfg.cow != "default" {
+        let animal_name = args.cow.as_deref().unwrap_or(&cfg.cow);
+        let profile = crate::scenery::get_animal_profile(animal_name);
+        let cli_cow_passed = args.cow.is_some();
+
+        if args.environment.is_none() && (cli_cow_passed || cfg.environment.is_none()) {
+            cfg.environment = Some(profile.environment.as_str().to_string());
+        }
+        if args.road.is_none() && (cli_cow_passed || cfg.road.is_none()) {
+            cfg.road = Some(profile.road.as_str().to_string());
+        }
+        if args.mountain.is_none() && (cli_cow_passed || cfg.mountain.is_none()) {
+            cfg.mountain = Some(profile.mountain.as_str().to_string());
+        }
+        if args.animation_type.is_none() && args.effect.is_none() && (cli_cow_passed || cfg.effect == "default" || cfg.effect == "static" || cfg.effect.is_empty()) {
+            cfg.animation_type = Some(profile.base_anim.as_str().to_string());
+            cfg.effect = profile.base_anim.as_str().to_string();
+        }
+        if args.palette.is_none() && (cli_cow_passed || cfg.palette.is_none()) && !profile.wildlife_palette.is_empty() {
+            cfg.palette = Some(profile.wildlife_palette.join(","));
+        }
+        if args.eyes.is_none() && (cli_cow_passed || cfg.eyes.is_empty()) {
+            cfg.eyes = profile.eyes.to_string();
+        }
+        if args.tongue.is_none() && (cli_cow_passed || cfg.tongue.is_empty()) {
+            cfg.tongue = profile.tongue.to_string();
+        }
+    }
+
+    // Dynamic scenario adaptation when environment is passed or overridden
+    if let Some(e) = &args.environment {
+        cfg.environment = Some(e.clone());
+        let env_style = crate::scenery::EnvironmentStyle::parse(e);
+        let (dyn_mtn, dyn_road) = crate::scenery::environment_scenery_defaults(env_style);
+        if args.mountain.is_none() {
+            cfg.mountain = Some(dyn_mtn.as_str().to_string());
+        }
+        if args.road.is_none() {
+            cfg.road = Some(dyn_road.as_str().to_string());
+        }
+        if args.animation_type.is_none() && (env_style == crate::scenery::EnvironmentStyle::Ocean || env_style == crate::scenery::EnvironmentStyle::Space) {
+            let animal_name = args.cow.as_deref().unwrap_or(&cfg.cow);
+            let profile = crate::scenery::get_animal_profile(animal_name);
+            if profile.base_anim == crate::dna::BaseAnim::Walk {
+                cfg.animation_type = Some("float".to_string());
+                cfg.effect = "float".to_string();
+            }
+        }
+    }
+
+    if let Some(a) = &args.animation {
+        cfg.animation = Some(a.clone());
+    }
+    if let Some(at) = &args.animation_type {
+        cfg.animation_type = Some(at.clone());
+        cfg.effect = at.clone();
+    }
+    if let Some(r) = &args.road {
+        cfg.road = Some(r.clone());
+    }
+    if let Some(m) = &args.mountain {
+        cfg.mountain = Some(m.clone());
+    }
+    if let Some(cm) = &args.color_mode {
+        cfg.color_mode = cm.clone();
+    }
+    if let Some(p) = &args.palette {
+        cfg.palette = Some(p.clone());
+    }
+    if let Some(ti) = args.thought_interval {
+        cfg.thought_interval = ti;
+    }
+    if args.split_scroll {
+        cfg.split_scroll = true;
     }
     if let Some(t) = &args.text {
         cfg.text = t.clone();
@@ -583,6 +966,90 @@ pub fn build_scene_config(args: &Args) -> Result<SceneConfig, String> {
     }
 
     Ok(cfg)
+}
+
+/// Levenshtein distance between two strings.
+pub fn levenshtein_distance(a: &str, b: &str) -> usize {
+    let a_bytes = a.as_bytes();
+    let b_bytes = b.as_bytes();
+    let mut prev_row: Vec<usize> = (0..=b_bytes.len()).collect();
+    let mut curr_row = vec![0; b_bytes.len() + 1];
+
+    for (i, &ca) in a_bytes.iter().enumerate() {
+        curr_row[0] = i + 1;
+        for (j, &cb) in b_bytes.iter().enumerate() {
+            let cost = if ca == cb { 0 } else { 1 };
+            curr_row[j + 1] = (curr_row[j] + 1)
+                .min(prev_row[j + 1] + 1)
+                .min(prev_row[j] + cost);
+        }
+        prev_row.clone_from_slice(&curr_row);
+    }
+    prev_row[b_bytes.len()]
+}
+
+/// Find closest matching string among candidates using substring or Levenshtein distance <= 3.
+pub fn find_closest_match<'a>(query: &str, candidates: &[&'a str]) -> Option<&'a str> {
+    let q = query.trim_start_matches('-').to_lowercase();
+    if q.is_empty() {
+        return None;
+    }
+    let mut best_match = None;
+    let mut best_dist = usize::MAX;
+
+    for &cand in candidates {
+        let c = cand.trim_start_matches('-').to_lowercase();
+        if c == q {
+            return Some(cand);
+        }
+        if c.contains(&q) || q.contains(&c) {
+            return Some(cand);
+        }
+        let dist = levenshtein_distance(&q, &c);
+        if dist <= 3 && dist < best_dist {
+            best_dist = dist;
+            best_match = Some(cand);
+        }
+    }
+    best_match
+}
+
+/// Generate helpful, interactive CLI suggestions based on user input.
+pub fn generate_command_suggestion(query: &str) -> Option<String> {
+    let q = query.trim().trim_start_matches('-').to_lowercase();
+    match q.as_str() {
+        "cow" | "cows" | "animal" | "animals" | "mascot" | "mascots" => Some(
+            "💡 Did you mean:\n  • forgum --animal <name>      (render a specific animal mascot)\n  • forgum list animals         (view all 106 available animals)\n  • forgum list                 (view all available options)".to_string()
+        ),
+        "effect" | "effects" | "anim" | "animation" | "animations" | "motion" => Some(
+            "💡 Did you mean:\n  • forgum --effect <name>      (set animation effect: walk, breathe, float...)\n  • forgum list effects         (view all available effects)".to_string()
+        ),
+        "scenery" | "env" | "environment" | "mountain" | "mountains" | "road" | "roads" => Some(
+            "💡 Did you mean:\n  • forgum --mountain <style>   (set procedural mountain horizon)\n  • forgum --road <style>       (set ground terrain)\n  • forgum --environment <name> (set atmospheric particles)\n  • forgum list scenery         (view all scenery options)".to_string()
+        ),
+        "color" | "colors" | "palette" | "palettes" | "lolcat" => Some(
+            "💡 Did you mean:\n  • forgum --color-mode <mode>  (set color mode: animal, rainbow, solid, none)\n  • forgum --palette <hex,...>  (set custom hex gradient)\n  • forgum list colors          (view all color modes and palettes)".to_string()
+        ),
+        "shell" | "shells" | "completion" | "completions" | "tab" => Some(
+            "💡 Did you mean:\n  • forgum completions <shell> (install tab completions into your shell profile)\n  • forgum init <shell>        (generate shell prompt integration hook)\n  • forgum list shells         (view supported shells & config paths)".to_string()
+        ),
+        "help" | "search" | "find" => Some(
+            "💡 Did you mean:\n  • forgum --help               (print complete command-line reference)\n  • forgum list                 (browse all options in structured tables)".to_string()
+        ),
+        other => {
+            let candidates = &[
+                "render", "think", "fortune", "tui", "init", "completions", "list",
+                "status", "doctor", "checkhealth", "config", "logs", "tmux", "status-line",
+                "herd", "theme", "demo", "showcase", "remote", "say", "timer", "battle",
+                "--animal", "--animation", "--effect", "--environment", "--road", "--mountain",
+                "--color-mode", "--palette", "--thought-interval", "--split-scroll", "--text",
+                "--think", "--background", "--banner", "--duration", "--fps", "--list",
+            ];
+            find_closest_match(other, candidates).map(|closest| {
+                format!("💡 Did you mean '{closest}'? Run 'forgum list' to browse available options.")
+            })
+        }
+    }
 }
 
 #[cfg(test)]
@@ -725,5 +1192,112 @@ mod tests {
         assert_eq!(a.command, Command::StatusLine);
         assert_eq!(a.max_len, Some(40));
         assert!(matches!(cmd, Some(Commands::StatusLine { max_len: 40 })));
+    }
+
+    #[test]
+    fn animal_flag_aliases_cow() {
+        let (a, _) = parse(&["forgum", "--animal", "dragon"]);
+        assert_eq!(a.cow, Some("dragon".to_string()));
+        let cfg = build_scene_config(&a).unwrap();
+        assert_eq!(cfg.cow, "dragon");
+    }
+
+    #[test]
+    fn scenery_and_color_flags_propagate_to_scene_config() {
+        let (a, _) = parse(&[
+            "forgum",
+            "--environment",
+            "inferno",
+            "--road",
+            "magma",
+            "--mountain",
+            "volcano",
+            "--color-mode",
+            "animal",
+            "--palette",
+            "#ff0000,#00ff00",
+            "--thought-interval",
+            "45",
+            "--split-scroll",
+        ]);
+        assert_eq!(a.environment, Some("inferno".to_string()));
+        assert_eq!(a.road, Some("magma".to_string()));
+        assert_eq!(a.mountain, Some("volcano".to_string()));
+        assert_eq!(a.color_mode, Some("animal".to_string()));
+        assert_eq!(a.palette, Some("#ff0000,#00ff00".to_string()));
+        assert_eq!(a.thought_interval, Some(45));
+        assert!(a.split_scroll);
+
+        let cfg = build_scene_config(&a).unwrap();
+        assert_eq!(cfg.environment, Some("inferno".to_string()));
+        assert_eq!(cfg.road, Some("magma".to_string()));
+        assert_eq!(cfg.mountain, Some("volcano".to_string()));
+        assert_eq!(cfg.color_mode, "animal");
+        assert_eq!(cfg.palette, Some("#ff0000,#00ff00".to_string()));
+        assert_eq!(cfg.thought_interval, 45);
+        assert!(cfg.split_scroll);
+    }
+
+    #[test]
+    fn animation_static_rejects_dynamic_type() {
+        let argv = vec![
+            "forgum".to_string(),
+            "--animation".to_string(),
+            "static".to_string(),
+            "--animation-type".to_string(),
+            "walk".to_string(),
+        ];
+        let err = parse_args(argv).unwrap_err();
+        assert_eq!(err.exit_code, 64);
+        assert!(err
+            .message
+            .contains("Cannot specify dynamic animation type 'walk' when animation is static"));
+    }
+
+    #[test]
+    fn animation_dynamic_rejects_static_type() {
+        let argv = vec![
+            "forgum".to_string(),
+            "--animation".to_string(),
+            "dynamic".to_string(),
+            "--animation-type".to_string(),
+            "static".to_string(),
+        ];
+        let err = parse_args(argv).unwrap_err();
+        assert_eq!(err.exit_code, 64);
+        assert!(err
+            .message
+            .contains("Cannot specify animation type 'static' when animation is dynamic"));
+    }
+
+    #[test]
+    fn list_subcommand_parses_category() {
+        let (a, cmd) = parse(&["forgum", "list", "animals"]);
+        assert_eq!(a.command, Command::List);
+        match cmd {
+            Some(Commands::List { category }) => assert_eq!(category, "animals"),
+            _ => panic!("Expected Commands::List"),
+        }
+    }
+
+    #[test]
+    fn list_flag_parses_optional_category() {
+        let (a1, _) = parse(&["forgum", "--list"]);
+        assert_eq!(a1.command, Command::List);
+        assert_eq!(a1.list, Some("all".to_string()));
+
+        let (a2, _) = parse(&["forgum", "-l", "effects"]);
+        assert_eq!(a2.command, Command::List);
+        assert_eq!(a2.list, Some("effects".to_string()));
+    }
+
+    #[test]
+    fn suggestions_for_common_misspellings() {
+        let err1 = parse_args(vec!["forgum".to_string(), "cows".to_string()]).unwrap_err();
+        assert!(err1.message.contains("Did you mean:"));
+        assert!(err1.message.contains("forgum list animals"));
+
+        let err2 = parse_args(vec!["forgum".to_string(), "effect".to_string()]).unwrap_err();
+        assert!(err2.message.contains("forgum list effects"));
     }
 }

@@ -1,0 +1,11 @@
+##
+## Pit Viper Snake
+##
+$the_cow = <<EOC;
+   $thoughts
+    $thoughts     /\_
+     $thoughts   ( $eyes)
+          \ $tongue\____
+           \_______/\
+                     \_
+EOC

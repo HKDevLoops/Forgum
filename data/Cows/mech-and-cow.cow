@@ -1,0 +1,12 @@
+##
+## Pilot Cow in Mech Walker
+##
+$the_cow = <<EOC;
+   $thoughts
+    $thoughts     [======]
+     $thoughts   /| $eyes |\
+        | | $tongue | |
+        \|______/|
+         / |  | \
+        /_/    \_\
+EOC

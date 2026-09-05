@@ -1,6 +1,6 @@
 @{
     RootModule        = 'Forgum.psm1'
-    ModuleVersion     = '0.4.0'
+    ModuleVersion     = '0.0.1'
     GUID              = 'b5f8e9d3-4a72-4f5d-9e6f-2c4e1b8a3d9f'
     Author            = 'Forgum Contributors'
     Description       = 'Cross-platform cowsay + fortune + lolcat with a Rust animation engine. The PowerShell module is a thin UX layer; the engine does the rendering.'

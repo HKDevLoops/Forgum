@@ -317,7 +317,8 @@ mod tests {
     #[test]
     fn load_theme_falls_back_to_preloaded() {
         let dir = TempDir::new().unwrap();
-        let matrix = load_theme(dir.path(), "matrix").expect("matrix theme must load from preloaded");
+        let matrix =
+            load_theme(dir.path(), "matrix").expect("matrix theme must load from preloaded");
         assert_eq!(matrix.effect.as_deref(), Some("glitch"));
         assert_eq!(matrix.cow.as_deref(), Some("telebears"));
         assert_eq!(matrix.eyes.as_deref(), Some("00"));
@@ -332,4 +333,3 @@ mod tests {
         assert!(all.contains(&"aurora".to_string()));
     }
 }
-

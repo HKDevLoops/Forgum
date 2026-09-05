@@ -2,7 +2,7 @@ pub mod app;
 
 use std::fs;
 use std::io;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
 use anyhow::Context;
@@ -10,21 +10,50 @@ use forgum_platform::protocol::ConfigFormat;
 use ratatui::backend::CrosstermBackend;
 use ratatui::Terminal;
 
-use crate::app::ConfigApp;
+use crate::app::{ConfigApp, Tab};
 
-/// Run the interactive config editor for the file at `config_path`.
+/// Run the interactive TUI associated with a config path (backward compatibility).
 ///
-/// This is the exact signature the engine calls via `cfg!(feature = "tui")`.
+/// NOTE: Even if `config_path` does not exist on disk, this DOES NOT fail. It
+/// initializes cleanly in-memory with defaults.
 pub fn run_config_tui(config_path: &Path) -> Result<(), Box<dyn std::error::Error>> {
-    // Detect format and load existing config, or fall back to defaults if missing/invalid.
-    let ext = config_path
-        .extension()
-        .and_then(|s| s.to_str())
-        .unwrap_or("json");
-    let initial_format = ConfigFormat::from_extension(ext).unwrap_or(ConfigFormat::Json);
-    let config = read_config_file(config_path, initial_format).unwrap_or_default();
+    run_tui(Some(config_path), None)
+}
 
-    // Terminal setup.
+/// Run the standalone interactive TUI dashboard & installer (no config file required).
+pub fn run_standalone_tui(initial_tab: Option<&str>) -> Result<(), Box<dyn std::error::Error>> {
+    let tab = match initial_tab.unwrap_or("").to_lowercase().as_str() {
+        "mascot" | "mascots" | "cows" | "animals" | "1" => Some(Tab::Mascots),
+        "scenery" | "biomes" | "roads" | "2" => Some(Tab::Scenery),
+        "fx" | "effects" | "anim" | "colors" | "3" => Some(Tab::Effects),
+        "install" | "installer" | "shell" | "shells" | "4" => Some(Tab::Installer),
+        "config" | "settings" | "5" => Some(Tab::Config),
+        _ => None,
+    };
+    run_tui(None, tab)
+}
+
+/// Master runner for the Forgum Studio TUI dashboard.
+///
+/// 100% in-memory resilient: if `config_path` is `None` or the file does not exist,
+/// the TUI runs flawlessly without any dependencies on the file system.
+pub fn run_tui(
+    config_path: Option<&Path>,
+    initial_tab: Option<Tab>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    // Attempt to load existing config if file exists, else use None (defaults in memory).
+    let (loaded_config, initial_path) = match config_path {
+        Some(p) if p.is_file() => {
+            let ext = p.extension().and_then(|s| s.to_str()).unwrap_or("json");
+            let fmt = ConfigFormat::from_extension(ext).unwrap_or(ConfigFormat::Json);
+            let cfg = read_config_file(p, fmt).ok();
+            (cfg, Some(p.to_path_buf()))
+        }
+        Some(p) => (None, Some(p.to_path_buf())),
+        None => (None, None),
+    };
+
+    // Terminal setup
     crossterm::terminal::enable_raw_mode().context("enable raw mode")?;
     let mut stdout = io::stdout();
     crossterm::execute!(stdout, crossterm::terminal::EnterAlternateScreen)
@@ -34,8 +63,8 @@ pub fn run_config_tui(config_path: &Path) -> Result<(), Box<dyn std::error::Erro
     let mut terminal = Terminal::new(backend).context("build terminal")?;
 
     let result = (|| -> anyhow::Result<()> {
-        let mut app = ConfigApp::new(config, initial_format);
-        let tick_rate = Duration::from_millis(33); // ~30 FPS live preview
+        let mut app = ConfigApp::new(loaded_config, initial_path, initial_tab);
+        let tick_rate = Duration::from_millis(33); // 30 FPS live preview
         let mut last_tick = Instant::now();
 
         loop {
@@ -54,19 +83,28 @@ pub fn run_config_tui(config_path: &Path) -> Result<(), Box<dyn std::error::Erro
                                 .config()
                                 .serialize_with_format(fmt)
                                 .map_err(|e| anyhow::anyhow!("serialize config: {e}"))?;
-                            if let Some(parent) = config_path.parent() {
-                                fs::create_dir_all(parent)
-                                    .with_context(|| format!("create {}", parent.display()))?;
-                            }
-                            let target_path = config_path
-                                .parent()
-                                .map(|p| p.join(format!("config.{}", fmt.extension())))
-                                .unwrap_or_else(|| config_path.to_path_buf());
+
+                            // If a path was provided, use it; otherwise resolve the default config path
+                            let target_path: PathBuf = match &app.config_path {
+                                Some(p) => {
+                                    if let Some(parent) = p.parent() {
+                                        let _ = fs::create_dir_all(parent);
+                                        parent.join(format!("config.{}", fmt.extension()))
+                                    } else {
+                                        p.clone()
+                                    }
+                                }
+                                None => {
+                                    let default_dir = forgum_platform::paths::config_dir()
+                                        .unwrap_or_else(|_| PathBuf::from("."));
+                                    let _ = fs::create_dir_all(&default_dir);
+                                    default_dir.join(format!("config.{}", fmt.extension()))
+                                }
+                            };
+
                             fs::write(&target_path, text)
                                 .with_context(|| format!("write {}", target_path.display()))?;
-                            if config_path.is_file() && config_path != target_path {
-                                let _ = fs::remove_file(config_path);
-                            }
+                            app.config_path = Some(target_path);
                             app.mark_saved();
                         }
                     }
@@ -80,10 +118,9 @@ pub fn run_config_tui(config_path: &Path) -> Result<(), Box<dyn std::error::Erro
         }
     })();
 
-    // Restore the terminal no matter what happened above.
-    crossterm::terminal::disable_raw_mode().context("disable raw mode")?;
-    crossterm::execute!(io::stdout(), crossterm::terminal::LeaveAlternateScreen)
-        .context("leave alternate screen")?;
+    // Restore the terminal unconditionally
+    let _ = crossterm::terminal::disable_raw_mode();
+    let _ = crossterm::execute!(io::stdout(), crossterm::terminal::LeaveAlternateScreen);
 
     result?;
     Ok(())

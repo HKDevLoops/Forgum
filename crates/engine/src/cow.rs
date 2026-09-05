@@ -30,14 +30,19 @@ pub fn load_cow(
     tongue: &str,
     thoughts: &str,
 ) -> String {
+    let clean = cow_name.trim().to_ascii_lowercase();
+    let resolved = match clean.as_str() {
+        "nyan-cat" | "nyancat" | "nyan_cat" => "nyan",
+        other => other,
+    };
     // 1. Try bundled data directory.
-    let cow_path = data_dir.join("Cows").join(format!("{cow_name}.cow"));
+    let cow_path = data_dir.join("Cows").join(format!("{resolved}.cow"));
     if let Ok(raw) = std::fs::read_to_string(&cow_path) {
         return expand_cow(&raw, eyes, tongue, thoughts);
     }
     // 2. Try user's custom cows directory (Phase 8.12: community cow packs).
     if let Some(custom_path) = custom_cows_dir() {
-        let custom_cow = custom_path.join(format!("{cow_name}.cow"));
+        let custom_cow = custom_path.join(format!("{resolved}.cow"));
         if let Ok(raw) = std::fs::read_to_string(&custom_cow) {
             return expand_cow(&raw, eyes, tongue, thoughts);
         }
@@ -50,6 +55,43 @@ pub fn load_cow(
 /// Otherwise return `cow_name` unchanged.
 pub fn resolve_cow_name(cow_name: &str, data_dir: &Path) -> String {
     if cow_name != "random" {
+        let clean = cow_name.trim().to_ascii_lowercase();
+        let cow_name = match clean.as_str() {
+            "nyan-cat" | "nyancat" | "nyan_cat" => "nyan",
+            other => other,
+        };
+        let cow_file = format!("{cow_name}.cow");
+        if data_dir.join("Cows").join(&cow_file).exists() {
+            return cow_name.to_string();
+        }
+        if let Some(custom) = custom_cows_dir() {
+            if custom.join(&cow_file).exists() {
+                return cow_name.to_string();
+            }
+        }
+        // Mascot not found: find closest match among available cows
+        if let Ok(rd) = std::fs::read_dir(data_dir.join("Cows")) {
+            let names: Vec<String> = rd
+                .flatten()
+                .filter_map(|e| {
+                    let p = e.path();
+                    if p.extension()
+                        .is_some_and(|ext| ext.eq_ignore_ascii_case("cow"))
+                    {
+                        p.file_stem().map(|s| s.to_string_lossy().into_owned())
+                    } else {
+                        None
+                    }
+                })
+                .collect();
+            let name_refs: Vec<&str> = names.iter().map(|s| s.as_str()).collect();
+            if let Some(closest) = crate::cli::find_closest_match(cow_name, &name_refs) {
+                eprintln!(
+                    "\x1b[1;33m💡 Mascot '{cow_name}' not found. Did you mean '{closest}'? (Using '{closest}'). Run 'forgum list animals' for all 106 options.\x1b[0m"
+                );
+                return closest.to_string();
+            }
+        }
         return cow_name.to_string();
     }
     let mut entries: Vec<String> = Vec::new();
@@ -155,11 +197,37 @@ pub fn expand_cow(cow_template: &str, eyes: &str, tongue: &str, thoughts: &str) 
         cow_template
     };
 
+    let eye_chars: Vec<char> = eyes.chars().collect();
+    let left_eye = eye_chars.first().copied().unwrap_or('o').to_string();
+    let right_eye = eye_chars
+        .get(1)
+        .copied()
+        .unwrap_or_else(|| eye_chars.first().copied().unwrap_or('o'))
+        .to_string();
+    let mut eye_idx = 0usize;
+
     for line in cow_body.lines() {
         if line.contains('$') {
-            let line = line.replace("$eyes", eyes);
-            let line = line.replace("$tongue", tongue);
-            let line = line.replace("$thoughts", thoughts);
+            let mut line = line
+                .replace("${eyes}", eyes)
+                .replace("$eyes", eyes)
+                .replace("${tongue}", tongue)
+                .replace("$tongue", tongue)
+                .replace("${thoughts}", thoughts)
+                .replace("$thoughts", thoughts);
+
+            // Handle singular $eye and ${eye} placeholders
+            while let Some(pos) = line.find("${eye}") {
+                let glyph = if eye_idx % 2 == 0 { &left_eye } else { &right_eye };
+                eye_idx += 1;
+                line.replace_range(pos..pos + 6, glyph);
+            }
+            while let Some(pos) = line.find("$eye") {
+                let glyph = if eye_idx % 2 == 0 { &left_eye } else { &right_eye };
+                eye_idx += 1;
+                line.replace_range(pos..pos + 4, glyph);
+            }
+
             result.push_str(&line);
         } else {
             result.push_str(line);
@@ -202,9 +270,72 @@ pub fn compose_scene_with_mode(cow_text: &str, bubble_text: &str, is_thought: bo
         wrap_bubble(bubble_text, cow_width)
     };
 
-    let mut result = String::with_capacity(bubble.len() + cow_text.len() + 1);
+    let mut result = String::with_capacity(bubble.len() + cow_text.len() + 64);
     result.push_str(&bubble);
     result.push('\n');
+
+    if is_thought {
+        // The thought bubble must strictly have exactly THREE circles below it
+        let head_indent = cow_lines
+            .iter()
+            .find(|l| !l.trim().is_empty() && l.trim() != "o" && l.trim() != "o ")
+            .map(|l| l.chars().take_while(|c| c.is_whitespace()).count())
+            .unwrap_or(6);
+        let p1 = head_indent.saturating_sub(4).max(2);
+        let p2 = head_indent.saturating_sub(2).max(3);
+        let p3 = head_indent.saturating_sub(1).max(4);
+
+        for indent in [p1, p2, p3] {
+            for _ in 0..indent {
+                result.push(' ');
+            }
+            result.push_str("o \n");
+        }
+
+        // Skip leading standalone thought pointer lines so total circles are strictly three
+        let leading_blanks = cow_lines
+            .iter()
+            .take(3)
+            .take_while(|l| l.trim().is_empty())
+            .count();
+        let standalone_lines = cow_lines[leading_blanks..]
+            .iter()
+            .take_while(|l| l.trim() == "o" || l.trim() == "o ")
+            .count();
+        if standalone_lines > 0 {
+            let remaining = cow_lines[leading_blanks + standalone_lines..].join("\n");
+            result.push_str(&remaining);
+            return result;
+        }
+    } else {
+        let has_pointer = cow_lines.iter().take(4).any(|line| {
+            let trimmed = line.trim_start();
+            trimmed.starts_with('\\')
+        });
+
+        if !has_pointer && !cow_lines.is_empty() {
+            let head_indent = cow_lines
+                .iter()
+                .find(|l| !l.trim().is_empty())
+                .map(|l| l.chars().take_while(|c| c.is_whitespace()).count())
+                .unwrap_or(4);
+            let p1_indent = head_indent.saturating_sub(2).max(1);
+            let p2_indent = head_indent.saturating_sub(1).max(2);
+
+            for _ in 0..p1_indent {
+                result.push(' ');
+            }
+            result.push('\\');
+            result.push('\n');
+
+            for _ in 0..p2_indent {
+                result.push(' ');
+            }
+            result.push('\\');
+            result.push('\n');
+        }
+    }
+
     result.push_str(cow_text);
     result
 }
@@ -291,6 +422,86 @@ pub fn str_display_width(s: &str) -> usize {
     s.chars().map(char_display_width).sum()
 }
 
+/// Wrap text to a maximum line width, breaking words if necessary.
+pub fn wrap_words(text: &str, max_width: usize) -> Vec<String> {
+    let mut out = Vec::new();
+    let max_w = max_width.max(4);
+
+    for raw_line in text.lines() {
+        if raw_line.is_empty() {
+            out.push(String::new());
+            continue;
+        }
+        let words: Vec<&str> = raw_line.split_whitespace().collect();
+        if words.is_empty() {
+            out.push(String::new());
+            continue;
+        }
+        let mut cur_line = String::new();
+        let mut cur_w = 0;
+        for word in words {
+            let word_w = str_display_width(word);
+            if cur_line.is_empty() {
+                if word_w > max_w {
+                    // Break long word
+                    let mut chunk = String::new();
+                    let mut chunk_w = 0;
+                    for ch in word.chars() {
+                        let cw = char_display_width(ch);
+                        if chunk_w + cw > max_w && !chunk.is_empty() {
+                            out.push(chunk);
+                            chunk = String::new();
+                            chunk_w = 0;
+                        }
+                        chunk.push(ch);
+                        chunk_w += cw;
+                    }
+                    if !chunk.is_empty() {
+                        cur_line = chunk;
+                        cur_w = chunk_w;
+                    }
+                } else {
+                    cur_line.push_str(word);
+                    cur_w = word_w;
+                }
+            } else if cur_w + 1 + word_w <= max_w {
+                cur_line.push(' ');
+                cur_line.push_str(word);
+                cur_w += 1 + word_w;
+            } else {
+                out.push(cur_line);
+                if word_w > max_w {
+                    // Break long word
+                    let mut chunk = String::new();
+                    let mut chunk_w = 0;
+                    for ch in word.chars() {
+                        let cw = char_display_width(ch);
+                        if chunk_w + cw > max_w && !chunk.is_empty() {
+                            out.push(chunk);
+                            chunk = String::new();
+                            chunk_w = 0;
+                        }
+                        chunk.push(ch);
+                        chunk_w += cw;
+                    }
+                    cur_line = chunk;
+                    cur_w = chunk_w;
+                } else {
+                    cur_line = word.to_string();
+                    cur_w = word_w;
+                }
+            }
+        }
+        if !cur_line.is_empty() {
+            out.push(cur_line);
+        }
+    }
+    if out.is_empty() {
+        out.push(String::new());
+    }
+    out
+}
+
 /// Wrap text in a speech bubble with rectangular borders.
 ///
 /// ```text
@@ -299,7 +510,12 @@ pub fn str_display_width(s: &str) -> usize {
 /// |_______________|
 /// ```
 pub fn wrap_bubble(text: &str, min_width: usize) -> String {
-    let lines: Vec<&str> = text.lines().collect();
+    if text.is_empty() {
+        return String::new();
+    }
+    let (term_w, _) = forgum_platform::terminal_size();
+    let max_inner = (term_w as usize).saturating_sub(6).max(8);
+    let lines = wrap_words(text, max_inner);
     if lines.is_empty() {
         return String::new();
     }
@@ -323,7 +539,7 @@ pub fn wrap_bubble(text: &str, min_width: usize) -> String {
     result.push('\n');
 
     // Content lines: `|  Hello, world |`
-    for line in lines.iter() {
+    for line in &lines {
         let pad_target = inner_width + 1;
         result.push('|');
         result.push(' ');
@@ -351,18 +567,38 @@ pub fn wrap_bubble(text: &str, min_width: usize) -> String {
 ///  (  Hello, world  )
 ///  (_______________)
 /// ```
-pub fn wrap_thought_bubble(text: &str, min_width: usize) -> String {
-    let lines: Vec<&str> = text.lines().collect();
+pub fn wrap_thought_bubble(text: &str, cow_width: usize) -> String {
+    if text.is_empty() {
+        return String::new();
+    }
+    let (term_w, _) = forgum_platform::terminal_size();
+    let term_max = (term_w as usize).saturating_sub(6).max(8);
+
+    // If cow_width is specified (> 0), the thought bubble must NEVER have width greater than the cow.
+    let max_inner = if cow_width > 0 {
+        // Bubble borders and padding take 4 chars total: `( ` + text + ` )`
+        cow_width.saturating_sub(4).max(1).min(term_max)
+    } else {
+        term_max
+    };
+
+    let lines = wrap_words(text, max_inner);
     if lines.is_empty() {
         return String::new();
     }
 
-    let text_width = lines
+    let raw_text_w = lines
         .iter()
         .map(|l| str_display_width(l))
         .max()
-        .unwrap_or(0)
-        .max(min_width.saturating_sub(2));
+        .unwrap_or(0);
+
+    let text_width = if cow_width > 0 {
+        raw_text_w.min(cow_width.saturating_sub(4).max(1))
+    } else {
+        raw_text_w
+    };
+
     let inner_width = text_width + 2; // +2 for padding spaces around text
 
     let mut result = String::with_capacity((inner_width + 4) * (lines.len() + 2));
@@ -375,7 +611,7 @@ pub fn wrap_thought_bubble(text: &str, min_width: usize) -> String {
     result.push('\n');
 
     // Content lines: `(  Hello, world  )`
-    for line in lines.iter() {
+    for line in &lines {
         let pad_target = inner_width + 1;
         result.push('(');
         result.push(' ');
@@ -398,9 +634,10 @@ pub fn wrap_thought_bubble(text: &str, min_width: usize) -> String {
 
 /// Pad `result` with spaces until its current line display width reaches `target_len`.
 fn pad_to(result: &mut String, target_len: usize) {
-    let current_width = result
-        .rsplit_once('\n')
-        .map_or_else(|| str_display_width(result), |(_, last)| str_display_width(last));
+    let current_width = result.rsplit_once('\n').map_or_else(
+        || str_display_width(result),
+        |(_, last)| str_display_width(last),
+    );
     for _ in current_width..target_len {
         result.push(' ');
     }
@@ -646,7 +883,6 @@ mod tests {
         }
     }
 
-
     #[test]
     fn bubble_no_trailing_underscore_row() {
         let bubble = wrap_bubble("Hello", 0);
@@ -668,12 +904,19 @@ mod tests {
 
     #[test]
     fn thought_bubble_structure_single_line() {
-        let bubble = wrap_thought_bubble("I ponder deeply", 10);
+        let bubble = wrap_thought_bubble("I ponder deeply", 25);
         let lines: Vec<&str> = bubble.lines().collect();
-        assert_eq!(lines.len(), 3, "single-line thought bubble must have 3 lines");
+        assert_eq!(
+            lines.len(),
+            3,
+            "single-line thought bubble must have 3 lines"
+        );
 
         // Top border: space + underscores
-        assert!(lines[0].starts_with(' '), "top border must start with space");
+        assert!(
+            lines[0].starts_with(' '),
+            "top border must start with space"
+        );
         assert!(
             lines[0].chars().all(|c| c == '_' || c == ' '),
             "top border must be underscores/spaces only"
@@ -682,7 +925,10 @@ mod tests {
         // Content line: starts with ( and ends with )
         assert!(lines[1].starts_with('('), "content line must start with (");
         assert!(lines[1].ends_with(')'), "content line must end with )");
-        assert!(lines[1].contains("I ponder deeply"), "content must contain thought text");
+        assert!(
+            lines[1].contains("I ponder deeply"),
+            "content must contain thought text"
+        );
 
         // Bottom border: (____...___)
         assert!(lines[2].starts_with('('), "bottom border must start with (");
@@ -736,6 +982,21 @@ mod tests {
         }
     }
 
+    #[test]
+    fn thought_bubble_never_exceeds_cow_width() {
+        let long_thought = "This is an extraordinarily long contemplation about quantum entanglement and bovine philosophy that spans multiple sentences and concepts.";
+        for cow_width in [15, 20, 25, 30, 40, 50] {
+            let bubble = wrap_thought_bubble(long_thought, cow_width);
+            for row in bubble.lines() {
+                let w = str_display_width(row);
+                assert!(
+                    w <= cow_width,
+                    "Thought bubble row width {w} exceeded cow width {cow_width}: '{row}'"
+                );
+            }
+        }
+    }
+
     // ── compose_scene ─────────────────────────────────────────────
 
     #[test]
@@ -780,10 +1041,10 @@ mod tests {
 
     #[test]
     fn compose_thought_scene_bubble_before_cow() {
-        let cow = "  cow_line1\n  cow_line2";
+        let cow = "  cow_line1                \n  cow_line2                ";
         let scene = compose_thought_scene(cow, "thinking of grass");
         let cow_pos = scene.find("cow_line1").unwrap();
-        let thought_pos = scene.find("thinking of grass").unwrap();
+        let thought_pos = scene.find("thinking").unwrap();
         assert!(
             thought_pos < cow_pos,
             "thought bubble (at {thought_pos}) must precede cow (at {cow_pos})"
@@ -973,5 +1234,3 @@ mod tests {
         let _ = std::fs::remove_dir_all(&tmp);
     }
 }
-
-

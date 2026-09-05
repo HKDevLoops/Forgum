@@ -1,0 +1,12 @@
+##
+## Unipony / Unicorn
+##
+$the_cow = <<EOC;
+   $thoughts
+    $thoughts      \
+     $thoughts     /\__
+          ( $eyes)______
+          ($tongue )     \
+           |   |--w |
+           ||  ||  ||
+EOC

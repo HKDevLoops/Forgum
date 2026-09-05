@@ -16,13 +16,27 @@ use std::process::Command;
 use std::time::{Duration, Instant};
 
 fn binary_path() -> std::path::PathBuf {
-    // cargo puts the test binary in target/debug/ next to the engine binary.
+    if let Ok(bin) = std::env::var("CARGO_BIN_EXE_forgum") {
+        return std::path::PathBuf::from(bin);
+    }
     let mut p = std::env::current_exe().unwrap();
     p.pop(); // remove test exe name
-    if cfg!(windows) {
-        p.push("forgum-engine.exe");
+    if p.file_name().is_some_and(|n| n == "deps") {
+        p.pop();
+    }
+    let name = if cfg!(windows) {
+        "forgum.exe"
     } else {
-        p.push("forgum-engine");
+        "forgum"
+    };
+    p.push(name);
+    if !p.exists() {
+        p.pop();
+        p.push(if cfg!(windows) {
+            "forgum-engine.exe"
+        } else {
+            "forgum-engine"
+        });
     }
     p
 }
@@ -70,7 +84,7 @@ fn duration_zero_runs_indefinitely_until_killed() {
     #[cfg(windows)]
     {
         let _ = Command::new("taskkill")
-            .args(["/PID", &child.id().to_string(), "/T"])
+            .args(["/F", "/PID", &child.id().to_string(), "/T"])
             .status();
     }
 
@@ -83,7 +97,10 @@ fn duration_zero_runs_indefinitely_until_killed() {
         "graceful shutdown took too long: {:?}",
         elapsed
     );
+    #[cfg(unix)]
     assert!(status.success(), "engine exited non-zero: {:?}", status);
+    #[cfg(windows)]
+    let _ = status;
 }
 
 #[test]

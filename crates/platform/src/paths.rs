@@ -344,15 +344,21 @@ fn is_safe_session_id(sid: &str) -> bool {
         && !sid.starts_with('/')
         && !sid.contains(':')
         && !sid.contains('\\')
-        && sid
-            .bytes()
-            .all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_' || b == b'%' || b == b'{' || b == b'}')
+        && sid.bytes().all(|b| {
+            b.is_ascii_alphanumeric()
+                || b == b'-'
+                || b == b'_'
+                || b == b'%'
+                || b == b'{'
+                || b == b'}'
+        })
 }
 
 fn sanitize_session_id(sid: &str) -> String {
     sid.chars()
         .map(|c| {
-            if c.is_ascii_alphanumeric() || c == '-' || c == '_' || c == '%' || c == '{' || c == '}' {
+            if c.is_ascii_alphanumeric() || c == '-' || c == '_' || c == '%' || c == '{' || c == '}'
+            {
                 c
             } else {
                 '_'

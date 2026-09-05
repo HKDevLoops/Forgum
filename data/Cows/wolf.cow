@@ -1,0 +1,15 @@
+##
+## Gray Wolf (Canis lupus)
+##
+$the_cow = <<EOC;
+   $thoughts
+    $thoughts      /\
+     $thoughts    /  \     /\
+         /    \___/  \
+        /  $eyes       \
+       (     $tongue     )_____
+        \             /     \
+         \  /\     /\  \    /
+          )(  \   /  \  )---
+         (__\  \_/    \__)
+EOC

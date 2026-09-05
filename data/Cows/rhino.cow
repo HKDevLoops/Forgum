@@ -1,0 +1,13 @@
+##
+## Rhinoceros (Rhinocerotidae)
+##
+$the_cow = <<EOC;
+   $thoughts
+    $thoughts       /\
+     $thoughts  /\ /  \
+       /  V $eyes \_______
+      (    $tongue  /        \
+       \____/|  ____  |
+             |||    |||
+             ---    ---
+EOC

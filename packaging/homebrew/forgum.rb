@@ -3,7 +3,7 @@ class Forgum < Formula
   homepage "https://github.com/HKDevLoops/Forgum"
   license "MIT"
 
-  version "0.4.0"
+  version "0.0.1-alpha.1"
 
   stable do
     on_macos do
@@ -30,6 +30,7 @@ class Forgum < Formula
 
   def install
     bin.install "forgum-engine"
+    bin.install "forgum" if File.exist?("forgum")
   end
 
   test do

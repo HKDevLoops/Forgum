@@ -1,10 +1,17 @@
-$the_cow = <<"EOC";
-        $thoughts   ^__^
-         $thoughts  ($eyes)
-            (__)
-           /-||-\\
-           \\|\\/|/
-            o==o 
-            ||||
-            ()()
+##
+## Minotaur - Beast of the Cretan Labyrinth
+##
+$the_cow = <<EOC;
+   $thoughts
+    $thoughts      <(__)>
+     $thoughts     ($eyes)   |---|
+          /\___(==)___/   |
+         / /   $tongue  \ \  |===|
+        ( (  /\  /\  ) )  |
+         \ \/  \/  \/ /   |
+          \  |    |  /   ---
+           | |====| |
+           ( (    ) )
+           | |    | |
+          (_()    ()_)
 EOC

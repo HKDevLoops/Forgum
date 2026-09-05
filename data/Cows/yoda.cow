@@ -1,0 +1,13 @@
+##
+## Master Yoda
+##
+$the_cow = <<EOC;
+   $thoughts
+    $thoughts   |_|         |_|
+     $thoughts  \  \_______/  /
+         \  $eyes   /
+          |  $tongue  |
+         /         \
+        / /|  |\ \
+       (_/ |_| \_)
+EOC

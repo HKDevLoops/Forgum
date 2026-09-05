@@ -9,7 +9,8 @@ Describe "Forgum ffmpeg animation capture" {
     }
     It "cargo ffmpeg_capture tests pass" {
         $out = cargo test --test ffmpeg_capture -- --nocapture 2>&1 | Out-String
-        $out | Should Match "4 passed"
+        $out | Should Match "test result: ok"
+        $out | Should Match "0 failed"
     }
     It "video directory contains mp4s after capture" {
         Test-Path $videoDir | Should Be $true

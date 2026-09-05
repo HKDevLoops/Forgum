@@ -3,10 +3,10 @@
 ##
 $the_cow = <<EOC;
    $thoughts
-    $thoughts   \\
-         \\ /\\
+    $thoughts   \
+         \ /\
          ( )
-       .( o ).
-      / /   \\ \\
-     (_/     \\_)
+       .($eyes).
+      / / $tongue \ \
+     (_/     \_)
 EOC

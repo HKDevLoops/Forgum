@@ -1,0 +1,11 @@
+##
+## Vulpix Fox
+##
+$the_cow = <<EOC;
+   $thoughts
+    $thoughts     /\___/\   _
+     $thoughts   ( $eyes ) { }
+          ( $tongue ) / /
+          /   \/_/
+         ( || || )
+EOC

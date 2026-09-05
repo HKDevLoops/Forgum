@@ -14,7 +14,7 @@ function Get-ForgumEngineBinary {
     [OutputType([string])]
     param()
 
-    $exeName = if ($IsWindows) { 'forgum-engine.exe' } else { 'forgum-engine' }
+    $exeNames = if ($IsWindows) { @('forgum.exe', 'forgum-engine.exe') } else { @('forgum', 'forgum-engine') }
 
     # 1. Explicit override.
     if ($env:FORGUM_ENGINE -and (Test-Path -LiteralPath $env:FORGUM_ENGINE)) {
@@ -23,15 +23,19 @@ function Get-ForgumEngineBinary {
 
     # 2. Module-relative.
     $moduleRoot = $PSScriptRoot | Split-Path -Parent
-    $candidate = Join-Path (Join-Path $moduleRoot 'bin') $exeName
-    if (Test-Path -LiteralPath $candidate) {
-        return (Resolve-Path -LiteralPath $candidate).Path
+    foreach ($exeName in $exeNames) {
+        $candidate = Join-Path (Join-Path $moduleRoot 'bin') $exeName
+        if (Test-Path -LiteralPath $candidate) {
+            return (Resolve-Path -LiteralPath $candidate).Path
+        }
     }
 
     # 3. System PATH.
-    $onPath = Get-Command $exeName -ErrorAction SilentlyContinue
-    if ($onPath) {
-        return $onPath.Source
+    foreach ($exeName in $exeNames) {
+        $onPath = Get-Command $exeName -ErrorAction SilentlyContinue
+        if ($onPath) {
+            return $onPath.Source
+        }
     }
 
     # Clear failure.

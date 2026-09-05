@@ -1,0 +1,12 @@
+##
+## Cal Telebears
+##
+$the_cow = <<EOC;
+   $thoughts
+    $thoughts    (c).-.(c)
+     $thoughts    / $eyes \
+         (  $tongue  )
+         /       \
+        (  /\ /\  )
+         `'  `'  `'
+EOC

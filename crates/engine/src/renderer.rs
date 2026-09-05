@@ -42,13 +42,23 @@ pub trait Renderer: Send {
 }
 
 /// Default ANSI renderer — writes cursor-move + character sequences.
+/// Rendering mode for the ANSI renderer.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum RenderMode {
+    #[default]
+    Standard,
+    Banner,
+    Overlay,
+}
+
+/// Default ANSI renderer — writes cursor-move + character sequences.
 ///
 /// The per-frame scratch buffer is reused across calls so a frame with many
 /// changed cells allocates **zero** heap (D1/D3): no `format!()` per cell.
 #[derive(Debug, Default)]
 pub struct AnsiRenderer {
     scratch: Vec<u8>,
-    is_banner: bool,
+    mode: RenderMode,
 }
 
 impl AnsiRenderer {
@@ -59,8 +69,23 @@ impl AnsiRenderer {
     pub fn new_banner() -> Self {
         Self {
             scratch: Vec::with_capacity(1024),
-            is_banner: true,
+            mode: RenderMode::Banner,
         }
+    }
+
+    pub fn new_overlay() -> Self {
+        Self {
+            scratch: Vec::with_capacity(1024),
+            mode: RenderMode::Overlay,
+        }
+    }
+
+    pub fn is_banner(&self) -> bool {
+        self.mode == RenderMode::Banner
+    }
+
+    pub fn is_overlay(&self) -> bool {
+        self.mode == RenderMode::Overlay
     }
 
     /// Write a single decimal `u32` into `buf` (no per-call allocation).
@@ -94,8 +119,11 @@ impl Renderer for AnsiRenderer {
         let buf = &mut self.scratch;
         buf.clear();
 
-        if self.is_banner {
+        if self.mode == RenderMode::Banner {
             buf.extend_from_slice(b"\x1b8");
+        } else if self.mode == RenderMode::Overlay {
+            // DECSC: save cursor position and attributes before writing damage cells
+            buf.extend_from_slice(b"\x1b7");
         }
 
         let mut cur_y = 0;
@@ -105,7 +133,7 @@ impl Renderer for AnsiRenderer {
             let idx = y0 * cols + x0;
             let cell0 = cells.get(idx).copied().unwrap_or_default();
 
-            if self.is_banner {
+            if self.mode == RenderMode::Banner {
                 if y0 > cur_y {
                     buf.extend_from_slice(b"\x1b[");
                     Self::write_decimal(buf, (y0 - cur_y) as u32);
@@ -180,6 +208,10 @@ impl Renderer for AnsiRenderer {
                 i += run_len;
             }
         }
+        if self.mode == RenderMode::Overlay {
+            // DECRC: restore cursor position and attributes so user's cursor remains unmoved
+            buf.extend_from_slice(b"\x1b8");
+        }
         out.write_all(buf)
     }
 
@@ -199,13 +231,19 @@ pub struct TmuxPassthroughRenderer {
 }
 
 impl TmuxPassthroughRenderer {
-    pub fn new(inner: Box<AnsiRenderer>) -> Self {
-        Self { inner: *inner }
+    pub fn new(inner: AnsiRenderer) -> Self {
+        Self { inner }
     }
 
     pub fn new_banner() -> Self {
         Self {
             inner: AnsiRenderer::new_banner(),
+        }
+    }
+
+    pub fn new_overlay() -> Self {
+        Self {
+            inner: AnsiRenderer::new_overlay(),
         }
     }
 }
@@ -246,6 +284,12 @@ impl SyncAnsiRenderer {
     pub fn new_banner() -> Self {
         Self {
             inner: AnsiRenderer::new_banner(),
+        }
+    }
+
+    pub fn new_overlay() -> Self {
+        Self {
+            inner: AnsiRenderer::new_overlay(),
         }
     }
 }
@@ -389,10 +433,49 @@ pub fn create_banner_renderer() -> Box<dyn Renderer> {
     Box::new(AnsiRenderer::new_banner())
 }
 
+/// Create an overlay renderer for running continuous background animation above the prompt.
+#[must_use]
+pub fn create_overlay_renderer() -> Box<dyn Renderer> {
+    if is_tmux() {
+        return Box::new(TmuxPassthroughRenderer::new_overlay());
+    }
+    if forgum_platform::terminal_supports_sync() {
+        return Box::new(SyncAnsiRenderer::new_overlay());
+    }
+    Box::new(AnsiRenderer::new_overlay())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::framebuffer::{Cell as FbCell, Color, FrameBuffer};
+
+    #[test]
+    fn overlay_renderer_saves_and_restores_cursor() {
+        let mut fb = FrameBuffer::new(10, 5);
+        let _ = fb.set(2, 1, FbCell::new('Z', Color::WHITE));
+
+        let mut out = Vec::new();
+        let mut renderer = AnsiRenderer::new_overlay();
+        let damage = vec![(2, 1)];
+        renderer
+            .render_damage(&mut out, &fb.back, fb.cols(), &damage)
+            .unwrap();
+        let s = String::from_utf8(out).unwrap();
+        assert!(
+            s.starts_with("\x1b7"),
+            "Overlay must save cursor at start with DECSC: {s}"
+        );
+        assert!(
+            s.ends_with("\x1b8"),
+            "Overlay must restore cursor at end with DECRC: {s}"
+        );
+        assert!(
+            s.contains("\x1b[2;3H"),
+            "Expected cursor move to row 2 col 3: {s}"
+        );
+        assert!(s.contains('Z'), "Expected character Z: {s}");
+    }
 
     #[test]
     fn ansi_renderer_writes_move_sequence() {
@@ -447,13 +530,25 @@ mod tests {
             .unwrap();
         let s = String::from_utf8(out).unwrap();
         // Must restore cursor to saved banner origin (\x1b8)
-        assert!(s.starts_with("\x1b8"), "Banner render must start with DECRC: {s}");
+        assert!(
+            s.starts_with("\x1b8"),
+            "Banner render must start with DECRC: {s}"
+        );
         // Must move down 2 lines (\x1b[2B)
-        assert!(s.contains("\x1b[2B"), "Banner render must move down relative lines: {s}");
+        assert!(
+            s.contains("\x1b[2B"),
+            "Banner render must move down relative lines: {s}"
+        );
         // Must move to column 6 (\x1b[6G)
-        assert!(s.contains("\x1b[6G"), "Banner render must move horizontally: {s}");
+        assert!(
+            s.contains("\x1b[6G"),
+            "Banner render must move horizontally: {s}"
+        );
         // Must NOT contain absolute row cursor move like \x1b[3;6H
-        assert!(!s.contains("\x1b[3;6H"), "Banner mode must not use absolute coordinates: {s}");
+        assert!(
+            !s.contains("\x1b[3;6H"),
+            "Banner mode must not use absolute coordinates: {s}"
+        );
         assert!(s.contains("B"), "Banner render must output character: {s}");
     }
 

@@ -1,14 +1,16 @@
 ##
-## MOOfasa.
+## Mufasa - King of the Pride Lands
 ##
 $the_cow = <<EOC;
-       $thoughts    ____
-        $thoughts  /    \\
-          | ^__^ |
-          | ($eyes) |______
-          | (__) |      )\\/\\
-           \\____/|----w |
-                ||     ||
-
-	         Moofasa
+   $thoughts
+    $thoughts     .-'""'-.
+     $thoughts   /  .-'''-.\
+        /  /  $eyes  \ \
+       |  |  (  $tongue ) | |
+        \  \  `---' / /
+         '-. `---' .-'  /\____
+            /     \    /      \
+           |  | |  |--'   /\   \
+           |  | |  |     /  \   \
+          (_/ (_/  \____/    \___)
 EOC

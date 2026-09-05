@@ -1,0 +1,11 @@
+##
+## Fresh Milk Carton
+##
+$the_cow = <<EOC;
+   $thoughts
+    $thoughts      /\____/\
+     $thoughts    / MILK /\
+         | $eyes | |
+         | $tongue |/
+         |______|
+EOC

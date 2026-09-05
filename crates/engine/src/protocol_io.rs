@@ -38,7 +38,7 @@ pub fn read_scene(file: Option<&Path>, cleanup: bool) -> Result<SceneConfig, Pla
             let _ = fs::remove_file(p);
         }
         bytes
-    } else if atty_stdin() {
+    } else if !forgum_platform::stdin_has_data() {
         return Ok(SceneConfig::default());
     } else {
         let mut buf = Vec::with_capacity(8 * 1024);
@@ -66,10 +66,6 @@ pub fn read_scene(file: Option<&Path>, cleanup: bool) -> Result<SceneConfig, Pla
             cfg.validate();
             cfg
         })
-}
-
-fn atty_stdin() -> bool {
-    crossterm::tty::IsTty::is_tty(&io::stdin())
 }
 
 #[cfg(test)]

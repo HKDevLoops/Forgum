@@ -113,6 +113,40 @@ pub fn parent_comm() -> Option<String> {
     }
 }
 
+/// Check if stdin has data available to read without blocking indefinitely.
+#[allow(unsafe_code)]
+pub fn stdin_has_data() -> bool {
+    use std::io;
+    use std::os::windows::io::AsRawHandle;
+    use windows_sys::Win32::Storage::FileSystem::{GetFileType, FILE_TYPE_DISK, FILE_TYPE_PIPE};
+    use windows_sys::Win32::System::Pipes::PeekNamedPipe;
+
+    if crossterm::tty::IsTty::is_tty(&io::stdin()) {
+        return false;
+    }
+
+    let handle = io::stdin().as_raw_handle() as windows_sys::Win32::Foundation::HANDLE;
+    let file_type = unsafe { GetFileType(handle) };
+    if file_type == FILE_TYPE_DISK {
+        return true;
+    }
+    if file_type == FILE_TYPE_PIPE {
+        let mut avail: u32 = 0;
+        let ok = unsafe {
+            PeekNamedPipe(
+                handle,
+                std::ptr::null_mut(),
+                0,
+                std::ptr::null_mut(),
+                &mut avail,
+                std::ptr::null_mut(),
+            )
+        };
+        return ok != 0 && avail > 0;
+    }
+    false
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

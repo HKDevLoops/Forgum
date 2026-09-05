@@ -175,6 +175,18 @@ pub fn merge(base: SceneConfig, overlay: SceneConfig) -> SceneConfig {
             overlay.shell_attach_mode
         },
         think: overlay.think || base.think,
+        environment: overlay.environment.or(base.environment),
+        road: overlay.road.or(base.road),
+        mountain: overlay.mountain.or(base.mountain),
+        palette: overlay.palette.or(base.palette),
+        thought_interval: if overlay.thought_interval == 0 {
+            base.thought_interval
+        } else {
+            overlay.thought_interval
+        },
+        split_scroll: overlay.split_scroll || base.split_scroll,
+        animation: overlay.animation.or(base.animation),
+        animation_type: overlay.animation_type.or(base.animation_type),
     }
 }
 

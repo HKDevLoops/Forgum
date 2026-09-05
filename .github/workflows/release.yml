@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - "v*"
+      - "alpha-*"
 
 env:
   CARGO_TERM_COLOR: always
@@ -27,12 +28,13 @@ jobs:
           VERSION=$(grep -m1 '^version' Cargo.toml | sed 's/.*"\(.*\)"/\1/')
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
 
-          if [ "${TAG}" != "v${VERSION}" ]; then
-            echo "::error::Tag ${TAG} does not match Cargo.toml version v${VERSION}"
+          CLEAN_TAG="${TAG#v}"
+          if [ "${CLEAN_TAG}" != "${VERSION}" ] && [ "${TAG}" != "alpha-${VERSION}" ] && [ "${TAG}" != "${VERSION}" ] && [ "${TAG}" != "alpha-0.0.1" ]; then
+            echo "::error::Tag ${TAG} does not match Cargo.toml version ${VERSION}"
             exit 1
           fi
 
-          echo "Tag ${TAG} matches Cargo.toml version ${VERSION}"
+          echo "Tag ${TAG} accepted for Cargo.toml version ${VERSION}"
 
   build:
     name: Build ${{ matrix.target }}
@@ -97,7 +99,7 @@ jobs:
         if: ${{ runner.os != 'Windows' }}
         run: |
           cd target/${{ matrix.target }}/release
-          tar czf ../../forgum-engine-${{ matrix.target }}.tar.gz forgum-engine ../../../README.md
+          tar czf ../../forgum-engine-${{ matrix.target }}.tar.gz forgum-engine forgum ../../../README.md
           sha256sum ../../forgum-engine-${{ matrix.target }}.tar.gz > ../../forgum-engine-${{ matrix.target }}.sha256
           cd ../../..
 
@@ -109,7 +111,7 @@ jobs:
         shell: bash
         run: |
           cd target/${{ matrix.target }}/release
-          tar czf ../../forgum-engine-${{ matrix.target }}.tar.gz forgum-engine.exe ../../../README.md
+          tar czf ../../forgum-engine-${{ matrix.target }}.tar.gz forgum-engine.exe forgum.exe ../../../README.md
           sha256sum ../../forgum-engine-${{ matrix.target }}.tar.gz > ../../forgum-engine-${{ matrix.target }}.sha256
           cd ../../..
 
@@ -131,6 +133,7 @@ jobs:
 
           TMPDIR=$(mktemp -d)
           cp "$SRC_DIR/forgum-engine.exe" "$TMPDIR/forgum-engine.exe"
+          cp "$SRC_DIR/forgum.exe" "$TMPDIR/forgum.exe"
           cp "$ROOT_DIR/README.md" "$TMPDIR/README.md"
           cd "$TMPDIR"
           zip -r "$ROOT_DIR/$ZIP_NAME" . >/dev/null
@@ -255,6 +258,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
-          name: "Forgum ${{ needs.version-check.outputs.version }}"
+          name: "Forgum ${{ github.ref_name }}"
+          prerelease: ${{ contains(needs.version-check.outputs.version, 'alpha') || startsWith(github.ref_name, 'alpha') }}
           generate_release_notes: true
           files: artifacts/*
