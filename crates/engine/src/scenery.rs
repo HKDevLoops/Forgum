@@ -880,7 +880,9 @@ pub fn get_animal_profile(animal: &str) -> AnimalProfile {
             environment: EnvironmentStyle::Space,
             road: RoadStyle::Grid,
             mountain: MountainStyle::Crater,
-            wildlife_palette: &["#ff0033", "#ff7f00", "#ffff00", "#33ff00", "#0099ff", "#9933ff"],
+            wildlife_palette: &[
+                "#ff0033", "#ff7f00", "#ffff00", "#33ff00", "#0099ff", "#9933ff",
+            ],
             eyes: "^^",
             tongue: "  ",
         },
@@ -1969,15 +1971,15 @@ pub fn render_road(
         RoadStyle::None => return,
     };
 
-    let pchars: Vec<char> = pattern.chars().collect();
-    if pchars.is_empty() {
+    let pbytes = pattern.as_bytes();
+    if pbytes.is_empty() {
         return;
     }
 
-    let offset = (time * 4.0) as usize % pchars.len();
+    let offset = (time * 4.0) as usize % pbytes.len();
 
     for x in 0..width {
-        let ch = pchars[(x + offset) % pchars.len()];
+        let ch = pbytes[(x + offset) % pbytes.len()] as char;
         if ch != ' ' {
             let _ = fb.set(x, cow_bottom_y, Cell::new(ch, fg));
         }

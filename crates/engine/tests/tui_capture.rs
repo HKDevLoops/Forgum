@@ -133,9 +133,8 @@ fn render_cell_to_pixels(
     let bg = if cell.bg.a > 0 { cell.bg } else { BG_COLOR };
     let px_x = cell_x * CELL_W;
     let px_y = cell_y * CELL_H;
-    let glyph_bits = forgum_platform::font::glyph(cell.ch).or_else(|| {
-        forgum_platform::font::glyph(cell.ch.to_ascii_uppercase())
-    });
+    let glyph_bits = forgum_platform::font::glyph(cell.ch)
+        .or_else(|| forgum_platform::font::glyph(cell.ch.to_ascii_uppercase()));
 
     for dy in 0..CELL_H {
         let font_y = dy * 8 / CELL_H;
@@ -317,7 +316,10 @@ fn capture_tui_screenshots_and_video() {
             if sym != " " && !sym.is_empty() {
                 non_space += 1;
                 if non_space <= 5 {
-                    println!("DEBUG: Cell ({},{}) = '{}' fg={:?} bg={:?}", x, y, sym, cell.fg, cell.bg);
+                    println!(
+                        "DEBUG: Cell ({},{}) = '{}' fg={:?} bg={:?}",
+                        x, y, sym, cell.fg, cell.bg
+                    );
                 }
             }
         }
@@ -380,6 +382,9 @@ fn capture_tui_screenshots_and_video() {
         assert!(res.is_ok(), "Video encoding must succeed: {:?}", res.err());
         assert!(mp4_path.is_file(), "TUI MP4 video file must exist");
         let meta = std::fs::metadata(&mp4_path).unwrap();
-        assert!(meta.len() > 1000, "MP4 video must contain valid encoded frames");
+        assert!(
+            meta.len() > 1000,
+            "MP4 video must contain valid encoded frames"
+        );
     }
 }

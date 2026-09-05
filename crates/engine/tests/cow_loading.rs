@@ -444,9 +444,20 @@ fn all_cows_have_zero_lingering_placeholders() {
     let mut unexpanded = Vec::new();
     for name in &names {
         let cow = forgum_engine::cow::load_cow(name, &dd, "oo", " ", "\\");
-        for placeholder in ["$eyes", "${eyes}", "$eye", "${eye}", "$tongue", "${tongue}", "$thoughts", "${thoughts}"] {
+        for placeholder in [
+            "$eyes",
+            "${eyes}",
+            "$eye",
+            "${eye}",
+            "$tongue",
+            "${tongue}",
+            "$thoughts",
+            "${thoughts}",
+        ] {
             if cow.contains(placeholder) {
-                unexpanded.push(format!("{name}.cow: contains unexpanded placeholder '{placeholder}'"));
+                unexpanded.push(format!(
+                    "{name}.cow: contains unexpanded placeholder '{placeholder}'"
+                ));
             }
         }
     }
@@ -509,7 +520,8 @@ fn all_cows_can_instantiate_and_render_all_effects() {
         let dna = forgum_engine::dna::get_dna(&animations, name);
 
         for effect_name in ["walk", "breathe", "float", "fly", "pulse", "static"] {
-            let effect = create_scene_effect(effect_name, composed.clone(), dna.clone(), 42, "animal");
+            let effect =
+                create_scene_effect(effect_name, composed.clone(), dna.clone(), 42, "animal");
 
             // Render 3 frames to verify physics and kinematic cycles execute cleanly
             for frame in 0..3 {
@@ -541,11 +553,15 @@ fn thought_bubble_has_exactly_three_connective_circles() {
 
     for name in &names {
         let cow = forgum_engine::cow::load_cow(name, &dd, "oo", " ", "o");
-        let composed = forgum_engine::cow::compose_scene_with_mode(&cow, "I ponder the cosmos.", true);
-        
+        let composed =
+            forgum_engine::cow::compose_scene_with_mode(&cow, "I ponder the cosmos.", true);
+
         let lines: Vec<&str> = composed.lines().collect();
         // Find circles between the bottom of the bubble and the mascot body
-        let bubble_end = lines.iter().position(|l| l.starts_with('(') && l.ends_with(')') && l.contains("___")).unwrap_or(0);
+        let bubble_end = lines
+            .iter()
+            .position(|l| l.starts_with('(') && l.ends_with(')') && l.contains("___"))
+            .unwrap_or(0);
         let circles_count = lines[bubble_end + 1..]
             .iter()
             .take(5)
@@ -557,4 +573,3 @@ fn thought_bubble_has_exactly_three_connective_circles() {
         );
     }
 }
-

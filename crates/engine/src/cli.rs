@@ -871,11 +871,20 @@ pub fn build_scene_config(args: &Args) -> Result<SceneConfig, String> {
         if args.mountain.is_none() && (cli_cow_passed || cfg.mountain.is_none()) {
             cfg.mountain = Some(profile.mountain.as_str().to_string());
         }
-        if args.animation_type.is_none() && args.effect.is_none() && (cli_cow_passed || cfg.effect == "default" || cfg.effect == "static" || cfg.effect.is_empty()) {
+        if args.animation_type.is_none()
+            && args.effect.is_none()
+            && (cli_cow_passed
+                || cfg.effect == "default"
+                || cfg.effect == "static"
+                || cfg.effect.is_empty())
+        {
             cfg.animation_type = Some(profile.base_anim.as_str().to_string());
             cfg.effect = profile.base_anim.as_str().to_string();
         }
-        if args.palette.is_none() && (cli_cow_passed || cfg.palette.is_none()) && !profile.wildlife_palette.is_empty() {
+        if args.palette.is_none()
+            && (cli_cow_passed || cfg.palette.is_none())
+            && !profile.wildlife_palette.is_empty()
+        {
             cfg.palette = Some(profile.wildlife_palette.join(","));
         }
         if args.eyes.is_none() && (cli_cow_passed || cfg.eyes.is_empty()) {
@@ -897,7 +906,10 @@ pub fn build_scene_config(args: &Args) -> Result<SceneConfig, String> {
         if args.road.is_none() {
             cfg.road = Some(dyn_road.as_str().to_string());
         }
-        if args.animation_type.is_none() && (env_style == crate::scenery::EnvironmentStyle::Ocean || env_style == crate::scenery::EnvironmentStyle::Space) {
+        if args.animation_type.is_none()
+            && (env_style == crate::scenery::EnvironmentStyle::Ocean
+                || env_style == crate::scenery::EnvironmentStyle::Space)
+        {
             let animal_name = args.cow.as_deref().unwrap_or(&cfg.cow);
             let profile = crate::scenery::get_animal_profile(animal_name);
             if profile.base_anim == crate::dna::BaseAnim::Walk {

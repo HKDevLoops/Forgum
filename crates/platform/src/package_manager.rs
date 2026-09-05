@@ -46,7 +46,9 @@ impl PackageManager {
             Self::Pacman => "sudo pacman -S forgum",
             Self::Apt => "sudo apt update && sudo apt install --only-upgrade forgum",
             Self::Cargo => "cargo install --force forgum-cli",
-            Self::DirectBinary => "gh release download or https://github.com/HKDevLoops/Forgum/releases/latest",
+            Self::DirectBinary => {
+                "gh release download or https://github.com/HKDevLoops/Forgum/releases/latest"
+            }
         }
     }
 
@@ -125,13 +127,22 @@ pub fn detect_source_from_path(path: &Path) -> PackageManager {
     if path_str.contains("winget") || path_str.contains("desktopappinstaller") {
         return PackageManager::Winget;
     }
-    if path_str.contains("chocolatey") || path_str.contains("\\choco\\") || path_str.contains("/choco/") {
+    if path_str.contains("chocolatey")
+        || path_str.contains("\\choco\\")
+        || path_str.contains("/choco/")
+    {
         return PackageManager::Chocolatey;
     }
-    if path_str.contains("homebrew") || path_str.contains("/cellar/") || path_str.contains("linuxbrew") {
+    if path_str.contains("homebrew")
+        || path_str.contains("/cellar/")
+        || path_str.contains("linuxbrew")
+    {
         return PackageManager::Homebrew;
     }
-    if path_str.contains(".cargo") || path_str.contains("\\cargo\\bin") || path_str.contains("/cargo/bin") {
+    if path_str.contains(".cargo")
+        || path_str.contains("\\cargo\\bin")
+        || path_str.contains("/cargo/bin")
+    {
         return PackageManager::Cargo;
     }
 
@@ -175,18 +186,42 @@ pub fn detect_available_package_managers() -> Vec<(PackageManager, bool)> {
 
     #[cfg(windows)]
     {
-        managers.push((PackageManager::Scoop, PackageManager::Scoop.is_available_on_host()));
-        managers.push((PackageManager::Winget, PackageManager::Winget.is_available_on_host()));
-        managers.push((PackageManager::Chocolatey, PackageManager::Chocolatey.is_available_on_host()));
-        managers.push((PackageManager::Cargo, PackageManager::Cargo.is_available_on_host()));
+        managers.push((
+            PackageManager::Scoop,
+            PackageManager::Scoop.is_available_on_host(),
+        ));
+        managers.push((
+            PackageManager::Winget,
+            PackageManager::Winget.is_available_on_host(),
+        ));
+        managers.push((
+            PackageManager::Chocolatey,
+            PackageManager::Chocolatey.is_available_on_host(),
+        ));
+        managers.push((
+            PackageManager::Cargo,
+            PackageManager::Cargo.is_available_on_host(),
+        ));
     }
 
     #[cfg(unix)]
     {
-        managers.push((PackageManager::Homebrew, PackageManager::Homebrew.is_available_on_host()));
-        managers.push((PackageManager::Pacman, PackageManager::Pacman.is_available_on_host()));
-        managers.push((PackageManager::Apt, PackageManager::Apt.is_available_on_host()));
-        managers.push((PackageManager::Cargo, PackageManager::Cargo.is_available_on_host()));
+        managers.push((
+            PackageManager::Homebrew,
+            PackageManager::Homebrew.is_available_on_host(),
+        ));
+        managers.push((
+            PackageManager::Pacman,
+            PackageManager::Pacman.is_available_on_host(),
+        ));
+        managers.push((
+            PackageManager::Apt,
+            PackageManager::Apt.is_available_on_host(),
+        ));
+        managers.push((
+            PackageManager::Cargo,
+            PackageManager::Cargo.is_available_on_host(),
+        ));
     }
 
     managers
@@ -259,7 +294,9 @@ mod tests {
     #[test]
     fn detect_from_known_paths() {
         assert_eq!(
-            detect_source_from_path(&PathBuf::from("C:\\Users\\user\\scoop\\apps\\forgum\\current\\forgum.exe")),
+            detect_source_from_path(&PathBuf::from(
+                "C:\\Users\\user\\scoop\\apps\\forgum\\current\\forgum.exe"
+            )),
             PackageManager::Scoop
         );
         assert_eq!(
@@ -267,11 +304,15 @@ mod tests {
             PackageManager::Scoop
         );
         assert_eq!(
-            detect_source_from_path(&PathBuf::from("C:\\Program Files\\WindowsApps\\Microsoft.Winget.Source_8wekyb3d8bbwe\\forgum.exe")),
+            detect_source_from_path(&PathBuf::from(
+                "C:\\Program Files\\WindowsApps\\Microsoft.Winget.Source_8wekyb3d8bbwe\\forgum.exe"
+            )),
             PackageManager::Winget
         );
         assert_eq!(
-            detect_source_from_path(&PathBuf::from("C:\\ProgramData\\chocolatey\\bin\\forgum.exe")),
+            detect_source_from_path(&PathBuf::from(
+                "C:\\ProgramData\\chocolatey\\bin\\forgum.exe"
+            )),
             PackageManager::Chocolatey
         );
         assert_eq!(
@@ -295,7 +336,11 @@ mod tests {
     #[test]
     fn package_manager_metadata() {
         assert_eq!(PackageManager::Scoop.name(), "Scoop");
-        assert!(PackageManager::Scoop.update_command().contains("scoop update"));
-        assert!(PackageManager::Winget.update_command().contains("winget upgrade"));
+        assert!(PackageManager::Scoop
+            .update_command()
+            .contains("scoop update"));
+        assert!(PackageManager::Winget
+            .update_command()
+            .contains("winget upgrade"));
     }
 }

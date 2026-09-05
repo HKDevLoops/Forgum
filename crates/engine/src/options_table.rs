@@ -210,7 +210,7 @@ pub fn render_options(category: &str) -> String {
             "\n\x1b[1;33mUnknown options category '{category}'.\x1b[0m\n\n\
             \x1b[1;36mAvailable categories:\x1b[0m\n\
               • \x1b[1mall\x1b[0m            - Complete options catalog across all domains\n\
-              • \x1b[1manimals\x1b[0m        - 106 animal mascots & visual archetypes (--animal / --cow)\n\
+              • \x1b[1manimals\x1b[0m        - 132 animal mascots & visual archetypes (--animal / --cow)\n\
               • \x1b[1meffects\x1b[0m        - Dynamic animation motion effects (--effect / --animation)\n\
               • \x1b[1mscenery\x1b[0m        - Procedural mountains, roads, and particle environments\n\
               • \x1b[1mmountains\x1b[0m      - Procedural mountain horizons (--mountain)\n\
@@ -328,15 +328,15 @@ pub fn render_options(category: &str) -> String {
         ];
         out.push_str(&format_table(&headers, &rows));
 
-        out.push_str("\n\x1b[1;35m━━━ Complete Cow Mascot Catalog (106 Available Built-In Animals) ━━━\x1b[0m\n");
+        out.push_str("\n\x1b[1;35m━━━ Complete Cow Mascot Catalog (132 Available Built-In Animals) ━━━\x1b[0m\n");
         let cat_headers = ["Category", "Mascot Names"];
         let cat_rows = vec![
-            vec!["Farm & Domestic", "default, bunny, cat, cat2, catfence, charlie, doge, fat-cow, goat, goat2, hippie, kitty, kitten, lamb, lamb2, meow, moose, mule, owl, sheep, shrug, squirrel, turkey"],
-            vec!["Wild & Safari", "armadillo, bearface, elephant, elephant2, elephant-in-snake, fox, hedgehog, koala, lobster, luke-koala, moofasa, tortoise, tweety-bird"],
-            vec!["Oceanic & Amphibian", "bud-frogs, docker-whale, dolphin, ebi_furai, happy-whale, jellyfish, octopus, seahorse, seahorse-big, smiling-octopus, turtle, whale"],
-            vec!["Fantasy & Sci-Fi", "atat, cthulhu-mini, daemon, dragon, dragon-and-cow, ghost, ghostbusters, glados, minotaur, mooghidjirah, moojira, pterodactyl, stegosaurus, tux, tux-big, wizard"],
-            vec!["Pop Culture & Fun", "beavis.zen, bill-the-cat, charizardvice, fat-banana, flaming-sheep, golden-eagle, hellokitty, hypno, kiss, lollerskates, mona-lisa, nyan, ren, snoopy, snoopyhouse, snoopysleep, stimpy"],
-            vec!["Abstract & Quirky", "bees, claw-arm, cower, cowfee, eyes, fence, hiya, king, knight, kosh, mutilated, pawn, periodic-table, personality-sphere, queen, rook, satanic, shikato, skeleton, small, spidercow, supermilker, surgery, weeping-angel, world"],
+            vec!["Farm & Domestic", "default, bunny, cat, cat2, catfence, charlie, corgi, doge, duck, fat-cow, goat, goat2, hippie, kitty, kitten, lamb, lamb2, meow, milk, moose, mule, owl, pig, ram, rooster, sheep, shrug, squirrel, turkey"],
+            vec!["Wild & Safari", "armadillo, bearface, elephant, elephant2, elephant-in-snake, fox, hedgehog, koala, lobster, luke-koala, moofasa, panther, rhino, sloth, telebears, tiger, tortoise, tweety-bird, wolf"],
+            vec!["Oceanic & Amphibian", "bud-frogs, docker-whale, dolphin, ebi_furai, happy-whale, jellyfish, octopus, pufferfish, seahorse, seahorse-big, smiling-octopus, squid, turtle, walrus, whale"],
+            vec!["Fantasy & Sci-Fi", "atat, cthulhu-mini, daemon, dragon, dragon-and-cow, ghost, ghostbusters, glados, mech-and-cow, minotaur, mooghidjirah, moojira, pterodactyl, sauron, stegosaurus, tux, tux-big, unipony, vader, wizard, yoda"],
+            vec!["Pop Culture & Fun", "beavis.zen, bill-the-cat, charizardvice, fat-banana, flaming-sheep, golden-eagle, hellokitty, hypno, kiss, lollerskates, mona-lisa, nyan, radioactive-kitty, ren, snoopy, snoopyhouse, snoopysleep, stimpy, vulpix"],
+            vec!["Abstract & Quirky", "apt, bees, claw-arm, cower, cowfee, eyes, fence, hiya, jesus, king, knight, kosh, mutilated, pawn, periodic-table, personality-sphere, queen, rook, satanic, shikato, skeleton, small, spidercow, supermilker, surgery, three-eyes, viper, weeping-angel, world"],
         ];
         out.push_str(&format_table(&cat_headers, &cat_rows));
     }

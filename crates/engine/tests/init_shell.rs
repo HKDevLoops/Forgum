@@ -126,9 +126,15 @@ fn shell_display_and_config_path() {
     assert_eq!(Shell::Pwsh.to_string(), "pwsh");
     assert_eq!(Shell::Cmd.to_string(), "cmd");
     assert_eq!(Shell::PowerShell.to_string(), "powershell");
-    assert!(Shell::Pwsh.default_config_path().contains(".config/forgum/config.json"));
-    assert!(Shell::Cmd.default_config_path().contains(".config/forgum/config.json"));
-    assert!(Shell::PowerShell.default_config_path().contains(".config/forgum/config.json"));
+    assert!(Shell::Pwsh
+        .default_config_path()
+        .contains(".config/forgum/config.json"));
+    assert!(Shell::Cmd
+        .default_config_path()
+        .contains(".config/forgum/config.json"));
+    assert!(Shell::PowerShell
+        .default_config_path()
+        .contains(".config/forgum/config.json"));
 }
 
 #[test]

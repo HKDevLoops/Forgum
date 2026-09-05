@@ -42,6 +42,9 @@ fn completions_all_shells_write() {
         Shell::Yash,
     ] {
         let mut cmd = Cli::command();
-        assert!(generate_completions(shell, &mut cmd).is_ok(), "failed for {shell}");
+        assert!(
+            generate_completions(shell, &mut cmd).is_ok(),
+            "failed for {shell}"
+        );
     }
 }

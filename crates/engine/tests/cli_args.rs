@@ -531,7 +531,14 @@ fn animal_signature_defaults_apply_automatically() {
 fn dynamic_scenario_adaptation_adapts_road_mountain_and_motion() {
     // When environment is overridden to ocean for walking animal (tux):
     // road adapts to seabed, mountain to seamount, motion adapts to float (swimming)
-    let (a, _) = parse_args(argv(&["forgum-engine", "--animal", "tux", "--env", "ocean"])).unwrap();
+    let (a, _) = parse_args(argv(&[
+        "forgum-engine",
+        "--animal",
+        "tux",
+        "--env",
+        "ocean",
+    ]))
+    .unwrap();
     let cfg = build_scene_config(&a).unwrap();
     assert_eq!(cfg.cow, "tux");
     assert_eq!(cfg.environment.as_deref(), Some("ocean"));
@@ -563,4 +570,3 @@ fn update_subcommand_parses_cleanly() {
     let (a_upgrade, _) = parse_args(argv(&["forgum", "upgrade"])).unwrap();
     assert_eq!(a_upgrade.command, Command::Update);
 }
-

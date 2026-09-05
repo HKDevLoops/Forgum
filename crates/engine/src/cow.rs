@@ -218,12 +218,20 @@ pub fn expand_cow(cow_template: &str, eyes: &str, tongue: &str, thoughts: &str) 
 
             // Handle singular $eye and ${eye} placeholders
             while let Some(pos) = line.find("${eye}") {
-                let glyph = if eye_idx % 2 == 0 { &left_eye } else { &right_eye };
+                let glyph = if eye_idx % 2 == 0 {
+                    &left_eye
+                } else {
+                    &right_eye
+                };
                 eye_idx += 1;
                 line.replace_range(pos..pos + 6, glyph);
             }
             while let Some(pos) = line.find("$eye") {
-                let glyph = if eye_idx % 2 == 0 { &left_eye } else { &right_eye };
+                let glyph = if eye_idx % 2 == 0 {
+                    &left_eye
+                } else {
+                    &right_eye
+                };
                 eye_idx += 1;
                 line.replace_range(pos..pos + 4, glyph);
             }

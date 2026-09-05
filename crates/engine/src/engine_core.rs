@@ -470,9 +470,11 @@ fn sim_thread(
             continue;
         }
 
-        // Fixed-timestep simulation.
+        // Fixed-timestep simulation with elapsed compute compensation.
         let now = Instant::now();
-        let dt = now.duration_since(last_frame);
+        let raw_dt = now.duration_since(last_frame);
+        // Clamp dt to [1ms, 100ms] to prevent physics explosion or freeze on window drag
+        let dt = raw_dt.clamp(Duration::from_millis(1), Duration::from_millis(100));
         last_frame = now;
 
         let frame = sim.tick(dt);
@@ -483,10 +485,13 @@ fn sim_thread(
             break;
         }
 
-        // Sleep for the frame period.
+        // Calibrated sleep: subtract elapsed frame work from target period to eliminate drift
         let period = sim.scheduler.frame_period();
         if !period.is_zero() {
-            std::thread::sleep(period);
+            let work_time = now.elapsed();
+            if period > work_time {
+                std::thread::sleep(period - work_time);
+            }
         }
     }
 }

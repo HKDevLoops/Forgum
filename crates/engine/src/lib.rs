@@ -22,6 +22,7 @@ pub mod dna;
 pub mod easing;
 pub mod effects;
 pub mod engine_core;
+pub mod error;
 pub mod fortune;
 pub mod framebuffer;
 pub mod herd;

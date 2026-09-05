@@ -216,12 +216,20 @@ impl FrameBuffer {
 
     /// Resize. Both buffers are reset to empty and the trackers cleared.
     pub fn resize(&mut self, width: usize, height: usize) {
+        let width = width.min(MAX_WIDTH);
+        let height = height.min(MAX_HEIGHT);
+        if self.width == width && self.height == height {
+            return;
+        }
         let sz = width.saturating_mul(height);
         self.width = width;
         self.height = height;
-        self.back = vec![Cell::empty(); sz];
-        self.front = vec![Cell::empty(); sz];
-        self.dirty = vec![false; sz];
+        self.back.clear();
+        self.back.resize(sz, Cell::empty());
+        self.front.clear();
+        self.front.resize(sz, Cell::empty());
+        self.dirty.clear();
+        self.dirty.resize(sz, false);
         self.damage_list.clear();
     }
 

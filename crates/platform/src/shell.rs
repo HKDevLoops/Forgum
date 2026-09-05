@@ -178,7 +178,8 @@ impl Shell {
     /// In accordance with Forgum standards, completions are canonically stored in
     /// `~/.config/forgum/completions/` across all operating systems.
     pub fn completions_script_path(&self) -> Option<PathBuf> {
-        let canonical_dir = home_dir().map(|h| h.join(".config").join("forgum").join("completions"));
+        let canonical_dir =
+            home_dir().map(|h| h.join(".config").join("forgum").join("completions"));
         match self {
             Shell::Bash => canonical_dir.map(|d| d.join("forgum.bash")),
             Shell::Zsh => canonical_dir.map(|d| d.join("_forgum")),

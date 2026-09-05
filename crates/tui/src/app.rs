@@ -95,49 +95,139 @@ impl Dropdown {
 
 /// Available Scenery Archetypes.
 pub const SCENERY_OPTIONS: &[(&str, &str)] = &[
-    ("pasture", "Classic rolling green meadows, wildflowers, and grazing hills"),
-    ("desert", "Sun-baked golden sand dunes, cacti ruts, and shimmering heat waves"),
-    ("forest", "Dense ancient pine woods, mossy logs, and whispering evergreen canopies"),
-    ("city", "Futuristic neon-lit urban skyscrapers, rooftops, and antenna towers"),
-    ("mountain", "Rugged alpine snowpeaks, jagged granite ridges, and crisp winds"),
-    ("arctic", "Vast polar icecaps, floating icebergs, pack ice, and glacial frost"),
-    ("graveyard", "Haunted misty cemetery, crooked weathered headstones, and spooky fog"),
-    ("ocean", "Submarine hydrothermal vents, undulating kelp beds, and deep sea trenches"),
-    ("space", "Cosmic interstellar vacuum, stellar dust clouds, and distant nebulae"),
-    ("savanna", "Golden African plains, silhouette umbrella acacia trees, and sun haze"),
-    ("jurassic", "Primeval volcanic caldera, towering palm ferns, and cycad groves"),
+    (
+        "pasture",
+        "Classic rolling green meadows, wildflowers, and grazing hills",
+    ),
+    (
+        "desert",
+        "Sun-baked golden sand dunes, cacti ruts, and shimmering heat waves",
+    ),
+    (
+        "forest",
+        "Dense ancient pine woods, mossy logs, and whispering evergreen canopies",
+    ),
+    (
+        "city",
+        "Futuristic neon-lit urban skyscrapers, rooftops, and antenna towers",
+    ),
+    (
+        "mountain",
+        "Rugged alpine snowpeaks, jagged granite ridges, and crisp winds",
+    ),
+    (
+        "arctic",
+        "Vast polar icecaps, floating icebergs, pack ice, and glacial frost",
+    ),
+    (
+        "graveyard",
+        "Haunted misty cemetery, crooked weathered headstones, and spooky fog",
+    ),
+    (
+        "ocean",
+        "Submarine hydrothermal vents, undulating kelp beds, and deep sea trenches",
+    ),
+    (
+        "space",
+        "Cosmic interstellar vacuum, stellar dust clouds, and distant nebulae",
+    ),
+    (
+        "savanna",
+        "Golden African plains, silhouette umbrella acacia trees, and sun haze",
+    ),
+    (
+        "jurassic",
+        "Primeval volcanic caldera, towering palm ferns, and cycad groves",
+    ),
 ];
 
 /// Available Road Surfaces.
 pub const ROAD_OPTIONS: &[(&str, &str)] = &[
-    ("dirt", "Dry country earth path with fine dust, pebbles, and ruts"),
-    ("gravel", "Crushed river stones with loose aggregate and crunchy texture"),
-    ("paved", "Smooth highway asphalt with painted dashed dividing lane lines"),
-    ("brick", "Classic red clay pavers laid in a sturdy interlocking herringbone pattern"),
-    ("cobble", "Old-world hand-chiseled granite cobblestones with recessed mortar joints"),
-    ("railway", "Twin steel rails bolted across timber cross-ties over stone ballast"),
-    ("starpath", "Cosmic celestial light bridge paved with sparkling stardust ribbons"),
+    (
+        "dirt",
+        "Dry country earth path with fine dust, pebbles, and ruts",
+    ),
+    (
+        "gravel",
+        "Crushed river stones with loose aggregate and crunchy texture",
+    ),
+    (
+        "paved",
+        "Smooth highway asphalt with painted dashed dividing lane lines",
+    ),
+    (
+        "brick",
+        "Classic red clay pavers laid in a sturdy interlocking herringbone pattern",
+    ),
+    (
+        "cobble",
+        "Old-world hand-chiseled granite cobblestones with recessed mortar joints",
+    ),
+    (
+        "railway",
+        "Twin steel rails bolted across timber cross-ties over stone ballast",
+    ),
+    (
+        "starpath",
+        "Cosmic celestial light bridge paved with sparkling stardust ribbons",
+    ),
 ];
 
 /// Available Kinematics Effects.
 pub const EFFECT_OPTIONS: &[(&str, &str)] = &[
-    ("walk", "Dynamic 4-phase quadruped leg gait cycle moving with forward cadence"),
-    ("breathe", "Sinusoidal thoracic expansion and compression rhythm"),
-    ("float", "Weightless anti-gravity hovering with smooth vertical sinusoidal bobbing"),
-    ("particles", "Twinkling magical embers, motes, and sparkles drifting around body"),
-    ("pulse", "Scale and brightness oscillation between dim and vivid illumination"),
-    ("glitch", "Cybernetic digital aberration with randomized character flicker"),
-    ("fly", "High-altitude soaring glide with undulating horizontal aerodynamic drift"),
-    ("talk", "Animated comic dialogue bubble with dynamic fortune-cookie quips"),
-    ("sway", "Rhythmic harmonic pendulum oscillation around central anchor"),
-    ("dissolve", "Ephemeral quantum dispersion fading into terminal cyberspace"),
+    (
+        "walk",
+        "Dynamic 4-phase quadruped leg gait cycle moving with forward cadence",
+    ),
+    (
+        "breathe",
+        "Sinusoidal thoracic expansion and compression rhythm",
+    ),
+    (
+        "float",
+        "Weightless anti-gravity hovering with smooth vertical sinusoidal bobbing",
+    ),
+    (
+        "particles",
+        "Twinkling magical embers, motes, and sparkles drifting around body",
+    ),
+    (
+        "pulse",
+        "Scale and brightness oscillation between dim and vivid illumination",
+    ),
+    (
+        "glitch",
+        "Cybernetic digital aberration with randomized character flicker",
+    ),
+    (
+        "fly",
+        "High-altitude soaring glide with undulating horizontal aerodynamic drift",
+    ),
+    (
+        "talk",
+        "Animated comic dialogue bubble with dynamic fortune-cookie quips",
+    ),
+    (
+        "sway",
+        "Rhythmic harmonic pendulum oscillation around central anchor",
+    ),
+    (
+        "dissolve",
+        "Ephemeral quantum dispersion fading into terminal cyberspace",
+    ),
 ];
 
 /// Available Color Palettes.
 pub const COLOR_OPTIONS: &[(&str, &str)] = &[
-    ("rainbow", "Dynamic TrueColor 360-degree spectral hue-shift animation"),
+    (
+        "rainbow",
+        "Dynamic TrueColor 360-degree spectral hue-shift animation",
+    ),
     ("lolcat", "Classic 256-color stepped rainbow color prism"),
-    ("solid", "Monochromatic theme (Emerald Green, Cyberpunk Cyan, Amber)"),
+    (
+        "solid",
+        "Monochromatic theme (Emerald Green, Cyberpunk Cyan, Amber)",
+    ),
     ("none", "Pure minimalist high-contrast monochrome ASCII"),
 ];
 
@@ -146,51 +236,117 @@ pub const CATEGORIES: &[(&str, &[&str])] = &[
     (
         "Farm & Domestic",
         &[
-            "default", "cat", "cat2", "catfence", "charlie", "corgi", "bunny",
-            "doge", "fat-cow", "goat", "goat2", "hippie", "kitty", "kitten",
-            "meow", "milk", "mule", "pig", "ram", "rooster", "sheep", "turkey",
+            "default", "cat", "cat2", "catfence", "charlie", "corgi", "bunny", "doge", "fat-cow",
+            "goat", "goat2", "hippie", "kitty", "kitten", "meow", "milk", "mule", "pig", "ram",
+            "rooster", "sheep", "turkey",
         ],
     ),
     (
         "Wild & Safari",
         &[
-            "armadillo", "bearface", "elephant", "elephant2",
-            "elephant-in-snake", "fox", "hedgehog", "koala", "luke-koala",
-            "moofasa", "panther", "rhino", "sloth", "telebears", "tiger", "wolf",
+            "armadillo",
+            "bearface",
+            "elephant",
+            "elephant2",
+            "elephant-in-snake",
+            "fox",
+            "hedgehog",
+            "koala",
+            "luke-koala",
+            "moofasa",
+            "panther",
+            "rhino",
+            "sloth",
+            "telebears",
+            "tiger",
+            "wolf",
         ],
     ),
     (
         "Oceanic & Amphibian",
         &[
-            "bud-frogs", "docker-whale", "dolphin", "duck", "ebi_furai",
-            "happy-whale", "jellyfish", "octopus", "pufferfish", "seahorse",
-            "squid", "turtle", "walrus", "whale",
+            "bud-frogs",
+            "docker-whale",
+            "dolphin",
+            "duck",
+            "ebi_furai",
+            "happy-whale",
+            "jellyfish",
+            "octopus",
+            "pufferfish",
+            "seahorse",
+            "squid",
+            "turtle",
+            "walrus",
+            "whale",
         ],
     ),
     (
         "Fantasy & Sci-Fi",
         &[
-            "atat", "cthulhu-mini", "daemon", "dragon", "dragon-and-cow",
-            "ghost", "ghostbusters", "glados", "mech-and-cow", "minotaur",
-            "mooghidjirah", "moojira", "pterodactyl", "sauron",
-            "stegosaurus", "unipony", "vader", "wizard", "yoda",
+            "atat",
+            "cthulhu-mini",
+            "daemon",
+            "dragon",
+            "dragon-and-cow",
+            "ghost",
+            "ghostbusters",
+            "glados",
+            "mech-and-cow",
+            "minotaur",
+            "mooghidjirah",
+            "moojira",
+            "pterodactyl",
+            "sauron",
+            "stegosaurus",
+            "unipony",
+            "vader",
+            "wizard",
+            "yoda",
         ],
     ),
     (
         "Pop Culture & Fun",
         &[
-            "beavis.zen", "bill-the-cat", "charizardvice", "fat-banana",
-            "flaming-sheep", "golden-eagle", "hellokitty", "hypno", "kiss",
-            "mona-lisa", "nyan", "radioactive-kitty", "ren", "snoopy",
-            "stimpy", "vulpix",
+            "beavis.zen",
+            "bill-the-cat",
+            "charizardvice",
+            "fat-banana",
+            "flaming-sheep",
+            "golden-eagle",
+            "hellokitty",
+            "hypno",
+            "kiss",
+            "mona-lisa",
+            "nyan",
+            "radioactive-kitty",
+            "ren",
+            "snoopy",
+            "stimpy",
+            "vulpix",
         ],
     ),
     (
         "Abstract & Quirky",
         &[
-            "apt", "bees", "claw-arm", "cower", "cowfee", "eyes", "fence", "hiya",
-            "jesus", "kosh", "mutilated", "queen", "skeleton", "small",
-            "supermilker", "surgery", "three-eyes", "viper",
+            "apt",
+            "bees",
+            "claw-arm",
+            "cower",
+            "cowfee",
+            "eyes",
+            "fence",
+            "hiya",
+            "jesus",
+            "kosh",
+            "mutilated",
+            "queen",
+            "skeleton",
+            "small",
+            "supermilker",
+            "surgery",
+            "three-eyes",
+            "viper",
         ],
     ),
 ];
@@ -259,7 +415,9 @@ impl ConfigField {
             ConfigField::Tongue => "ASCII characters for tongue (e.g. 'U ', '  ', '||')",
             ConfigField::Background => "Daemon non-blocking prompt overlay mode (true/false)",
             ConfigField::AutoRenderOnPrompt => "Trigger mascot automatically on shell prompt enter",
-            ConfigField::ShellAttachMode => "Prompt hook integration: banner, split, reactive, manual",
+            ConfigField::ShellAttachMode => {
+                "Prompt hook integration: banner, split, reactive, manual"
+            }
             ConfigField::ConfigFormat => "File serialization syntax: JSON, YAML, or TOML",
         }
     }
@@ -451,7 +609,8 @@ impl ConfigApp {
             attach_mode_dropdown,
             format_dropdown,
             saved: false,
-            status_message: "Welcome to Forgum! Use <Tab> to navigate, 'i' to install shell hooks.".into(),
+            status_message: "Welcome to Forgum! Use <Tab> to navigate, 'i' to install shell hooks."
+                .into(),
             animation_time: 0.0,
             cow_cache: HashMap::new(),
         };
@@ -696,7 +855,11 @@ impl ConfigApp {
 
     fn handle_scenery_key(&mut self, key: KeyEvent) -> anyhow::Result<Option<Action>> {
         match key.code {
-            KeyCode::Tab | KeyCode::Left | KeyCode::Right | KeyCode::Char('h') | KeyCode::Char('l') => {
+            KeyCode::Tab
+            | KeyCode::Left
+            | KeyCode::Right
+            | KeyCode::Char('h')
+            | KeyCode::Char('l') => {
                 self.scenery_sub_focus = 1 - self.scenery_sub_focus;
             }
             KeyCode::Up | KeyCode::Char('k') => {
@@ -739,7 +902,11 @@ impl ConfigApp {
 
     fn handle_effects_key(&mut self, key: KeyEvent) -> anyhow::Result<Option<Action>> {
         match key.code {
-            KeyCode::Tab | KeyCode::Left | KeyCode::Right | KeyCode::Char('h') | KeyCode::Char('l') => {
+            KeyCode::Tab
+            | KeyCode::Left
+            | KeyCode::Right
+            | KeyCode::Char('h')
+            | KeyCode::Char('l') => {
                 self.fx_sub_focus = 1 - self.fx_sub_focus;
             }
             KeyCode::Up | KeyCode::Char('k') => {
@@ -813,10 +980,12 @@ impl ConfigApp {
             }
             KeyCode::Char('p') => {
                 let pm = self.detected_install_source;
-                self.installer_log.push(format!("▶ Checking updates via {}...", pm.name()));
+                self.installer_log
+                    .push(format!("▶ Checking updates via {}...", pm.name()));
                 match forgum_platform::execute_package_manager_action(pm, true) {
                     Ok(out) => {
-                        self.installer_log.push(format!("✓ Update status ({}): OK", pm.name()));
+                        self.installer_log
+                            .push(format!("✓ Update status ({}): OK", pm.name()));
                         for line in out.lines().take(2) {
                             if !line.trim().is_empty() {
                                 self.installer_log.push(format!("  {line}"));
@@ -825,7 +994,8 @@ impl ConfigApp {
                         self.status_message = format!("✓ Update check complete via {}.", pm.name());
                     }
                     Err(err) => {
-                        self.installer_log.push(format!("✗ Update check failed: {err}"));
+                        self.installer_log
+                            .push(format!("✗ Update check failed: {err}"));
                         self.status_message = "Update check completed with warnings.".into();
                     }
                 }
@@ -907,10 +1077,8 @@ export extern "forgum" [
             match std::fs::write(&comp_path, completion_script) {
                 Ok(_) => {
                     shell_info.is_completion_installed = true;
-                    self.installer_log.push(format!(
-                        "✓ Generated completions: {}",
-                        comp_path.display()
-                    ));
+                    self.installer_log
+                        .push(format!("✓ Generated completions: {}", comp_path.display()));
                 }
                 Err(e) => {
                     self.installer_log.push(format!("✗ Completions error: {e}"));
@@ -948,13 +1116,12 @@ export extern "forgum" [
             match std::fs::write(&rc_path, updated) {
                 Ok(_) => {
                     shell_info.is_hook_installed = true;
-                    self.installer_log.push(format!(
-                        "✓ Injected hook block into: {}",
-                        rc_path.display()
-                    ));
+                    self.installer_log
+                        .push(format!("✓ Injected hook block into: {}", rc_path.display()));
                 }
                 Err(e) => {
-                    self.installer_log.push(format!("✗ Hook injection error: {e}"));
+                    self.installer_log
+                        .push(format!("✗ Hook injection error: {e}"));
                     success = false;
                 }
             }
@@ -976,7 +1143,8 @@ export extern "forgum" [
         }
 
         if success {
-            self.status_message = format!("✓ Successfully installed {sh} integration & completions!");
+            self.status_message =
+                format!("✓ Successfully installed {sh} integration & completions!");
         } else {
             self.status_message = format!("⚠ Completed installation of {sh} with warnings.");
         }
@@ -1000,7 +1168,8 @@ export extern "forgum" [
                     );
                     let _ = std::fs::write(&rc_path, cleaned);
                     shell_info.is_hook_installed = false;
-                    self.installer_log.push(format!("✓ Removed hook from: {}", rc_path.display()));
+                    self.installer_log
+                        .push(format!("✓ Removed hook from: {}", rc_path.display()));
                 }
             }
         }
@@ -1076,32 +1245,43 @@ export extern "forgum" [
                 let step = if forward { 5 } else { -5 };
                 let next = (self.config.duration as i32 + step).max(0) as u32;
                 self.config.duration = next;
-                self.status_message = format!("Duration adjusted to {}s (Enter to type exact value)", next);
+                self.status_message =
+                    format!("Duration adjusted to {}s (Enter to type exact value)", next);
             }
             ConfigField::Fps => {
                 let step = if forward { 5 } else { -5 };
                 let next = (self.config.fps as i32 + step).clamp(1, 240) as u16;
                 self.config.fps = next;
-                self.status_message = format!("FPS adjusted to {} fps (Enter to type exact value)", next);
+                self.status_message =
+                    format!("FPS adjusted to {} fps (Enter to type exact value)", next);
             }
             ConfigField::Background => {
                 self.config.background = !self.config.background;
                 self.status_message = format!(
                     "Background scenery {}",
-                    if self.config.background { "ENABLED" } else { "DISABLED" }
+                    if self.config.background {
+                        "ENABLED"
+                    } else {
+                        "DISABLED"
+                    }
                 );
             }
             ConfigField::AutoRenderOnPrompt => {
                 self.config.auto_render_on_prompt = !self.config.auto_render_on_prompt;
                 self.status_message = format!(
                     "Auto-render on prompt {}",
-                    if self.config.auto_render_on_prompt { "ENABLED" } else { "DISABLED" }
+                    if self.config.auto_render_on_prompt {
+                        "ENABLED"
+                    } else {
+                        "DISABLED"
+                    }
                 );
             }
             ConfigField::ShellAttachMode => {
                 self.attach_mode_dropdown.cycle(forward);
                 self.config.shell_attach_mode = self.attach_mode_dropdown.current();
-                self.status_message = format!("Shell attach mode: {}", self.config.shell_attach_mode);
+                self.status_message =
+                    format!("Shell attach mode: {}", self.config.shell_attach_mode);
             }
             ConfigField::ConfigFormat => {
                 self.format_dropdown.cycle(forward);
@@ -1409,10 +1589,7 @@ export extern "forgum" [
         // Left column split: Top = Shells, Bottom = Package managers
         let left_split = Layout::default()
             .direction(Direction::Vertical)
-            .constraints([
-                Constraint::Percentage(55),
-                Constraint::Percentage(45),
-            ])
+            .constraints([Constraint::Percentage(55), Constraint::Percentage(45)])
             .split(left_rect);
 
         self.render_installer_list(f, left_split[0]);
@@ -1421,10 +1598,7 @@ export extern "forgum" [
         // Right column split: Top = Grand Welcoming Hero & Diagnostics, Bottom = Log
         let right_split = Layout::default()
             .direction(Direction::Vertical)
-            .constraints([
-                Constraint::Min(13),
-                Constraint::Length(8),
-            ])
+            .constraints([Constraint::Min(13), Constraint::Length(8)])
             .split(right_rect);
 
         self.render_installer_hero_card(f, right_split[0]);
@@ -1437,11 +1611,16 @@ export extern "forgum" [
             Span::styled("Detected Source: ", Style::default().fg(Color::DarkGray)),
             Span::styled(
                 self.detected_install_source.name(),
-                Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD),
+                Style::default()
+                    .fg(Color::Yellow)
+                    .add_modifier(Modifier::BOLD),
             ),
         ]));
         lines.push(Line::from(""));
-        lines.push(Line::from(Span::styled("Available On Host:", Style::default().fg(Color::Cyan))));
+        lines.push(Line::from(Span::styled(
+            "Available On Host:",
+            Style::default().fg(Color::Cyan),
+        )));
 
         for (pm, is_avail) in &self.package_managers {
             let status = if *is_avail {
@@ -1451,7 +1630,14 @@ export extern "forgum" [
             };
             lines.push(Line::from(vec![
                 status,
-                Span::styled(pm.name(), Style::default().fg(if *is_avail { Color::White } else { Color::DarkGray })),
+                Span::styled(
+                    pm.name(),
+                    Style::default().fg(if *is_avail {
+                        Color::White
+                    } else {
+                        Color::DarkGray
+                    }),
+                ),
             ]));
         }
 
@@ -1482,47 +1668,93 @@ export extern "forgum" [
                 // Grand Welcoming Hero Banner & Diagnostics
                 lines.push(Line::from(Span::styled(
                     "  ███████╗ ██████╗ ██████╗  ██████╗ ██╗   ██╗███╗   ███╗",
-                    Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
+                    Style::default()
+                        .fg(Color::Cyan)
+                        .add_modifier(Modifier::BOLD),
                 )));
                 lines.push(Line::from(Span::styled(
                     "  ██╔════╝██╔═══██╗██╔══██╗██╔════╝ ██║   ██║████╗ ████║",
-                    Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
+                    Style::default()
+                        .fg(Color::Cyan)
+                        .add_modifier(Modifier::BOLD),
                 )));
                 lines.push(Line::from(Span::styled(
                     "  █████╗  ██║   ██║██████╔╝██║  ███╗██║   ██║██╔████╔██║",
-                    Style::default().fg(Color::Green).add_modifier(Modifier::BOLD),
+                    Style::default()
+                        .fg(Color::Green)
+                        .add_modifier(Modifier::BOLD),
                 )));
                 lines.push(Line::from(Span::styled(
                     "  ██╔══╝  ██║   ██║██╔══██╗██║   ██║██║   ██║██║╚██╔╝██║",
-                    Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD),
+                    Style::default()
+                        .fg(Color::Yellow)
+                        .add_modifier(Modifier::BOLD),
                 )));
                 lines.push(Line::from(Span::styled(
                     "  ██║     ╚██████╔╝██║  ██║╚██████╔╝╚██████╔╝██║ ╚═╝ ██║",
-                    Style::default().fg(Color::Magenta).add_modifier(Modifier::BOLD),
+                    Style::default()
+                        .fg(Color::Magenta)
+                        .add_modifier(Modifier::BOLD),
                 )));
                 lines.push(Line::from(Span::styled(
-                    format!("  v{} • Universal Holographic Terminal Engine • 100% Offline", env!("CARGO_PKG_VERSION")),
-                    Style::default().fg(Color::White).add_modifier(Modifier::ITALIC),
+                    format!(
+                        "  v{} • Universal Holographic Terminal Engine • 100% Offline",
+                        env!("CARGO_PKG_VERSION")
+                    ),
+                    Style::default()
+                        .fg(Color::White)
+                        .add_modifier(Modifier::ITALIC),
                 )));
                 lines.push(Line::from(""));
 
                 lines.push(Line::from(vec![
-                    Span::styled("  • Operating System   : ", Style::default().fg(Color::DarkGray)),
-                    Span::styled(format!("{os_str} ({arch_str})"), Style::default().fg(Color::White).add_modifier(Modifier::BOLD)),
+                    Span::styled(
+                        "  • Operating System   : ",
+                        Style::default().fg(Color::DarkGray),
+                    ),
+                    Span::styled(
+                        format!("{os_str} ({arch_str})"),
+                        Style::default()
+                            .fg(Color::White)
+                            .add_modifier(Modifier::BOLD),
+                    ),
                     Span::styled(" [100% Compatible]", Style::default().fg(Color::Green)),
                 ]));
                 lines.push(Line::from(vec![
-                    Span::styled("  • Active Terminal    : ", Style::default().fg(Color::DarkGray)),
-                    Span::styled(active_term, Style::default().fg(Color::White).add_modifier(Modifier::BOLD)),
-                    Span::styled(" [24-bit TrueColor Ready]", Style::default().fg(Color::Cyan)),
+                    Span::styled(
+                        "  • Active Terminal    : ",
+                        Style::default().fg(Color::DarkGray),
+                    ),
+                    Span::styled(
+                        active_term,
+                        Style::default()
+                            .fg(Color::White)
+                            .add_modifier(Modifier::BOLD),
+                    ),
+                    Span::styled(
+                        " [24-bit TrueColor Ready]",
+                        Style::default().fg(Color::Cyan),
+                    ),
                 ]));
                 lines.push(Line::from(vec![
-                    Span::styled("  • Canonical Config   : ", Style::default().fg(Color::DarkGray)),
-                    Span::styled("~/.config/forgum/config.json", Style::default().fg(Color::Yellow)),
+                    Span::styled(
+                        "  • Canonical Config   : ",
+                        Style::default().fg(Color::DarkGray),
+                    ),
+                    Span::styled(
+                        "~/.config/forgum/config.json",
+                        Style::default().fg(Color::Yellow),
+                    ),
                 ]));
                 lines.push(Line::from(vec![
-                    Span::styled("  • Shell Completions  : ", Style::default().fg(Color::DarkGray)),
-                    Span::styled("~/.config/forgum/completions/", Style::default().fg(Color::Yellow)),
+                    Span::styled(
+                        "  • Shell Completions  : ",
+                        Style::default().fg(Color::DarkGray),
+                    ),
+                    Span::styled(
+                        "~/.config/forgum/completions/",
+                        Style::default().fg(Color::Yellow),
+                    ),
                 ]));
                 lines.push(Line::from(""));
 
@@ -1546,7 +1778,9 @@ export extern "forgum" [
                 // License & Terms
                 lines.push(Line::from(Span::styled(
                     "  Dual-Licensed: MIT License & Apache License 2.0",
-                    Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
+                    Style::default()
+                        .fg(Color::Cyan)
+                        .add_modifier(Modifier::BOLD),
                 )));
                 lines.push(Line::from(Span::styled(
                     "  Copyright (c) 2026 Forgum Authors & Contributors",
@@ -1555,15 +1789,23 @@ export extern "forgum" [
                 lines.push(Line::from(""));
                 lines.push(Line::from(Span::styled(
                     "  Terms of Use & Architecture Guarantees:",
-                    Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD),
+                    Style::default()
+                        .fg(Color::Yellow)
+                        .add_modifier(Modifier::BOLD),
                 )));
                 lines.push(Line::from(vec![
                     Span::styled("  ✓ Free & Open Source : ", Style::default().fg(Color::Green)),
                     Span::styled("Permissive dual licensing permits personal and commercial use without fee.", Style::default().fg(Color::White)),
                 ]));
                 lines.push(Line::from(vec![
-                    Span::styled("  ✓ Zero Telemetry     : ", Style::default().fg(Color::Green)),
-                    Span::styled("No analytics, no network telemetry, no background tracking daemons.", Style::default().fg(Color::White)),
+                    Span::styled(
+                        "  ✓ Zero Telemetry     : ",
+                        Style::default().fg(Color::Green),
+                    ),
+                    Span::styled(
+                        "No analytics, no network telemetry, no background tracking daemons.",
+                        Style::default().fg(Color::White),
+                    ),
                 ]));
                 lines.push(Line::from(vec![
                     Span::styled("  ✓ 100% Offline       : ", Style::default().fg(Color::Green)),
@@ -1587,7 +1829,9 @@ export extern "forgum" [
                 // Package Managers & Update Distribution
                 lines.push(Line::from(Span::styled(
                     "  Package Manager Installation & Distribution Channels",
-                    Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
+                    Style::default()
+                        .fg(Color::Cyan)
+                        .add_modifier(Modifier::BOLD),
                 )));
                 lines.push(Line::from(""));
                 lines.push(Line::from(vec![
@@ -1595,29 +1839,68 @@ export extern "forgum" [
                     Span::styled("scoop bucket add hkdevloops https://github.com/HKDevLoops/scoop-bucket && scoop install forgum", Style::default().fg(Color::White)),
                 ]));
                 lines.push(Line::from(vec![
-                    Span::styled("  • WinGet (Windows)    : ", Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
-                    Span::styled("winget install HKDevLoops.Forgum", Style::default().fg(Color::White)),
+                    Span::styled(
+                        "  • WinGet (Windows)    : ",
+                        Style::default()
+                            .fg(Color::Yellow)
+                            .add_modifier(Modifier::BOLD),
+                    ),
+                    Span::styled(
+                        "winget install HKDevLoops.Forgum",
+                        Style::default().fg(Color::White),
+                    ),
                 ]));
                 lines.push(Line::from(vec![
-                    Span::styled("  • Chocolatey (Windows): ", Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
+                    Span::styled(
+                        "  • Chocolatey (Windows): ",
+                        Style::default()
+                            .fg(Color::Yellow)
+                            .add_modifier(Modifier::BOLD),
+                    ),
                     Span::styled("choco install forgum", Style::default().fg(Color::White)),
                 ]));
                 lines.push(Line::from(vec![
-                    Span::styled("  • Homebrew (macOS/Lin): ", Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
+                    Span::styled(
+                        "  • Homebrew (macOS/Lin): ",
+                        Style::default()
+                            .fg(Color::Yellow)
+                            .add_modifier(Modifier::BOLD),
+                    ),
                     Span::styled("brew install forgum", Style::default().fg(Color::White)),
                 ]));
                 lines.push(Line::from(vec![
-                    Span::styled("  • Pacman (Arch Linux) : ", Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
+                    Span::styled(
+                        "  • Pacman (Arch Linux) : ",
+                        Style::default()
+                            .fg(Color::Yellow)
+                            .add_modifier(Modifier::BOLD),
+                    ),
                     Span::styled("sudo pacman -S forgum", Style::default().fg(Color::White)),
                 ]));
                 lines.push(Line::from(vec![
-                    Span::styled("  • Cargo (Universal)   : ", Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
-                    Span::styled("cargo install --force forgum-cli", Style::default().fg(Color::White)),
+                    Span::styled(
+                        "  • Cargo (Universal)   : ",
+                        Style::default()
+                            .fg(Color::Yellow)
+                            .add_modifier(Modifier::BOLD),
+                    ),
+                    Span::styled(
+                        "cargo install --force forgum-cli",
+                        Style::default().fg(Color::White),
+                    ),
                 ]));
                 lines.push(Line::from(""));
                 lines.push(Line::from(vec![
-                    Span::styled("  ⚡ Automated Update   : ", Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)),
-                    Span::styled("Run `forgum update` or `forgum update --check` at any time.", Style::default().fg(Color::White)),
+                    Span::styled(
+                        "  ⚡ Automated Update   : ",
+                        Style::default()
+                            .fg(Color::Green)
+                            .add_modifier(Modifier::BOLD),
+                    ),
+                    Span::styled(
+                        "Run `forgum update` or `forgum update --check` at any time.",
+                        Style::default().fg(Color::White),
+                    ),
                 ]));
                 lines.push(Line::from(""));
                 lines.push(Line::from(Span::styled(
@@ -1954,7 +2237,10 @@ export extern "forgum" [
                         format!("{} (←/→ cycle)", self.config.shell_attach_mode)
                     }
                     ConfigField::ConfigFormat => {
-                        format!("{} (←/→ cycle)", self.format_dropdown.current().to_uppercase())
+                        format!(
+                            "{} (←/→ cycle)",
+                            self.format_dropdown.current().to_uppercase()
+                        )
                     }
                 };
 
@@ -2152,7 +2438,9 @@ export extern "forgum" [
                     Block::default()
                         .borders(Borders::ALL)
                         .border_type(BorderType::Rounded)
-                        .title(" Shell Installation Action Log (i: Install, u: Uninstall, t: Test) "),
+                        .title(
+                            " Shell Installation Action Log (i: Install, u: Uninstall, t: Test) ",
+                        ),
                 );
                 f.render_widget(p, area);
             }
@@ -2189,10 +2477,7 @@ export extern "forgum" [
                     Style::default().bg(Color::DarkGray).fg(Color::Green),
                 ),
                 Span::raw(" Install  "),
-                Span::styled(
-                    " <u> ",
-                    Style::default().bg(Color::DarkGray).fg(Color::Red),
-                ),
+                Span::styled(" <u> ", Style::default().bg(Color::DarkGray).fg(Color::Red)),
                 Span::raw(" Uninstall  "),
                 Span::styled(
                     " <t> ",
@@ -2209,10 +2494,7 @@ export extern "forgum" [
                     Style::default().bg(Color::DarkGray).fg(Color::Magenta),
                 ),
                 Span::raw(" Updates  "),
-                Span::styled(
-                    " <q> ",
-                    Style::default().bg(Color::DarkGray).fg(Color::Red),
-                ),
+                Span::styled(" <q> ", Style::default().bg(Color::DarkGray).fg(Color::Red)),
                 Span::raw(" Quit  "),
                 Span::styled(
                     format!(" │ {}", self.status_message),
@@ -2251,10 +2533,7 @@ export extern "forgum" [
                     Style::default().bg(Color::DarkGray).fg(Color::Cyan),
                 ),
                 Span::raw(" Save  "),
-                Span::styled(
-                    " <q> ",
-                    Style::default().bg(Color::DarkGray).fg(Color::Red),
-                ),
+                Span::styled(" <q> ", Style::default().bg(Color::DarkGray).fg(Color::Red)),
                 Span::raw(" Quit  "),
                 Span::styled(
                     format!(" │ {}", self.status_message),
@@ -2301,11 +2580,8 @@ mod tests {
         .unwrap();
         assert_eq!(app.current_tab, Tab::Scenery);
 
-        app.handle_event(Event::Key(KeyEvent::new(
-            KeyCode::Tab,
-            KeyModifiers::NONE,
-        )))
-        .unwrap();
+        app.handle_event(Event::Key(KeyEvent::new(KeyCode::Tab, KeyModifiers::NONE)))
+            .unwrap();
         assert_eq!(app.current_tab, Tab::Effects);
     }
 

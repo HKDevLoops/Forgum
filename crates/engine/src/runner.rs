@@ -251,7 +251,11 @@ pub fn run() -> ExitCode {
                 let p = std::path::PathBuf::from(path_str);
                 forgum_engine::config_tui::run(&p)
             } else {
-                forgum_engine::config_tui::run_standalone(if tab.is_empty() { None } else { Some(&tab) })
+                forgum_engine::config_tui::run_standalone(if tab.is_empty() {
+                    None
+                } else {
+                    Some(&tab)
+                })
             };
             ExitCode::from(code as u8)
         }

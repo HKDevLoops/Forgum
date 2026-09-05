@@ -81,7 +81,10 @@ pub fn find_cow_start_line(text: &str) -> usize {
 
 #[inline]
 pub(crate) fn is_eye_glyph(ch: char) -> bool {
-    matches!(ch, 'o' | 'O' | '@' | '^' | '*' | '$' | 'x' | 'X' | '.' | '=' | '0' | 'e' | '+' | 'v')
+    matches!(
+        ch,
+        'o' | 'O' | '@' | '^' | '*' | '$' | 'x' | 'X' | '.' | '=' | '0' | 'e' | '+' | 'v'
+    )
 }
 
 /// Dynamically find the bottom-most non-empty line of the cow/animal art.
@@ -228,19 +231,27 @@ impl Effect for BreatheEffect {
                 return;
             }
 
-            // Creature lines: subtle chest/flank breathing expansion in place
-            let chars: Vec<char> = line.chars().collect();
+            // Creature lines: subtle chest/flank breathing expansion in place (zero-allocation)
+            let has_under_expansion = line.contains("___") || line.contains("__");
+            let has_dash_expansion = line.contains("---") || line.contains("--");
+            let mut chars_iter = line.chars().peekable();
             let mut x = 0usize;
-            while x < chars.len() && x < fb.width {
-                let mut ch = chars[x];
+            while let Some(mut ch) = chars_iter.next() {
+                if x >= fb.width {
+                    break;
+                }
 
                 // Blink eyes: oo, OO, @@, ^^, **, $$, .., etc. -> --
-                if is_blinking
-                    && is_eye_glyph(ch)
-                    && x + 1 < chars.len()
-                    && chars[x + 1] == ch
-                {
-                    let cell_fg = resolve_fg_palette(&self.color_mode, &self.palette, x, y, time, Color::WHITE);
+                if is_blinking && is_eye_glyph(ch) && chars_iter.peek().copied() == Some(ch) {
+                    let _ = chars_iter.next(); // consume second eye glyph
+                    let cell_fg = resolve_fg_palette(
+                        &self.color_mode,
+                        &self.palette,
+                        x,
+                        y,
+                        time,
+                        Color::WHITE,
+                    );
                     let _ = fb.set(x, y, Cell::new('-', cell_fg));
                     if x + 1 < fb.width {
                         let _ = fb.set(x + 1, y, Cell::new('-', cell_fg));
@@ -251,14 +262,15 @@ impl Effect for BreatheEffect {
 
                 // Inhale breathing wave on torso/flank lines:
                 if is_inhale && self.amp.breath > 0.05 {
-                    if ch == '_' && (line.contains("___") || line.contains("__")) {
+                    if ch == '_' && has_under_expansion {
                         ch = '~';
-                    } else if ch == '-' && (line.contains("---") || line.contains("--")) {
+                    } else if ch == '-' && has_dash_expansion {
                         ch = '=';
                     }
                 }
 
-                let cell_fg = resolve_fg_palette(&self.color_mode, &self.palette, x, y, time, Color::WHITE);
+                let cell_fg =
+                    resolve_fg_palette(&self.color_mode, &self.palette, x, y, time, Color::WHITE);
                 let _ = fb.set(x, y, Cell::new(ch, cell_fg));
                 x += 1;
             }
@@ -369,28 +381,31 @@ impl Effect for FloatEffect {
                 return;
             }
 
-            // Creature lines: gentle hovering shimmer in place or aquatic wave
-            let chars: Vec<char> = line.chars().collect();
-            let mut x = 0usize;
+            // Creature lines: gentle hovering shimmer in place or aquatic wave (zero-allocation)
             let aquatic_wave_x = if self.is_marine {
                 ((time * 2.5 + y as f32 * 0.4 + self.phase).sin() * 0.8) as i32
             } else {
                 0
             };
 
-            while x < chars.len() {
+            let mut chars_iter = line.chars().peekable();
+            let mut x = 0usize;
+            while let Some(mut ch) = chars_iter.next() {
                 let xi = x as i32 + aquatic_wave_x;
                 if xi >= 0 && (xi as usize) < fb.width {
                     let uxi = xi as usize;
-                    let mut ch = chars[x];
 
                     // Blink eyes:
-                    if is_blinking
-                        && is_eye_glyph(ch)
-                        && x + 1 < chars.len()
-                        && chars[x + 1] == ch
-                    {
-                        let cell_fg = resolve_fg_palette(&self.color_mode, &self.palette, uxi, y, time, Color::WHITE);
+                    if is_blinking && is_eye_glyph(ch) && chars_iter.peek().copied() == Some(ch) {
+                        let _ = chars_iter.next(); // consume second eye glyph
+                        let cell_fg = resolve_fg_palette(
+                            &self.color_mode,
+                            &self.palette,
+                            uxi,
+                            y,
+                            time,
+                            Color::WHITE,
+                        );
                         let _ = fb.set(uxi, y, Cell::new('-', cell_fg));
                         if uxi + 1 < fb.width {
                             let _ = fb.set(uxi + 1, y, Cell::new('-', cell_fg));
@@ -408,7 +423,14 @@ impl Effect for FloatEffect {
                         }
                     }
 
-                    let cell_fg = resolve_fg_palette(&self.color_mode, &self.palette, uxi, y, time, Color::WHITE);
+                    let cell_fg = resolve_fg_palette(
+                        &self.color_mode,
+                        &self.palette,
+                        uxi,
+                        y,
+                        time,
+                        Color::WHITE,
+                    );
                     let _ = fb.set(uxi, y, Cell::new(ch, cell_fg));
                 }
                 x += 1;
@@ -598,16 +620,27 @@ impl Effect for WalkEffect {
         let mut y = 0usize;
         for_each_line(&self.cow_text, &self.line_offsets, |line| {
             let line = line.trim_end_matches(['\r', '\n']);
-            let mut x = 0usize;
-            let line_chars: Vec<char> = line.chars().collect();
-            let mut i = 0usize;
 
-            // Bounding hull for occlusion masking
-            let hull_start = line_chars.iter().position(|c| *c != ' ');
-            let hull_end = line_chars.iter().rposition(|c| *c != ' ');
+            // Bounding hull for occlusion masking (zero-allocation scan)
+            let mut first_non_ws = None;
+            let mut last_non_ws = None;
+            for (col, ch) in line.chars().enumerate() {
+                if ch != ' ' {
+                    if first_non_ws.is_none() {
+                        first_non_ws = Some(col);
+                    }
+                    last_non_ws = Some(col);
+                }
+            }
+            let hull_start = first_non_ws;
+            let hull_end = last_non_ws;
 
-            while i < line_chars.len() {
-                let mut display_ch = line_chars[i];
+            let mut skip_until = 0usize;
+
+            for (x, mut display_ch) in line.chars().enumerate() {
+                if x < skip_until {
+                    continue;
+                }
 
                 // 1. Leg stride animation on bottom foot line
                 if y == self.leg_line_idx && self.leg_cols.contains(&x) {
@@ -630,7 +663,7 @@ impl Effect for WalkEffect {
 
                 // 4. Tail swishing animation
                 if let Some((tail_row, tail_col)) = self.tail_pos {
-                    if y == tail_row && x == tail_col && i + 4 <= line_chars.len() {
+                    if y == tail_row && x == tail_col {
                         let swish = match tail_frame {
                             1 => [')', '|', '/', '\\'],
                             2 => [')', '/', '\\', '/'],
@@ -644,14 +677,19 @@ impl Effect for WalkEffect {
                                 let uxi = xi as usize;
                                 let uyi = yi as usize;
                                 if uyi < fb.height && uxi < fb.width {
-                                    let cell_fg =
-                                        resolve_fg_palette(&self.color_mode, &self.palette, uxi, uyi, time, Color::WHITE);
+                                    let cell_fg = resolve_fg_palette(
+                                        &self.color_mode,
+                                        &self.palette,
+                                        uxi,
+                                        uyi,
+                                        time,
+                                        Color::WHITE,
+                                    );
                                     let _ = fb.set(uxi, uyi, Cell::new(sc, cell_fg));
                                 }
                             }
                         }
-                        x += 4;
-                        i += 4;
+                        skip_until = x + 4;
                         continue;
                     }
                 }
@@ -663,7 +701,14 @@ impl Effect for WalkEffect {
                     let uyi = yi as usize;
                     if uyi < fb.height && uxi < fb.width {
                         if display_ch != ' ' {
-                            let cell_fg = resolve_fg_palette(&self.color_mode, &self.palette, uxi, uyi, time, Color::WHITE);
+                            let cell_fg = resolve_fg_palette(
+                                &self.color_mode,
+                                &self.palette,
+                                uxi,
+                                uyi,
+                                time,
+                                Color::WHITE,
+                            );
                             let _ = fb.set(uxi, uyi, Cell::new(display_ch, cell_fg));
                         } else if let (Some(hs), Some(he)) = (hull_start, hull_end) {
                             if x >= hs && x <= he {
@@ -673,8 +718,6 @@ impl Effect for WalkEffect {
                         }
                     }
                 }
-                x += 1;
-                i += 1;
             }
             y += 1;
         });
@@ -856,7 +899,14 @@ impl Effect for GlitchEffect {
     fn update(&mut self, _dt: f32, _cols: usize, _rows: usize) {}
 
     fn render(&self, fb: &mut FrameBuffer, time: f32) {
-        render_text_palette(fb, &self.cow_text, Color::WHITE, &self.color_mode, &self.palette, time);
+        render_text_palette(
+            fb,
+            &self.cow_text,
+            Color::WHITE,
+            &self.color_mode,
+            &self.palette,
+            time,
+        );
         if self.body_coords.is_empty() || fb.width == 0 || fb.height == 0 {
             return;
         }
@@ -961,12 +1011,13 @@ impl FlyEffect {
             let draw_y = target_y as usize;
 
             let is_trail_row = line.contains("-_-_") || line.contains("_-_-");
-            let chars: Vec<char> = line.chars().collect();
-
             // Detect where the pop-tart pastry starts (first ',' or '|' on rainbow line)
-            let pastry_start = line.find(',').or_else(|| line.find('|')).unwrap_or(chars.len());
+            let pastry_start = line
+                .chars()
+                .position(|c| c == ',' || c == '|')
+                .unwrap_or(usize::MAX);
 
-            for (x, mut ch) in chars.into_iter().enumerate() {
+            for (x, mut ch) in line.chars().enumerate() {
                 if x >= fb.width || ch == ' ' {
                     continue;
                 }
@@ -993,7 +1044,11 @@ impl FlyEffect {
                 // Rainbow propulsion trail:
                 if is_trail_row && x < pastry_start && (ch == '-' || ch == '_' || ch == '~') {
                     ch = if wave_phase == 0 {
-                        if ch == '~' { '-' } else { ch }
+                        if ch == '~' {
+                            '-'
+                        } else {
+                            ch
+                        }
                     } else if ch == '-' || ch == '~' {
                         '_'
                     } else {
@@ -1006,28 +1061,36 @@ impl FlyEffect {
                         0 => Color::rgb(255, 0, 51),   // Red
                         1 => Color::rgb(255, 153, 0),  // Orange / Yellow
                         2 => Color::rgb(51, 255, 0),   // Green
-                        _ => Color::rgb(153, 51, 255),  // Indigo / Purple
+                        _ => Color::rgb(153, 51, 255), // Indigo / Purple
                     };
                     let _ = fb.set(x, draw_y, Cell::new(ch, rainbow_color));
                     continue;
                 }
 
                 // Pop-Tart Pastry & Cat Body:
-                let fg_color = if ch == ',' || (ch == '-' && x >= pastry_start) || ch == '|' || ch == '_' {
-                    // Golden pastry crust
-                    Color::rgb(230, 162, 108)
-                } else if ch == '/' || ch == '\\' || ch == '(' || ch == ')' || ch == '\'' {
-                    // Soft gray cat head and paws
-                    Color::rgb(160, 160, 160)
-                } else if ch == '.' {
-                    // Rosy pink nose
-                    Color::rgb(255, 64, 129)
-                } else if ch == '^' {
-                    // Cat eyes
-                    Color::rgb(20, 20, 20)
-                } else {
-                    resolve_fg_palette(&self.color_mode, &self.palette, x, draw_y, time, Color::WHITE)
-                };
+                let fg_color =
+                    if ch == ',' || (ch == '-' && x >= pastry_start) || ch == '|' || ch == '_' {
+                        // Golden pastry crust
+                        Color::rgb(230, 162, 108)
+                    } else if ch == '/' || ch == '\\' || ch == '(' || ch == ')' || ch == '\'' {
+                        // Soft gray cat head and paws
+                        Color::rgb(160, 160, 160)
+                    } else if ch == '.' {
+                        // Rosy pink nose
+                        Color::rgb(255, 64, 129)
+                    } else if ch == '^' {
+                        // Cat eyes
+                        Color::rgb(20, 20, 20)
+                    } else {
+                        resolve_fg_palette(
+                            &self.color_mode,
+                            &self.palette,
+                            x,
+                            draw_y,
+                            time,
+                            Color::WHITE,
+                        )
+                    };
 
                 let _ = fb.set(x, draw_y, Cell::new(ch, fg_color));
             }
@@ -1076,19 +1139,25 @@ impl Effect for FlyEffect {
                 return;
             }
 
-            // Creature lines: flap wings/horns in place and blink eyes
-            let chars: Vec<char> = line.chars().collect();
+            // Creature lines: flap wings/horns in place and blink eyes (zero-allocation)
+            let mut chars_iter = line.chars().peekable();
             let mut x = 0usize;
-            while x < chars.len() && x < fb.width {
-                let mut ch = chars[x];
+            while let Some(mut ch) = chars_iter.next() {
+                if x >= fb.width {
+                    break;
+                }
 
                 // Eye blinking:
-                if is_blinking
-                    && is_eye_glyph(ch)
-                    && x + 1 < chars.len()
-                    && chars[x + 1] == ch
-                {
-                    let cell_fg = resolve_fg_palette(&self.color_mode, &self.palette, x, y, time, Color::WHITE);
+                if is_blinking && is_eye_glyph(ch) && chars_iter.peek().copied() == Some(ch) {
+                    let _ = chars_iter.next(); // consume second eye glyph
+                    let cell_fg = resolve_fg_palette(
+                        &self.color_mode,
+                        &self.palette,
+                        x,
+                        y,
+                        time,
+                        Color::WHITE,
+                    );
                     let _ = fb.set(x, y, Cell::new('-', cell_fg));
                     if x + 1 < fb.width {
                         let _ = fb.set(x + 1, y, Cell::new('-', cell_fg));
@@ -1106,7 +1175,8 @@ impl Effect for FlyEffect {
                     ch = 'v';
                 }
 
-                let cell_fg = resolve_fg_palette(&self.color_mode, &self.palette, x, y, time, Color::WHITE);
+                let cell_fg =
+                    resolve_fg_palette(&self.color_mode, &self.palette, x, y, time, Color::WHITE);
                 let _ = fb.set(x, y, Cell::new(ch, cell_fg));
                 x += 1;
             }
@@ -1216,11 +1286,11 @@ impl Effect for TalkEffect {
                 return;
             }
 
-            // Animal body lines:
-            let line_chars: Vec<char> = line.chars().collect();
-            let mut x = 0usize;
-            while x < line_chars.len() && x < fb.width {
-                let mut display_ch = line_chars[x];
+            // Animal body lines (zero-allocation streaming):
+            for (x, mut display_ch) in line.chars().enumerate() {
+                if x >= fb.width {
+                    break;
+                }
 
                 // 1. Natural eye preservation and blinking
                 if let Some((eye_row, eye_col)) = self.eye_pos {
@@ -1228,9 +1298,15 @@ impl Effect for TalkEffect {
                         if is_blinking && (x == eye_col || x == eye_col + 1) {
                             display_ch = '-';
                         }
-                        let cell_fg = resolve_fg_palette(&self.color_mode, &self.palette, x, y, time, Color::WHITE);
+                        let cell_fg = resolve_fg_palette(
+                            &self.color_mode,
+                            &self.palette,
+                            x,
+                            y,
+                            time,
+                            Color::WHITE,
+                        );
                         let _ = fb.set(x, y, Cell::new(display_ch, cell_fg));
-                        x += 1;
                         continue;
                     }
                 }
@@ -1247,9 +1323,9 @@ impl Effect for TalkEffect {
                     }
                 }
 
-                let cell_fg = resolve_fg_palette(&self.color_mode, &self.palette, x, y, time, Color::WHITE);
+                let cell_fg =
+                    resolve_fg_palette(&self.color_mode, &self.palette, x, y, time, Color::WHITE);
                 let _ = fb.set(x, y, Cell::new(display_ch, cell_fg));
-                x += 1;
             }
             y = y.saturating_add(1);
         });
@@ -1324,7 +1400,14 @@ impl Effect for SwayEffect {
                 if xi >= 0 {
                     let xi = xi as usize;
                     if xi < fb.width {
-                        let cell_fg = resolve_fg_palette(&self.color_mode, &self.palette, xi, i, time, Color::WHITE);
+                        let cell_fg = resolve_fg_palette(
+                            &self.color_mode,
+                            &self.palette,
+                            xi,
+                            i,
+                            time,
+                            Color::WHITE,
+                        );
                         let _ = fb.set(xi, i, Cell::new(ch, cell_fg));
                     }
                 }
@@ -1425,7 +1508,14 @@ impl Effect for DissolveEffect {
                     let fy = final_y as usize;
                     if fy < fb.height && fx < fb.width {
                         let alpha = (t * 255.0) as u8;
-                        let cell_fg = resolve_fg_palette(&self.color_mode, &self.palette, fx, fy, time, Color::WHITE);
+                        let cell_fg = resolve_fg_palette(
+                            &self.color_mode,
+                            &self.palette,
+                            fx,
+                            fy,
+                            time,
+                            Color::WHITE,
+                        );
                         let _ = fb.set(
                             fx,
                             fy,
@@ -1571,10 +1661,8 @@ fn render_text_offset_palette(
     palette: &[(u8, u8, u8)],
     time: f32,
 ) {
-    // Pre-compute per-line bounding hulls for occlusion masking.
-    let lines: Vec<&str> = text.lines().collect();
-
-    for (y, line) in lines.iter().enumerate() {
+    // Zero-allocation streaming scanline render with bounding-hull occlusion masking.
+    for (y, line) in text.lines().enumerate() {
         let yi = y as i32 + y_off;
         if yi < 0 {
             continue;
@@ -1584,21 +1672,24 @@ fn render_text_offset_palette(
             break;
         }
 
-        let chars: Vec<char> = line.chars().collect();
-        if chars.is_empty() {
-            continue;
+        // Determine bounding hull without allocating a Vec<char>
+        let mut first_non_ws = None;
+        let mut last_non_ws = None;
+        for (x, ch) in line.chars().enumerate() {
+            if ch != ' ' {
+                if first_non_ws.is_none() {
+                    first_non_ws = Some(x);
+                }
+                last_non_ws = Some(x);
+            }
         }
-
-        // Compute bounding hull: first and last non-space column in this line.
-        let first_non_ws = chars.iter().position(|c| *c != ' ');
-        let last_non_ws = chars.iter().rposition(|c| *c != ' ');
 
         let (hull_start, hull_end) = match (first_non_ws, last_non_ws) {
             (Some(s), Some(e)) => (s, e),
             _ => continue, // Entirely whitespace line — skip
         };
 
-        for (x, &ch) in chars.iter().enumerate() {
+        for (x, ch) in line.chars().enumerate() {
             let xi = x as i32 + x_off;
             if xi < 0 {
                 continue;
@@ -2401,24 +2492,36 @@ mod tests {
                 }
             }
         }
-        assert!(!row_chars_1.is_empty(), "nyan trail must have '-' and '_' characters");
+        assert!(
+            !row_chars_1.is_empty(),
+            "nyan trail must have '-' and '_' characters"
+        );
         assert_eq!(row_chars_1.len(), row_chars_2.len(), "trail lengths match");
         // Check that at least some characters toggled between '-' and '_'
         let toggled = row_chars_1
             .iter()
             .zip(row_chars_2.iter())
             .any(|(a, b)| a.2 != b.2);
-        assert!(toggled, "nyan rainbow wave must alternate characters between frames");
+        assert!(
+            toggled,
+            "nyan rainbow wave must alternate characters between frames"
+        );
     }
 
     #[test]
     fn marine_aquatic_wave_swimming() {
-        let whale_art = "      (  )\n       (oo)\n  .-'\"'-.\n / #     \\\n| # # # # |\n \\       /\n  `'---'`";
+        let whale_art =
+            "      (  )\n       (oo)\n  .-'\"'-.\n / #     \\\n| # # # # |\n \\       /\n  `'---'`";
         let dna = CowDna {
             palette: vec!["#0288d1".to_string(), "#29b6f6".to_string()],
             ..Default::default()
         };
-        let effect = FloatEffect::new(format!("whale\n{}", whale_art), &dna, 0, "animal".to_string());
+        let effect = FloatEffect::new(
+            format!("whale\n{}", whale_art),
+            &dna,
+            0,
+            "animal".to_string(),
+        );
         assert!(effect.is_marine);
 
         let mut fb = FrameBuffer::new(80, 24);
@@ -2435,7 +2538,10 @@ mod tests {
                 }
             }
         }
-        assert!(colored_cells > 0, "marine creature must render in authentic wildlife colors");
+        assert!(
+            colored_cells > 0,
+            "marine creature must render in authentic wildlife colors"
+        );
     }
 
     // ── TalkEffect ────────────────────────────────────────────────

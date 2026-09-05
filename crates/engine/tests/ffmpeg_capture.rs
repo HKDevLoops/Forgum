@@ -425,7 +425,11 @@ fn ffmpeg_nyan_and_wildlife_capture() {
             .output()
             .unwrap();
         assert!(st.status.success());
-        println!("Saved showcase video {} and image {}", mp4_out.display(), png_out.display());
+        println!(
+            "Saved showcase video {} and image {}",
+            mp4_out.display(),
+            png_out.display()
+        );
     }
 }
 
@@ -438,12 +442,21 @@ fn ffmpeg_new_animals_showcase_capture() {
     let dd = data_dir();
     let anims = dna::load_animations(&dd);
     let showcases = [
-        ("corgi", "A cheerful corgi trotting along cobblestone hills!"),
+        (
+            "corgi",
+            "A cheerful corgi trotting along cobblestone hills!",
+        ),
         ("duck", "Quack! Floating peacefully across misty wetlands."),
         ("wolf", "Howling through the moonlit pines and rocky crags."),
         ("tiger", "Prowling through the amber savanna grass."),
-        ("vader", "The dark side of the terminal is a pathway to many abilities..."),
-        ("moose", "Majestic northern moose commanding the boreal forest."),
+        (
+            "vader",
+            "The dark side of the terminal is a pathway to many abilities...",
+        ),
+        (
+            "moose",
+            "Majestic northern moose commanding the boreal forest.",
+        ),
         ("moofasa", "The sun will never set on our kingdom."),
         ("minotaur", "Guardian of the labyrinth."),
         ("tux", "Powered by Linux and written in pure Rust."),
@@ -498,7 +511,11 @@ fn ffmpeg_new_animals_showcase_capture() {
             .output()
             .unwrap();
         assert!(st.status.success());
-        println!("Saved showcase video {} and image {}", mp4_out.display(), png_out.display());
+        println!(
+            "Saved showcase video {} and image {}",
+            mp4_out.display(),
+            png_out.display()
+        );
     }
 }
 

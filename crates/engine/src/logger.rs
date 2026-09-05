@@ -59,11 +59,45 @@ pub struct LogEntry {
     pub message: String,
 }
 
+use std::sync::atomic::{AtomicU8, Ordering};
+
+/// Global minimum log level threshold. Defaults to LogLevel::Info (2).
+static LOG_THRESHOLD: AtomicU8 = AtomicU8::new(LogLevel::Info as u8);
+
 /// Global logger lock to prevent write interleaving across threads.
 static LOG_LOCK: Mutex<()> = Mutex::new(());
 
+/// Set minimum logging severity threshold.
+pub fn set_min_log_level(level: LogLevel) {
+    LOG_THRESHOLD.store(level as u8, Ordering::Release);
+}
+
+/// Raw minimum log level for zero-overhead macro inspection.
+#[inline(always)]
+#[must_use]
+pub fn min_log_level_raw() -> u8 {
+    LOG_THRESHOLD.load(Ordering::Relaxed)
+}
+
+/// Get current logging severity threshold.
+#[must_use]
+pub fn get_min_log_level() -> LogLevel {
+    match LOG_THRESHOLD.load(Ordering::Acquire) {
+        0 => LogLevel::Trace,
+        1 => LogLevel::Debug,
+        2 => LogLevel::Info,
+        3 => LogLevel::Warn,
+        _ => LogLevel::Error,
+    }
+}
+
 /// Log a message at the given level and target.
 pub fn log(level: LogLevel, target: &str, message: &str) {
+    // O(1) atomic threshold check: return immediately with zero heap allocation
+    if (level as u8) < LOG_THRESHOLD.load(Ordering::Relaxed) {
+        return;
+    }
+
     let now = Local::now();
     let timestamp_human = now.format("%Y-%m-%d %H:%M:%S%.3f").to_string();
     let timestamp_iso = now.to_rfc3339();
@@ -132,28 +166,36 @@ pub fn log(level: LogLevel, target: &str, message: &str) {
 #[macro_export]
 macro_rules! log_info {
     ($target:expr, $($arg:tt)*) => {
-        $crate::logger::log($crate::logger::LogLevel::Info, $target, &format!($($arg)*))
+        if ($crate::logger::LogLevel::Info as u8) >= $crate::logger::min_log_level_raw() {
+            $crate::logger::log($crate::logger::LogLevel::Info, $target, &format!($($arg)*))
+        }
     };
 }
 
 #[macro_export]
 macro_rules! log_warn {
     ($target:expr, $($arg:tt)*) => {
-        $crate::logger::log($crate::logger::LogLevel::Warn, $target, &format!($($arg)*))
+        if ($crate::logger::LogLevel::Warn as u8) >= $crate::logger::min_log_level_raw() {
+            $crate::logger::log($crate::logger::LogLevel::Warn, $target, &format!($($arg)*))
+        }
     };
 }
 
 #[macro_export]
 macro_rules! log_error {
     ($target:expr, $($arg:tt)*) => {
-        $crate::logger::log($crate::logger::LogLevel::Error, $target, &format!($($arg)*))
+        if ($crate::logger::LogLevel::Error as u8) >= $crate::logger::min_log_level_raw() {
+            $crate::logger::log($crate::logger::LogLevel::Error, $target, &format!($($arg)*))
+        }
     };
 }
 
 #[macro_export]
 macro_rules! log_debug {
     ($target:expr, $($arg:tt)*) => {
-        $crate::logger::log($crate::logger::LogLevel::Debug, $target, &format!($($arg)*))
+        if ($crate::logger::LogLevel::Debug as u8) >= $crate::logger::min_log_level_raw() {
+            $crate::logger::log($crate::logger::LogLevel::Debug, $target, &format!($($arg)*))
+        }
     };
 }
 

@@ -160,7 +160,7 @@ _forgum_mountains="hills peaks volcano iceberg skyline seamount plateau crater g
 _forgum_roads="dirt cobblestone magma ice seabed sidewalk roof grid crypt savanna mud tracks checkerboard none"
 _forgum_environments="pasture inferno ocean arctic city forest savanna swamp space cyber graveyard jurassic hive throne none"
 _forgum_colors="animal rainbow solid none"
-_forgum_animals="default dragon tux cat ghost elephant bunny corgi fox octopus random"
+_forgum_animals="apt armadillo atat bearface beavis.zen bees bill-the-cat bud-frogs bunny cat cat2 catfence charizardvice charlie claw-arm corgi cower cowfee cthulhu-mini daemon default docker-whale doge dolphin dragon dragon-and-cow duck ebi_furai elephant elephant-in-snake elephant2 eyes fat-banana fat-cow fence flaming-sheep fox ghost ghostbusters glados goat goat2 golden-eagle happy-whale hedgehog hellokitty hippie hiya hypno jellyfish jesus king kiss kitten kitty knight koala kosh lamb lamb2 lobster lollerskates luke-koala mech-and-cow meow milk minotaur mona-lisa moofasa mooghidjirah moojira moose mule mutilated nyan octopus owl panther pawn periodic-table personality-sphere pig pterodactyl pufferfish queen radioactive-kitty ram ren rhino rook rooster satanic sauron seahorse seahorse-big sheep shikato shrug skeleton sloth small smiling-octopus snoopy snoopyhouse snoopysleep spidercow squid squirrel stegosaurus stimpy supermilker surgery telebears three-eyes tiger tortoise turkey turtle tux tux-big tweety-bird unipony vader viper vulpix walrus weeping-angel whale wizard wolf world yoda random"
 
 _forgum_custom_complete() {
     local prev="${COMP_WORDS[COMP_CWORD-1]}"
@@ -265,6 +265,141 @@ _forgum_environments=(
     'throne:Imperial gothic sanctuary'
     'none:Disable particle effects'
 )
+_forgum_animals=(
+    'apt:Mascot apt'
+    'armadillo:Mascot armadillo'
+    'atat:Mascot atat'
+    'bearface:Mascot bearface'
+    'beavis.zen:Mascot beavis.zen'
+    'bees:Mascot bees'
+    'bill-the-cat:Mascot bill-the-cat'
+    'bud-frogs:Mascot bud-frogs'
+    'bunny:Mascot bunny'
+    'cat:Mascot cat'
+    'cat2:Mascot cat2'
+    'catfence:Mascot catfence'
+    'charizardvice:Mascot charizardvice'
+    'charlie:Mascot charlie'
+    'claw-arm:Mascot claw-arm'
+    'corgi:Mascot corgi'
+    'cower:Mascot cower'
+    'cowfee:Mascot cowfee'
+    'cthulhu-mini:Mascot cthulhu-mini'
+    'daemon:Mascot daemon'
+    'default:Mascot default'
+    'docker-whale:Mascot docker-whale'
+    'doge:Mascot doge'
+    'dolphin:Mascot dolphin'
+    'dragon:Mascot dragon'
+    'dragon-and-cow:Mascot dragon-and-cow'
+    'duck:Mascot duck'
+    'ebi_furai:Mascot ebi_furai'
+    'elephant:Mascot elephant'
+    'elephant-in-snake:Mascot elephant-in-snake'
+    'elephant2:Mascot elephant2'
+    'eyes:Mascot eyes'
+    'fat-banana:Mascot fat-banana'
+    'fat-cow:Mascot fat-cow'
+    'fence:Mascot fence'
+    'flaming-sheep:Mascot flaming-sheep'
+    'fox:Mascot fox'
+    'ghost:Mascot ghost'
+    'ghostbusters:Mascot ghostbusters'
+    'glados:Mascot glados'
+    'goat:Mascot goat'
+    'goat2:Mascot goat2'
+    'golden-eagle:Mascot golden-eagle'
+    'happy-whale:Mascot happy-whale'
+    'hedgehog:Mascot hedgehog'
+    'hellokitty:Mascot hellokitty'
+    'hippie:Mascot hippie'
+    'hiya:Mascot hiya'
+    'hypno:Mascot hypno'
+    'jellyfish:Mascot jellyfish'
+    'jesus:Mascot jesus'
+    'king:Mascot king'
+    'kiss:Mascot kiss'
+    'kitten:Mascot kitten'
+    'kitty:Mascot kitty'
+    'knight:Mascot knight'
+    'koala:Mascot koala'
+    'kosh:Mascot kosh'
+    'lamb:Mascot lamb'
+    'lamb2:Mascot lamb2'
+    'lobster:Mascot lobster'
+    'lollerskates:Mascot lollerskates'
+    'luke-koala:Mascot luke-koala'
+    'mech-and-cow:Mascot mech-and-cow'
+    'meow:Mascot meow'
+    'milk:Mascot milk'
+    'minotaur:Mascot minotaur'
+    'mona-lisa:Mascot mona-lisa'
+    'moofasa:Mascot moofasa'
+    'mooghidjirah:Mascot mooghidjirah'
+    'moojira:Mascot moojira'
+    'moose:Mascot moose'
+    'mule:Mascot mule'
+    'mutilated:Mascot mutilated'
+    'nyan:Mascot nyan'
+    'octopus:Mascot octopus'
+    'owl:Mascot owl'
+    'panther:Mascot panther'
+    'pawn:Mascot pawn'
+    'periodic-table:Mascot periodic-table'
+    'personality-sphere:Mascot personality-sphere'
+    'pig:Mascot pig'
+    'pterodactyl:Mascot pterodactyl'
+    'pufferfish:Mascot pufferfish'
+    'queen:Mascot queen'
+    'radioactive-kitty:Mascot radioactive-kitty'
+    'ram:Mascot ram'
+    'ren:Mascot ren'
+    'rhino:Mascot rhino'
+    'rook:Mascot rook'
+    'rooster:Mascot rooster'
+    'satanic:Mascot satanic'
+    'sauron:Mascot sauron'
+    'seahorse:Mascot seahorse'
+    'seahorse-big:Mascot seahorse-big'
+    'sheep:Mascot sheep'
+    'shikato:Mascot shikato'
+    'shrug:Mascot shrug'
+    'skeleton:Mascot skeleton'
+    'sloth:Mascot sloth'
+    'small:Mascot small'
+    'smiling-octopus:Mascot smiling-octopus'
+    'snoopy:Mascot snoopy'
+    'snoopyhouse:Mascot snoopyhouse'
+    'snoopysleep:Mascot snoopysleep'
+    'spidercow:Mascot spidercow'
+    'squid:Mascot squid'
+    'squirrel:Mascot squirrel'
+    'stegosaurus:Mascot stegosaurus'
+    'stimpy:Mascot stimpy'
+    'supermilker:Mascot supermilker'
+    'surgery:Mascot surgery'
+    'telebears:Mascot telebears'
+    'three-eyes:Mascot three-eyes'
+    'tiger:Mascot tiger'
+    'tortoise:Mascot tortoise'
+    'turkey:Mascot turkey'
+    'turtle:Mascot turtle'
+    'tux:Mascot tux'
+    'tux-big:Mascot tux-big'
+    'tweety-bird:Mascot tweety-bird'
+    'unipony:Mascot unipony'
+    'vader:Mascot vader'
+    'viper:Mascot viper'
+    'vulpix:Mascot vulpix'
+    'walrus:Mascot walrus'
+    'weeping-angel:Mascot weeping-angel'
+    'whale:Mascot whale'
+    'wizard:Mascot wizard'
+    'wolf:Mascot wolf'
+    'world:Mascot world'
+    'yoda:Mascot yoda'
+    'random:Mascot random'
+)
 "#;
     script.push_str(zsh_extra);
     script
@@ -300,7 +435,7 @@ complete -c forgum -n '__fish_forgum_no_subcommand' -a 'say' -d 'Run command and
 
 # Rich option value completions with descriptions
 complete -c forgum -l effect -s e -d 'Animation effect' -x -a 'walk	"Natural bovine walking animation" breathe	"Gentle idle breathing animation" float	"Drifting levitation animation" fly	"Flying creature animation" talk	"Conversational jaw animation" sway	"Swaying pendulum animation" pulse	"Pulsing scale animation" glitch	"Digital cyberpunk glitch animation" particles	"Ambient particle emitter animation" dissolve	"Dissolve and materialize animation"'
-complete -c forgum -l cow -l animal -s c -s a -d 'Animal mascot name' -x -a 'default	"Standard bovine mascot" dragon	"Fire-breathing dragon" tux	"Linux penguin mascot" cat	"Playful feline mascot" ghost	"Spooky floating phantom" elephant	"Gentle giant" bunny	"Cute rabbit mascot" corgi	"Playful corgi" fox	"Clever woodland fox" random	"Pick random mascot"'
+complete -c forgum -l cow -l animal -s c -s a -d 'Animal mascot name' -x -a 'apt	"Mascot apt" armadillo	"Mascot armadillo" atat	"Mascot atat" bearface	"Mascot bearface" beavis.zen	"Mascot beavis.zen" bees	"Mascot bees" bill-the-cat	"Mascot bill-the-cat" bud-frogs	"Mascot bud-frogs" bunny	"Mascot bunny" cat	"Mascot cat" cat2	"Mascot cat2" catfence	"Mascot catfence" charizardvice	"Mascot charizardvice" charlie	"Mascot charlie" claw-arm	"Mascot claw-arm" corgi	"Mascot corgi" cower	"Mascot cower" cowfee	"Mascot cowfee" cthulhu-mini	"Mascot cthulhu-mini" daemon	"Mascot daemon" default	"Mascot default" docker-whale	"Mascot docker-whale" doge	"Mascot doge" dolphin	"Mascot dolphin" dragon	"Mascot dragon" dragon-and-cow	"Mascot dragon-and-cow" duck	"Mascot duck" ebi_furai	"Mascot ebi_furai" elephant	"Mascot elephant" elephant-in-snake	"Mascot elephant-in-snake" elephant2	"Mascot elephant2" eyes	"Mascot eyes" fat-banana	"Mascot fat-banana" fat-cow	"Mascot fat-cow" fence	"Mascot fence" flaming-sheep	"Mascot flaming-sheep" fox	"Mascot fox" ghost	"Mascot ghost" ghostbusters	"Mascot ghostbusters" glados	"Mascot glados" goat	"Mascot goat" goat2	"Mascot goat2" golden-eagle	"Mascot golden-eagle" happy-whale	"Mascot happy-whale" hedgehog	"Mascot hedgehog" hellokitty	"Mascot hellokitty" hippie	"Mascot hippie" hiya	"Mascot hiya" hypno	"Mascot hypno" jellyfish	"Mascot jellyfish" jesus	"Mascot jesus" king	"Mascot king" kiss	"Mascot kiss" kitten	"Mascot kitten" kitty	"Mascot kitty" knight	"Mascot knight" koala	"Mascot koala" kosh	"Mascot kosh" lamb	"Mascot lamb" lamb2	"Mascot lamb2" lobster	"Mascot lobster" lollerskates	"Mascot lollerskates" luke-koala	"Mascot luke-koala" mech-and-cow	"Mascot mech-and-cow" meow	"Mascot meow" milk	"Mascot milk" minotaur	"Mascot minotaur" mona-lisa	"Mascot mona-lisa" moofasa	"Mascot moofasa" mooghidjirah	"Mascot mooghidjirah" moojira	"Mascot moojira" moose	"Mascot moose" mule	"Mascot mule" mutilated	"Mascot mutilated" nyan	"Mascot nyan" octopus	"Mascot octopus" owl	"Mascot owl" panther	"Mascot panther" pawn	"Mascot pawn" periodic-table	"Mascot periodic-table" personality-sphere	"Mascot personality-sphere" pig	"Mascot pig" pterodactyl	"Mascot pterodactyl" pufferfish	"Mascot pufferfish" queen	"Mascot queen" radioactive-kitty	"Mascot radioactive-kitty" ram	"Mascot ram" ren	"Mascot ren" rhino	"Mascot rhino" rook	"Mascot rook" rooster	"Mascot rooster" satanic	"Mascot satanic" sauron	"Mascot sauron" seahorse	"Mascot seahorse" seahorse-big	"Mascot seahorse-big" sheep	"Mascot sheep" shikato	"Mascot shikato" shrug	"Mascot shrug" skeleton	"Mascot skeleton" sloth	"Mascot sloth" small	"Mascot small" smiling-octopus	"Mascot smiling-octopus" snoopy	"Mascot snoopy" snoopyhouse	"Mascot snoopyhouse" snoopysleep	"Mascot snoopysleep" spidercow	"Mascot spidercow" squid	"Mascot squid" squirrel	"Mascot squirrel" stegosaurus	"Mascot stegosaurus" stimpy	"Mascot stimpy" supermilker	"Mascot supermilker" surgery	"Mascot surgery" telebears	"Mascot telebears" three-eyes	"Mascot three-eyes" tiger	"Mascot tiger" tortoise	"Mascot tortoise" turkey	"Mascot turkey" turtle	"Mascot turtle" tux	"Mascot tux" tux-big	"Mascot tux-big" tweety-bird	"Mascot tweety-bird" unipony	"Mascot unipony" vader	"Mascot vader" viper	"Mascot viper" vulpix	"Mascot vulpix" walrus	"Mascot walrus" weeping-angel	"Mascot weeping-angel" whale	"Mascot whale" wizard	"Mascot wizard" wolf	"Mascot wolf" world	"Mascot world" yoda	"Mascot yoda" random	"Mascot random"'
 complete -c forgum -l mountain -d 'Mountain/horizon style' -x -a 'hills	"Rolling verdant hills" peaks	"Jagged alpine peaks" volcano	"Active smoldering volcano" iceberg	"Frozen glacier ridges" skyline	"Urban skyscraper silhouette" seamount	"Underwater tectonic ridges" plateau	"Desert mesa and canyon ridges" crater	"Impact rim and astral ridge" gothic	"Spire and cathedral silhouette" castle	"Fortress ramparts" garden	"Terraced hedge and floral ridge" none	"Disable mountain horizon"'
 complete -c forgum -l road -d 'Road/ground style' -x -a 'dirt	"Countryside dirt trail" cobblestone	"Medieval stone pavement" magma	"Cracked volcanic basalt" ice	"Packed crystalline ice" seabed	"Ripple sands and deep coral" sidewalk	"Paved urban asphalt" roof	"Ceramic roof shingles" grid	"Neon vector cyber grid" crypt	"Dark catacomb flagstones" savanna	"Sun-baked arid trail" mud	"Squishy wet soil" tracks	"Railroad ties" checkerboard	"High-contrast dual tiles" none	"Disable ground layer"'
 complete -c forgum -l environment -d 'Environment particle effect' -x -a 'pasture	"Open meadows" inferno	"Blazing magma" ocean	"Aquatic realm" arctic	"Frozen tundra" city	"Metropolitan skyline" forest	"Ancient woodlands" savanna	"Golden plains" swamp	"Murky bayou" space	"Cosmos void" cyber	"Digital matrix" graveyard	"Gothic cemetery" jurassic	"Primeval wilds" hive	"Bio hive" throne	"Gothic sanctuary" none	"Disable particles"'
@@ -397,16 +532,139 @@ Register-ArgumentCompleter -Native -CommandName 'forgum' -ScriptBlock {
     }
 
     $animals = @{
-        'default' = 'Standard bovine mascot'
-        'dragon' = 'Fire-breathing dragon'
-        'tux' = 'Linux penguin mascot'
-        'cat' = 'Playful feline mascot'
-        'ghost' = 'Spooky floating phantom'
-        'elephant' = 'Gentle giant'
-        'bunny' = 'Cute rabbit mascot'
-        'corgi' = 'Playful corgi'
-        'fox' = 'Clever woodland fox'
-        'random' = 'Pick random mascot'
+        'apt' = 'Mascot apt'
+        'armadillo' = 'Mascot armadillo'
+        'atat' = 'Mascot atat'
+        'bearface' = 'Mascot bearface'
+        'beavis.zen' = 'Mascot beavis.zen'
+        'bees' = 'Mascot bees'
+        'bill-the-cat' = 'Mascot bill-the-cat'
+        'bud-frogs' = 'Mascot bud-frogs'
+        'bunny' = 'Mascot bunny'
+        'cat' = 'Mascot cat'
+        'cat2' = 'Mascot cat2'
+        'catfence' = 'Mascot catfence'
+        'charizardvice' = 'Mascot charizardvice'
+        'charlie' = 'Mascot charlie'
+        'claw-arm' = 'Mascot claw-arm'
+        'corgi' = 'Mascot corgi'
+        'cower' = 'Mascot cower'
+        'cowfee' = 'Mascot cowfee'
+        'cthulhu-mini' = 'Mascot cthulhu-mini'
+        'daemon' = 'Mascot daemon'
+        'default' = 'Mascot default'
+        'docker-whale' = 'Mascot docker-whale'
+        'doge' = 'Mascot doge'
+        'dolphin' = 'Mascot dolphin'
+        'dragon' = 'Mascot dragon'
+        'dragon-and-cow' = 'Mascot dragon-and-cow'
+        'duck' = 'Mascot duck'
+        'ebi_furai' = 'Mascot ebi_furai'
+        'elephant' = 'Mascot elephant'
+        'elephant-in-snake' = 'Mascot elephant-in-snake'
+        'elephant2' = 'Mascot elephant2'
+        'eyes' = 'Mascot eyes'
+        'fat-banana' = 'Mascot fat-banana'
+        'fat-cow' = 'Mascot fat-cow'
+        'fence' = 'Mascot fence'
+        'flaming-sheep' = 'Mascot flaming-sheep'
+        'fox' = 'Mascot fox'
+        'ghost' = 'Mascot ghost'
+        'ghostbusters' = 'Mascot ghostbusters'
+        'glados' = 'Mascot glados'
+        'goat' = 'Mascot goat'
+        'goat2' = 'Mascot goat2'
+        'golden-eagle' = 'Mascot golden-eagle'
+        'happy-whale' = 'Mascot happy-whale'
+        'hedgehog' = 'Mascot hedgehog'
+        'hellokitty' = 'Mascot hellokitty'
+        'hippie' = 'Mascot hippie'
+        'hiya' = 'Mascot hiya'
+        'hypno' = 'Mascot hypno'
+        'jellyfish' = 'Mascot jellyfish'
+        'jesus' = 'Mascot jesus'
+        'king' = 'Mascot king'
+        'kiss' = 'Mascot kiss'
+        'kitten' = 'Mascot kitten'
+        'kitty' = 'Mascot kitty'
+        'knight' = 'Mascot knight'
+        'koala' = 'Mascot koala'
+        'kosh' = 'Mascot kosh'
+        'lamb' = 'Mascot lamb'
+        'lamb2' = 'Mascot lamb2'
+        'lobster' = 'Mascot lobster'
+        'lollerskates' = 'Mascot lollerskates'
+        'luke-koala' = 'Mascot luke-koala'
+        'mech-and-cow' = 'Mascot mech-and-cow'
+        'meow' = 'Mascot meow'
+        'milk' = 'Mascot milk'
+        'minotaur' = 'Mascot minotaur'
+        'mona-lisa' = 'Mascot mona-lisa'
+        'moofasa' = 'Mascot moofasa'
+        'mooghidjirah' = 'Mascot mooghidjirah'
+        'moojira' = 'Mascot moojira'
+        'moose' = 'Mascot moose'
+        'mule' = 'Mascot mule'
+        'mutilated' = 'Mascot mutilated'
+        'nyan' = 'Mascot nyan'
+        'octopus' = 'Mascot octopus'
+        'owl' = 'Mascot owl'
+        'panther' = 'Mascot panther'
+        'pawn' = 'Mascot pawn'
+        'periodic-table' = 'Mascot periodic-table'
+        'personality-sphere' = 'Mascot personality-sphere'
+        'pig' = 'Mascot pig'
+        'pterodactyl' = 'Mascot pterodactyl'
+        'pufferfish' = 'Mascot pufferfish'
+        'queen' = 'Mascot queen'
+        'radioactive-kitty' = 'Mascot radioactive-kitty'
+        'ram' = 'Mascot ram'
+        'ren' = 'Mascot ren'
+        'rhino' = 'Mascot rhino'
+        'rook' = 'Mascot rook'
+        'rooster' = 'Mascot rooster'
+        'satanic' = 'Mascot satanic'
+        'sauron' = 'Mascot sauron'
+        'seahorse' = 'Mascot seahorse'
+        'seahorse-big' = 'Mascot seahorse-big'
+        'sheep' = 'Mascot sheep'
+        'shikato' = 'Mascot shikato'
+        'shrug' = 'Mascot shrug'
+        'skeleton' = 'Mascot skeleton'
+        'sloth' = 'Mascot sloth'
+        'small' = 'Mascot small'
+        'smiling-octopus' = 'Mascot smiling-octopus'
+        'snoopy' = 'Mascot snoopy'
+        'snoopyhouse' = 'Mascot snoopyhouse'
+        'snoopysleep' = 'Mascot snoopysleep'
+        'spidercow' = 'Mascot spidercow'
+        'squid' = 'Mascot squid'
+        'squirrel' = 'Mascot squirrel'
+        'stegosaurus' = 'Mascot stegosaurus'
+        'stimpy' = 'Mascot stimpy'
+        'supermilker' = 'Mascot supermilker'
+        'surgery' = 'Mascot surgery'
+        'telebears' = 'Mascot telebears'
+        'three-eyes' = 'Mascot three-eyes'
+        'tiger' = 'Mascot tiger'
+        'tortoise' = 'Mascot tortoise'
+        'turkey' = 'Mascot turkey'
+        'turtle' = 'Mascot turtle'
+        'tux' = 'Mascot tux'
+        'tux-big' = 'Mascot tux-big'
+        'tweety-bird' = 'Mascot tweety-bird'
+        'unipony' = 'Mascot unipony'
+        'vader' = 'Mascot vader'
+        'viper' = 'Mascot viper'
+        'vulpix' = 'Mascot vulpix'
+        'walrus' = 'Mascot walrus'
+        'weeping-angel' = 'Mascot weeping-angel'
+        'whale' = 'Mascot whale'
+        'wizard' = 'Mascot wizard'
+        'wolf' = 'Mascot wolf'
+        'world' = 'Mascot world'
+        'yoda' = 'Mascot yoda'
+        'random' = 'Mascot random'
     }
 
     $targetMap = $null
@@ -559,7 +817,141 @@ def "nu_forgum_colors" [] {
 
 def "nu_forgum_animals" [] {
     [
-        { value: "default", description: "Standard bovine mascot" },
+        { value: "apt", description: "Mascot apt" },
+        { value: "armadillo", description: "Mascot armadillo" },
+        { value: "atat", description: "Mascot atat" },
+        { value: "bearface", description: "Mascot bearface" },
+        { value: "beavis.zen", description: "Mascot beavis.zen" },
+        { value: "bees", description: "Mascot bees" },
+        { value: "bill-the-cat", description: "Mascot bill-the-cat" },
+        { value: "bud-frogs", description: "Mascot bud-frogs" },
+        { value: "bunny", description: "Mascot bunny" },
+        { value: "cat", description: "Mascot cat" },
+        { value: "cat2", description: "Mascot cat2" },
+        { value: "catfence", description: "Mascot catfence" },
+        { value: "charizardvice", description: "Mascot charizardvice" },
+        { value: "charlie", description: "Mascot charlie" },
+        { value: "claw-arm", description: "Mascot claw-arm" },
+        { value: "corgi", description: "Mascot corgi" },
+        { value: "cower", description: "Mascot cower" },
+        { value: "cowfee", description: "Mascot cowfee" },
+        { value: "cthulhu-mini", description: "Mascot cthulhu-mini" },
+        { value: "daemon", description: "Mascot daemon" },
+        { value: "default", description: "Mascot default" },
+        { value: "docker-whale", description: "Mascot docker-whale" },
+        { value: "doge", description: "Mascot doge" },
+        { value: "dolphin", description: "Mascot dolphin" },
+        { value: "dragon", description: "Mascot dragon" },
+        { value: "dragon-and-cow", description: "Mascot dragon-and-cow" },
+        { value: "duck", description: "Mascot duck" },
+        { value: "ebi_furai", description: "Mascot ebi_furai" },
+        { value: "elephant", description: "Mascot elephant" },
+        { value: "elephant-in-snake", description: "Mascot elephant-in-snake" },
+        { value: "elephant2", description: "Mascot elephant2" },
+        { value: "eyes", description: "Mascot eyes" },
+        { value: "fat-banana", description: "Mascot fat-banana" },
+        { value: "fat-cow", description: "Mascot fat-cow" },
+        { value: "fence", description: "Mascot fence" },
+        { value: "flaming-sheep", description: "Mascot flaming-sheep" },
+        { value: "fox", description: "Mascot fox" },
+        { value: "ghost", description: "Mascot ghost" },
+        { value: "ghostbusters", description: "Mascot ghostbusters" },
+        { value: "glados", description: "Mascot glados" },
+        { value: "goat", description: "Mascot goat" },
+        { value: "goat2", description: "Mascot goat2" },
+        { value: "golden-eagle", description: "Mascot golden-eagle" },
+        { value: "happy-whale", description: "Mascot happy-whale" },
+        { value: "hedgehog", description: "Mascot hedgehog" },
+        { value: "hellokitty", description: "Mascot hellokitty" },
+        { value: "hippie", description: "Mascot hippie" },
+        { value: "hiya", description: "Mascot hiya" },
+        { value: "hypno", description: "Mascot hypno" },
+        { value: "jellyfish", description: "Mascot jellyfish" },
+        { value: "jesus", description: "Mascot jesus" },
+        { value: "king", description: "Mascot king" },
+        { value: "kiss", description: "Mascot kiss" },
+        { value: "kitten", description: "Mascot kitten" },
+        { value: "kitty", description: "Mascot kitty" },
+        { value: "knight", description: "Mascot knight" },
+        { value: "koala", description: "Mascot koala" },
+        { value: "kosh", description: "Mascot kosh" },
+        { value: "lamb", description: "Mascot lamb" },
+        { value: "lamb2", description: "Mascot lamb2" },
+        { value: "lobster", description: "Mascot lobster" },
+        { value: "lollerskates", description: "Mascot lollerskates" },
+        { value: "luke-koala", description: "Mascot luke-koala" },
+        { value: "mech-and-cow", description: "Mascot mech-and-cow" },
+        { value: "meow", description: "Mascot meow" },
+        { value: "milk", description: "Mascot milk" },
+        { value: "minotaur", description: "Mascot minotaur" },
+        { value: "mona-lisa", description: "Mascot mona-lisa" },
+        { value: "moofasa", description: "Mascot moofasa" },
+        { value: "mooghidjirah", description: "Mascot mooghidjirah" },
+        { value: "moojira", description: "Mascot moojira" },
+        { value: "moose", description: "Mascot moose" },
+        { value: "mule", description: "Mascot mule" },
+        { value: "mutilated", description: "Mascot mutilated" },
+        { value: "nyan", description: "Mascot nyan" },
+        { value: "octopus", description: "Mascot octopus" },
+        { value: "owl", description: "Mascot owl" },
+        { value: "panther", description: "Mascot panther" },
+        { value: "pawn", description: "Mascot pawn" },
+        { value: "periodic-table", description: "Mascot periodic-table" },
+        { value: "personality-sphere", description: "Mascot personality-sphere" },
+        { value: "pig", description: "Mascot pig" },
+        { value: "pterodactyl", description: "Mascot pterodactyl" },
+        { value: "pufferfish", description: "Mascot pufferfish" },
+        { value: "queen", description: "Mascot queen" },
+        { value: "radioactive-kitty", description: "Mascot radioactive-kitty" },
+        { value: "ram", description: "Mascot ram" },
+        { value: "ren", description: "Mascot ren" },
+        { value: "rhino", description: "Mascot rhino" },
+        { value: "rook", description: "Mascot rook" },
+        { value: "rooster", description: "Mascot rooster" },
+        { value: "satanic", description: "Mascot satanic" },
+        { value: "sauron", description: "Mascot sauron" },
+        { value: "seahorse", description: "Mascot seahorse" },
+        { value: "seahorse-big", description: "Mascot seahorse-big" },
+        { value: "sheep", description: "Mascot sheep" },
+        { value: "shikato", description: "Mascot shikato" },
+        { value: "shrug", description: "Mascot shrug" },
+        { value: "skeleton", description: "Mascot skeleton" },
+        { value: "sloth", description: "Mascot sloth" },
+        { value: "small", description: "Mascot small" },
+        { value: "smiling-octopus", description: "Mascot smiling-octopus" },
+        { value: "snoopy", description: "Mascot snoopy" },
+        { value: "snoopyhouse", description: "Mascot snoopyhouse" },
+        { value: "snoopysleep", description: "Mascot snoopysleep" },
+        { value: "spidercow", description: "Mascot spidercow" },
+        { value: "squid", description: "Mascot squid" },
+        { value: "squirrel", description: "Mascot squirrel" },
+        { value: "stegosaurus", description: "Mascot stegosaurus" },
+        { value: "stimpy", description: "Mascot stimpy" },
+        { value: "supermilker", description: "Mascot supermilker" },
+        { value: "surgery", description: "Mascot surgery" },
+        { value: "telebears", description: "Mascot telebears" },
+        { value: "three-eyes", description: "Mascot three-eyes" },
+        { value: "tiger", description: "Mascot tiger" },
+        { value: "tortoise", description: "Mascot tortoise" },
+        { value: "turkey", description: "Mascot turkey" },
+        { value: "turtle", description: "Mascot turtle" },
+        { value: "tux", description: "Mascot tux" },
+        { value: "tux-big", description: "Mascot tux-big" },
+        { value: "tweety-bird", description: "Mascot tweety-bird" },
+        { value: "unipony", description: "Mascot unipony" },
+        { value: "vader", description: "Mascot vader" },
+        { value: "viper", description: "Mascot viper" },
+        { value: "vulpix", description: "Mascot vulpix" },
+        { value: "walrus", description: "Mascot walrus" },
+        { value: "weeping-angel", description: "Mascot weeping-angel" },
+        { value: "whale", description: "Mascot whale" },
+        { value: "wizard", description: "Mascot wizard" },
+        { value: "wolf", description: "Mascot wolf" },
+        { value: "world", description: "Mascot world" },
+        { value: "yoda", description: "Mascot yoda" },
+        { value: "random", description: "Mascot random" },
+    ]
+},
         { value: "dragon", description: "Fire-breathing dragon" },
         { value: "tux", description: "Linux penguin mascot" },
         { value: "cat", description: "Playful feline mascot" },
@@ -661,7 +1053,8 @@ def _forgum_completer(command):
         "herd", "theme", "demo", "showcase", "say", "help"
     }
     return opts
-"#.to_string()
+"#
+    .to_string()
 }
 
 fn generate_tcsh_completions() -> String {
@@ -689,8 +1082,8 @@ fn generate_ksh_completions(cmd: &mut clap::Command) -> String {
 fn generate_ion_completions() -> String {
     r#"# Ion completion for Forgum
 complete -c forgum -a "render think fortune list completions init tui status doctor checkhealth config logs herd theme demo showcase say help"
-complete -c forgum -l animal -a "default dragon tux cat ghost elephant bunny corgi fox octopus random"
-complete -c forgum -l cow -a "default dragon tux cat ghost elephant bunny corgi fox octopus random"
+complete -c forgum -l animal -a "apt armadillo atat bearface beavis.zen bees bill-the-cat bud-frogs bunny cat cat2 catfence charizardvice charlie claw-arm corgi cower cowfee cthulhu-mini daemon default docker-whale doge dolphin dragon dragon-and-cow duck ebi_furai elephant elephant-in-snake elephant2 eyes fat-banana fat-cow fence flaming-sheep fox ghost ghostbusters glados goat goat2 golden-eagle happy-whale hedgehog hellokitty hippie hiya hypno jellyfish jesus king kiss kitten kitty knight koala kosh lamb lamb2 lobster lollerskates luke-koala mech-and-cow meow milk minotaur mona-lisa moofasa mooghidjirah moojira moose mule mutilated nyan octopus owl panther pawn periodic-table personality-sphere pig pterodactyl pufferfish queen radioactive-kitty ram ren rhino rook rooster satanic sauron seahorse seahorse-big sheep shikato shrug skeleton sloth small smiling-octopus snoopy snoopyhouse snoopysleep spidercow squid squirrel stegosaurus stimpy supermilker surgery telebears three-eyes tiger tortoise turkey turtle tux tux-big tweety-bird unipony vader viper vulpix walrus weeping-angel whale wizard wolf world yoda random"
+complete -c forgum -l cow -a "apt armadillo atat bearface beavis.zen bees bill-the-cat bud-frogs bunny cat cat2 catfence charizardvice charlie claw-arm corgi cower cowfee cthulhu-mini daemon default docker-whale doge dolphin dragon dragon-and-cow duck ebi_furai elephant elephant-in-snake elephant2 eyes fat-banana fat-cow fence flaming-sheep fox ghost ghostbusters glados goat goat2 golden-eagle happy-whale hedgehog hellokitty hippie hiya hypno jellyfish jesus king kiss kitten kitty knight koala kosh lamb lamb2 lobster lollerskates luke-koala mech-and-cow meow milk minotaur mona-lisa moofasa mooghidjirah moojira moose mule mutilated nyan octopus owl panther pawn periodic-table personality-sphere pig pterodactyl pufferfish queen radioactive-kitty ram ren rhino rook rooster satanic sauron seahorse seahorse-big sheep shikato shrug skeleton sloth small smiling-octopus snoopy snoopyhouse snoopysleep spidercow squid squirrel stegosaurus stimpy supermilker surgery telebears three-eyes tiger tortoise turkey turtle tux tux-big tweety-bird unipony vader viper vulpix walrus weeping-angel whale wizard wolf world yoda random"
 complete -c forgum -l effect -a "walk breathe float fly talk sway pulse glitch particles dissolve"
 complete -c forgum -l mountain -a "hills peaks volcano iceberg skyline seamount plateau crater gothic castle garden none"
 complete -c forgum -l road -a "dirt cobblestone magma ice seabed sidewalk roof grid crypt savanna mud tracks checkerboard none"
