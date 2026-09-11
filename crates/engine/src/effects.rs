@@ -102,6 +102,127 @@ pub fn find_cow_foot_y(text: &str) -> usize {
     lines.len().saturating_sub(1)
 }
 
+/// Natural Wildlife Instinct Archetype for creatures.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AnimalInstinct {
+    Dragon,
+    Marine,
+    Cephalopod,
+    Canine,
+    Feline,
+    Avian,
+    Amphibian,
+    Bovine,
+    Spectral,
+}
+
+/// Detect the natural wildlife instinct of an animal mascot based on DNA and art patterns.
+pub fn detect_animal_instinct(cow_text: &str, dna: &CowDna) -> AnimalInstinct {
+    if dna.particles.rate > 0 && dna.particles.r#type == crate::dna::ParticleType::Fire {
+        return AnimalInstinct::Dragon;
+    }
+    if dna.particles.rate > 0 && dna.particles.r#type == crate::dna::ParticleType::Bubbles {
+        return AnimalInstinct::Marine;
+    }
+    let lower = cow_text.to_ascii_lowercase();
+    // Dragon / Inferno / Mythic
+    if lower.contains("dragon")
+        || lower.contains("charizard")
+        || lower.contains("mooghidjirah")
+        || lower.contains("moojira")
+        || lower.contains("flaming")
+        || lower.contains("daemon")
+        || lower.contains("satanic")
+        || lower.contains("minotaur")
+        || lower.contains("sauron")
+    {
+        return AnimalInstinct::Dragon;
+    }
+    // Cephalopod / Deep Sea
+    if lower.contains("octopus")
+        || lower.contains("squid")
+        || lower.contains("jellyfish")
+        || lower.contains("cthulhu")
+    {
+        return AnimalInstinct::Cephalopod;
+    }
+    // Marine / Ocean
+    if lower.contains("whale")
+        || lower.contains("dolphin")
+        || lower.contains("seahorse")
+        || lower.contains("turtle")
+        || lower.contains("pufferfish")
+        || lower.contains("walrus")
+        || lower.contains("ebi_furai")
+        || lower.contains("shark")
+    {
+        return AnimalInstinct::Marine;
+    }
+    // Canine / Dog
+    if lower.contains("doge")
+        || lower.contains("snoopy")
+        || lower.contains("corgi")
+        || lower.contains("wolf")
+    {
+        return AnimalInstinct::Canine;
+    }
+    // Feline / Cat
+    if lower.contains("cat")
+        || lower.contains("kitten")
+        || lower.contains("kitty")
+        || lower.contains("meow")
+        || lower.contains("hellokitty")
+        || lower.contains("tiger")
+        || lower.contains("panther")
+        || lower.contains("vulpix")
+        || lower.contains("fox")
+    {
+        return AnimalInstinct::Feline;
+    }
+    // Avian / Bird
+    if lower.contains("eagle")
+        || lower.contains("tweety")
+        || lower.contains("owl")
+        || lower.contains("turkey")
+        || lower.contains("duck")
+        || lower.contains("rooster")
+        || lower.contains("pterodactyl")
+        || lower.contains("bird")
+        || lower.contains("bees")
+    {
+        return AnimalInstinct::Avian;
+    }
+    // Amphibian / Reptilian
+    if lower.contains("frog")
+        || lower.contains("bud-frogs")
+        || lower.contains("viper")
+        || lower.contains("tortoise")
+        || lower.contains("armadillo")
+        || lower.contains("stegosaurus")
+        || lower.contains("snake")
+    {
+        return AnimalInstinct::Amphibian;
+    }
+    // Spectral / Cosmic / Arcane
+    if lower.contains("ghost")
+        || lower.contains("skeleton")
+        || lower.contains("weeping-angel")
+        || lower.contains("wizard")
+        || lower.contains("nyan")
+        || lower.contains("glados")
+        || lower.contains("hypno")
+        || lower.contains("kosh")
+        || lower.contains("atat")
+        || lower.contains("mech")
+        || lower.contains("surgery")
+        || lower.contains("eyes")
+    {
+        return AnimalInstinct::Spectral;
+    }
+    // Default fallback: Bovine & pastoral herbivores
+    AnimalInstinct::Bovine
+}
+
 // ── Static (no animation) ──────────────────────────────────────────
 
 /// The Phase 0 static cow with keep-alive micro-animations (Phase 8.1).
@@ -130,7 +251,15 @@ impl StaticEffect {
                     .replace("XX", "--")
                     .replace("@@", "--")
                     .replace("$$", "--")
-                    .replace("00", "--");
+                    .replace("00", "--")
+                    .replace("^^", "--")
+                    .replace("**", "--")
+                    .replace("==", "--")
+                    .replace("..", "--")
+                    .replace("o o", "- -")
+                    .replace("O O", "- -")
+                    .replace("^ ^", "- -")
+                    .replace("* *", "- -");
                 blink_lines.push(replaced);
             }
         }
@@ -178,6 +307,8 @@ pub struct BreatheEffect {
     speed: f32,
     color_mode: String,
     palette: Vec<(u8, u8, u8)>,
+    instinct: AnimalInstinct,
+    mouth_pos: Option<(usize, usize)>,
 }
 
 impl BreatheEffect {
@@ -186,16 +317,54 @@ impl BreatheEffect {
         let line_offsets = compute_line_offsets(&cow_text);
         let cow_start_line = find_cow_start_line(&cow_text);
         let palette = crate::color::parse_palette(&dna.palette);
+        let mut amp = dna.amplitude.clone();
+        if amp.breath <= 0.05 {
+            amp.breath = 0.25;
+        }
+
+        let instinct = detect_animal_instinct(&cow_text, dna);
+
+        // Find mouth/snout position for breathing fire/bubbles/particles
+        let mut mouth_pos = None;
+        let lines: Vec<&str> = cow_text.lines().collect();
+        for (i, line) in lines.iter().enumerate().skip(cow_start_line) {
+            if mouth_pos.is_some() {
+                break;
+            }
+            if let Some(open) = line.find("(__)") {
+                mouth_pos = Some((i, open + 1));
+            } else if let Some(idx) = line.find("/$eye") {
+                mouth_pos = Some((i + 1, idx));
+            } else if let Some(idx) = line.find("\\@") {
+                mouth_pos = Some((i, idx));
+            } else if let Some(idx) = line.find("$eyes") {
+                mouth_pos = Some((i + 1, idx));
+            } else if let Some(idx) = line.find("$eye") {
+                mouth_pos = Some((i + 1, idx));
+            }
+        }
+        if mouth_pos.is_none() && lines.len() > cow_start_line {
+            // Fallback: use first non-space char of top creature row
+            for (i, line) in lines.iter().enumerate().skip(cow_start_line) {
+                if let Some(pos) = line.find(|c: char| !c.is_whitespace()) {
+                    mouth_pos = Some((i, pos));
+                    break;
+                }
+            }
+        }
+
         Self {
             cow_text,
             line_offsets,
             cow_start_line,
-            amp: dna.amplitude.clone(),
+            amp,
             easing_fn: easing::by_name(&dna.easing.base),
             phase,
             speed: dna.speed,
             color_mode,
             palette,
+            instinct,
+            mouth_pos,
         }
     }
 }
@@ -218,13 +387,14 @@ impl Effect for BreatheEffect {
             if y >= fb.height {
                 return;
             }
+            let hull = find_line_hull(line);
 
             // Speech/thought bubble lines: strictly anchored at (0, 0), completely untouched
             if y < self.cow_start_line {
                 for (x, ch) in line.chars().enumerate() {
                     if x < fb.width {
                         let cell_fg = resolve_fg(&self.color_mode, x, y, time, Color::WHITE);
-                        let _ = fb.set(x, y, Cell::new(ch, cell_fg));
+                        draw_char_with_hull(fb, x, y, x, hull, ch, cell_fg);
                     }
                 }
                 y += 1;
@@ -252,9 +422,9 @@ impl Effect for BreatheEffect {
                         time,
                         Color::WHITE,
                     );
-                    let _ = fb.set(x, y, Cell::new('-', cell_fg));
+                    draw_char_with_hull(fb, x, y, x, hull, '-', cell_fg);
                     if x + 1 < fb.width {
-                        let _ = fb.set(x + 1, y, Cell::new('-', cell_fg));
+                        draw_char_with_hull(fb, x + 1, y, x + 1, hull, '-', cell_fg);
                     }
                     x += 2;
                     continue;
@@ -269,13 +439,215 @@ impl Effect for BreatheEffect {
                     }
                 }
 
-                let cell_fg =
+                let mut cell_fg =
                     resolve_fg_palette(&self.color_mode, &self.palette, x, y, time, Color::WHITE);
-                let _ = fb.set(x, y, Cell::new(ch, cell_fg));
+
+                // Natural Instinct signature highlights:
+                match self.instinct {
+                    AnimalInstinct::Dragon => {
+                        // Dragon chest glows with inner magma during exhale
+                        if !is_inhale && (ch == '~' || ch == '=' || ch == '#' || ch == '@') {
+                            cell_fg = Color::rgb(255, 68, 0);
+                        }
+                    }
+                    AnimalInstinct::Cephalopod => {
+                        // Cephalopod mantle bioluminescence wave
+                        if is_inhale && (ch == '(' || ch == ')' || ch == '{' || ch == '}') {
+                            cell_fg = Color::rgb(0, 255, 204);
+                        }
+                    }
+                    AnimalInstinct::Feline => {
+                        // Cat whisker subtle twitch
+                        if ch == '=' && ((time * 3.0) as usize) % 2 == 0 {
+                            ch = '-';
+                        }
+                    }
+                    AnimalInstinct::Amphibian if is_inhale && ch == '(' && line.contains("()") => {
+                        // Gular sac swelling during inhale
+                        ch = '[';
+                    }
+                    _ => {}
+                }
+
+                draw_char_with_hull(fb, x, y, x, hull, ch, cell_fg);
                 x += 1;
             }
             y += 1;
         });
+
+        // Natural Wildlife Instinct signature emitters:
+        match self.instinct {
+            AnimalInstinct::Dragon => {
+                if let Some((my, mx)) = self.mouth_pos {
+                    if !is_inhale && my < fb.height {
+                        // Dragon is exhaling: BREATHE FIRE!
+                        let flame_reach = (((eased - 0.4) / 0.6) * 8.0) as usize;
+                        let fire_glyphs = ['*', '^', '~', '§', '»', '>', '#'];
+                        let fire_colors = [
+                            Color::rgb(255, 34, 0),    // blazing vermilion
+                            Color::rgb(255, 102, 0),   // fiery orange
+                            Color::rgb(255, 204, 0),   // golden ember
+                            Color::rgb(255, 240, 150), // white-hot flame core
+                        ];
+                        let streams_left = mx > 5;
+                        for k in 1..=flame_reach {
+                            let fx = if streams_left {
+                                mx.saturating_sub(k)
+                            } else {
+                                mx + k
+                            };
+                            if fx < fb.width {
+                                let g_idx = (k + (time * 12.0) as usize) % fire_glyphs.len();
+                                let c_idx = (k + (time * 8.0) as usize) % fire_colors.len();
+                                let _ = fb.set(
+                                    fx,
+                                    my,
+                                    Cell::new(fire_glyphs[g_idx], fire_colors[c_idx]),
+                                );
+                                // Flame flickering plume above/below
+                                if k > 2 && (k % 2 == 0) && my > 0 {
+                                    let plume_y = if k % 4 == 0 {
+                                        my.saturating_sub(1)
+                                    } else {
+                                        (my + 1).min(fb.height.saturating_sub(1))
+                                    };
+                                    let _ = fb.set(
+                                        fx,
+                                        plume_y,
+                                        Cell::new(
+                                            '~',
+                                            fire_colors[(c_idx + 1) % fire_colors.len()],
+                                        ),
+                                    );
+                                }
+                            }
+                        }
+                    } else if is_inhale && my < fb.height {
+                        // Small smoke/ember wisps drifting up
+                        let ember_x = if mx > 2 { mx - 1 } else { mx + 1 };
+                        if ember_x < fb.width && my > 0 {
+                            let _ =
+                                fb.set(ember_x, my - 1, Cell::new('.', Color::rgb(255, 170, 0)));
+                        }
+                    }
+                }
+            }
+            AnimalInstinct::Marine => {
+                // Marine life: whale blowhole vertical water spout or rising bubbles
+                if let Some((my, mx)) = self.mouth_pos {
+                    if !is_inhale && my > 1 {
+                        // Exhale: water spout shoots straight up from blowhole
+                        let spout_reach = (((eased - 0.4) / 0.6) * 4.0) as usize + 1;
+                        let spout_glyphs = ['|', '~', '^', '*', 'o'];
+                        for k in 1..=spout_reach {
+                            let sy = my.saturating_sub(k);
+                            if sy < fb.height {
+                                let ch =
+                                    spout_glyphs[(k + (time * 6.0) as usize) % spout_glyphs.len()];
+                                let _ = fb.set(mx, sy, Cell::new(ch, Color::rgb(0, 229, 255)));
+                                // Spray droplets spreading at crest
+                                if k == spout_reach {
+                                    if mx > 0 {
+                                        let _ = fb.set(
+                                            mx - 1,
+                                            sy,
+                                            Cell::new('~', Color::rgb(128, 216, 255)),
+                                        );
+                                    }
+                                    if mx + 1 < fb.width {
+                                        let _ = fb.set(
+                                            mx + 1,
+                                            sy,
+                                            Cell::new('~', Color::rgb(128, 216, 255)),
+                                        );
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        // Inhale: gentle bubbles rising
+                        let bubble_y = my.saturating_sub(((time * 3.0) as usize) % 3 + 1);
+                        let bubble_x =
+                            (mx + ((time * 2.0) as usize) % 2).min(fb.width.saturating_sub(1));
+                        if bubble_y < fb.height {
+                            let b_ch = if ((time * 3.0) as usize) % 2 == 0 {
+                                'o'
+                            } else {
+                                '°'
+                            };
+                            let _ = fb.set(
+                                bubble_x,
+                                bubble_y,
+                                Cell::new(b_ch, Color::rgb(0, 220, 255)),
+                            );
+                        }
+                    }
+                }
+            }
+            AnimalInstinct::Cephalopod => {
+                // Bioluminescent spore sparkles floating around the mantle
+                if let Some((my, mx)) = self.mouth_pos {
+                    let spore_y = my.saturating_sub(((time * 2.5) as usize) % 3);
+                    let spore_x = (mx + ((time * 4.0) as usize) % 4)
+                        .saturating_sub(2)
+                        .min(fb.width.saturating_sub(1));
+                    if spore_y < fb.height {
+                        let _ = fb.set(spore_x, spore_y, Cell::new('*', Color::rgb(0, 255, 204)));
+                    }
+                }
+            }
+            AnimalInstinct::Canine => {
+                // Sleeping snoopy/doge emits floating Zzz sleep motes; active canine emits panting puff
+                if let Some((my, mx)) = self.mouth_pos {
+                    let is_sleeping =
+                        self.cow_text.contains("snoopysleep") || self.cow_text.contains("--");
+                    if is_sleeping && my > 1 {
+                        let z_step = ((time * 2.0) as usize) % 3;
+                        let zy = my.saturating_sub(z_step + 1);
+                        let zx = (mx + z_step).min(fb.width.saturating_sub(1));
+                        if zy < fb.height {
+                            let z_ch = if z_step == 2 { 'Z' } else { 'z' };
+                            let _ = fb.set(zx, zy, Cell::new(z_ch, Color::rgb(149, 117, 205)));
+                        }
+                    } else if !is_inhale && my < fb.height {
+                        let px = if mx > 1 { mx - 1 } else { mx + 1 };
+                        if px < fb.width {
+                            let _ = fb.set(px, my, Cell::new('.', Color::rgb(255, 183, 77)));
+                        }
+                    }
+                }
+            }
+            AnimalInstinct::Avian => {
+                // Feather motes drifting softly
+                if let Some((my, mx)) = self.mouth_pos {
+                    let fy = (my + ((time * 1.5) as usize) % 3).min(fb.height.saturating_sub(1));
+                    let fx = if mx > 2 { mx - 2 } else { mx + 2 };
+                    if fx < fb.width {
+                        let _ = fb.set(fx, fy, Cell::new(',', Color::rgb(255, 213, 79)));
+                    }
+                }
+            }
+            AnimalInstinct::Spectral => {
+                // Arcane mystic runes floating and orbiting
+                if let Some((my, mx)) = self.mouth_pos {
+                    let runes = ['✦', '*', '°', '·', '✧'];
+                    for (i, &rune) in runes.iter().enumerate() {
+                        let angle = (time * 2.0 + i as f32 * 1.25) % std::f32::consts::TAU;
+                        let rx = (mx as f32 + angle.cos() * 3.5).max(0.0) as usize;
+                        let ry = (my as f32 + angle.sin() * 1.8).max(0.0) as usize;
+                        if rx < fb.width && ry < fb.height {
+                            let col = if i % 2 == 0 {
+                                Color::rgb(128, 255, 219)
+                            } else {
+                                Color::rgb(189, 147, 249)
+                            };
+                            let _ = fb.set(rx, ry, Cell::new(rune, col));
+                        }
+                    }
+                }
+            }
+            _ => {}
+        }
     }
 }
 
@@ -295,7 +667,7 @@ pub struct FloatEffect {
     speed: f32,
     color_mode: String,
     palette: Vec<(u8, u8, u8)>,
-    is_marine: bool,
+    instinct: AnimalInstinct,
     pub body: crate::kinematics::KinematicBody,
     elapsed: f32,
 }
@@ -320,27 +692,23 @@ impl FloatEffect {
         );
         body.vx = 0.0;
         body.vy = 0.0;
-        let lower = cow_text.to_ascii_lowercase();
-        let is_marine = lower.contains("whale")
-            || lower.contains("dolphin")
-            || lower.contains("octopus")
-            || lower.contains("jellyfish")
-            || lower.contains("lobster")
-            || lower.contains("seahorse")
-            || lower.contains("turtle")
-            || lower.contains("ebi_furai");
+        let instinct = detect_animal_instinct(&cow_text, dna);
         let palette = crate::color::parse_palette(&dna.palette);
+        let mut amp = dna.amplitude.clone();
+        if amp.float <= 0.05 {
+            amp.float = 0.3;
+        }
         Self {
             cow_text,
             line_offsets,
             cow_start_line,
-            amp: dna.amplitude.clone(),
+            amp,
             easing_fn: easing::by_name(&dna.easing.base),
             phase,
             speed: dna.speed,
             color_mode,
             palette,
-            is_marine,
+            instinct,
             body,
             elapsed: 0.0,
         }
@@ -369,46 +737,44 @@ impl Effect for FloatEffect {
                 return;
             }
 
-            // Speech/thought bubble: strictly anchored at (0, 0), completely untouched
+            let hull = find_line_hull(line);
+
+            // Speech/thought bubble: strictly anchored at (0, 0), zero shift
             if y < self.cow_start_line {
                 for (x, ch) in line.chars().enumerate() {
                     if x < fb.width {
                         let cell_fg = resolve_fg(&self.color_mode, x, y, time, Color::WHITE);
-                        let _ = fb.set(x, y, Cell::new(ch, cell_fg));
+                        draw_char_with_hull(fb, x, y, x, hull, ch, cell_fg);
                     }
                 }
                 y += 1;
                 return;
             }
 
-            // Creature lines: gentle hovering shimmer in place or aquatic wave (zero-allocation)
-            let aquatic_wave_x = if self.is_marine {
-                ((time * 2.5 + y as f32 * 0.4 + self.phase).sin() * 0.8) as i32
-            } else {
-                0
-            };
+            // Creature lines: anchored at stagnant position (y)
+            let draw_y = y;
 
             let mut chars_iter = line.chars().peekable();
             let mut x = 0usize;
             while let Some(mut ch) = chars_iter.next() {
-                let xi = x as i32 + aquatic_wave_x;
+                let xi = x as i32;
                 if xi >= 0 && (xi as usize) < fb.width {
                     let uxi = xi as usize;
 
-                    // Blink eyes:
+                    // Periodic eye-blink:
                     if is_blinking && is_eye_glyph(ch) && chars_iter.peek().copied() == Some(ch) {
-                        let _ = chars_iter.next(); // consume second eye glyph
+                        let _ = chars_iter.next();
                         let cell_fg = resolve_fg_palette(
                             &self.color_mode,
                             &self.palette,
                             uxi,
-                            y,
+                            draw_y,
                             time,
                             Color::WHITE,
                         );
-                        let _ = fb.set(uxi, y, Cell::new('-', cell_fg));
+                        draw_char_with_hull(fb, uxi, draw_y, x, hull, '-', cell_fg);
                         if uxi + 1 < fb.width {
-                            let _ = fb.set(uxi + 1, y, Cell::new('-', cell_fg));
+                            draw_char_with_hull(fb, uxi + 1, draw_y, x + 1, hull, '-', cell_fg);
                         }
                         x += 2;
                         continue;
@@ -427,16 +793,117 @@ impl Effect for FloatEffect {
                         &self.color_mode,
                         &self.palette,
                         uxi,
-                        y,
+                        draw_y,
                         time,
                         Color::WHITE,
                     );
-                    let _ = fb.set(uxi, y, Cell::new(ch, cell_fg));
+                    draw_char_with_hull(fb, uxi, draw_y, x, hull, ch, cell_fg);
                 }
                 x += 1;
             }
             y += 1;
         });
+
+        // Natural Wildlife Instinct floating particles:
+        match self.instinct {
+            AnimalInstinct::Marine => {
+                // Buoyant bubbles rising through water
+                for i in 0..4 {
+                    let seed = i * 19;
+                    let bx = (seed + ((time * 3.0) as usize)) % fb.width.max(1);
+                    let by = ((fb.height.saturating_sub(1)) as f32
+                        - ((time * 4.0 + i as f32 * 2.5) % fb.height.max(1) as f32))
+                        .max(0.0) as usize;
+                    if bx < fb.width && by < fb.height {
+                        let b_ch = if i % 2 == 0 { 'o' } else { '°' };
+                        let _ = fb.set(bx, by, Cell::new(b_ch, Color::rgb(0, 229, 255)));
+                    }
+                }
+            }
+            AnimalInstinct::Cephalopod => {
+                // Bioluminescent spore sparkles
+                for i in 0..4 {
+                    let seed = i * 23;
+                    let sx = (seed + ((time * 2.0) as usize)) % fb.width.max(1);
+                    let sy = ((fb.height.saturating_sub(1)) as f32
+                        - ((time * 3.0 + i as f32 * 3.0) % fb.height.max(1) as f32))
+                        .max(0.0) as usize;
+                    if sx < fb.width && sy < fb.height {
+                        let col = if i % 2 == 0 {
+                            Color::rgb(0, 255, 204)
+                        } else {
+                            Color::rgb(204, 102, 255)
+                        };
+                        let _ = fb.set(sx, sy, Cell::new('*', col));
+                    }
+                }
+            }
+            AnimalInstinct::Dragon => {
+                // Floating on hot magma updrafts: rising sparks
+                for i in 0..4 {
+                    let seed = i * 17;
+                    let fx = (seed + ((time * 4.0) as usize)) % fb.width.max(1);
+                    let fy = ((fb.height.saturating_sub(1)) as f32
+                        - ((time * 5.0 + i as f32 * 2.0) % fb.height.max(1) as f32))
+                        .max(0.0) as usize;
+                    if fx < fb.width && fy < fb.height {
+                        let _ = fb.set(fx, fy, Cell::new('*', Color::rgb(255, 68, 0)));
+                    }
+                }
+            }
+            AnimalInstinct::Spectral => {
+                // Levitating arcane runes
+                let runes = ['✦', '*', '°', '·'];
+                for (i, &rune) in runes.iter().enumerate() {
+                    let angle = (time * 1.8 + i as f32 * 1.57) % std::f32::consts::TAU;
+                    let rx = ((fb.width / 2) as f32 + angle.cos() * 8.0).max(0.0) as usize;
+                    let ry = ((fb.height / 2) as f32 + angle.sin() * 3.5).max(0.0) as usize;
+                    if rx < fb.width && ry < fb.height {
+                        let _ = fb.set(rx, ry, Cell::new(rune, Color::rgb(128, 255, 219)));
+                    }
+                }
+            }
+            AnimalInstinct::Canine => {
+                // Soft floating dream sleep clouds
+                for i in 0..3 {
+                    let seed = i * 21;
+                    let cx = (seed + ((time * 2.0) as usize)) % fb.width.max(1);
+                    let cy = ((fb.height.saturating_sub(1)) as f32
+                        - ((time * 2.0 + i as f32 * 2.0) % fb.height.max(1) as f32))
+                        .max(0.0) as usize;
+                    if cx < fb.width && cy < fb.height {
+                        let _ = fb.set(cx, cy, Cell::new('~', Color::rgb(209, 196, 233)));
+                    }
+                }
+            }
+            AnimalInstinct::Avian => {
+                // Rising thermal updrafts
+                for i in 0..3 {
+                    let seed = i * 27;
+                    let ax = (seed + ((time * 3.0) as usize)) % fb.width.max(1);
+                    let ay = ((fb.height.saturating_sub(1)) as f32
+                        - ((time * 4.0 + i as f32 * 3.0) % fb.height.max(1) as f32))
+                        .max(0.0) as usize;
+                    if ax < fb.width && ay < fb.height {
+                        let _ = fb.set(ax, ay, Cell::new('^', Color::rgb(255, 238, 88)));
+                    }
+                }
+            }
+            AnimalInstinct::Bovine => {
+                // Meadow dandelion spores drifting
+                for i in 0..3 {
+                    let seed = i * 31;
+                    let bx = (seed + ((time * 1.5) as usize)) % fb.width.max(1);
+                    let by = ((fb.height.saturating_sub(1)) as f32
+                        - ((time * 2.5 + i as f32 * 2.0) % fb.height.max(1) as f32))
+                        .max(0.0) as usize;
+                    if bx < fb.width && by < fb.height {
+                        let _ = fb.set(bx, by, Cell::new('*', Color::rgb(200, 230, 201)));
+                    }
+                }
+            }
+            _ => {}
+        }
     }
 }
 
@@ -458,6 +925,7 @@ pub struct WalkEffect {
     speed: f32,
     color_mode: String,
     palette: Vec<(u8, u8, u8)>,
+    instinct: AnimalInstinct,
     pub body: crate::kinematics::KinematicBody,
     elapsed: f32,
 }
@@ -564,6 +1032,7 @@ impl WalkEffect {
         body.vx = 0.0;
         body.vy = 0.0;
         let palette = crate::color::parse_palette(&dna.palette);
+        let instinct = detect_animal_instinct(&cow_text, dna);
 
         Self {
             cow_text,
@@ -578,6 +1047,7 @@ impl WalkEffect {
             speed: dna.speed,
             color_mode,
             palette,
+            instinct,
             body,
             elapsed: 0.0,
         }
@@ -721,6 +1191,90 @@ impl Effect for WalkEffect {
             }
             y += 1;
         });
+
+        // Natural Wildlife Instinct footsteps:
+        if self.leg_line_idx < fb.height {
+            let foot_y = (self.leg_line_idx as i32 + y_off).max(0) as usize;
+            match self.instinct {
+                AnimalInstinct::Dragon => {
+                    // Fiery magma footsteps
+                    for &col in &self.leg_cols {
+                        let foot_x = (col as i32 + x_off) as usize;
+                        if foot_x < fb.width && foot_y < fb.height {
+                            let ember_ch = if (time * 10.0) as usize % 2 == 0 {
+                                '*'
+                            } else {
+                                '.'
+                            };
+                            let _ =
+                                fb.set(foot_x, foot_y, Cell::new(ember_ch, Color::rgb(255, 68, 0)));
+                        }
+                    }
+                }
+                AnimalInstinct::Marine => {
+                    // Aquatic swimming tail wake
+                    if let Some((_ty, tx)) = self.tail_pos {
+                        let foot_x = (tx as i32 + x_off) as usize;
+                        if foot_x < fb.width && foot_y < fb.height {
+                            let _ = fb.set(foot_x, foot_y, Cell::new('~', Color::rgb(0, 229, 255)));
+                        }
+                    }
+                }
+                AnimalInstinct::Spectral => {
+                    // Ethereal phase trail
+                    for &col in &self.leg_cols {
+                        let foot_x = (col as i32 + x_off) as usize;
+                        if foot_x < fb.width && foot_y < fb.height {
+                            let _ =
+                                fb.set(foot_x, foot_y, Cell::new('·', Color::rgb(128, 255, 219)));
+                        }
+                    }
+                }
+                AnimalInstinct::Canine => {
+                    // Trotting dust motes behind feet
+                    for &col in &self.leg_cols {
+                        let foot_x = ((col as i32 + x_off).saturating_sub(1)) as usize;
+                        if foot_x < fb.width && foot_y < fb.height {
+                            let dust_ch = if (time * 8.0) as usize % 2 == 0 {
+                                '.'
+                            } else {
+                                '°'
+                            };
+                            let _ = fb.set(
+                                foot_x,
+                                foot_y,
+                                Cell::new(dust_ch, Color::rgb(215, 204, 200)),
+                            );
+                        }
+                    }
+                }
+                AnimalInstinct::Avian => {
+                    // Avian ground hopping claw marks
+                    for &col in &self.leg_cols {
+                        let foot_x = (col as i32 + x_off) as usize;
+                        if foot_x < fb.width && foot_y < fb.height {
+                            let claw_ch = if stride < 0.5 { '\'' } else { '`' };
+                            let _ = fb.set(
+                                foot_x,
+                                foot_y,
+                                Cell::new(claw_ch, Color::rgb(255, 213, 79)),
+                            );
+                        }
+                    }
+                }
+                AnimalInstinct::Amphibian => {
+                    // Reptilian/amphibian low crawl motes
+                    for &col in &self.leg_cols {
+                        let foot_x = (col as i32 + x_off) as usize;
+                        if foot_x < fb.width && foot_y < fb.height {
+                            let _ =
+                                fb.set(foot_x, foot_y, Cell::new('~', Color::rgb(139, 195, 74)));
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
     }
 }
 
@@ -802,24 +1356,46 @@ pub struct PulseEffect {
     phase: f32,
     speed: f32,
     color_mode: String,
+    instinct: AnimalInstinct,
 }
 
 impl PulseEffect {
     pub fn new(cow_text: String, dna: &CowDna, instance_id: u32, color_mode: String) -> Self {
         let phase = instance_phase(dna.phase_seed, instance_id);
         let palette = color::parse_palette(&dna.palette);
-        let glow_color = parse_hex(&dna.glow.color)
-            .map(|(r, g, b)| Color::rgb(r, g, b))
-            .unwrap_or(Color::WHITE);
+        let instinct = detect_animal_instinct(&cow_text, dna);
+        let glow_color = if dna.glow.color != "#ffffff" && !dna.glow.color.is_empty() {
+            parse_hex(&dna.glow.color)
+                .map(|(r, g, b)| Color::rgb(r, g, b))
+                .unwrap_or(Color::WHITE)
+        } else {
+            match instinct {
+                AnimalInstinct::Dragon => Color::rgb(255, 68, 0),
+                AnimalInstinct::Marine => Color::rgb(0, 229, 255),
+                AnimalInstinct::Cephalopod => Color::rgb(186, 104, 200),
+                AnimalInstinct::Canine => Color::rgb(255, 183, 77),
+                AnimalInstinct::Feline => Color::rgb(255, 112, 67),
+                AnimalInstinct::Avian => Color::rgb(255, 213, 79),
+                AnimalInstinct::Amphibian => Color::rgb(76, 175, 80),
+                AnimalInstinct::Spectral => Color::rgb(128, 255, 219),
+                AnimalInstinct::Bovine => Color::rgb(129, 199, 132),
+            }
+        };
+        let glow_radius = if dna.glow.radius > 0.0 {
+            dna.glow.radius
+        } else {
+            4.0
+        };
         Self {
             cow_text,
             palette,
             glow_color,
-            glow_radius: dna.glow.radius,
+            glow_radius,
             easing_fn: easing::by_name(&dna.easing.base),
             phase,
             speed: dna.speed,
             color_mode,
+            instinct,
         }
     }
 }
@@ -838,11 +1414,18 @@ impl Effect for PulseEffect {
             let (r, g, b) = lerp_palette(&self.palette, intensity);
             Color::rgb(r, g, b)
         };
-        render_text(fb, &self.cow_text, color, &self.color_mode, time);
+        render_text_palette(
+            fb,
+            &self.cow_text,
+            color,
+            &self.color_mode,
+            &self.palette,
+            time,
+        );
 
-        // Apply glow at center of cow
+        // Apply signature wildlife aura glow at center of mascot
         let cx = fb.width as f32 / 2.0;
-        let cy = fb.height as f32 * 0.3;
+        let cy = fb.height as f32 * 0.35;
         let glow_intensity = intensity * 0.5;
         apply_glow(
             fb,
@@ -852,6 +1435,28 @@ impl Effect for PulseEffect {
             self.glow_color,
             glow_intensity,
         );
+
+        // Natural Wildlife Instinct pulse particles
+        match self.instinct {
+            AnimalInstinct::Dragon => {
+                if intensity > 0.6 {
+                    let rx = ((time * 11.0) as usize) % fb.width.max(1);
+                    let ry = ((time * 7.0) as usize) % fb.height.max(1);
+                    let _ = fb.set(rx, ry, Cell::new('*', Color::rgb(255, 68, 0)));
+                }
+            }
+            AnimalInstinct::Spectral if intensity > 0.6 => {
+                let rx = ((time * 9.0) as usize) % fb.width.max(1);
+                let ry = ((time * 5.0) as usize) % fb.height.max(1);
+                let _ = fb.set(rx, ry, Cell::new('✦', Color::rgb(189, 147, 249)));
+            }
+            AnimalInstinct::Marine if intensity > 0.6 => {
+                let rx = ((time * 8.0) as usize) % fb.width.max(1);
+                let ry = ((time * 6.0) as usize) % fb.height.max(1);
+                let _ = fb.set(rx, ry, Cell::new('°', Color::rgb(0, 229, 255)));
+            }
+            _ => {}
+        }
     }
 }
 
@@ -866,6 +1471,7 @@ pub struct GlitchEffect {
     speed: f32,
     color_mode: String,
     palette: Vec<(u8, u8, u8)>,
+    instinct: AnimalInstinct,
 }
 
 impl GlitchEffect {
@@ -884,6 +1490,7 @@ impl GlitchEffect {
             }
         }
         let palette = crate::color::parse_palette(&dna.palette);
+        let instinct = detect_animal_instinct(&cow_text, dna);
         Self {
             cow_text,
             body_coords,
@@ -891,6 +1498,7 @@ impl GlitchEffect {
             speed: dna.speed,
             color_mode,
             palette,
+            instinct,
         }
     }
 }
@@ -910,7 +1518,33 @@ impl Effect for GlitchEffect {
         if self.body_coords.is_empty() || fb.width == 0 || fb.height == 0 {
             return;
         }
-        let glitch_chars = ['0', '1', '#', '@', '█', '▓'];
+        let (glitch_chars, c1, c2) = match self.instinct {
+            AnimalInstinct::Dragon => (
+                &['*', '^', '#', '@', '§', '»'][..],
+                Color::rgb(255, 68, 0),
+                Color::rgb(255, 204, 0),
+            ),
+            AnimalInstinct::Marine => (
+                &['~', 'o', '°', '≈', '*', '#'][..],
+                Color::rgb(0, 229, 255),
+                Color::rgb(0, 150, 255),
+            ),
+            AnimalInstinct::Cephalopod => (
+                &['@', '%', '*', '§', '&', '#'][..],
+                Color::rgb(186, 104, 200),
+                Color::rgb(0, 255, 204),
+            ),
+            AnimalInstinct::Spectral => (
+                &['✦', '✧', '0', '1', '·', '█'][..],
+                Color::rgb(128, 255, 219),
+                Color::rgb(189, 147, 249),
+            ),
+            _ => (
+                &['0', '1', '#', '@', '█', '▓'][..],
+                Color::rgb(0, 255, 0),
+                Color::rgb(255, 0, 0),
+            ),
+        };
         let t = time * self.speed + self.phase;
         let intensity = (t * 3.0).sin() * 0.5 + 0.5;
         let count = ((intensity * 8.0) as usize).min(self.body_coords.len());
@@ -921,11 +1555,7 @@ impl Effect for GlitchEffect {
             let (x, y) = self.body_coords[coord_idx];
             if x < fb.width && y < fb.height {
                 let ch = glitch_chars[(seed as usize) % glitch_chars.len()];
-                let c = if seed % 2 == 0 {
-                    Color::rgb(0, 255, 0)
-                } else {
-                    Color::rgb(255, 0, 0)
-                };
+                let c = if seed % 2 == 0 { c1 } else { c2 };
                 let _ = fb.set(x, y, Cell::new(ch, c));
             }
         }
@@ -946,6 +1576,7 @@ pub struct FlyEffect {
     color_mode: String,
     palette: Vec<(u8, u8, u8)>,
     is_nyan: bool,
+    instinct: AnimalInstinct,
     pub body: crate::kinematics::KinematicBody,
     elapsed: f32,
 }
@@ -962,6 +1593,7 @@ impl FlyEffect {
         body.vy = 0.0;
         let lower = cow_text.to_ascii_lowercase();
         let is_nyan = cow_text.contains("-_-_") || lower.contains("nyan");
+        let instinct = detect_animal_instinct(&cow_text, dna);
         let palette = crate::color::parse_palette(&dna.palette);
         Self {
             cow_text,
@@ -974,6 +1606,7 @@ impl FlyEffect {
             color_mode,
             palette,
             is_nyan,
+            instinct,
             body,
             elapsed: 0.0,
         }
@@ -1126,13 +1759,14 @@ impl Effect for FlyEffect {
             if y >= fb.height {
                 return;
             }
+            let hull = find_line_hull(line);
 
             // Speech/thought bubble: strictly anchored at (0, 0), completely untouched
             if y < self.cow_start_line {
                 for (x, ch) in line.chars().enumerate() {
                     if x < fb.width {
                         let cell_fg = resolve_fg(&self.color_mode, x, y, time, Color::WHITE);
-                        let _ = fb.set(x, y, Cell::new(ch, cell_fg));
+                        draw_char_with_hull(fb, x, y, x, hull, ch, cell_fg);
                     }
                 }
                 y += 1;
@@ -1158,9 +1792,9 @@ impl Effect for FlyEffect {
                         time,
                         Color::WHITE,
                     );
-                    let _ = fb.set(x, y, Cell::new('-', cell_fg));
+                    draw_char_with_hull(fb, x, y, x, hull, '-', cell_fg);
                     if x + 1 < fb.width {
-                        let _ = fb.set(x + 1, y, Cell::new('-', cell_fg));
+                        draw_char_with_hull(fb, x + 1, y, x + 1, hull, '-', cell_fg);
                     }
                     x += 2;
                     continue;
@@ -1177,11 +1811,74 @@ impl Effect for FlyEffect {
 
                 let cell_fg =
                     resolve_fg_palette(&self.color_mode, &self.palette, x, y, time, Color::WHITE);
-                let _ = fb.set(x, y, Cell::new(ch, cell_fg));
+                draw_char_with_hull(fb, x, y, x, hull, ch, cell_fg);
                 x += 1;
             }
             y += 1;
         });
+
+        // Natural Wildlife Instinct trailing flight particles:
+        match self.instinct {
+            AnimalInstinct::Dragon => {
+                let ember_colors = [
+                    Color::rgb(255, 34, 0),
+                    Color::rgb(255, 102, 0),
+                    Color::rgb(255, 204, 0),
+                ];
+                for i in 0..4 {
+                    let seed = i * 17 + (time * 10.0) as usize;
+                    let ex = (seed * 7 + 13) % fb.width.max(1);
+                    let ey = (seed * 3 + self.cow_start_line) % fb.height.max(1);
+                    let _ = fb.set(ex, ey, Cell::new('*', ember_colors[i % ember_colors.len()]));
+                }
+            }
+            AnimalInstinct::Marine => {
+                // Ocean spray
+                for i in 0..4 {
+                    let seed = i * 23 + (time * 8.0) as usize;
+                    let ex = (seed * 5 + 7) % fb.width.max(1);
+                    let ey = (seed * 3 + self.cow_start_line) % fb.height.max(1);
+                    let _ = fb.set(ex, ey, Cell::new('~', Color::rgb(0, 229, 255)));
+                }
+            }
+            AnimalInstinct::Avian => {
+                // Aerodynamic feather motes
+                for i in 0..3 {
+                    let seed = i * 19 + (time * 6.0) as usize;
+                    let ex = (seed * 9 + 5) % fb.width.max(1);
+                    let ey = (seed * 4 + self.cow_start_line) % fb.height.max(1);
+                    let _ = fb.set(ex, ey, Cell::new('\'', Color::rgb(255, 213, 79)));
+                }
+            }
+            AnimalInstinct::Spectral => {
+                // Trailing stardust
+                for i in 0..4 {
+                    let seed = i * 31 + (time * 7.0) as usize;
+                    let ex = (seed * 11 + 3) % fb.width.max(1);
+                    let ey = (seed * 5 + self.cow_start_line) % fb.height.max(1);
+                    let _ = fb.set(ex, ey, Cell::new('✦', Color::rgb(189, 147, 249)));
+                }
+            }
+            AnimalInstinct::Canine => {
+                // Flying Ace Snoopy trailing wind gusts
+                for i in 0..3 {
+                    let seed = i * 13 + (time * 7.0) as usize;
+                    let ex = (seed * 8 + 4) % fb.width.max(1);
+                    let ey = (seed * 2 + self.cow_start_line) % fb.height.max(1);
+                    let _ = fb.set(ex, ey, Cell::new('~', Color::rgb(224, 224, 224)));
+                }
+            }
+            AnimalInstinct::Cephalopod => {
+                // Jet propulsion water bubbles
+                for i in 0..4 {
+                    let seed = i * 15 + (time * 8.0) as usize;
+                    let ex = (seed * 6 + 10) % fb.width.max(1);
+                    let ey = (seed * 3 + self.cow_start_line) % fb.height.max(1);
+                    let _ = fb.set(ex, ey, Cell::new('°', Color::rgb(0, 255, 204)));
+                }
+            }
+            _ => {}
+        }
     }
 }
 
@@ -1201,6 +1898,7 @@ pub struct TalkEffect {
     speed: f32,
     color_mode: String,
     palette: Vec<(u8, u8, u8)>,
+    instinct: AnimalInstinct,
 }
 
 impl TalkEffect {
@@ -1234,6 +1932,7 @@ impl TalkEffect {
         }
 
         let palette = crate::color::parse_palette(&dna.palette);
+        let instinct = detect_animal_instinct(&cow_text, dna);
 
         Self {
             cow_text,
@@ -1247,6 +1946,7 @@ impl TalkEffect {
             speed: dna.speed,
             color_mode,
             palette,
+            instinct,
         }
     }
 }
@@ -1273,13 +1973,14 @@ impl Effect for TalkEffect {
             if y >= fb.height {
                 return;
             }
+            let hull = find_line_hull(line);
 
             // Speech/thought bubble lines: preserve characters verbatim!
             if y < self.cow_start_line {
                 for (x, ch) in line.chars().enumerate() {
                     if x < fb.width {
                         let cell_fg = resolve_fg(&self.color_mode, x, y, time, Color::WHITE);
-                        let _ = fb.set(x, y, Cell::new(ch, cell_fg));
+                        draw_char_with_hull(fb, x, y, x, hull, ch, cell_fg);
                     }
                 }
                 y += 1;
@@ -1306,7 +2007,7 @@ impl Effect for TalkEffect {
                             time,
                             Color::WHITE,
                         );
-                        let _ = fb.set(x, y, Cell::new(display_ch, cell_fg));
+                        draw_char_with_hull(fb, x, y, x, hull, display_ch, cell_fg);
                         continue;
                     }
                 }
@@ -1325,10 +2026,46 @@ impl Effect for TalkEffect {
 
                 let cell_fg =
                     resolve_fg_palette(&self.color_mode, &self.palette, x, y, time, Color::WHITE);
-                let _ = fb.set(x, y, Cell::new(display_ch, cell_fg));
+                draw_char_with_hull(fb, x, y, x, hull, display_ch, cell_fg);
             }
             y = y.saturating_add(1);
         });
+
+        // Natural Wildlife Instinct vocal emissions:
+        if mouth_ch == 'o' || mouth_ch == 'O' || mouth_ch == 'W' {
+            if let Some((my, mx)) = self.mouth_pos {
+                let px = if mx > 2 { mx - 1 } else { mx + 2 };
+                if px < fb.width && my < fb.height {
+                    match self.instinct {
+                        AnimalInstinct::Dragon => {
+                            let puff_ch = if mouth_ch == 'O' { '»' } else { '*' };
+                            let _ = fb.set(px, my, Cell::new(puff_ch, Color::rgb(255, 68, 0)));
+                        }
+                        AnimalInstinct::Marine => {
+                            let b_ch = if mouth_ch == 'O' { 'O' } else { 'o' };
+                            let _ = fb.set(px, my, Cell::new(b_ch, Color::rgb(0, 229, 255)));
+                        }
+                        AnimalInstinct::Cephalopod => {
+                            let ink_ch = if mouth_ch == 'O' { '@' } else { '*' };
+                            let _ = fb.set(px, my, Cell::new(ink_ch, Color::rgb(142, 36, 170)));
+                        }
+                        AnimalInstinct::Canine => {
+                            let bark_ch = if mouth_ch == 'O' { '!' } else { '>' };
+                            let _ = fb.set(px, my, Cell::new(bark_ch, Color::rgb(255, 183, 77)));
+                        }
+                        AnimalInstinct::Avian => {
+                            let note_ch = if mouth_ch == 'O' { '♫' } else { '♪' };
+                            let _ = fb.set(px, my, Cell::new(note_ch, Color::rgb(0, 230, 118)));
+                        }
+                        AnimalInstinct::Spectral => {
+                            let spark_ch = if mouth_ch == 'O' { '⚡' } else { '*' };
+                            let _ = fb.set(px, my, Cell::new(spark_ch, Color::rgb(128, 255, 219)));
+                        }
+                        _ => {}
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -1346,6 +2083,7 @@ pub struct SwayEffect {
     speed: f32,
     color_mode: String,
     palette: Vec<(u8, u8, u8)>,
+    instinct: AnimalInstinct,
 }
 
 impl SwayEffect {
@@ -1354,16 +2092,22 @@ impl SwayEffect {
         let line_offsets = compute_line_offsets(&cow_text);
         let cow_start_line = find_cow_start_line(&cow_text);
         let palette = crate::color::parse_palette(&dna.palette);
+        let instinct = detect_animal_instinct(&cow_text, dna);
+        let mut amp = dna.amplitude.clone();
+        if amp.sway <= 0.05 {
+            amp.sway = 0.35;
+        }
         Self {
             cow_text,
             line_offsets,
             cow_start_line,
-            amp: dna.amplitude.clone(),
+            amp,
             easing_fn: easing::by_name(&dna.easing.base),
             phase,
             speed: dna.speed,
             color_mode,
             palette,
+            instinct,
         }
     }
 }
@@ -1383,6 +2127,7 @@ impl Effect for SwayEffect {
             if i >= fb.height {
                 return;
             }
+            let hull = find_line_hull(line);
 
             // Speech/thought bubble: STRICTLY anchored at x_off = 0! NEVER skewed or shifted!
             let x_off = if i < self.cow_start_line {
@@ -1391,24 +2136,31 @@ impl Effect for SwayEffect {
                 let rel_i = i - self.cow_start_line;
                 // Progressive skew on the creature itself: top of creature = max, bottom feet = 0
                 let skew_factor = 1.0 - (rel_i as f32 / cow_lines as f32);
-                ((eased * self.amp.sway * 4.0 - 2.0) * skew_factor) as i32
+                let base_skew = ((eased - 0.5) * 4.0 * self.amp.sway) * skew_factor;
+                // Serpentine sine wave for amphibians / vipers:
+                let wave_skew = if self.instinct == AnimalInstinct::Amphibian {
+                    ((time * 4.0 + rel_i as f32 * 0.6).sin() * 1.2) as i32
+                } else {
+                    0
+                };
+                base_skew as i32 + wave_skew
             };
 
             let mut x = 0usize;
             for ch in line.chars() {
                 let xi = x as i32 + x_off;
                 if xi >= 0 {
-                    let xi = xi as usize;
-                    if xi < fb.width {
+                    let uxi = xi as usize;
+                    if uxi < fb.width {
                         let cell_fg = resolve_fg_palette(
                             &self.color_mode,
                             &self.palette,
-                            xi,
+                            uxi,
                             i,
                             time,
                             Color::WHITE,
                         );
-                        let _ = fb.set(xi, i, Cell::new(ch, cell_fg));
+                        draw_char_with_hull(fb, uxi, i, x, hull, ch, cell_fg);
                     }
                 }
                 x = x.saturating_add(1);
@@ -1539,6 +2291,48 @@ impl Effect for DissolveEffect {
 
 // ── Shared helpers ─────────────────────────────────────────────────
 
+/// Determine the bounding hull (first and last non-space character column) for a line.
+#[inline]
+pub(crate) fn find_line_hull(line: &str) -> Option<(usize, usize)> {
+    let mut start = None;
+    let mut end = None;
+    for (i, ch) in line.chars().enumerate() {
+        if ch != ' ' {
+            if start.is_none() {
+                start = Some(i);
+            }
+            end = Some(i);
+        }
+    }
+    start.zip(end)
+}
+
+/// Render a cell respecting bounding-hull occlusion:
+/// - If `ch != ' '`: draws the character with fg color.
+/// - If `ch == ' '` and inside hull: draws opaque blank to prevent background scenery bleed.
+/// - If `ch == ' '` and outside hull (leading or trailing): leaves framebuffer untouched so scenery shows.
+#[inline]
+pub(crate) fn draw_char_with_hull(
+    fb: &mut FrameBuffer,
+    x: usize,
+    y: usize,
+    orig_col: usize,
+    hull: Option<(usize, usize)>,
+    ch: char,
+    fg: Color,
+) {
+    if x >= fb.width || y >= fb.height {
+        return;
+    }
+    if ch != ' ' {
+        let _ = fb.set(x, y, Cell::new(ch, fg));
+    } else if let Some((start, end)) = hull {
+        if orig_col >= start && orig_col <= end {
+            let _ = fb.set(x, y, Cell::new(' ', Color::WHITE));
+        }
+    }
+}
+
 /// Pre-compute byte offsets for each line in text (for zero-alloc iteration).
 fn compute_line_offsets(text: &str) -> Vec<usize> {
     let mut offsets = Vec::with_capacity(16);
@@ -1577,11 +2371,11 @@ pub(crate) fn resolve_fg_palette(
     base: Color,
 ) -> Color {
     match color_mode {
-        "rainbow" => {
+        "rainbow" | "lolcat" => {
             let (r, g, b) = crate::color::lolcat_color(x as f32, y as f32, time, 0.0);
             Color { r, g, b, a: 255 }
         }
-        "animal" => {
+        "default" | "animal" => {
             if !palette.is_empty() {
                 let (r, g, b) = crate::color::palette_gradient(palette, x as f32, y as f32, time);
                 Color { r, g, b, a: 255 }
@@ -1589,7 +2383,7 @@ pub(crate) fn resolve_fg_palette(
                 base
             }
         }
-        "solid" => Color::WHITE,
+        "solid" | "static" | "white" => Color::WHITE,
         "none" => base,
         _ => {
             if color_mode.starts_with('#') {
@@ -1672,21 +2466,9 @@ fn render_text_offset_palette(
             break;
         }
 
-        // Determine bounding hull without allocating a Vec<char>
-        let mut first_non_ws = None;
-        let mut last_non_ws = None;
-        for (x, ch) in line.chars().enumerate() {
-            if ch != ' ' {
-                if first_non_ws.is_none() {
-                    first_non_ws = Some(x);
-                }
-                last_non_ws = Some(x);
-            }
-        }
-
-        let (hull_start, hull_end) = match (first_non_ws, last_non_ws) {
-            (Some(s), Some(e)) => (s, e),
-            _ => continue, // Entirely whitespace line — skip
+        let (hull_start, hull_end) = match find_line_hull(line) {
+            Some(h) => h,
+            None => continue, // Entirely whitespace line — skip
         };
 
         for (x, ch) in line.chars().enumerate() {
@@ -1699,15 +2481,8 @@ fn render_text_offset_palette(
                 break;
             }
 
-            if ch != ' ' {
-                // Visible character — always draw
-                let cell_fg = resolve_fg_palette(color_mode, palette, uxi, uyi, time, fg);
-                let _ = fb.set(uxi, uyi, Cell::new(ch, cell_fg));
-            } else if x >= hull_start && x <= hull_end {
-                // Space inside bounding hull — write opaque blank to occlude scenery
-                let _ = fb.set(uxi, uyi, Cell::new(' ', Color::WHITE));
-            }
-            // Space outside hull — leave transparent (background shows through edges)
+            let cell_fg = resolve_fg_palette(color_mode, palette, uxi, uyi, time, fg);
+            draw_char_with_hull(fb, uxi, uyi, x, Some((hull_start, hull_end)), ch, cell_fg);
         }
     }
 }
@@ -1800,6 +2575,27 @@ impl CompoundSignatureEffect {
             base_effect,
         }
     }
+
+    /// Construct a CompoundSignatureEffect wrapping an explicit base effect.
+    pub fn with_base(
+        cow_text: String,
+        dna: CowDna,
+        instance_id: u32,
+        base_effect: Box<dyn Effect>,
+    ) -> Self {
+        let phase = instance_phase(dna.phase_seed, instance_id);
+        let speed = dna.speed;
+        Self {
+            cow_text,
+            dna,
+            pool: ParticlePool::new(),
+            spawn_timer: 0.0,
+            phase,
+            speed,
+            instance_id,
+            base_effect,
+        }
+    }
 }
 
 impl Effect for CompoundSignatureEffect {
@@ -1862,8 +2658,9 @@ impl Effect for CompoundSignatureEffect {
 
 /// Create an effect for a scene configuration and DNA.
 /// - If `effect_name` is `"static"`, returns `StaticEffect`.
-/// - If `effect_name` is `"default"`, returns the animal's unique `CompoundSignatureEffect`.
-/// - If `effect_name` is a specific effect name (e.g. `"breathe"`, `"walk"`, `"pulse"`), overrides with that effect.
+/// - If `effect_name` is `"default"`, uses the animal's signature base animation.
+/// - If the animal's DNA defines particles or radial glow, they are ALWAYS preserved
+///   by wrapping the base effect in `CompoundSignatureEffect`.
 pub fn create_scene_effect(
     effect_name: &str,
     cow_text: String,
@@ -1871,74 +2668,108 @@ pub fn create_scene_effect(
     instance_id: u32,
     color_mode: &str,
 ) -> Box<dyn Effect> {
-    match effect_name.trim().to_ascii_lowercase().as_str() {
-        "static" => Box::new(StaticEffect::new(cow_text, color_mode.to_string())),
+    let eff = effect_name.trim().to_ascii_lowercase();
+    if eff == "static" {
+        return Box::new(StaticEffect::new(cow_text, color_mode.to_string()));
+    }
+
+    let base: Box<dyn Effect> = match eff.as_str() {
         "breathe" => Box::new(BreatheEffect::new(
-            cow_text,
+            cow_text.clone(),
             &dna,
             instance_id,
             color_mode.to_string(),
         )),
         "float" => Box::new(FloatEffect::new(
-            cow_text,
+            cow_text.clone(),
             &dna,
             instance_id,
             color_mode.to_string(),
         )),
         "walk" => Box::new(WalkEffect::new(
-            cow_text,
+            cow_text.clone(),
             &dna,
             instance_id,
             color_mode.to_string(),
         )),
         "particles" => Box::new(ParticlesEffect::new(
-            cow_text,
-            dna,
+            cow_text.clone(),
+            dna.clone(),
             instance_id,
             color_mode.to_string(),
         )),
         "pulse" => Box::new(PulseEffect::new(
-            cow_text,
+            cow_text.clone(),
             &dna,
             instance_id,
             color_mode.to_string(),
         )),
         "glitch" => Box::new(GlitchEffect::new(
-            cow_text,
+            cow_text.clone(),
             &dna,
             instance_id,
             color_mode.to_string(),
         )),
         "fly" => Box::new(FlyEffect::new(
-            cow_text,
+            cow_text.clone(),
             &dna,
             instance_id,
             color_mode.to_string(),
         )),
         "talk" => Box::new(TalkEffect::new(
-            cow_text,
+            cow_text.clone(),
             &dna,
             instance_id,
             color_mode.to_string(),
         )),
-        "sway" => Box::new(SwayEffect::new(
-            cow_text,
+        "sway" | "liquid" | "flow" => Box::new(SwayEffect::new(
+            cow_text.clone(),
             &dna,
             instance_id,
             color_mode.to_string(),
         )),
         "dissolve" => Box::new(DissolveEffect::new(
-            cow_text,
+            cow_text.clone(),
             &dna,
             instance_id,
             color_mode.to_string(),
         )),
-        _ => Box::new(CompoundSignatureEffect::new(
-            cow_text,
-            dna,
+        "squish" | "bounce" => Box::new(BreatheEffect::new(
+            cow_text.clone(),
+            &dna,
             instance_id,
             color_mode.to_string(),
         )),
+        "matrix" | "digital" => Box::new(GlitchEffect::new(
+            cow_text.clone(),
+            &dna,
+            instance_id,
+            color_mode.to_string(),
+        )),
+        "abduction" | "beam" => Box::new(FloatEffect::new(
+            cow_text.clone(),
+            &dna,
+            instance_id,
+            color_mode.to_string(),
+        )),
+        _ => create_effect(
+            dna.base,
+            cow_text.clone(),
+            dna.clone(),
+            instance_id,
+            color_mode,
+        ),
+    };
+
+    if dna.particles.rate > 0 || (dna.glow.radius > 0.0 && dna.glow.color != "#ffffff") {
+        Box::new(CompoundSignatureEffect::with_base(
+            cow_text,
+            dna,
+            instance_id,
+            base,
+        ))
+    } else {
+        base
     }
 }
 
@@ -2006,6 +2837,31 @@ pub fn create_effect(
             color_mode.to_string(),
         )),
         BaseAnim::Dissolve => Box::new(DissolveEffect::new(
+            cow_text,
+            &dna,
+            instance_id,
+            color_mode.to_string(),
+        )),
+        // Extended animation types map to their closest existing effect
+        BaseAnim::Liquid => Box::new(SwayEffect::new(
+            cow_text,
+            &dna,
+            instance_id,
+            color_mode.to_string(),
+        )),
+        BaseAnim::Squish => Box::new(BreatheEffect::new(
+            cow_text,
+            &dna,
+            instance_id,
+            color_mode.to_string(),
+        )),
+        BaseAnim::Matrix => Box::new(GlitchEffect::new(
+            cow_text,
+            &dna,
+            instance_id,
+            color_mode.to_string(),
+        )),
+        BaseAnim::Abduction => Box::new(FloatEffect::new(
             cow_text,
             &dna,
             instance_id,
@@ -2522,7 +3378,7 @@ mod tests {
             0,
             "animal".to_string(),
         );
-        assert!(effect.is_marine);
+        assert_eq!(effect.instinct, AnimalInstinct::Marine);
 
         let mut fb = FrameBuffer::new(80, 24);
         effect.render(&mut fb, 0.5);
@@ -2810,6 +3666,10 @@ mod tests {
             BaseAnim::Talk,
             BaseAnim::Sway,
             BaseAnim::Dissolve,
+            BaseAnim::Liquid,
+            BaseAnim::Squish,
+            BaseAnim::Matrix,
+            BaseAnim::Abduction,
         ];
         for base in &bases {
             let mut effect = create_effect(*base, COW.to_string(), dna.clone(), 0, "static");
@@ -2892,6 +3752,10 @@ mod tests {
             BaseAnim::Talk,
             BaseAnim::Sway,
             BaseAnim::Dissolve,
+            BaseAnim::Liquid,
+            BaseAnim::Squish,
+            BaseAnim::Matrix,
+            BaseAnim::Abduction,
         ];
         for base in &bases {
             let mut effect = create_effect(*base, COW.to_string(), dna.clone(), 0, "static");
@@ -2921,6 +3785,10 @@ mod tests {
             BaseAnim::Talk,
             BaseAnim::Sway,
             BaseAnim::Dissolve,
+            BaseAnim::Liquid,
+            BaseAnim::Squish,
+            BaseAnim::Matrix,
+            BaseAnim::Abduction,
         ];
         for base in &bases {
             let mut effect = create_effect(*base, COW.to_string(), dna.clone(), 0, "static");
@@ -2950,6 +3818,10 @@ mod tests {
             BaseAnim::Talk,
             BaseAnim::Sway,
             BaseAnim::Dissolve,
+            BaseAnim::Liquid,
+            BaseAnim::Squish,
+            BaseAnim::Matrix,
+            BaseAnim::Abduction,
         ];
         for base in &bases {
             let mut effect = create_effect(*base, COW.to_string(), dna.clone(), 0, "static");

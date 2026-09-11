@@ -213,7 +213,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
 
       - name: Build engine
-        run: cargo build --release -p forgum-engine
+        run: cargo build --release -p forgum-engine --bin forgum
 
       - name: Install WiX
         continue-on-error: true

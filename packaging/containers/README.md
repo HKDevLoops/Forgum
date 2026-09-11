@@ -11,7 +11,7 @@ Designed for Windows Container hosts running Podman or Docker in Windows contain
 ### Features
 - **Base Image:** `mcr.microsoft.com/powershell:lts-nanoserver-ltsc2022`
 - **Config:** Preconfigured at `C:\Users\ContainerUser\.config\forgum\config.json`
-- **Prompt Hook:** Automatically injects `forgum-engine init pwsh` into `$PROFILE`
+- **Prompt Hook:** Automatically injects `forgum init pwsh` into `$PROFILE`
 - **Engine Features:** 30 FPS, TrueColor rendering, `tux` mascot with speech wrapping
 
 ### Build & Run

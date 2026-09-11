@@ -160,6 +160,7 @@ pub struct Cli {
     /// Lock terminal scroll margins below the background animation (DECSTBM).
     #[arg(
         long,
+        alias = "split",
         global = true,
         help = "Lock terminal scroll margins below background animation (DECSTBM)",
         long_help = "Configure DECSTBM terminal scroll margins so terminal output scrolls cleanly beneath the persistent animation banner without pushing it off screen."
@@ -306,9 +307,29 @@ pub enum Commands {
         #[arg(default_value = "")]
         tab: String,
     },
-    /// First-time setup wizard & shell installer with host diagnostics.
+    /// First-time celestial setup wizard & shell installer with host diagnostics.
     #[command(alias = "setup", alias = "wizard", alias = "installer")]
-    Install,
+    Install {
+        /// Force headless installation without interactive terminal UI.
+        #[arg(long)]
+        headless: bool,
+        /// Allow or decline anonymous motivation telemetry: 'allow' (yes) or 'decline' (no).
+        #[arg(long, value_name = "CONSENT")]
+        telemetry: Option<String>,
+    },
+    /// Cleanly uninstall Forgum from your environment with user-directed choice.
+    #[command(alias = "remove", alias = "deorbit", alias = "uninstaller")]
+    Uninstall {
+        /// Uninstallation method: 'soft' (keep configs & custom cows) or 'purge' (clean slate).
+        #[arg(short = 'm', long, value_name = "METHOD")]
+        method: Option<String>,
+        /// Automatically confirm uninstallation without interactive prompts.
+        #[arg(short = 'y', long, alias = "yes")]
+        non_interactive: bool,
+        /// Force interactive celestial uninstaller TUI wizard.
+        #[arg(long)]
+        tui: bool,
+    },
     /// Check for updates or upgrade Forgum using the detected package manager.
     #[command(alias = "upgrade")]
     Update {
@@ -372,6 +393,7 @@ pub enum Commands {
         migrate: Option<String>,
     },
     /// View, query, or clear structured engine logs.
+    #[command(name = "logs", alias = "log", alias = "view-logs", alias = "show-logs")]
     Logs {
         /// Number of recent log lines to display.
         #[arg(short = 'n', long, alias = "limit", default_value = "25")]
@@ -383,14 +405,49 @@ pub enum Commands {
         #[arg(long)]
         json: bool,
         /// Follow / stream live logs in real time.
-        #[arg(long)]
+        #[arg(short = 'w', long, alias = "tail", alias = "watch")]
         follow: bool,
         /// Print the absolute path to the log files and directory.
-        #[arg(long)]
+        #[arg(short = 'p', long)]
         path: bool,
+        /// Open the log directory or file in the default system editor/explorer.
+        #[arg(short = 'o', long, alias = "edit")]
+        open: bool,
+        /// Output the raw unformatted text log directly (cat/dump).
+        #[arg(long, alias = "cat", alias = "dump")]
+        raw: bool,
+        /// Filter/search logs by keyword or substring.
+        #[arg(
+            short = 's',
+            short_alias = 'q',
+            long,
+            alias = "grep",
+            alias = "query",
+            alias = "search"
+        )]
+        filter: Option<String>,
         /// Clear/truncate existing log files.
-        #[arg(long)]
+        #[arg(long, alias = "clean")]
         clear: bool,
+        /// Run intelligent diagnostic triage to detect uprising bugs, root causes, and developer hints.
+        #[arg(
+            short = 'D',
+            long,
+            alias = "bugs",
+            alias = "diagnose",
+            alias = "triage"
+        )]
+        diagnose: bool,
+    },
+    /// Run diagnostic triage across logs and subsystems to pinpoint bugs and resolutions.
+    #[command(name = "diagnose", alias = "triage", alias = "bugradar")]
+    Diagnose {
+        /// Number of recent log entries to analyze (default: 100).
+        #[arg(short = 'n', long, alias = "limit", default_value = "100")]
+        lines: usize,
+        /// Output raw JSON report instead of formatted ANSI terminal report.
+        #[arg(long)]
+        json: bool,
     },
     /// tmux integration subcommands.
     Tmux {
@@ -443,6 +500,9 @@ pub enum Commands {
         #[arg(long, default_value = "Bob")]
         name2: String,
     },
+    /// Emergency recovery command to restore terminal cursor, disable raw mode, clear temporary pipes, and exit cleanly.
+    #[command(alias = "clean")]
+    Sweep,
 }
 
 #[derive(Debug, Subcommand)]
@@ -476,6 +536,50 @@ pub enum HerdSub {
     Effect {
         /// Effect name.
         name: String,
+        /// Filter by session ID.
+        #[arg(long)]
+        session: Option<String>,
+        /// Apply to all daemons.
+        #[arg(long)]
+        all: bool,
+    },
+    /// Set cow/animal model on all (or filtered) daemons.
+    Cow {
+        /// Cow name or alias.
+        name: String,
+        /// Filter by session ID.
+        #[arg(long)]
+        session: Option<String>,
+        /// Apply to all daemons.
+        #[arg(long)]
+        all: bool,
+    },
+    /// Set eyes glyph on all (or filtered) daemons.
+    Eyes {
+        /// Eyes string (e.g. 'oo', '^^', '$$', '..').
+        eyes: String,
+        /// Filter by session ID.
+        #[arg(long)]
+        session: Option<String>,
+        /// Apply to all daemons.
+        #[arg(long)]
+        all: bool,
+    },
+    /// Set tongue glyph on all (or filtered) daemons.
+    Tongue {
+        /// Tongue string (e.g. 'U ', '||').
+        tongue: String,
+        /// Filter by session ID.
+        #[arg(long)]
+        session: Option<String>,
+        /// Apply to all daemons.
+        #[arg(long)]
+        all: bool,
+    },
+    /// Set color mode on all (or filtered) daemons.
+    Color {
+        /// Color mode (e.g. 'rainbow', 'aurora', 'matrix', 'fire', 'pastel').
+        mode: String,
         /// Filter by session ID.
         #[arg(long)]
         session: Option<String>,
@@ -632,8 +736,11 @@ pub enum Command {
     Doctor,
     Checkhealth,
     Logs,
+    Diagnose,
     Install,
+    Uninstall,
     Update,
+    Sweep,
     Unknown(String),
 }
 
@@ -785,9 +892,12 @@ pub fn parse_args(argv: Vec<String>) -> Result<(Args, Option<Commands>), CliErro
         Some(Commands::Doctor) => (Command::Doctor, None, false),
         Some(Commands::Checkhealth { .. }) => (Command::Checkhealth, None, false),
         Some(Commands::Logs { .. }) => (Command::Logs, None, false),
+        Some(Commands::Diagnose { .. }) => (Command::Diagnose, None, false),
         Some(Commands::List { .. }) => (Command::List, None, false),
-        Some(Commands::Install) => (Command::Install, None, false),
+        Some(Commands::Install { .. }) => (Command::Install, None, false),
+        Some(Commands::Uninstall { .. }) => (Command::Uninstall, None, false),
         Some(Commands::Update { .. }) => (Command::Update, None, false),
+        Some(Commands::Sweep) => (Command::Sweep, None, false),
     };
 
     let max_len = match &cli.command {
@@ -1053,6 +1163,7 @@ pub fn generate_command_suggestion(query: &str) -> Option<String> {
                 "render", "think", "fortune", "tui", "init", "completions", "list",
                 "status", "doctor", "checkhealth", "config", "logs", "tmux", "status-line",
                 "herd", "theme", "demo", "showcase", "remote", "say", "timer", "battle",
+                "sweep", "clean",
                 "--animal", "--animation", "--effect", "--environment", "--road", "--mountain",
                 "--color-mode", "--palette", "--thought-interval", "--split-scroll", "--text",
                 "--think", "--background", "--banner", "--duration", "--fps", "--list",

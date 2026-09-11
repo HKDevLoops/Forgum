@@ -168,8 +168,8 @@ Look for this block (typically near the `# Modules` or `# Forgum Shell Hook` sec
 
 ```powershell
 # ---------- Forgum Shell Hook ----------
-if (Get-Command forgum-engine -ErrorAction Ignore) {
-    Invoke-Expression (forgum-engine init pwsh 2>$null)
+if (Get-Command forgum -ErrorAction Ignore) {
+    Invoke-Expression (forgum init pwsh 2>$null)
 }
 ```
 
@@ -179,7 +179,7 @@ if (Get-Command forgum-engine -ErrorAction Ignore) {
 notepad $PROFILE
 ```
 
-Remove any lines referencing `forgum-engine`, `forgum init`, or `Forgum`.
+Remove any lines referencing `forgum`, `forgum init`, or `Forgum`.
 
 ### bash
 
@@ -192,7 +192,7 @@ Look for and remove:
 
 ```sh
 # Look for lines like these:
-eval "$(forgum-engine init bash)"
+eval "$(forgum init bash)"
 ```
 
 ### zsh
@@ -204,7 +204,7 @@ nano ~/.zshrc
 Remove:
 
 ```sh
-eval "$(forgum-engine init zsh)"
+eval "$(forgum init zsh)"
 ```
 
 ### fish
@@ -216,7 +216,7 @@ nano ~/.config/fish/config.fish
 Remove:
 
 ```fish
-forgum-engine init fish | source
+forgum init fish | source
 ```
 
 ### cmd (Windows Command Prompt)

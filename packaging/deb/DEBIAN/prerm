@@ -1,0 +1,9 @@
+#!/bin/sh
+set -e
+
+# prerm - clean up shell hooks and integrations prior to binary removal
+if [ "$1" = "remove" ] || [ "$1" = "deconfigure" ]; then
+    if [ -x /usr/bin/forgum-engine ]; then
+        /usr/bin/forgum-engine uninstall --method soft --yes 2>/dev/null || true
+    fi
+fi

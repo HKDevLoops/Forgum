@@ -155,13 +155,18 @@ pub fn palette_gradient(palette: &[(u8, u8, u8)], x: f32, y: f32, t: f32) -> (u8
 
 // ── Lolcat rainbow ─────────────────────────────────────────────────
 
-/// Classic lolcat HSV-based rainbow color.
+/// Refined lolcat rainbow color with high-vibrancy saturated chromatic wave.
 ///
-/// `x`, `y` are pixel coordinates; `t` is time; `offset` is hue shift.
+/// Uses an aspect-ratio-corrected diagonal wave propagation (x * 0.045 + y * 0.09)
+/// to account for the terminal's 2:1 character cell proportions. Produces the
+/// iconic, deeply saturated, dazzling rainbow spectrum (pure red, electric orange,
+/// vibrant yellow, radiant green, vivid cyan, deep royal blue, neon magenta)
+/// that defines authentic lolcat.
 pub fn lolcat_color(x: f32, y: f32, t: f32, offset: f32) -> (u8, u8, u8) {
-    let angle = 45.0_f32.to_radians();
-    let hue = ((x * angle.cos() + y * angle.sin()) / 100.0 + offset / 360.0 + t) % 1.0;
-    hsv_to_rgb((hue * 360.0 + 360.0) % 360.0, 0.8, 0.9)
+    // Aspect-ratio-compensated diagonal wave propagation
+    let phase = ((x * 0.045 + y * 0.09) + (offset / 360.0) + (t * 0.8)).rem_euclid(1.0);
+    let hue_deg = phase * 360.0;
+    hsv_to_rgb(hue_deg, 1.0, 1.0)
 }
 
 /// Convert HSV (h in degrees, s/v in [0,1]) to RGB.

@@ -252,7 +252,7 @@ pub fn get_animal_profile(animal: &str) -> AnimalProfile {
         // ── Volcanic, Mythic & Dragons ──────────────────────────────────────
         "dragon" => AnimalProfile {
             name: "dragon",
-            base_anim: BaseAnim::Fly,
+            base_anim: BaseAnim::Breathe,
             environment: EnvironmentStyle::Inferno,
             road: RoadStyle::Magma,
             mountain: MountainStyle::Volcano,
@@ -262,7 +262,7 @@ pub fn get_animal_profile(animal: &str) -> AnimalProfile {
         },
         "dragon-and-cow" => AnimalProfile {
             name: "dragon-and-cow",
-            base_anim: BaseAnim::Fly,
+            base_anim: BaseAnim::Breathe,
             environment: EnvironmentStyle::Inferno,
             road: RoadStyle::Magma,
             mountain: MountainStyle::Volcano,
@@ -272,7 +272,7 @@ pub fn get_animal_profile(animal: &str) -> AnimalProfile {
         },
         "charizardvice" => AnimalProfile {
             name: "charizardvice",
-            base_anim: BaseAnim::Fly,
+            base_anim: BaseAnim::Breathe,
             environment: EnvironmentStyle::Inferno,
             road: RoadStyle::Magma,
             mountain: MountainStyle::Volcano,
@@ -312,7 +312,7 @@ pub fn get_animal_profile(animal: &str) -> AnimalProfile {
         },
         "mooghidjirah" => AnimalProfile {
             name: "mooghidjirah",
-            base_anim: BaseAnim::Fly,
+            base_anim: BaseAnim::Breathe,
             environment: EnvironmentStyle::Inferno,
             road: RoadStyle::Magma,
             mountain: MountainStyle::Volcano,
@@ -322,7 +322,7 @@ pub fn get_animal_profile(animal: &str) -> AnimalProfile {
         },
         "moojira" => AnimalProfile {
             name: "moojira",
-            base_anim: BaseAnim::Walk,
+            base_anim: BaseAnim::Breathe,
             environment: EnvironmentStyle::Inferno,
             road: RoadStyle::Magma,
             mountain: MountainStyle::Volcano,
@@ -332,7 +332,7 @@ pub fn get_animal_profile(animal: &str) -> AnimalProfile {
         },
         "flaming-sheep" => AnimalProfile {
             name: "flaming-sheep",
-            base_anim: BaseAnim::Walk,
+            base_anim: BaseAnim::Breathe,
             environment: EnvironmentStyle::Inferno,
             road: RoadStyle::Magma,
             mountain: MountainStyle::Volcano,
@@ -1634,7 +1634,115 @@ pub fn resolve_archetype_with_overrides(
     (mtn, road, env)
 }
 
-// ── Scenery Layer Renderers ─────────────────────────────────────────
+/// Calculate the exact number of natural mountain peaks across viewport width based on tectonic wavelength.
+pub fn calculate_mountain_peaks(width: usize, style: MountainStyle) -> usize {
+    if style == MountainStyle::None || width == 0 {
+        return 0;
+    }
+    let lambda = match style {
+        MountainStyle::Peaks => 24.0,
+        MountainStyle::Hills => 38.0,
+        MountainStyle::Volcano => 48.0,
+        MountainStyle::Iceberg => 20.0,
+        MountainStyle::Skyline => 12.0,
+        MountainStyle::Seamount => 32.0,
+        MountainStyle::Plateau => 36.0,
+        MountainStyle::Crater => 42.0,
+        MountainStyle::Gothic => 16.0,
+        MountainStyle::Castle => 22.0,
+        MountainStyle::Garden => 28.0,
+        MountainStyle::None => 1.0,
+    };
+    let phi = 1.618_034_f32;
+    let peak_count = ((width as f32) / (lambda * (phi * 0.5))).round() as usize;
+    peak_count.max(1)
+}
+
+/// Mathematical mountain height function using multi-harmonic Fourier synthesis.
+/// Determines continuous elevation at column x incorporating erosion pinching and natural geomorphology.
+pub fn calculate_mountain_height(
+    x: f32,
+    width: usize,
+    mountain_base_y: usize,
+    style: MountainStyle,
+    time: f32,
+) -> f32 {
+    let (base_h, max_var): (f32, f32) = match style {
+        MountainStyle::Hills => (2.2, 1.2),
+        MountainStyle::Peaks => (2.5, 1.8),
+        MountainStyle::Volcano => (2.4, 1.5),
+        MountainStyle::Iceberg => (2.6, 1.7),
+        MountainStyle::Skyline => (2.7, 1.6),
+        MountainStyle::Seamount => (2.0, 1.2),
+        MountainStyle::Plateau => (2.3, 1.1),
+        MountainStyle::Crater => (2.0, 1.2),
+        MountainStyle::Gothic => (2.6, 1.6),
+        MountainStyle::Castle => (2.4, 1.3),
+        MountainStyle::Garden => (2.0, 1.0),
+        MountainStyle::None => return 0.0,
+    };
+
+    let scale = ((mountain_base_y as f32) * 0.45).clamp(2.5, 14.0);
+    let scale_mult = scale / 2.5;
+    let scaled_base_h = base_h * scale_mult;
+    let scaled_max_var = max_var * scale_mult;
+    let max_allowed = (mountain_base_y as f32 * 0.85).max(3.0);
+
+    let n_peaks = calculate_mountain_peaks(width, style).max(1) as f32;
+    let w_f = (width.max(20)) as f32;
+    let omega = (2.0 * std::f32::consts::PI * n_peaks) / w_f;
+    let t_offset = time * 1.2;
+    let x_world = x + t_offset;
+
+    match style {
+        MountainStyle::Peaks | MountainStyle::Iceberg | MountainStyle::Gothic => {
+            // Glacial horn erosion: power-pinched acute peaks with broad cirque valleys
+            let theta1 = omega * x_world;
+            let theta2 = omega * 2.0 * x_world + 1.2;
+            let theta3 = omega * 3.618 * x_world + 2.4;
+            let h1 = theta1.sin().abs().powf(1.85) * scaled_max_var;
+            let h2 = (theta2.sin() * 0.35 + theta3.cos() * 0.20) * scaled_max_var;
+            (scaled_base_h + h1 + h2).clamp(1.0, max_allowed)
+        }
+        MountainStyle::Plateau => {
+            // Mesa plateau: hyperbolic tangent cliff saturation produces sheer flat-topped mesas
+            let theta = omega * x_world;
+            let h1 = (theta.sin() * 3.0).tanh() * scaled_max_var;
+            (scaled_base_h + h1).clamp(1.0, max_allowed)
+        }
+        MountainStyle::Volcano => {
+            // Volcanic caldera: Lorentzian cone with central crater depression
+            let period = w_f / n_peaks;
+            let rel_x = ((x_world % period) + period) % period - (period * 0.5);
+            let sigma = period * 0.25;
+            let cone = scaled_max_var * 1.8 / (1.0 + (rel_x / sigma).powi(2));
+            let crater = if rel_x.abs() < sigma * 0.35 {
+                (1.0 - (rel_x / (sigma * 0.35)).abs()) * (scaled_max_var * 0.5)
+            } else {
+                0.0
+            };
+            (scaled_base_h + cone - crater).clamp(1.0, max_allowed)
+        }
+        MountainStyle::Skyline => {
+            // Stepped building heights across urban skyline
+            let theta1 = omega * x_world;
+            let theta2 = omega * 2.23 * x_world + 0.8;
+            let raw = theta1.sin() * 0.65 + theta2.sin() * 0.35;
+            let steps = (raw * 4.0).floor() / 4.0;
+            (scaled_base_h + steps * scaled_max_var).clamp(1.0, max_allowed)
+        }
+        _ => {
+            // Natural rolling terrain: multi-harmonic smooth superposition
+            let theta1 = omega * x_world;
+            let theta2 = omega * 2.14 * x_world + 1.3;
+            let theta3 = omega * 0.618 * x_world + 2.1;
+            let h1 = theta1.sin() * (scaled_max_var * 0.60);
+            let h2 = theta2.sin() * (scaled_max_var * 0.30);
+            let h3 = theta3.cos() * (scaled_max_var * 0.20);
+            (scaled_base_h + h1 + h2 + h3).clamp(1.0, max_allowed)
+        }
+    }
+}
 
 /// Render mountain / horizon layer directly behind the creature, anchored to the horizon above the road.
 /// Uses a multi-harmonic mathematical algorithm to generate dynamic, non-uniform variable heights
@@ -1651,38 +1759,26 @@ pub fn render_mountain(
         return;
     }
 
-    let (fg, base_h, max_var): (Color, f32, f32) = match style {
-        MountainStyle::Hills => (Color::rgb(28, 68, 32), 2.2, 1.2),
-        MountainStyle::Peaks => (Color::rgb(64, 82, 92), 2.4, 1.5),
-        MountainStyle::Volcano => (Color::rgb(55, 50, 50), 2.3, 1.3),
-        MountainStyle::Iceberg => (Color::rgb(55, 115, 125), 2.5, 1.4),
-        MountainStyle::Skyline => (Color::rgb(42, 54, 62), 2.7, 1.5),
-        MountainStyle::Seamount => (Color::rgb(15, 42, 85), 2.0, 1.1),
-        MountainStyle::Plateau => (Color::rgb(90, 72, 65), 2.2, 1.0),
-        MountainStyle::Crater => (Color::rgb(52, 68, 78), 2.0, 1.1),
-        MountainStyle::Gothic => (Color::rgb(50, 32, 95), 2.5, 1.4),
-        MountainStyle::Castle => (Color::rgb(75, 58, 52), 2.4, 1.2),
-        MountainStyle::Garden => (Color::rgb(45, 95, 52), 2.0, 1.0),
+    let fg = match style {
+        MountainStyle::Hills => Color::rgb(28, 68, 32),
+        MountainStyle::Peaks => Color::rgb(64, 82, 92),
+        MountainStyle::Volcano => Color::rgb(55, 50, 50),
+        MountainStyle::Iceberg => Color::rgb(55, 115, 125),
+        MountainStyle::Skyline => Color::rgb(42, 54, 62),
+        MountainStyle::Seamount => Color::rgb(15, 42, 85),
+        MountainStyle::Plateau => Color::rgb(90, 72, 65),
+        MountainStyle::Crater => Color::rgb(52, 68, 78),
+        MountainStyle::Gothic => Color::rgb(50, 32, 95),
+        MountainStyle::Castle => Color::rgb(75, 58, 52),
+        MountainStyle::Garden => Color::rgb(45, 95, 52),
         MountainStyle::None => return,
-    };
-
-    // Parallax scroll offset (mountains move smoothly at gentle speed)
-    let t_offset = time * 1.2;
-
-    // Mathematical height function for column x
-    let calc_h = |x: f32| -> f32 {
-        let p = (x + t_offset) * 0.16;
-        let h1 = p.sin() * (max_var * 0.65);
-        let h2 = (p * 2.23 + 1.2).sin() * (max_var * 0.35);
-        let h3 = (p * 0.53 + 2.4).cos() * (max_var * 0.25);
-        (base_h + h1 + h2 + h3).clamp(1.0, 4.0)
     };
 
     for x in 0..width {
         let x_f = x as f32;
-        let h_curr = calc_h(x_f);
-        let h_prev = calc_h(x_f - 1.0);
-        let h_next = calc_h(x_f + 1.0);
+        let h_curr = calculate_mountain_height(x_f, width, mountain_base_y, style, time);
+        let h_prev = calculate_mountain_height(x_f - 1.0, width, mountain_base_y, style, time);
+        let h_next = calculate_mountain_height(x_f + 1.0, width, mountain_base_y, style, time);
 
         let h_int = h_curr.round() as usize;
         let start_y = mountain_base_y.saturating_sub(h_int);
@@ -1792,37 +1888,235 @@ pub fn render_mountain(
     }
 }
 
+/// Fibonacci / Golden Ratio reciprocal constant for optimal low-discrepancy flora dispersion.
+pub const PHI_RECIPROCAL: f32 = 0.618_034;
+
+/// Mathematical distance between tree k and tree k+1 using Fibonacci phyllotaxis and grove clustering.
+/// Models biological root exclusion and natural tree clumping (alternating stands and clearings).
+pub fn calculate_inter_tree_distance(k: usize, min_dist: f32, var_dist: f32) -> f32 {
+    let phi_fract = ((k as f32) * PHI_RECIPROCAL).fract();
+    let phi_sq_fract = ((k as f32) * (PHI_RECIPROCAL * PHI_RECIPROCAL)).fract();
+    // Grove clustering factor: alternates between tighter tree clusters (stands) and open clearings
+    let cluster_modulation = (phi_sq_fract * 2.0 * std::f32::consts::PI).cos() * (var_dist * 0.25);
+    (min_dist + phi_fract * var_dist + cluster_modulation).max(min_dist * 0.7)
+}
+
+/// Cumulative world coordinate of tree index n based on integrated Fibonacci distance.
+pub fn calculate_tree_position(n: usize, min_dist: f32, var_dist: f32) -> usize {
+    let avg_stride = min_dist + var_dist * 0.5;
+    let phi_fract = ((n as f32) * PHI_RECIPROCAL).fract();
+    let harmonic_drift = ((n as f32) * 0.381966).sin() * (var_dist * 0.35);
+    let pos = (n as f32) * avg_stride + (phi_fract - 0.5) * var_dist + harmonic_drift;
+    pos.max(0.0).round() as usize
+}
+
+/// Calculate the distance across multiple trees (from tree `from` to tree `to`).
+pub fn calculate_multi_tree_span(from: usize, to: usize, min_dist: f32, var_dist: f32) -> usize {
+    if to <= from {
+        return 0;
+    }
+    let p_from = calculate_tree_position(from, min_dist, var_dist);
+    let p_to = calculate_tree_position(to, min_dist, var_dist);
+    p_to.saturating_sub(p_from)
+}
+
+/// Calculate the mathematically optimal number of trees across viewport width
+/// based on biome environmental canopy density and animal stature occupancy.
+pub fn calculate_tree_count(width: usize, env: EnvironmentStyle, animal_height: usize) -> usize {
+    if width == 0 {
+        return 0;
+    }
+    let density_factor = match env {
+        EnvironmentStyle::Forest => 1.40_f32,
+        EnvironmentStyle::Pasture => 1.00_f32,
+        EnvironmentStyle::Savanna => 0.60_f32,
+        EnvironmentStyle::Arctic => 0.50_f32,
+        EnvironmentStyle::Graveyard => 0.45_f32,
+        EnvironmentStyle::Jurassic => 1.25_f32,
+        EnvironmentStyle::Hive => 0.85_f32,
+        EnvironmentStyle::Swamp => 0.90_f32,
+        EnvironmentStyle::City
+        | EnvironmentStyle::Space
+        | EnvironmentStyle::Cyber
+        | EnvironmentStyle::None => return 0,
+        _ => 0.90_f32,
+    };
+
+    let animal_scale_occupancy = if animal_height >= 12 {
+        0.80_f32
+    } else if animal_height <= 4 {
+        1.15_f32
+    } else {
+        1.00_f32
+    };
+
+    let avg_stride = 22.0_f32;
+    let count =
+        ((width as f32 / avg_stride) * density_factor * animal_scale_occupancy).round() as usize;
+    count.max(1)
+}
+
+/// Tree species variants for procedural mixed-stand rendering.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TreeSpecies {
+    Oak,
+    Pine,
+    Acacia,
+    SnowFir,
+    DeadTree,
+    Birch,
+    Palm,
+}
+
+/// Determine the mathematical tree species / order for tree index n within an environment biome.
+/// Uses a low-discrepancy Weyl sequence to guarantee natural mixed diversity without artificial repetition.
+pub fn calculate_tree_species(n: usize, env: EnvironmentStyle, animal_seed: u32) -> TreeSpecies {
+    let seed_offset = (animal_seed % 7) as f32 * 0.142857;
+    let sequence_val = (((n as f32) * PHI_RECIPROCAL + seed_offset).fract() * 100.0) as usize;
+
+    match env {
+        EnvironmentStyle::Arctic => {
+            if sequence_val % 3 == 0 {
+                TreeSpecies::Pine
+            } else {
+                TreeSpecies::SnowFir
+            }
+        }
+        EnvironmentStyle::Savanna => {
+            if sequence_val % 4 == 0 {
+                TreeSpecies::DeadTree
+            } else {
+                TreeSpecies::Acacia
+            }
+        }
+        EnvironmentStyle::Graveyard => {
+            if sequence_val % 3 == 0 {
+                TreeSpecies::Oak
+            } else {
+                TreeSpecies::DeadTree
+            }
+        }
+        EnvironmentStyle::Jurassic => {
+            if sequence_val % 2 == 0 {
+                TreeSpecies::Palm
+            } else {
+                TreeSpecies::Pine
+            }
+        }
+        _ => {
+            let r = sequence_val % 3;
+            if r == 0 {
+                TreeSpecies::Oak
+            } else if r == 1 {
+                TreeSpecies::Pine
+            } else {
+                TreeSpecies::Birch
+            }
+        }
+    }
+}
+
+/// Mathematical tree height calculation proportioned with respect to the mascot's stature,
+/// base animation kinematics, and environmental perspective.
+///
+/// If animal is tall/colossal (dragon, stegosaurus), trees scale up gracefully.
+/// If animal is airborne/levitating (Float, Fly), tree height is scaled down so the creature
+/// hovers above or level with the canopy rather than being swallowed inside the branches.
+pub fn calculate_tree_height(
+    tree_idx: usize,
+    animal_height: usize,
+    base_anim: BaseAnim,
+    tree_base_y: usize,
+) -> usize {
+    let base_animal_h = animal_height.max(3) as f32;
+
+    let anim_mult = match base_anim {
+        BaseAnim::Walk => 1.25_f32,
+        BaseAnim::Breathe => 1.35_f32,
+        BaseAnim::Float | BaseAnim::Fly | BaseAnim::Abduction => 0.80_f32,
+        BaseAnim::Sway => 1.15_f32,
+        BaseAnim::Squish | BaseAnim::Liquid => 1.55_f32,
+        _ => 1.20_f32,
+    };
+
+    let idx_f = tree_idx as f32;
+    let variation = 1.0 + 0.22 * (idx_f * 2.39996).sin() + 0.12 * (idx_f * 1.61803).cos();
+
+    let computed_h = base_animal_h * anim_mult * variation;
+    let max_h = ((tree_base_y as f32) * 0.90).max(2.0);
+    computed_h.clamp(2.0, max_h).round() as usize
+}
+
 /// Render procedural midground trees and flora layer.
 /// Planted on the horizon line directly above the road (`tree_base_y = road_y.saturating_sub(1)`).
-/// Scrolls at midground speed `(time * 2.4)` between mountains and the road.
+/// Scrolls at midground speed `(time * 2.4)` between mountains and the road using Fibonacci spacing.
 pub fn render_trees(
+    fb: &mut FrameBuffer,
+    mountain: MountainStyle,
+    env: EnvironmentStyle,
+    tree_base_y: usize,
+    width: usize,
+    time: f32,
+) {
+    render_trees_with_animal(
+        fb,
+        mountain,
+        env,
+        tree_base_y,
+        width,
+        time,
+        None,
+        None,
+        None,
+    );
+}
+
+/// Render procedural midground trees and flora layer with explicit animal-relative height and properties.
+#[allow(clippy::too_many_arguments)]
+pub fn render_trees_with_animal(
     fb: &mut FrameBuffer,
     _mountain: MountainStyle,
     env: EnvironmentStyle,
     tree_base_y: usize,
     width: usize,
     time: f32,
+    animal_name: Option<&str>,
+    animal_height: Option<usize>,
+    base_anim: Option<BaseAnim>,
 ) {
     if tree_base_y >= fb.height || width == 0 {
         return;
     }
 
+    let animal_h = animal_height.unwrap_or(8);
+    let anim = base_anim.unwrap_or_else(|| {
+        if let Some(name) = animal_name {
+            get_animal_profile(name).base_anim
+        } else {
+            BaseAnim::Walk
+        }
+    });
+    let animal_seed = animal_name.map_or(0, |n| n.len() as u32);
+
     // Midground parallax speed
     let scroll_x = (time * 2.4) as usize;
-    let period = 16; // spacing between trees
+    let min_dist = 16.0_f32;
+    let var_dist = 12.0_f32;
 
     let tree_green = Color::rgb(76, 175, 80);
     let trunk_brown = Color::rgb(121, 85, 72);
     let snow_white = Color::rgb(224, 247, 250);
     let acacia_gold = Color::rgb(139, 195, 74);
     let dark_wood = Color::rgb(97, 97, 97);
+    let birch_cream = Color::rgb(238, 238, 210);
 
-    // Trees across the visible span
-    let start_tree = scroll_x / period;
-    let end_tree = (scroll_x + width + period) / period;
+    // Natural Fibonacci phyllotaxis tree range across the visible span
+    let avg_stride = min_dist + var_dist * 0.5;
+    let start_tree = (scroll_x as f32 / (avg_stride + var_dist)).floor().max(0.0) as usize;
+    let end_tree = (((scroll_x + width + 40) as f32 / min_dist).ceil() as usize) + 2;
 
     for t_idx in start_tree..=end_tree {
-        let world_x = t_idx * period + (t_idx * 7 % 5);
+        let world_x = calculate_tree_position(t_idx, min_dist, var_dist);
         if world_x < scroll_x {
             continue;
         }
@@ -1831,18 +2125,57 @@ pub fn render_trees(
             continue;
         }
 
-        // Preserve clear mascot silhouette corridor (columns 10..34)
-        // so trees never spawn on or blend directly into the mascot
-        if (10..=34).contains(&screen_x) {
+        // Preserve clear mascot silhouette corridor (columns 6..68)
+        if screen_x + 15 >= 6 && screen_x <= 68 {
             continue;
         }
 
-        let is_pine = t_idx % 2 == 0;
+        let target_tree_h = calculate_tree_height(t_idx, animal_h, anim, tree_base_y);
+        let species = calculate_tree_species(t_idx, env, animal_seed);
 
-        match env {
-            EnvironmentStyle::Arctic => {
-                // Frost-covered snow fir
-                if tree_base_y >= 2 && screen_x + 2 < width {
+        match species {
+            TreeSpecies::SnowFir => {
+                if target_tree_h >= 8 && screen_x + 8 < width {
+                    let _ = fb.set(screen_x + 4, tree_base_y - 8, Cell::new('^', snow_white));
+                    let _ = fb.set(screen_x + 3, tree_base_y - 7, Cell::new('/', snow_white));
+                    let _ = fb.set(screen_x + 4, tree_base_y - 7, Cell::new('|', snow_white));
+                    let _ = fb.set(screen_x + 5, tree_base_y - 7, Cell::new('\\', snow_white));
+                    let _ = fb.set(screen_x + 2, tree_base_y - 6, Cell::new('/', snow_white));
+                    let _ = fb.set(screen_x + 3, tree_base_y - 6, Cell::new('*', snow_white));
+                    let _ = fb.set(screen_x + 4, tree_base_y - 6, Cell::new('|', snow_white));
+                    let _ = fb.set(screen_x + 5, tree_base_y - 6, Cell::new('*', snow_white));
+                    let _ = fb.set(screen_x + 6, tree_base_y - 6, Cell::new('\\', snow_white));
+                    let _ = fb.set(screen_x + 1, tree_base_y - 5, Cell::new('/', snow_white));
+                    let _ = fb.set(screen_x + 2, tree_base_y - 5, Cell::new('*', snow_white));
+                    let _ = fb.set(screen_x + 4, tree_base_y - 5, Cell::new('|', snow_white));
+                    let _ = fb.set(screen_x + 6, tree_base_y - 5, Cell::new('*', snow_white));
+                    let _ = fb.set(screen_x + 7, tree_base_y - 5, Cell::new('\\', snow_white));
+                    let _ = fb.set(screen_x, tree_base_y - 4, Cell::new('/', snow_white));
+                    let _ = fb.set(screen_x + 2, tree_base_y - 4, Cell::new('*', snow_white));
+                    let _ = fb.set(screen_x + 4, tree_base_y - 4, Cell::new('|', snow_white));
+                    let _ = fb.set(screen_x + 6, tree_base_y - 4, Cell::new('*', snow_white));
+                    let _ = fb.set(screen_x + 8, tree_base_y - 4, Cell::new('\\', snow_white));
+                    let _ = fb.set(screen_x + 1, tree_base_y - 3, Cell::new('/', snow_white));
+                    let _ = fb.set(screen_x + 3, tree_base_y - 3, Cell::new('_', snow_white));
+                    let _ = fb.set(screen_x + 4, tree_base_y - 3, Cell::new('|', snow_white));
+                    let _ = fb.set(screen_x + 5, tree_base_y - 3, Cell::new('_', snow_white));
+                    let _ = fb.set(screen_x + 7, tree_base_y - 3, Cell::new('\\', snow_white));
+                    let _ = fb.set(screen_x + 4, tree_base_y - 2, Cell::new('|', dark_wood));
+                    let _ = fb.set(screen_x + 4, tree_base_y - 1, Cell::new('|', dark_wood));
+                    let _ = fb.set(screen_x + 4, tree_base_y, Cell::new('|', dark_wood));
+                } else if target_tree_h >= 4 && screen_x + 4 < width {
+                    let _ = fb.set(screen_x + 2, tree_base_y - 4, Cell::new('^', snow_white));
+                    let _ = fb.set(screen_x + 1, tree_base_y - 3, Cell::new('/', snow_white));
+                    let _ = fb.set(screen_x + 2, tree_base_y - 3, Cell::new('*', snow_white));
+                    let _ = fb.set(screen_x + 3, tree_base_y - 3, Cell::new('\\', snow_white));
+                    let _ = fb.set(screen_x, tree_base_y - 2, Cell::new('/', snow_white));
+                    let _ = fb.set(screen_x + 1, tree_base_y - 2, Cell::new('*', snow_white));
+                    let _ = fb.set(screen_x + 2, tree_base_y - 2, Cell::new('|', snow_white));
+                    let _ = fb.set(screen_x + 3, tree_base_y - 2, Cell::new('*', snow_white));
+                    let _ = fb.set(screen_x + 4, tree_base_y - 2, Cell::new('\\', snow_white));
+                    let _ = fb.set(screen_x + 2, tree_base_y - 1, Cell::new('|', dark_wood));
+                    let _ = fb.set(screen_x + 2, tree_base_y, Cell::new('|', dark_wood));
+                } else if target_tree_h >= 2 && screen_x + 2 < width {
                     let _ = fb.set(screen_x + 1, tree_base_y - 2, Cell::new('^', snow_white));
                     let _ = fb.set(screen_x, tree_base_y - 1, Cell::new('/', snow_white));
                     let _ = fb.set(screen_x + 1, tree_base_y - 1, Cell::new('*', snow_white));
@@ -1850,9 +2183,38 @@ pub fn render_trees(
                     let _ = fb.set(screen_x + 1, tree_base_y, Cell::new('|', dark_wood));
                 }
             }
-            EnvironmentStyle::Savanna => {
-                // Flat-topped Acacia tree
-                if tree_base_y >= 1 && screen_x + 4 < width {
+            TreeSpecies::Acacia => {
+                if target_tree_h >= 7 && screen_x + 14 < width {
+                    for (i, c) in "  .-----------.  ".chars().enumerate() {
+                        let _ = fb.set(screen_x + i, tree_base_y - 7, Cell::new(c, acacia_gold));
+                    }
+                    for (i, c) in " (_____________) ".chars().enumerate() {
+                        let _ = fb.set(screen_x + i, tree_base_y - 6, Cell::new(c, acacia_gold));
+                    }
+                    for (i, c) in "   \\   |   /   ".chars().enumerate() {
+                        let _ = fb.set(screen_x + i, tree_base_y - 5, Cell::new(c, acacia_gold));
+                    }
+                    let _ = fb.set(screen_x + 4, tree_base_y - 4, Cell::new('\\', trunk_brown));
+                    let _ = fb.set(screen_x + 7, tree_base_y - 4, Cell::new('|', trunk_brown));
+                    let _ = fb.set(screen_x + 10, tree_base_y - 4, Cell::new('/', trunk_brown));
+                    let _ = fb.set(screen_x + 5, tree_base_y - 3, Cell::new('\\', trunk_brown));
+                    let _ = fb.set(screen_x + 7, tree_base_y - 3, Cell::new('|', trunk_brown));
+                    let _ = fb.set(screen_x + 9, tree_base_y - 3, Cell::new('/', trunk_brown));
+                    let _ = fb.set(screen_x + 7, tree_base_y - 2, Cell::new('|', trunk_brown));
+                    let _ = fb.set(screen_x + 7, tree_base_y - 1, Cell::new('|', trunk_brown));
+                    let _ = fb.set(screen_x + 7, tree_base_y, Cell::new('|', trunk_brown));
+                } else if target_tree_h >= 4 && screen_x + 6 < width {
+                    for (i, c) in " _.~---~._ ".chars().take(9).enumerate() {
+                        if screen_x + i < width {
+                            let _ =
+                                fb.set(screen_x + i, tree_base_y - 3, Cell::new(c, acacia_gold));
+                        }
+                    }
+                    let _ = fb.set(screen_x + 2, tree_base_y - 2, Cell::new('\\', trunk_brown));
+                    let _ = fb.set(screen_x + 4, tree_base_y - 2, Cell::new('/', trunk_brown));
+                    let _ = fb.set(screen_x + 3, tree_base_y - 1, Cell::new('|', trunk_brown));
+                    let _ = fb.set(screen_x + 3, tree_base_y, Cell::new('|', trunk_brown));
+                } else if target_tree_h >= 1 && screen_x + 4 < width {
                     for (i, c) in "__~---~__".chars().take(5).enumerate() {
                         if screen_x + i < width {
                             let _ =
@@ -1862,9 +2224,37 @@ pub fn render_trees(
                     let _ = fb.set(screen_x + 2, tree_base_y, Cell::new('|', trunk_brown));
                 }
             }
-            EnvironmentStyle::Graveyard => {
-                // Barren gnarled spooky dead tree
-                if tree_base_y >= 2 && screen_x + 2 < width {
+            TreeSpecies::DeadTree => {
+                if target_tree_h >= 8 && screen_x + 8 < width {
+                    let _ = fb.set(screen_x, tree_base_y - 8, Cell::new('\\', dark_wood));
+                    let _ = fb.set(screen_x + 4, tree_base_y - 8, Cell::new('/', dark_wood));
+                    let _ = fb.set(screen_x + 5, tree_base_y - 8, Cell::new('\\', dark_wood));
+                    let _ = fb.set(screen_x + 8, tree_base_y - 8, Cell::new('/', dark_wood));
+                    let _ = fb.set(screen_x + 1, tree_base_y - 7, Cell::new('\\', dark_wood));
+                    let _ = fb.set(screen_x + 3, tree_base_y - 7, Cell::new('/', dark_wood));
+                    let _ = fb.set(screen_x + 6, tree_base_y - 7, Cell::new('\\', dark_wood));
+                    let _ = fb.set(screen_x + 7, tree_base_y - 7, Cell::new('/', dark_wood));
+                    let _ = fb.set(screen_x + 2, tree_base_y - 6, Cell::new('\\', dark_wood));
+                    let _ = fb.set(screen_x + 4, tree_base_y - 6, Cell::new('|', dark_wood));
+                    let _ = fb.set(screen_x + 6, tree_base_y - 6, Cell::new('/', dark_wood));
+                    let _ = fb.set(screen_x + 3, tree_base_y - 5, Cell::new('\\', dark_wood));
+                    let _ = fb.set(screen_x + 4, tree_base_y - 5, Cell::new('|', dark_wood));
+                    let _ = fb.set(screen_x + 5, tree_base_y - 5, Cell::new('/', dark_wood));
+                    let _ = fb.set(screen_x + 4, tree_base_y - 4, Cell::new('|', dark_wood));
+                    let _ = fb.set(screen_x + 4, tree_base_y - 3, Cell::new('|', dark_wood));
+                    let _ = fb.set(screen_x + 4, tree_base_y - 2, Cell::new('|', dark_wood));
+                    let _ = fb.set(screen_x + 4, tree_base_y - 1, Cell::new('|', dark_wood));
+                    let _ = fb.set(screen_x + 4, tree_base_y, Cell::new('|', dark_wood));
+                } else if target_tree_h >= 4 && screen_x + 4 < width {
+                    let _ = fb.set(screen_x, tree_base_y - 4, Cell::new('\\', dark_wood));
+                    let _ = fb.set(screen_x + 4, tree_base_y - 4, Cell::new('/', dark_wood));
+                    let _ = fb.set(screen_x + 1, tree_base_y - 3, Cell::new('\\', dark_wood));
+                    let _ = fb.set(screen_x + 2, tree_base_y - 3, Cell::new('|', dark_wood));
+                    let _ = fb.set(screen_x + 3, tree_base_y - 3, Cell::new('/', dark_wood));
+                    let _ = fb.set(screen_x + 2, tree_base_y - 2, Cell::new('|', dark_wood));
+                    let _ = fb.set(screen_x + 2, tree_base_y - 1, Cell::new('|', dark_wood));
+                    let _ = fb.set(screen_x + 2, tree_base_y, Cell::new('|', dark_wood));
+                } else if target_tree_h >= 2 && screen_x + 2 < width {
                     let _ = fb.set(screen_x, tree_base_y - 2, Cell::new('\\', dark_wood));
                     let _ = fb.set(screen_x + 1, tree_base_y - 2, Cell::new('|', dark_wood));
                     let _ = fb.set(screen_x + 2, tree_base_y - 2, Cell::new('/', dark_wood));
@@ -1872,38 +2262,292 @@ pub fn render_trees(
                     let _ = fb.set(screen_x + 1, tree_base_y, Cell::new('|', dark_wood));
                 }
             }
-            EnvironmentStyle::City | EnvironmentStyle::Space | EnvironmentStyle::Cyber => {
-                // No organic trees in futuristic/cyber backdrops
+            TreeSpecies::Pine => {
+                if target_tree_h >= 8 && screen_x + 8 < width {
+                    let _ = fb.set(screen_x + 4, tree_base_y - 8, Cell::new('^', tree_green));
+                    let _ = fb.set(screen_x + 3, tree_base_y - 7, Cell::new('/', tree_green));
+                    let _ = fb.set(screen_x + 4, tree_base_y - 7, Cell::new('|', tree_green));
+                    let _ = fb.set(screen_x + 5, tree_base_y - 7, Cell::new('\\', tree_green));
+                    let _ = fb.set(screen_x + 2, tree_base_y - 6, Cell::new('/', tree_green));
+                    let _ = fb.set(screen_x + 3, tree_base_y - 6, Cell::new('*', tree_green));
+                    let _ = fb.set(screen_x + 4, tree_base_y - 6, Cell::new('|', tree_green));
+                    let _ = fb.set(screen_x + 5, tree_base_y - 6, Cell::new('*', tree_green));
+                    let _ = fb.set(screen_x + 6, tree_base_y - 6, Cell::new('\\', tree_green));
+                    let _ = fb.set(screen_x + 1, tree_base_y - 5, Cell::new('/', tree_green));
+                    let _ = fb.set(screen_x + 2, tree_base_y - 5, Cell::new('*', tree_green));
+                    let _ = fb.set(screen_x + 4, tree_base_y - 5, Cell::new('|', tree_green));
+                    let _ = fb.set(screen_x + 6, tree_base_y - 5, Cell::new('*', tree_green));
+                    let _ = fb.set(screen_x + 7, tree_base_y - 5, Cell::new('\\', tree_green));
+                    let _ = fb.set(screen_x, tree_base_y - 4, Cell::new('/', tree_green));
+                    let _ = fb.set(screen_x + 2, tree_base_y - 4, Cell::new('*', tree_green));
+                    let _ = fb.set(screen_x + 4, tree_base_y - 4, Cell::new('|', tree_green));
+                    let _ = fb.set(screen_x + 6, tree_base_y - 4, Cell::new('*', tree_green));
+                    let _ = fb.set(screen_x + 8, tree_base_y - 4, Cell::new('\\', tree_green));
+                    let _ = fb.set(screen_x + 1, tree_base_y - 3, Cell::new('/', tree_green));
+                    let _ = fb.set(screen_x + 3, tree_base_y - 3, Cell::new('_', tree_green));
+                    let _ = fb.set(screen_x + 4, tree_base_y - 3, Cell::new('|', tree_green));
+                    let _ = fb.set(screen_x + 5, tree_base_y - 3, Cell::new('_', tree_green));
+                    let _ = fb.set(screen_x + 7, tree_base_y - 3, Cell::new('\\', tree_green));
+                    let _ = fb.set(screen_x + 4, tree_base_y - 2, Cell::new('|', trunk_brown));
+                    let _ = fb.set(screen_x + 4, tree_base_y - 1, Cell::new('|', trunk_brown));
+                    let _ = fb.set(screen_x + 4, tree_base_y, Cell::new('|', trunk_brown));
+                } else if target_tree_h >= 4 && screen_x + 4 < width {
+                    let _ = fb.set(screen_x + 2, tree_base_y - 4, Cell::new('^', tree_green));
+                    let _ = fb.set(screen_x + 1, tree_base_y - 3, Cell::new('/', tree_green));
+                    let _ = fb.set(screen_x + 2, tree_base_y - 3, Cell::new('|', tree_green));
+                    let _ = fb.set(screen_x + 3, tree_base_y - 3, Cell::new('\\', tree_green));
+                    let _ = fb.set(screen_x, tree_base_y - 2, Cell::new('/', tree_green));
+                    let _ = fb.set(screen_x + 1, tree_base_y - 2, Cell::new('/', tree_green));
+                    let _ = fb.set(screen_x + 2, tree_base_y - 2, Cell::new('|', tree_green));
+                    let _ = fb.set(screen_x + 3, tree_base_y - 2, Cell::new('\\', tree_green));
+                    let _ = fb.set(screen_x + 4, tree_base_y - 2, Cell::new('\\', tree_green));
+                    let _ = fb.set(screen_x + 2, tree_base_y - 1, Cell::new('|', trunk_brown));
+                    let _ = fb.set(screen_x + 2, tree_base_y, Cell::new('|', trunk_brown));
+                } else if target_tree_h >= 2 && screen_x + 2 < width {
+                    let _ = fb.set(screen_x + 1, tree_base_y - 2, Cell::new('^', tree_green));
+                    let _ = fb.set(screen_x, tree_base_y - 1, Cell::new('/', tree_green));
+                    let _ = fb.set(screen_x + 1, tree_base_y - 1, Cell::new('|', tree_green));
+                    let _ = fb.set(screen_x + 2, tree_base_y - 1, Cell::new('\\', tree_green));
+                    let _ = fb.set(screen_x + 1, tree_base_y, Cell::new('|', trunk_brown));
+                }
             }
-            _ => {
-                // Pastoral, Forest, Jungle, Hive, Default: Oak or Pine
-                if is_pine {
-                    // Evergreen Pine
-                    if tree_base_y >= 2 && screen_x + 2 < width {
-                        let _ = fb.set(screen_x + 1, tree_base_y - 2, Cell::new('^', tree_green));
-                        let _ = fb.set(screen_x, tree_base_y - 1, Cell::new('/', tree_green));
-                        let _ = fb.set(screen_x + 1, tree_base_y - 1, Cell::new('|', tree_green));
-                        let _ = fb.set(screen_x + 2, tree_base_y - 1, Cell::new('\\', tree_green));
-                        let _ = fb.set(screen_x + 1, tree_base_y, Cell::new('|', trunk_brown));
+            TreeSpecies::Birch => {
+                if target_tree_h >= 6 && screen_x + 4 < width {
+                    let _ = fb.set(screen_x + 2, tree_base_y - 5, Cell::new('^', tree_green));
+                    let _ = fb.set(screen_x + 1, tree_base_y - 4, Cell::new('(', tree_green));
+                    let _ = fb.set(screen_x + 2, tree_base_y - 4, Cell::new('*', tree_green));
+                    let _ = fb.set(screen_x + 3, tree_base_y - 4, Cell::new(')', tree_green));
+                    let _ = fb.set(screen_x + 1, tree_base_y - 3, Cell::new('/', tree_green));
+                    let _ = fb.set(screen_x + 2, tree_base_y - 3, Cell::new('|', birch_cream));
+                    let _ = fb.set(screen_x + 3, tree_base_y - 3, Cell::new('\\', tree_green));
+                    let _ = fb.set(screen_x + 2, tree_base_y - 2, Cell::new('|', birch_cream));
+                    let _ = fb.set(screen_x + 2, tree_base_y - 1, Cell::new('|', birch_cream));
+                    let _ = fb.set(screen_x + 2, tree_base_y, Cell::new('|', birch_cream));
+                } else if target_tree_h >= 3 && screen_x + 2 < width {
+                    let _ = fb.set(screen_x + 1, tree_base_y - 2, Cell::new('*', tree_green));
+                    let _ = fb.set(screen_x + 1, tree_base_y - 1, Cell::new('|', birch_cream));
+                    let _ = fb.set(screen_x + 1, tree_base_y, Cell::new('|', birch_cream));
+                }
+            }
+            TreeSpecies::Palm => {
+                if target_tree_h >= 6 && screen_x + 6 < width {
+                    let _ = fb.set(screen_x + 1, tree_base_y - 5, Cell::new('\\', tree_green));
+                    let _ = fb.set(screen_x + 3, tree_base_y - 5, Cell::new('^', tree_green));
+                    let _ = fb.set(screen_x + 5, tree_base_y - 5, Cell::new('/', tree_green));
+                    let _ = fb.set(screen_x + 2, tree_base_y - 4, Cell::new('\\', tree_green));
+                    let _ = fb.set(screen_x + 3, tree_base_y - 4, Cell::new('*', tree_green));
+                    let _ = fb.set(screen_x + 4, tree_base_y - 4, Cell::new('/', tree_green));
+                    let _ = fb.set(screen_x + 3, tree_base_y - 3, Cell::new('/', trunk_brown));
+                    let _ = fb.set(screen_x + 3, tree_base_y - 2, Cell::new('|', trunk_brown));
+                    let _ = fb.set(screen_x + 3, tree_base_y - 1, Cell::new('|', trunk_brown));
+                    let _ = fb.set(screen_x + 3, tree_base_y, Cell::new('|', trunk_brown));
+                } else if target_tree_h >= 3 && screen_x + 4 < width {
+                    let _ = fb.set(screen_x + 1, tree_base_y - 2, Cell::new('\\', tree_green));
+                    let _ = fb.set(screen_x + 2, tree_base_y - 2, Cell::new('^', tree_green));
+                    let _ = fb.set(screen_x + 3, tree_base_y - 2, Cell::new('/', tree_green));
+                    let _ = fb.set(screen_x + 2, tree_base_y - 1, Cell::new('|', trunk_brown));
+                    let _ = fb.set(screen_x + 2, tree_base_y, Cell::new('|', trunk_brown));
+                }
+            }
+            TreeSpecies::Oak => {
+                if target_tree_h >= 8 && screen_x + 10 < width {
+                    for (i, c) in "   .---.   ".chars().enumerate() {
+                        let _ = fb.set(screen_x + i, tree_base_y - 8, Cell::new(c, tree_green));
                     }
-                } else {
-                    // Pastoral Round Oak
-                    if tree_base_y >= 2 && screen_x + 2 < width {
-                        let _ = fb.set(screen_x, tree_base_y - 2, Cell::new('(', tree_green));
-                        let _ = fb.set(screen_x + 1, tree_base_y - 2, Cell::new('\'', tree_green));
-                        let _ = fb.set(screen_x + 2, tree_base_y - 2, Cell::new(')', tree_green));
-                        let _ = fb.set(screen_x, tree_base_y - 1, Cell::new('(', tree_green));
-                        let _ = fb.set(screen_x + 1, tree_base_y - 1, Cell::new('_', tree_green));
-                        let _ = fb.set(screen_x + 2, tree_base_y - 1, Cell::new(')', tree_green));
-                        let _ = fb.set(screen_x + 1, tree_base_y, Cell::new('|', trunk_brown));
+                    for (i, c) in " .'     '. ".chars().enumerate() {
+                        let _ = fb.set(screen_x + i, tree_base_y - 7, Cell::new(c, tree_green));
                     }
+                    for (i, c) in "/  (@)    \\".chars().enumerate() {
+                        let _ = fb.set(screen_x + i, tree_base_y - 6, Cell::new(c, tree_green));
+                    }
+                    for (i, c) in "|  (@)  (@)|".chars().enumerate() {
+                        let _ = fb.set(screen_x + i, tree_base_y - 5, Cell::new(c, tree_green));
+                    }
+                    for (i, c) in "|    (@)   |".chars().enumerate() {
+                        let _ = fb.set(screen_x + i, tree_base_y - 4, Cell::new(c, tree_green));
+                    }
+                    for (i, c) in " \\  _____ / ".chars().enumerate() {
+                        let _ = fb.set(screen_x + i, tree_base_y - 3, Cell::new(c, tree_green));
+                    }
+                    let _ = fb.set(screen_x + 5, tree_base_y - 2, Cell::new('|', trunk_brown));
+                    let _ = fb.set(screen_x + 5, tree_base_y - 1, Cell::new('|', trunk_brown));
+                    let _ = fb.set(screen_x + 5, tree_base_y, Cell::new('|', trunk_brown));
+                } else if target_tree_h >= 4 && screen_x + 4 < width {
+                    let _ = fb.set(screen_x + 1, tree_base_y - 4, Cell::new('(', tree_green));
+                    let _ = fb.set(screen_x + 2, tree_base_y - 4, Cell::new('_', tree_green));
+                    let _ = fb.set(screen_x + 3, tree_base_y - 4, Cell::new(')', tree_green));
+                    let _ = fb.set(screen_x, tree_base_y - 3, Cell::new('(', tree_green));
+                    let _ = fb.set(screen_x + 2, tree_base_y - 3, Cell::new('@', tree_green));
+                    let _ = fb.set(screen_x + 4, tree_base_y - 3, Cell::new(')', tree_green));
+                    let _ = fb.set(screen_x, tree_base_y - 2, Cell::new('(', tree_green));
+                    let _ = fb.set(screen_x + 1, tree_base_y - 2, Cell::new('_', tree_green));
+                    let _ = fb.set(screen_x + 2, tree_base_y - 2, Cell::new('_', tree_green));
+                    let _ = fb.set(screen_x + 3, tree_base_y - 2, Cell::new('_', tree_green));
+                    let _ = fb.set(screen_x + 4, tree_base_y - 2, Cell::new(')', tree_green));
+                    let _ = fb.set(screen_x + 2, tree_base_y - 1, Cell::new('|', trunk_brown));
+                    let _ = fb.set(screen_x + 2, tree_base_y, Cell::new('|', trunk_brown));
+                } else if target_tree_h >= 2 && screen_x + 2 < width {
+                    let _ = fb.set(screen_x, tree_base_y - 2, Cell::new('(', tree_green));
+                    let _ = fb.set(screen_x + 1, tree_base_y - 2, Cell::new('\'', tree_green));
+                    let _ = fb.set(screen_x + 2, tree_base_y - 2, Cell::new(')', tree_green));
+                    let _ = fb.set(screen_x, tree_base_y - 1, Cell::new('(', tree_green));
+                    let _ = fb.set(screen_x + 1, tree_base_y - 1, Cell::new('_', tree_green));
+                    let _ = fb.set(screen_x + 2, tree_base_y - 1, Cell::new(')', tree_green));
+                    let _ = fb.set(screen_x + 1, tree_base_y, Cell::new('|', trunk_brown));
                 }
             }
         }
     }
 }
 
-/// Render ground / road baseline directly at cow_bottom_y.
+/// Mathematical road surface texture generator based on harmonic roughness synthesis.
+/// Mimics physical soil grains, cobblestone mortar joints, cooled magma crust, and ice fractures.
+pub fn calculate_road_texture(x: usize, style: RoadStyle, time: f32) -> (char, Color) {
+    let x_f = x as f32;
+    // Multi-harmonic deterministic surface roughness synthesis
+    let r1 = (x_f * 0.43 + time * 1.8).sin();
+    let r2 = (x_f * 0.97 - time * 0.7).cos();
+    let r3 = (x_f * 2.17 + time * 3.1).sin();
+    let roughness = (r1 * 0.5 + r2 * 0.3 + r3 * 0.2).abs();
+
+    match style {
+        RoadStyle::Dirt => {
+            let fg = Color::rgb(141, 110, 99);
+            let ch = if roughness > 0.82 {
+                'o' // small pebble
+            } else if roughness > 0.55 {
+                '.' // gravel grain
+            } else if roughness > 0.30 {
+                '_' // earth furrow
+            } else {
+                ' ' // packed soil
+            };
+            (ch, fg)
+        }
+        RoadStyle::Cobblestone => {
+            let fg = Color::rgb(158, 158, 158);
+            // Paving stone geometry: periodic mortar joint with weathered surface variation
+            let stone_idx = (x + ((time * 2.8) as usize)) % 5;
+            let ch = if stone_idx == 0 {
+                '|' // mortar joint between pavers
+            } else if roughness > 0.6 {
+                '=' // worn flagstone
+            } else {
+                '-' // smooth paver
+            };
+            (ch, fg)
+        }
+        RoadStyle::Magma => {
+            let fg = if roughness > 0.65 {
+                Color::rgb(255, 171, 0) // incandescent magma vent
+            } else {
+                Color::rgb(255, 87, 34) // cooling basalt crust
+            };
+            let ch = if roughness > 0.75 {
+                '*' // bubbling magma fountain
+            } else if roughness > 0.35 {
+                '~' // convective crust ripple
+            } else {
+                '.' // basalt grain
+            };
+            (ch, fg)
+        }
+        RoadStyle::Ice => {
+            let fg = Color::rgb(224, 247, 250);
+            let ch = if (x + ((time * 1.5) as usize)) % 9 == 0 {
+                '/' // glacial fissure / crevasse
+            } else if roughness > 0.5 {
+                '=' // glazed ice sheet
+            } else {
+                '-' // packed snow
+            };
+            (ch, fg)
+        }
+        RoadStyle::Seabed => {
+            let fg = Color::rgb(255, 213, 79);
+            let ch = if roughness > 0.70 {
+                '~' // ocean wave ripple in sand
+            } else if roughness > 0.40 {
+                '.' // fine sand grain
+            } else {
+                ' ' // seabed hollow
+            };
+            (ch, fg)
+        }
+        RoadStyle::Sidewalk => {
+            let fg = Color::rgb(189, 189, 189);
+            let slab = (x + ((time * 2.5) as usize)) % 10;
+            let ch = if slab == 0 {
+                '|' // expansion joint
+            } else if slab == 5 {
+                '_'
+            } else {
+                '─' // smooth pavement
+            };
+            (ch, fg)
+        }
+        RoadStyle::Roof => {
+            let fg = Color::rgb(120, 144, 156);
+            let tile = (x + ((time * 2.0) as usize)) % 4;
+            let ch = if tile == 0 { '#' } else { '=' };
+            (ch, fg)
+        }
+        RoadStyle::Grid => {
+            let fg = Color::rgb(0, 229, 255);
+            let node = (x + ((time * 3.0) as usize)) % 6;
+            let ch = if node == 0 { '+' } else { '-' };
+            (ch, fg)
+        }
+        RoadStyle::Crypt => {
+            let fg = Color::rgb(117, 117, 117);
+            let ch = if roughness > 0.75 {
+                'o' // ancient bone/skull fragment
+            } else if roughness > 0.40 {
+                '_' // stone slab seam
+            } else {
+                '.' // catacomb dust
+            };
+            (ch, fg)
+        }
+        RoadStyle::Savanna => {
+            let fg = Color::rgb(215, 204, 200);
+            let ch = if roughness > 0.70 {
+                '_' // sun-cracked dry clay furrow
+            } else if roughness > 0.40 {
+                '.' // steppe dust
+            } else {
+                '-' // dry clay
+            };
+            (ch, fg)
+        }
+        RoadStyle::Mud => {
+            let fg = Color::rgb(109, 76, 65);
+            let ch = if roughness > 0.75 {
+                'O' // mud bubble
+            } else if roughness > 0.50 {
+                'o' // small puddle
+            } else {
+                '.' // viscous slurry
+            };
+            (ch, fg)
+        }
+        RoadStyle::Tracks => {
+            let fg = Color::rgb(144, 164, 174);
+            let tie = (x + ((time * 3.5) as usize)) % 5;
+            let ch = if tie == 0 { '|' } else { '=' };
+            (ch, fg)
+        }
+        RoadStyle::Checkerboard => {
+            let fg = Color::rgb(238, 238, 238);
+            let tile = (x + ((time * 2.0) as usize)) % 4;
+            let ch = if tile < 2 { '#' } else { ' ' };
+            (ch, fg)
+        }
+        RoadStyle::None => (' ', Color::rgb(0, 0, 0)),
+    }
+}
+
+/// Render ground / road baseline directly at cow_bottom_y with procedural harmonic texture synthesis.
 pub fn render_road(
     fb: &mut FrameBuffer,
     style: RoadStyle,
@@ -1911,75 +2555,12 @@ pub fn render_road(
     width: usize,
     time: f32,
 ) {
-    if style == RoadStyle::None || cow_bottom_y >= fb.height {
+    if style == RoadStyle::None || cow_bottom_y >= fb.height || width == 0 {
         return;
     }
-
-    let (pattern, fg) = match style {
-        RoadStyle::Dirt => (
-            "..  ...   .   ...  ..   .   ..   ...   ..",
-            Color::rgb(141, 110, 99),
-        ),
-        RoadStyle::Cobblestone => (
-            "[===][===][===][===][===][===][===][===]",
-            Color::rgb(158, 158, 158),
-        ),
-        RoadStyle::Magma => (
-            "~~.~~.~~~..~~~.~~~.~~..~~~.~~~..~~~.~~",
-            Color::rgb(255, 87, 34),
-        ),
-        RoadStyle::Ice => (
-            "====/======/====/======/====/======/====",
-            Color::rgb(224, 247, 250),
-        ),
-        RoadStyle::Seabed => (
-            "~ . ~ . ~ . ~ . ~ . ~ . ~ . ~ . ~ . ~ . ",
-            Color::rgb(255, 213, 79),
-        ),
-        RoadStyle::Sidewalk => (
-            "──────[____]──────[____]──────[____]────",
-            Color::rgb(189, 189, 189),
-        ),
-        RoadStyle::Roof => (
-            "########################################",
-            Color::rgb(120, 144, 156),
-        ),
-        RoadStyle::Grid => (
-            "+---+---+---+---+---+---+---+---+---+---+",
-            Color::rgb(0, 229, 255),
-        ),
-        RoadStyle::Crypt => (
-            "oo__oo__oo__oo__oo__oo__oo__oo__oo__oo__",
-            Color::rgb(117, 117, 117),
-        ),
-        RoadStyle::Savanna => (
-            "__.-..-.__.-..-.__.-..-.__.-..-.__.-..-_",
-            Color::rgb(215, 204, 200),
-        ),
-        RoadStyle::Mud => (
-            "o..O..o..O..o..O..o..O..o..O..o..O..o..O",
-            Color::rgb(109, 76, 65),
-        ),
-        RoadStyle::Tracks => (
-            "=||===||===||===||===||===||===||===||= ",
-            Color::rgb(144, 164, 174),
-        ),
-        RoadStyle::Checkerboard => (
-            "[#][ ][#][ ][#][ ][#][ ][#][ ][#][ ][#] ",
-            Color::rgb(238, 238, 238),
-        ),
-        RoadStyle::None => return,
-    };
-
-    let pbytes = pattern.as_bytes();
-    if pbytes.is_empty() {
-        return;
-    }
-
-    let offset = (time * 4.0) as usize % pbytes.len();
 
     for x in 0..width {
-        let ch = pbytes[(x + offset) % pbytes.len()] as char;
+        let (ch, fg) = calculate_road_texture(x, style, time);
         if ch != ' ' {
             let _ = fb.set(x, cow_bottom_y, Cell::new(ch, fg));
         }
@@ -2005,12 +2586,23 @@ pub fn render_environment(
             // Floating clouds in upper sky above the mountains
             let cloud_fg = Color::rgb(255, 255, 255);
             let cloud_x = ((time * 2.0) as usize) % width.max(1);
-            let sky_y = ground_y.saturating_sub(5).min(1);
+            let sky_y = (ground_y / 5).clamp(1, fb.height.saturating_sub(1));
             if sky_y < fb.height {
                 let s = "(   )";
                 for (i, ch) in s.chars().enumerate() {
                     let x = (cloud_x + i) % width;
                     let _ = fb.set(x, sky_y, Cell::new(ch, cloud_fg));
+                }
+            }
+            if ground_y >= 12 {
+                let cloud_x2 = ((time * 1.4 + 28.0) as usize) % width.max(1);
+                let sky_y2 = (ground_y / 3).clamp(1, fb.height.saturating_sub(1));
+                if sky_y2 < fb.height && sky_y2 != sky_y {
+                    let s2 = "(      )";
+                    for (i, ch) in s2.chars().enumerate() {
+                        let x = (cloud_x2 + i) % width;
+                        let _ = fb.set(x, sky_y2, Cell::new(ch, cloud_fg));
+                    }
                 }
             }
             // Wildflowers blooming directly on the road / pasture ground
@@ -2058,7 +2650,7 @@ pub fn render_environment(
             // Crescent moon and stars in the night sky above the skyline
             let moon_fg = Color::rgb(255, 245, 157);
             let mx = width.saturating_sub(6);
-            let sky_y = ground_y.saturating_sub(5).min(1);
+            let sky_y = (ground_y / 5).clamp(1, fb.height.saturating_sub(1));
             if mx < width && sky_y < fb.height {
                 let _ = fb.set(mx, sky_y, Cell::new('(', moon_fg));
                 if mx + 1 < width {
@@ -2068,6 +2660,14 @@ pub fn render_environment(
             let star_fg = Color::rgb(255, 255, 255);
             for x in (3..width).step_by(14) {
                 let _ = fb.set(x, sky_y, Cell::new('.', star_fg));
+            }
+            if ground_y >= 12 {
+                let sky_y2 = (ground_y / 3).clamp(1, fb.height.saturating_sub(1));
+                if sky_y2 != sky_y {
+                    for x in (10..width).step_by(18) {
+                        let _ = fb.set(x, sky_y2, Cell::new('*', star_fg));
+                    }
+                }
             }
         }
         EnvironmentStyle::Space => {
@@ -2165,6 +2765,22 @@ pub fn render_scenery(
     road_y: usize,
     time: f32,
 ) {
+    render_scenery_full(fb, mountain, road, env, road_y, time, None, None, None);
+}
+
+/// Composite full scenery with explicit animal-relative height and kinematic locomotion properties.
+#[allow(clippy::too_many_arguments)]
+pub fn render_scenery_full(
+    fb: &mut FrameBuffer,
+    mountain: MountainStyle,
+    road: RoadStyle,
+    env: EnvironmentStyle,
+    road_y: usize,
+    time: f32,
+    animal_name: Option<&str>,
+    animal_height: Option<usize>,
+    base_anim: Option<BaseAnim>,
+) {
     let w = fb.width;
     let h = fb.height;
     if w == 0 || h == 0 {
@@ -2173,7 +2789,17 @@ pub fn render_scenery(
 
     let mountain_base_y = road_y.saturating_sub(1);
     render_mountain(fb, mountain, mountain_base_y, w, time);
-    render_trees(fb, mountain, env, mountain_base_y, w, time);
+    render_trees_with_animal(
+        fb,
+        mountain,
+        env,
+        mountain_base_y,
+        w,
+        time,
+        animal_name,
+        animal_height,
+        base_anim,
+    );
     render_environment(fb, env, road_y, w, h, time);
     render_road(fb, road, road_y, w, time);
 }
@@ -2181,6 +2807,105 @@ pub fn render_scenery(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_mountain_mathematics() {
+        let peaks_peaks = calculate_mountain_peaks(80, MountainStyle::Peaks);
+        let hills_peaks = calculate_mountain_peaks(80, MountainStyle::Hills);
+        let volcano_peaks = calculate_mountain_peaks(80, MountainStyle::Volcano);
+        assert!(peaks_peaks >= 2);
+        assert!(hills_peaks >= 1);
+        assert!(volcano_peaks >= 1);
+
+        let h1 = calculate_mountain_height(10.0, 80, 15, MountainStyle::Peaks, 0.0);
+        let h2 = calculate_mountain_height(20.0, 80, 15, MountainStyle::Peaks, 0.0);
+        assert!(h1 > 0.0 && h1 <= 15.0);
+        assert!(h2 > 0.0 && h2 <= 15.0);
+    }
+
+    #[test]
+    fn test_tree_mathematics_distance_and_clustering() {
+        let d0 = calculate_inter_tree_distance(0, 16.0, 12.0);
+        let d1 = calculate_inter_tree_distance(1, 16.0, 12.0);
+        let d2 = calculate_inter_tree_distance(2, 16.0, 12.0);
+        assert!((11.0..=30.0).contains(&d0));
+        assert!((11.0..=30.0).contains(&d1));
+        assert!((11.0..=30.0).contains(&d2));
+
+        // Verify monotonic positioning and multi-tree span
+        let p0 = calculate_tree_position(0, 16.0, 12.0);
+        let p1 = calculate_tree_position(1, 16.0, 12.0);
+        let p2 = calculate_tree_position(2, 16.0, 12.0);
+        assert!(p1 > p0);
+        assert!(p2 > p1);
+
+        let span_0_2 = calculate_multi_tree_span(0, 2, 16.0, 12.0);
+        assert_eq!(span_0_2, p2 - p0);
+    }
+
+    #[test]
+    fn test_tree_count_and_density() {
+        let forest_trees = calculate_tree_count(100, EnvironmentStyle::Forest, 8);
+        let savanna_trees = calculate_tree_count(100, EnvironmentStyle::Savanna, 8);
+        let city_trees = calculate_tree_count(100, EnvironmentStyle::City, 8);
+        assert!(forest_trees > savanna_trees);
+        assert_eq!(city_trees, 0);
+
+        // Colossal mascot vs tiny mascot scale factor
+        let colossal_trees = calculate_tree_count(100, EnvironmentStyle::Pasture, 16);
+        let tiny_trees = calculate_tree_count(100, EnvironmentStyle::Pasture, 3);
+        assert!(tiny_trees >= colossal_trees);
+    }
+
+    #[test]
+    fn test_tree_species_sequencing() {
+        let s0 = calculate_tree_species(0, EnvironmentStyle::Pasture, 42);
+        let s1 = calculate_tree_species(1, EnvironmentStyle::Pasture, 42);
+        let s2 = calculate_tree_species(2, EnvironmentStyle::Pasture, 42);
+        // Ensure species are valid variants
+        assert!(matches!(
+            s0,
+            TreeSpecies::Oak | TreeSpecies::Pine | TreeSpecies::Birch
+        ));
+        assert!(matches!(
+            s1,
+            TreeSpecies::Oak | TreeSpecies::Pine | TreeSpecies::Birch
+        ));
+        assert!(matches!(
+            s2,
+            TreeSpecies::Oak | TreeSpecies::Pine | TreeSpecies::Birch
+        ));
+
+        let arctic_s = calculate_tree_species(0, EnvironmentStyle::Arctic, 10);
+        assert!(matches!(arctic_s, TreeSpecies::Pine | TreeSpecies::SnowFir));
+    }
+
+    #[test]
+    fn test_tree_height_wrt_animal_properties() {
+        let base_y = 20;
+        // Tall mascot (dragon, height 14) vs small mascot (bunny, height 3)
+        let dragon_tree_h = calculate_tree_height(0, 14, BaseAnim::Breathe, base_y);
+        let bunny_tree_h = calculate_tree_height(0, 3, BaseAnim::Walk, base_y);
+        assert!(dragon_tree_h > bunny_tree_h);
+
+        // Airborne mascot (Float / Fly) hovers above canopy: tree height is scaled lower
+        let fly_tree_h = calculate_tree_height(0, 10, BaseAnim::Fly, base_y);
+        let walk_tree_h = calculate_tree_height(0, 10, BaseAnim::Walk, base_y);
+        assert!(fly_tree_h < walk_tree_h);
+    }
+
+    #[test]
+    fn test_road_texture_synthesis() {
+        let (ch1, col1) = calculate_road_texture(0, RoadStyle::Dirt, 0.0);
+        let (ch2, col2) = calculate_road_texture(5, RoadStyle::Cobblestone, 1.0);
+        let (ch3, col3) = calculate_road_texture(10, RoadStyle::Magma, 2.0);
+        assert_ne!(ch1, '\0');
+        assert_ne!(ch2, '\0');
+        assert_ne!(ch3, '\0');
+        assert!(col1.r > 0 || col1.g > 0 || col1.b > 0);
+        assert!(col2.r > 0 || col2.g > 0 || col2.b > 0);
+        assert!(col3.r > 0 || col3.g > 0 || col3.b > 0);
+    }
 
     #[test]
     fn parse_styles() {

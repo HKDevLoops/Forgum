@@ -20,6 +20,9 @@ pub enum ControlCmd {
     Speed(f32),
     Cow(String),
     Text(String),
+    Eyes(String),
+    Tongue(String),
+    Color(String),
     Status,
     Ping,
     /// Register as a peer in a sync session.
@@ -131,6 +134,9 @@ pub fn parse_cmd(line: &str) -> ControlCmd {
             }
             "COW" => ControlCmd::Cow(req.arg.unwrap_or_default()),
             "TEXT" => ControlCmd::Text(req.arg.unwrap_or_default()),
+            "EYES" => ControlCmd::Eyes(req.arg.unwrap_or_default()),
+            "TONGUE" => ControlCmd::Tongue(req.arg.unwrap_or_default()),
+            "COLOR" => ControlCmd::Color(req.arg.unwrap_or_default()),
             "STATUS" => ControlCmd::Status,
             "PING" => ControlCmd::Ping,
             "PEER-JOIN" => {
@@ -386,6 +392,24 @@ mod tests {
     fn parse_text_with_arg() {
         let cmd = parse_cmd(r#"{"cmd":"TEXT","arg":"hello"}"#);
         assert!(matches!(cmd, ControlCmd::Text(ref s) if s == "hello"));
+    }
+
+    #[test]
+    fn parse_eyes_with_arg() {
+        let cmd = parse_cmd(r#"{"cmd":"EYES","arg":"^^"}"#);
+        assert!(matches!(cmd, ControlCmd::Eyes(ref s) if s == "^^"));
+    }
+
+    #[test]
+    fn parse_tongue_with_arg() {
+        let cmd = parse_cmd(r#"{"cmd":"TONGUE","arg":"U "}"#);
+        assert!(matches!(cmd, ControlCmd::Tongue(ref s) if s == "U "));
+    }
+
+    #[test]
+    fn parse_color_with_arg() {
+        let cmd = parse_cmd(r#"{"cmd":"COLOR","arg":"rainbow"}"#);
+        assert!(matches!(cmd, ControlCmd::Color(ref s) if s == "rainbow"));
     }
 
     #[test]

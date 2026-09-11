@@ -52,7 +52,7 @@ programs.forgum.enable = true;
 ```
 
 > Note: the module is best-effort and untested in CI (Nix CI runs on
-> Linux only). It assumes `forgum-engine init <shell>` prints shell init code.
+> Linux only). It assumes `forgum init <shell>` prints shell init code.
 
 ---
 

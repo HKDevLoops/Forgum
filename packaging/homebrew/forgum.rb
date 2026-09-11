@@ -31,6 +31,9 @@ class Forgum < Formula
   def install
     bin.install "forgum-engine"
     bin.install "forgum" if File.exist?("forgum")
+
+    # Generate and install shell completions
+    generate_completions_from_executable(bin/"forgum-engine", "completions", shells: [:bash, :zsh, :fish])
   end
 
   test do

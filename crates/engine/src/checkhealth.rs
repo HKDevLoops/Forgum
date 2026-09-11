@@ -7,6 +7,10 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use forgum_platform::{
+    detect_available_package_managers, detect_installation_source, is_telemetry_allowed,
+    ALL_FORGUM_MARKER_PAIRS,
+};
 use serde::{Deserialize, Serialize};
 
 use crate::init::Shell;
@@ -151,6 +155,46 @@ pub fn run_health_check(explicit_config: Option<&Path>) -> HealthReport {
         } else {
             Some("Ensure forgum-engine is placed in a directory on your system PATH.".into())
         },
+    });
+
+    let source_pm = detect_installation_source();
+    let available_pms = detect_available_package_managers();
+    let active_pms: Vec<String> = available_pms
+        .iter()
+        .filter(|(_, avail)| *avail)
+        .map(|(pm, _)| pm.name().to_string())
+        .collect();
+
+    sys_items.push(HealthItem {
+        status: HealthStatus::Ok,
+        title: format!("Installation Source: {}", source_pm.name()),
+        details: vec![
+            format!("Origin: {}", source_pm.name()),
+            format!("Upgrade Command: `{}`", source_pm.update_command()),
+            format!("Uninstall Command: `{}`", source_pm.uninstall_command()),
+        ],
+        suggestion: None,
+    });
+
+    sys_items.push(HealthItem {
+        status: if active_pms.is_empty() {
+            HealthStatus::Info
+        } else {
+            HealthStatus::Ok
+        },
+        title: format!("Host Package Managers: {} detected active", active_pms.len()),
+        details: vec![
+            format!(
+                "Active Managers: {}",
+                if active_pms.is_empty() {
+                    "None (standalone host)".to_string()
+                } else {
+                    active_pms.join(", ")
+                }
+            ),
+            "Supported ecosystems: Scoop, WinGet, Chocolatey, Homebrew, Pacman, APT, DNF, Zypper, Nix, APK, XBPS, Gentoo, MacPorts, FreeBSD pkg, Cargo".to_string(),
+        ],
+        suggestion: None,
     });
 
     sections.push(HealthSection {
@@ -404,6 +448,74 @@ pub fn run_health_check(explicit_config: Option<&Path>) -> HealthReport {
         suggestion: Some(format!("Add `forgum init {:?} | Out-String | Invoke-Expression` (or eval for bash/zsh) to your shell profile.", shell_kind)),
     });
 
+    // Probe all 15 supported shells
+    let mut integrated_shells = Vec::new();
+    let mut present_shells = Vec::new();
+
+    for &sh in Shell::ALL {
+        if let Some(rc) = sh.shell_rc_path() {
+            if rc.exists() {
+                present_shells.push(sh);
+                if let Ok(content) = fs::read_to_string(&rc) {
+                    let has_hook = ALL_FORGUM_MARKER_PAIRS
+                        .iter()
+                        .any(|(b, _)| content.contains(b));
+                    if has_hook {
+                        integrated_shells.push(sh);
+                    }
+                }
+            }
+        }
+    }
+
+    shell_items.push(HealthItem {
+        status: if !integrated_shells.is_empty() {
+            HealthStatus::Ok
+        } else {
+            HealthStatus::Warn
+        },
+        title: format!(
+            "Universal Shell Ecosystem: {} of {} detected shells integrated",
+            integrated_shells.len(),
+            present_shells.len()
+        ),
+        details: vec![
+            format!(
+                "Integrated Shells: {}",
+                if integrated_shells.is_empty() {
+                    "None".to_string()
+                } else {
+                    integrated_shells
+                        .iter()
+                        .map(|s| format!("{s}"))
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                }
+            ),
+            format!(
+                "Configured Profiles on Host: {}",
+                if present_shells.is_empty() {
+                    "None".to_string()
+                } else {
+                    present_shells
+                        .iter()
+                        .map(|s| format!("{s}"))
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                }
+            ),
+            "Supported shells: Bash, Zsh, Fish, Pwsh, PowerShell, Cmd, Elvish, Nushell, Carapace, Xonsh, Tcsh, Ksh, Ion, Oil, Yash".into(),
+        ],
+        suggestion: if integrated_shells.is_empty() {
+            Some(format!(
+                "Run `forgum init {:?}` to install prompt hook, or run `forgum install` for interactive setup.",
+                shell_kind
+            ))
+        } else {
+            None
+        },
+    });
+
     sections.push(HealthSection {
         name: "Shell Integration & Prompt Hooks".into(),
         items: shell_items,
@@ -440,20 +552,76 @@ pub fn run_health_check(explicit_config: Option<&Path>) -> HealthReport {
         let text_size = text.metadata().map(|m| m.len()).unwrap_or(0);
         let jsonl_size = jsonl.metadata().map(|m| m.len()).unwrap_or(0);
 
+        let recent_logs = crate::logger::read_recent_logs(100, None).unwrap_or_default();
+        let diag = crate::logger::diagnose_logs(&recent_logs);
+
+        let status = if diag.errors_count > 0 {
+            HealthStatus::Error
+        } else if diag.warnings_count > 0 || !diag.uprising_bugs.is_empty() {
+            HealthStatus::Warn
+        } else {
+            HealthStatus::Ok
+        };
+
+        let mut details = vec![
+            format!("Text Log: {} ({} KB)", text.display(), text_size / 1024),
+            format!("JSONL Log: {} ({} KB)", jsonl.display(), jsonl_size / 1024),
+            format!(
+                "Recent Events: {} errors, {} warnings across {} logs",
+                diag.errors_count, diag.warnings_count, diag.total_logs
+            ),
+        ];
+        for bug in &diag.uprising_bugs {
+            details.push(format!(
+                "Bug Radar: {} [{}] - {}",
+                bug.pattern, bug.threat_level, bug.suggested_fix
+            ));
+        }
+
+        let suggestion = if !diag.user_action_items.is_empty() {
+            Some(format!(
+                "Triage: {}. Run `forgum logs --diagnose` for full report.",
+                diag.user_action_items[0]
+            ))
+        } else if text_size > 10 * 1024 * 1024 {
+            Some("Logs exceed 10 MB. Run `forgum logs --clear` to truncate old events.".into())
+        } else {
+            None
+        };
+
         log_items.push(HealthItem {
-            status: HealthStatus::Ok,
-            title: format!("Logging Subsystem: {}", dir.display()),
-            details: vec![
-                format!("Text Log: {} ({} KB)", text.display(), text_size / 1024),
-                format!("JSONL Log: {} ({} KB)", jsonl.display(), jsonl_size / 1024),
-            ],
-            suggestion: if text_size > 10 * 1024 * 1024 {
-                Some("Logs exceed 10 MB. Run `forgum logs --clear` to truncate old events.".into())
-            } else {
-                None
-            },
+            status,
+            title: format!("Logging & Anomaly Diagnostics: {}", dir.display()),
+            details,
+            suggestion,
         });
     }
+
+    // Telemetry & Motivation Diagnostics
+    let telem_active = is_telemetry_allowed();
+    log_items.push(HealthItem {
+        status: HealthStatus::Info,
+        title: format!(
+            "Motivation Telemetry: {}",
+            if telem_active {
+                "Active (Opted-in)"
+            } else {
+                "Disabled (Opted-out)"
+            }
+        ),
+        details: vec![
+            format!(
+                "Status: {}",
+                if telem_active { "Enabled" } else { "Disabled" }
+            ),
+            "Philosophy: Anonymous motivation counter (users_tried, users_installed, active_pulse)"
+                .into(),
+            "Privacy Guarantees: ZERO personal data, ZERO IP logging, ZERO background daemons"
+                .into(),
+            "Controls: Toggle via `FORGUM_TELEMETRY=0` or `forgum config`".into(),
+        ],
+        suggestion: None,
+    });
 
     sections.push(HealthSection {
         name: "Structured Logging & Traceability".into(),

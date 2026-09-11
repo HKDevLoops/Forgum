@@ -1,0 +1,8 @@
+#!/bin/sh
+set -e
+
+# postrm - clean up residual files on purge
+if [ "$1" = "purge" ]; then
+    rm -rf /etc/forgum 2>/dev/null || true
+    rm -rf /var/log/forgum 2>/dev/null || true
+fi

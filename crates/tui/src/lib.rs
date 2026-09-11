@@ -1,4 +1,6 @@
 pub mod app;
+pub mod celestial_art;
+pub mod wizard;
 
 use std::fs;
 use std::io;
@@ -11,6 +13,7 @@ use ratatui::backend::CrosstermBackend;
 use ratatui::Terminal;
 
 use crate::app::{ConfigApp, Tab};
+pub use wizard::{run_installer_wizard, run_uninstaller_wizard};
 
 /// Run the interactive TUI associated with a config path (backward compatibility).
 ///
@@ -50,7 +53,18 @@ pub fn run_tui(
             (cfg, Some(p.to_path_buf()))
         }
         Some(p) => (None, Some(p.to_path_buf())),
-        None => (None, None),
+        None => {
+            if let Ok((path, format)) = forgum_platform::paths::detect_config_file(None) {
+                if path.is_file() {
+                    let cfg = read_config_file(&path, format).ok();
+                    (cfg, Some(path))
+                } else {
+                    (None, Some(path))
+                }
+            } else {
+                (None, None)
+            }
+        }
     };
 
     // Terminal setup
@@ -64,10 +78,12 @@ pub fn run_tui(
 
     let result = (|| -> anyhow::Result<()> {
         let mut app = ConfigApp::new(loaded_config, initial_path, initial_tab);
-        let tick_rate = Duration::from_millis(33); // 30 FPS live preview
         let mut last_tick = Instant::now();
 
         loop {
+            let fps = (app.config().fps).clamp(1, 240) as u64;
+            let tick_rate = Duration::from_micros(1_000_000 / fps);
+
             terminal.draw(|f| {
                 app.render(f);
             })?;
@@ -102,8 +118,34 @@ pub fn run_tui(
                                 }
                             };
 
+                            // Write new configuration file first
                             fs::write(&target_path, text)
                                 .with_context(|| format!("write {}", target_path.display()))?;
+
+                            // Remove conflicting alternate format configs in the directory to satisfy mutual exclusivity
+                            if let Some(target_dir) = target_path.parent() {
+                                let canonical_target = target_path.canonicalize().ok();
+                                for candidate in [
+                                    "config.json",
+                                    "forgum.json",
+                                    "config.yaml",
+                                    "config.yml",
+                                    "forgum.yaml",
+                                    "forgum.yml",
+                                    "config.toml",
+                                    "forgum.toml",
+                                ] {
+                                    let old = target_dir.join(candidate);
+                                    let is_same = match (&canonical_target, old.canonicalize()) {
+                                        (Some(c_tgt), Ok(c_old)) => c_tgt == &c_old,
+                                        _ => old.file_name() == target_path.file_name(),
+                                    };
+                                    if !is_same && old.exists() {
+                                        let _ = fs::remove_file(old);
+                                    }
+                                }
+                            }
+
                             app.config_path = Some(target_path);
                             app.mark_saved();
                         }

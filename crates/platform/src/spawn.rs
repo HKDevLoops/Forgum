@@ -320,7 +320,7 @@ pub fn daemon_bootstrap<F: FnOnce() -> std::process::ExitCode>(
 ) -> std::process::ExitCode {
     use std::io::Write;
     use std::os::windows::process::CommandExt;
-    use windows_sys::Win32::System::Threading::{CREATE_NEW_PROCESS_GROUP, DETACHED_PROCESS};
+    use windows_sys::Win32::System::Threading::CREATE_NEW_PROCESS_GROUP;
 
     if std::env::args().any(|a| a == "--internal-daemon-runner") {
         return fallback();
@@ -338,7 +338,9 @@ pub fn daemon_bootstrap<F: FnOnce() -> std::process::ExitCode>(
     cmd.stdin(Stdio::null());
     cmd.stdout(Stdio::null());
     cmd.stderr(Stdio::null());
-    cmd.creation_flags(DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP);
+    // Create new process group so child does not receive parent Ctrl+C, but preserve
+    // console attachment so CONOUT$ remains valid for terminal overlay rendering.
+    cmd.creation_flags(CREATE_NEW_PROCESS_GROUP);
 
     let child_pid = match cmd.spawn() {
         Ok(child) => child.id(),

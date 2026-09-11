@@ -25,6 +25,25 @@ pub enum Shell {
 }
 
 impl Shell {
+    /// All 15 supported shell variants.
+    pub const ALL: &'static [Shell] = &[
+        Shell::Bash,
+        Shell::Zsh,
+        Shell::Fish,
+        Shell::Pwsh,
+        Shell::PowerShell,
+        Shell::Cmd,
+        Shell::Elvish,
+        Shell::Nushell,
+        Shell::Carapace,
+        Shell::Xonsh,
+        Shell::Tcsh,
+        Shell::Ksh,
+        Shell::Ion,
+        Shell::Oil,
+        Shell::Yash,
+    ];
+
     /// Parse a shell name string.
     pub fn parse(name: &str) -> Option<Self> {
         match name.to_lowercase().as_str() {
@@ -99,6 +118,14 @@ impl Shell {
                 #[cfg(windows)]
                 {
                     home.map(|h| {
+                        let onedrive_profile = h
+                            .join("OneDrive")
+                            .join("Documents")
+                            .join("PowerShell")
+                            .join("Microsoft.PowerShell_profile.ps1");
+                        if onedrive_profile.exists() {
+                            return onedrive_profile;
+                        }
                         h.join("Documents")
                             .join("PowerShell")
                             .join("Microsoft.PowerShell_profile.ps1")
@@ -116,6 +143,14 @@ impl Shell {
                 #[cfg(windows)]
                 {
                     home.map(|h| {
+                        let onedrive_profile = h
+                            .join("OneDrive")
+                            .join("Documents")
+                            .join("WindowsPowerShell")
+                            .join("Microsoft.PowerShell_profile.ps1");
+                        if onedrive_profile.exists() {
+                            return onedrive_profile;
+                        }
                         h.join("Documents")
                             .join("WindowsPowerShell")
                             .join("Microsoft.PowerShell_profile.ps1")
@@ -333,6 +368,157 @@ pub fn write_file_if_changed(path: &Path, content: &str) -> std::io::Result<bool
     Ok(true)
 }
 
+/// Universal standard marker identifiers for shell configuration blocks.
+pub const HOOK_MARKER_BEGIN: &str = "# >>> forgum >>>";
+pub const HOOK_MARKER_END: &str = "# <<< forgum <<<";
+pub const COMPLETIONS_MARKER_BEGIN: &str = "# >>> forgum completions >>>";
+pub const COMPLETIONS_MARKER_END: &str = "# <<< forgum completions <<<";
+
+/// All known begin/end marker pairs ever used by Forgum in shell / mux configs.
+pub const ALL_FORGUM_MARKER_PAIRS: &[(&str, &str)] = &[
+    ("# >>> forgum >>>", "# <<< forgum <<<"),
+    (
+        "# >>> forgum completions >>>",
+        "# <<< forgum completions <<<",
+    ),
+    (
+        "# >>> forgum completions (bash) >>>",
+        "# <<< forgum completions <<<",
+    ),
+    (
+        "# >>> forgum completions (zsh) >>>",
+        "# <<< forgum completions <<<",
+    ),
+    (
+        "# >>> forgum completions (fish) >>>",
+        "# <<< forgum completions <<<",
+    ),
+    (
+        "# >>> forgum completions (pwsh) >>>",
+        "# <<< forgum completions <<<",
+    ),
+    ("# >>> forgum (bash) >>>", "# <<< forgum <<<"),
+    ("# >>> forgum (zsh) >>>", "# <<< forgum <<<"),
+    ("# >>> forgum (fish) >>>", "# <<< forgum <<<"),
+    ("# >>> forgum (pwsh) >>>", "# <<< forgum <<<"),
+    ("# >>> forgum (powershell) >>>", "# <<< forgum <<<"),
+    ("# >>> forgum (nushell) >>>", "# <<< forgum <<<"),
+    ("# >>> forgum (elvish) >>>", "# <<< forgum <<<"),
+    ("# >>> forgum (carapace) >>>", "# <<< forgum <<<"),
+    ("# >>> forgum (xonsh) >>>", "# <<< forgum <<<"),
+    ("# >>> forgum (tcsh) >>>", "# <<< forgum <<<"),
+    ("# >>> forgum (ksh) >>>", "# <<< forgum <<<"),
+    ("# >>> forgum (ion) >>>", "# <<< forgum <<<"),
+    ("# >>> forgum (oil) >>>", "# <<< forgum <<<"),
+    ("# >>> forgum (yash) >>>", "# <<< forgum <<<"),
+    ("rem >>> forgum (cmd) >>>", "rem <<< forgum <<<"),
+    ("rem >>> forgum (cmd) >>>", "rem <<< forgum (cmd) <<<"),
+    ("rem >>> forgum >>>", "rem <<< forgum <<<"),
+    ("# >>> forgum tmux >>>", "# <<< forgum tmux <<<"),
+    ("# >>> forgum zellij >>>", "# <<< forgum zellij <<<"),
+    ("-- >>> forgum wezterm >>>", "-- <<< forgum wezterm <<<"),
+    ("# >>> forgum screen >>>", "# <<< forgum screen <<<"),
+    ("# >>> forgum starship >>>", "# <<< forgum starship <<<"),
+    ("# >>> forgum byobu >>>", "# <<< forgum byobu <<<"),
+];
+
+/// Remove a delimited block from configuration file content.
+///
+/// Strips all content between and including `begin_marker` and `end_marker`
+/// (along with the end marker's newline). Cleans up any trailing whitespace
+/// or redundant newlines left behind. Returns `(new_content, was_removed)`.
+pub fn remove_delimited_block(
+    content: &str,
+    begin_marker: &str,
+    end_marker: &str,
+) -> (String, bool) {
+    let mut current = content.to_string();
+    let mut removed_any = false;
+
+    while let (Some(start), Some(end)) = (current.find(begin_marker), current.find(end_marker)) {
+        if start <= end {
+            let before = &current[..start];
+            let after_marker = &current[end..];
+            let after = if let Some(nl) = after_marker.find('\n') {
+                &after_marker[nl + 1..]
+            } else {
+                ""
+            };
+
+            let trimmed_before = before.trim_end_matches([' ', '\t', '\r']);
+            let trimmed_after = after.trim_start_matches(['\r', '\n']);
+
+            let mut next = String::with_capacity(trimmed_before.len() + trimmed_after.len() + 2);
+            if !trimmed_before.is_empty() {
+                next.push_str(trimmed_before);
+                if !trimmed_before.ends_with('\n') {
+                    next.push('\n');
+                }
+            }
+            if !trimmed_after.is_empty() {
+                next.push_str(trimmed_after);
+            }
+            current = next;
+            removed_any = true;
+        } else {
+            break;
+        }
+    }
+
+    (current, removed_any)
+}
+
+/// Remove all known forgum blocks from content.
+pub fn remove_all_forgum_blocks(mut content: String) -> (String, bool) {
+    let mut any_removed = false;
+    for &(b, e) in ALL_FORGUM_MARKER_PAIRS {
+        let (updated, removed) = remove_delimited_block(&content, b, e);
+        if removed {
+            content = updated;
+            any_removed = true;
+        }
+    }
+    (content, any_removed)
+}
+
+/// Uninstall integration and completions for a specific shell.
+///
+/// Returns `Ok(true)` if modifications or removals were made, `Ok(false)` if clean.
+pub fn uninstall_shell_integration(shell: Shell) -> std::io::Result<bool> {
+    let mut changed = false;
+
+    // 1. Clean shell rc file
+    if let Some(rc_path) = shell.shell_rc_path() {
+        if rc_path.exists() {
+            if let Ok(content) = std::fs::read_to_string(&rc_path) {
+                let (cleaned, removed) = remove_all_forgum_blocks(content);
+                if removed {
+                    std::fs::write(&rc_path, cleaned)?;
+                    changed = true;
+                }
+            }
+        }
+    }
+
+    // 2. Remove completions script
+    if let Some(comp_path) = shell.completions_script_path() {
+        if comp_path.exists() {
+            let _ = std::fs::remove_file(&comp_path);
+            changed = true;
+        }
+    }
+
+    Ok(changed)
+}
+
+/// Uninstall integration and completions across all 15 supported shells.
+pub fn uninstall_all_shell_integrations() -> Vec<(Shell, std::io::Result<bool>)> {
+    Shell::ALL
+        .iter()
+        .map(|&sh| (sh, uninstall_shell_integration(sh)))
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -374,5 +560,49 @@ mod tests {
             updated,
             "prefix\n# >>> forgum >>>\nnew content\n# <<< forgum <<<\nsuffix\n"
         );
+    }
+
+    #[test]
+    fn remove_delimited_block_cleanly_excises() {
+        let content = "export PATH=$PATH:/usr/bin\n# >>> forgum >>>\nsource ~/.forgum\n# <<< forgum <<<\nalias ll='ls -l'\n";
+        let (cleaned, removed) =
+            remove_delimited_block(content, "# >>> forgum >>>", "# <<< forgum <<<");
+        assert!(removed);
+        assert_eq!(cleaned, "export PATH=$PATH:/usr/bin\nalias ll='ls -l'\n");
+    }
+
+    #[test]
+    fn remove_delimited_block_when_absent() {
+        let content = "export PATH=$PATH:/usr/bin\n";
+        let (cleaned, removed) =
+            remove_delimited_block(content, "# >>> forgum >>>", "# <<< forgum <<<");
+        assert!(!removed);
+        assert_eq!(cleaned, content);
+    }
+
+    #[test]
+    fn remove_all_forgum_blocks_handles_mixed_markers() {
+        let content = "prefix\n# >>> forgum >>>\nhook\n# <<< forgum <<<\nmiddle\n# >>> forgum completions >>>\ncomp\n# <<< forgum completions <<<\nsuffix\n";
+        let (cleaned, removed) = remove_all_forgum_blocks(content.to_string());
+        assert!(removed);
+        assert_eq!(cleaned, "prefix\nmiddle\nsuffix\n");
+    }
+
+    #[test]
+    fn all_known_marker_pairs_are_cleanly_excised() {
+        for &(begin, end) in ALL_FORGUM_MARKER_PAIRS {
+            let wrapped = format!(
+                "export PATH=/usr/bin\n{begin}\nsome configuration\n{end}\nalias ll='ls -la'\n"
+            );
+            let (cleaned, removed) = remove_all_forgum_blocks(wrapped);
+            assert!(
+                removed,
+                "marker pair ({begin}, {end}) must be recognized and removed by remove_all_forgum_blocks"
+            );
+            assert_eq!(
+                cleaned, "export PATH=/usr/bin\nalias ll='ls -la'\n",
+                "marker pair ({begin}, {end}) must leave clean surrounding content"
+            );
+        }
     }
 }

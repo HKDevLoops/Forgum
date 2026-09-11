@@ -240,7 +240,11 @@ pub fn run() -> ExitCode {
             );
             print!("{hook}");
             if cfg!(feature = "tui") {
-                println!("# run `forgum config --tui` to customize your cow");
+                if matches!(shell, Shell::Cmd) {
+                    println!("rem run `forgum config --tui` to customize your cow");
+                } else {
+                    println!("# run `forgum config --tui` to customize your cow");
+                }
             }
             ExitCode::SUCCESS
         }
@@ -261,9 +265,62 @@ pub fn run() -> ExitCode {
         }
 
         // ── install / setup wizard ─────────────────────────────────
-        Some(cli::Commands::Install) => {
-            let code = forgum_engine::config_tui::run_standalone(Some("installer"));
-            ExitCode::from(code as u8)
+        Some(cli::Commands::Install {
+            headless,
+            telemetry,
+        }) => {
+            if let Some(t) = telemetry {
+                let allowed = matches!(t.to_lowercase().as_str(), "allow" | "yes" | "1" | "true");
+                let _ = forgum_platform::set_telemetry_consent(allowed);
+            }
+            if headless {
+                forgum_platform::record_tried();
+                if let Ok(d) = forgum_platform::paths::config_dir() {
+                    let _ = std::fs::create_dir_all(&d);
+                    let cfg_path = d.join("config.json");
+                    if !cfg_path.exists() {
+                        let default_cfg = forgum_platform::protocol::SceneConfig::default();
+                        if let Ok(s) = serde_json::to_string_pretty(&default_cfg) {
+                            let _ = std::fs::write(&cfg_path, s);
+                        }
+                    }
+                }
+                forgum_platform::record_installed();
+                println!("\x1b[1;32m✓\x1b[0m Headless Forgum installation completed.");
+                ExitCode::SUCCESS
+            } else {
+                let code = forgum_engine::config_tui::run_installer_wizard();
+                ExitCode::from(code as u8)
+            }
+        }
+
+        // ── uninstall ──────────────────────────────────────────────
+        Some(cli::Commands::Uninstall {
+            method,
+            non_interactive,
+            tui,
+        }) => {
+            let is_tty = forgum_platform::terminal::detect_capabilities().is_tty;
+            if (tui || (method.is_none() && !non_interactive)) && is_tty {
+                let code = forgum_engine::config_tui::run_uninstaller_wizard();
+                ExitCode::from(code as u8)
+            } else {
+                let mode = match method.as_deref().unwrap_or("soft").to_lowercase().as_str() {
+                    "purge" | "clean" | "all" => forgum_platform::UninstallMode::Purge,
+                    _ => forgum_platform::UninstallMode::Soft,
+                };
+                println!("\x1b[1;36m━━━ Forgum De-Orbit Uninstaller ━━━\x1b[0m");
+                println!("Executing: \x1b[1;33m{}\x1b[0m\n", mode.title());
+                let report = forgum_platform::perform_uninstallation(mode);
+                for log in report.logs {
+                    println!("  {log}");
+                }
+                for err in report.errors {
+                    eprintln!("  \x1b[1;31m✗\x1b[0m {err}");
+                }
+                println!("\n\x1b[1;32m✓ Uninstallation completed.\x1b[0m");
+                ExitCode::SUCCESS
+            }
         }
 
         // ── update ─────────────────────────────────────────────────
@@ -477,14 +534,17 @@ pub fn run() -> ExitCode {
             }
         }
 
-        // ── logs ───────────────────────────────────────────────────
         Some(cli::Commands::Logs {
             lines,
             level,
             json,
             follow,
             path,
+            open,
+            raw,
+            filter,
             clear,
+            diagnose,
         }) => {
             if path {
                 if let Some((dir, text, jsonl)) = forgum_engine::logger::get_log_paths() {
@@ -495,6 +555,39 @@ pub fn run() -> ExitCode {
                     eprintln!("{PROGRAM}: cannot determine log directory");
                 }
                 return ExitCode::SUCCESS;
+            }
+
+            if open {
+                match forgum_engine::logger::open_log_in_system(false) {
+                    Ok(opened_path) => {
+                        println!(
+                            "Opened log in default system viewer: {}",
+                            opened_path.display()
+                        );
+                        return ExitCode::SUCCESS;
+                    }
+                    Err(e) => {
+                        eprintln!("{PROGRAM}: unable to open log viewer: {e}");
+                        return ExitCode::from(1);
+                    }
+                }
+            }
+
+            if raw {
+                match forgum_engine::logger::read_raw_log() {
+                    Ok(content) => {
+                        if content.is_empty() {
+                            println!("Log file is empty or no events recorded yet.");
+                        } else {
+                            print!("{content}");
+                        }
+                        return ExitCode::SUCCESS;
+                    }
+                    Err(e) => {
+                        eprintln!("{PROGRAM}: error reading raw log: {e}");
+                        return ExitCode::from(1);
+                    }
+                }
             }
 
             if clear {
@@ -509,13 +602,29 @@ pub fn run() -> ExitCode {
             let min_level = level
                 .as_deref()
                 .and_then(forgum_engine::logger::LogLevel::from_str_loose);
-            let entries = match forgum_engine::logger::read_recent_logs(lines, min_level) {
+            let mut entries = match forgum_engine::logger::read_recent_logs(lines, min_level) {
                 Ok(e) => e,
                 Err(err) => {
                     eprintln!("{PROGRAM}: error reading logs: {err}");
                     return ExitCode::from(1);
                 }
             };
+
+            if let Some(ref q) = filter {
+                entries = forgum_engine::logger::filter_entries(&entries, q);
+            }
+
+            if diagnose {
+                let diag = forgum_engine::logger::diagnose_logs(&entries);
+                if json {
+                    if let Ok(s) = serde_json::to_string_pretty(&diag) {
+                        println!("{s}");
+                    }
+                } else {
+                    print!("{}", forgum_engine::logger::format_diagnostic_report(&diag));
+                }
+                return ExitCode::SUCCESS;
+            }
 
             if json {
                 for entry in &entries {
@@ -532,7 +641,12 @@ pub fn run() -> ExitCode {
                 let mut last_seen = entries.len();
                 loop {
                     std::thread::sleep(std::time::Duration::from_millis(500));
-                    if let Ok(all_entries) = forgum_engine::logger::read_recent_logs(0, min_level) {
+                    if let Ok(mut all_entries) =
+                        forgum_engine::logger::read_recent_logs(0, min_level)
+                    {
+                        if let Some(ref q) = filter {
+                            all_entries = forgum_engine::logger::filter_entries(&all_entries, q);
+                        }
                         if all_entries.len() > last_seen {
                             for entry in &all_entries[last_seen..] {
                                 if json {
@@ -558,6 +672,26 @@ pub fn run() -> ExitCode {
                 }
             }
 
+            ExitCode::SUCCESS
+        }
+
+        // ── diagnose ────────────────────────────────────────────────
+        Some(cli::Commands::Diagnose { lines, json }) => {
+            let entries = match forgum_engine::logger::read_recent_logs(lines, None) {
+                Ok(e) => e,
+                Err(err) => {
+                    eprintln!("{PROGRAM}: error reading logs: {err}");
+                    return ExitCode::from(1);
+                }
+            };
+            let diag = forgum_engine::logger::diagnose_logs(&entries);
+            if json {
+                if let Ok(s) = serde_json::to_string_pretty(&diag) {
+                    println!("{s}");
+                }
+            } else {
+                print!("{}", forgum_engine::logger::format_diagnostic_report(&diag));
+            }
             ExitCode::SUCCESS
         }
 
@@ -778,6 +912,79 @@ pub fn run() -> ExitCode {
                 }
                 Err(e) => {
                     eprintln!("{PROGRAM}: herd effect: {e}");
+                    ExitCode::from(1)
+                }
+            }
+        }
+
+        // ── herd cow ───────────────────────────────────────────────
+        Some(cli::Commands::Herd {
+            sub: cli::HerdSub::Cow { name, session, all },
+        }) => {
+            let filter = forgum_engine::herd::HerdFilter { session, all };
+            match forgum_engine::herd::herd_cow(&name, &filter) {
+                Ok(n) => {
+                    println!("Set cow on {n} daemon(s).");
+                    ExitCode::SUCCESS
+                }
+                Err(e) => {
+                    eprintln!("{PROGRAM}: herd cow: {e}");
+                    ExitCode::from(1)
+                }
+            }
+        }
+
+        // ── herd eyes ──────────────────────────────────────────────
+        Some(cli::Commands::Herd {
+            sub: cli::HerdSub::Eyes { eyes, session, all },
+        }) => {
+            let filter = forgum_engine::herd::HerdFilter { session, all };
+            match forgum_engine::herd::herd_eyes(&eyes, &filter) {
+                Ok(n) => {
+                    println!("Set eyes on {n} daemon(s).");
+                    ExitCode::SUCCESS
+                }
+                Err(e) => {
+                    eprintln!("{PROGRAM}: herd eyes: {e}");
+                    ExitCode::from(1)
+                }
+            }
+        }
+
+        // ── herd tongue ────────────────────────────────────────────
+        Some(cli::Commands::Herd {
+            sub:
+                cli::HerdSub::Tongue {
+                    tongue,
+                    session,
+                    all,
+                },
+        }) => {
+            let filter = forgum_engine::herd::HerdFilter { session, all };
+            match forgum_engine::herd::herd_tongue(&tongue, &filter) {
+                Ok(n) => {
+                    println!("Set tongue on {n} daemon(s).");
+                    ExitCode::SUCCESS
+                }
+                Err(e) => {
+                    eprintln!("{PROGRAM}: herd tongue: {e}");
+                    ExitCode::from(1)
+                }
+            }
+        }
+
+        // ── herd color ─────────────────────────────────────────────
+        Some(cli::Commands::Herd {
+            sub: cli::HerdSub::Color { mode, session, all },
+        }) => {
+            let filter = forgum_engine::herd::HerdFilter { session, all };
+            match forgum_engine::herd::herd_color(&mode, &filter) {
+                Ok(n) => {
+                    println!("Set color mode on {n} daemon(s).");
+                    ExitCode::SUCCESS
+                }
+                Err(e) => {
+                    eprintln!("{PROGRAM}: herd color: {e}");
                     ExitCode::from(1)
                 }
             }
@@ -1061,6 +1268,24 @@ pub fn run() -> ExitCode {
             }
         },
 
+        // ── sweep ───────────────────────────────────────────────────
+        Some(cli::Commands::Sweep) => {
+            let session_id = forgum_platform::detect_session_id();
+            let path = forgum_platform::daemon_state_path(&session_id);
+            if path.exists() {
+                if let Ok(state) = forgum_engine::daemon::DaemonState::read(&path) {
+                    if !state.is_alive() {
+                        forgum_engine::daemon::cleanup_daemon_state(&session_id);
+                    }
+                } else {
+                    forgum_engine::daemon::cleanup_daemon_state(&session_id);
+                }
+            }
+            let _ = crossterm::terminal::disable_raw_mode();
+            let _ = crossterm::execute!(std::io::stdout(), crossterm::cursor::Show);
+            ExitCode::SUCCESS
+        }
+
         // ── render (default) ────────────────────────────────────────
         _ => render_subcommand(args),
     }
@@ -1180,7 +1405,7 @@ fn render_subcommand(args: cli::Args) -> ExitCode {
     let cow_dna = dna::get_dna(&animations, &scene.cow);
     let instance_id = std::process::id();
 
-    let result = if scene.background {
+    let result = if scene.background || scene.split_scroll || args.split_scroll {
         render::render_loop_background(
             out,
             scene,
@@ -1356,7 +1581,7 @@ fn run_daemon_child(args: cli::Args) -> ExitCode {
     let instance_id = std::process::id();
     let shutdown = ShutdownFlag::new();
 
-    let result = if scene.background {
+    let result = if scene.background || scene.split_scroll {
         render::render_loop_background(
             out,
             scene,

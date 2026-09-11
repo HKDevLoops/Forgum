@@ -8,7 +8,7 @@ This guide is for advanced users who want to extend Forgum: add cows, effects,
 shell hooks, or config keys, or hack on the engine internals. Every `file:line`
 reference below points at the **real** workspace code. Nothing here describes the fictional `brain/19` flow.
 
-- Binary name: `forgum-engine`
+- Binary name: `forgum` (accessed strictly and exclusively via `forgum`)
 - Real crates: `engine`, `platform`, `tui`
 - Config schema is **strict** (`#[serde(deny_unknown_fields)]`) — unknown
   fields are rejected at parse time, so a new option must be added end-to-end.
@@ -29,8 +29,8 @@ the path on demand:
    classic cowsay `.cow` format (a `$the_cow =` block with `$eyes`, `$tongue`,
    `$thoughts` placeholders).
 2. Reference it by name via the `cow` config key (no code change required):
-   - `forgum-engine --config ... say "hi"` with `"cow": "mycow"` in the JSON, or
-   - `cargo run -p forgum-engine -- say "hi"` (uses `cow: "default"` unless overridden).
+   - `forgum --config ... say "hi"` with `"cow": "mycow"` in the JSON, or
+   - `cargo run --bin forgum -- say "hi"` (uses `cow: "default"` unless overridden).
 3. If a `cow_dna.json` exists (a DNA/catalog file referenced by older tools),
    add an entry for `mycow`. **Verified: `data/cow_dna.json` does NOT currently
    exist in this workspace**, so there is nothing to update — skip this step.
@@ -143,6 +143,8 @@ Subsystem → file:line (all verified against this workspace):
 | **CLI** | `crates/engine/src/cli.rs` (`Commands` enum ~line 85, `Config` variant ~line 108) |
 | **TUI** | `crates/tui/src/lib.rs` (`run_config_tui`), `crates/tui/src/app.rs` |
 | **Platform paths** | `crates/platform/src/paths.rs` (`ShellKind` ~line 28 — NOT the engine `Shell`) |
+| **Procedural Nature Math** | `crates/engine/src/scenery.rs` (mountain peaks/elevation, flora Fibonacci spacing, road roughness) |
+| **Memory Ceiling (< 100MB)** | `crates/engine/tests/memory_budget.rs` (enforcing strict <100MB resident memory ceiling across threads) |
 
 ---
 

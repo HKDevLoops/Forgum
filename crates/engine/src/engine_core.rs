@@ -73,6 +73,9 @@ pub enum ControlMsg {
     Speed(f32),
     Cow(String),
     Text(String),
+    Eyes(String),
+    Tongue(String),
+    ColorMode(String),
     Resize { cols: u16, rows: u16 },
 }
 
@@ -222,14 +225,24 @@ impl SimState {
 
         // Render scenery layers before effect
         let (mtn_style, road_style, env_style) = self.scenery;
-        let road_y = (self.cow_foot_y + 1).min(self.fb.height.saturating_sub(1));
-        crate::scenery::render_scenery(
+        let has_scenery = env_style != crate::scenery::EnvironmentStyle::None
+            || mtn_style != crate::scenery::MountainStyle::None;
+        let road_y = if has_scenery && self.fb.height > self.cow_foot_y + 3 {
+            self.fb.height.saturating_sub(2).max(self.cow_foot_y + 1)
+        } else {
+            (self.cow_foot_y + 1).min(self.fb.height.saturating_sub(1))
+        };
+        let animal_h = self.cow_foot_y.max(1);
+        crate::scenery::render_scenery_full(
             &mut self.fb,
             mtn_style,
             road_style,
             env_style,
             road_y,
             self.elapsed,
+            Some(&self.config.cow),
+            Some(animal_h),
+            Some(self.cow_dna.base),
         );
 
         // Update effect.
@@ -381,6 +394,90 @@ impl SimState {
                 );
                 self.need_full_redraw = true;
             }
+            ControlMsg::Eyes(eyes) => {
+                self.config.eyes = eyes.clone();
+                let thoughts_glyph = if self.config.think { "o" } else { "\\" };
+                let cow_text = crate::cow::load_cow(
+                    &self.config.cow,
+                    &self.data_dir,
+                    &self.config.eyes,
+                    &self.config.tongue,
+                    thoughts_glyph,
+                );
+                let composed = crate::cow::compose_scene_with_mode(
+                    &cow_text,
+                    &self.config.text,
+                    self.config.think,
+                );
+                if let Ok(mut lock) = self.active_composed.write() {
+                    *lock = composed.clone();
+                }
+                self.cow_foot_y = effects::find_cow_foot_y(&composed);
+                self.effect = effects::create_scene_effect(
+                    &self.config.effect,
+                    composed,
+                    self.cow_dna.clone(),
+                    self.instance_id,
+                    &self.config.color_mode,
+                );
+                self.need_full_redraw = true;
+            }
+            ControlMsg::Tongue(tongue) => {
+                self.config.tongue = tongue.clone();
+                let thoughts_glyph = if self.config.think { "o" } else { "\\" };
+                let cow_text = crate::cow::load_cow(
+                    &self.config.cow,
+                    &self.data_dir,
+                    &self.config.eyes,
+                    &self.config.tongue,
+                    thoughts_glyph,
+                );
+                let composed = crate::cow::compose_scene_with_mode(
+                    &cow_text,
+                    &self.config.text,
+                    self.config.think,
+                );
+                if let Ok(mut lock) = self.active_composed.write() {
+                    *lock = composed.clone();
+                }
+                self.cow_foot_y = effects::find_cow_foot_y(&composed);
+                self.effect = effects::create_scene_effect(
+                    &self.config.effect,
+                    composed,
+                    self.cow_dna.clone(),
+                    self.instance_id,
+                    &self.config.color_mode,
+                );
+                self.need_full_redraw = true;
+            }
+            ControlMsg::ColorMode(mode) => {
+                self.config.color_mode = mode.clone();
+                let thoughts_glyph = if self.config.think { "o" } else { "\\" };
+                let cow_text = crate::cow::load_cow(
+                    &self.config.cow,
+                    &self.data_dir,
+                    &self.config.eyes,
+                    &self.config.tongue,
+                    thoughts_glyph,
+                );
+                let composed = crate::cow::compose_scene_with_mode(
+                    &cow_text,
+                    &self.config.text,
+                    self.config.think,
+                );
+                if let Ok(mut lock) = self.active_composed.write() {
+                    *lock = composed.clone();
+                }
+                self.cow_foot_y = effects::find_cow_foot_y(&composed);
+                self.effect = effects::create_scene_effect(
+                    &self.config.effect,
+                    composed,
+                    self.cow_dna.clone(),
+                    self.instance_id,
+                    &self.config.color_mode,
+                );
+                self.need_full_redraw = true;
+            }
             _ => {}
         }
     }
@@ -452,7 +549,12 @@ fn sim_thread(
                     sim.effect.on_resize(cols as usize, rows as usize);
                     sim.need_full_redraw = true;
                 }
-                ref msg @ (ControlMsg::Effect(_) | ControlMsg::Cow(_) | ControlMsg::Text(_)) => {
+                ref msg @ (ControlMsg::Effect(_)
+                | ControlMsg::Cow(_)
+                | ControlMsg::Text(_)
+                | ControlMsg::Eyes(_)
+                | ControlMsg::Tongue(_)
+                | ControlMsg::ColorMode(_)) => {
                     sim.handle_hot_swap(msg);
                 }
             }
@@ -729,6 +831,9 @@ pub fn run_engine(
                         ControlCmd::Speed(s) => ControlMsg::Speed(s),
                         ControlCmd::Cow(name) => ControlMsg::Cow(name),
                         ControlCmd::Text(text) => ControlMsg::Text(text),
+                        ControlCmd::Eyes(eyes) => ControlMsg::Eyes(eyes),
+                        ControlCmd::Tongue(tongue) => ControlMsg::Tongue(tongue),
+                        ControlCmd::Color(color) => ControlMsg::ColorMode(color),
                         _ => continue,
                     };
                     if tx.send(msg).is_err() {
@@ -894,6 +999,9 @@ pub fn run_engine_banner(
                         ControlCmd::Speed(s) => ControlMsg::Speed(s),
                         ControlCmd::Cow(name) => ControlMsg::Cow(name),
                         ControlCmd::Text(text) => ControlMsg::Text(text),
+                        ControlCmd::Eyes(eyes) => ControlMsg::Eyes(eyes),
+                        ControlCmd::Tongue(tongue) => ControlMsg::Tongue(tongue),
+                        ControlCmd::Color(color) => ControlMsg::ColorMode(color),
                         _ => continue,
                     };
                     if tx.send(msg).is_err() {
@@ -964,9 +1072,21 @@ pub fn run_engine_overlay(
     // If split_scroll is enabled, lock scroll margins to rows below the overlay
     if config.split_scroll && total_rows > rows + 2 {
         let scroll_top = rows + 1;
-        let _ = out.write_all(format!("\x1b[{scroll_top};{total_rows}r").as_bytes());
+        let _ = out
+            .write_all(format!("\x1b[{scroll_top};{total_rows}r\x1b[{scroll_top};1H").as_bytes());
         let _ = out.flush();
     }
+
+    crate::log_info!(
+        "engine",
+        "Engine overlay initialized: {}x{} @ {} fps (cow='{}', effect='{}', split_scroll={})",
+        cols,
+        rows,
+        config.fps,
+        config.cow,
+        config.effect,
+        config.split_scroll
+    );
 
     let (control_tx, control_rx) = unbounded::<ControlMsg>();
     let (frame_tx, frame_rx) = bounded::<Arc<Frame>>(2);
@@ -1000,6 +1120,9 @@ pub fn run_engine_overlay(
                         ControlCmd::Speed(s) => ControlMsg::Speed(s),
                         ControlCmd::Cow(name) => ControlMsg::Cow(name),
                         ControlCmd::Text(text) => ControlMsg::Text(text),
+                        ControlCmd::Eyes(eyes) => ControlMsg::Eyes(eyes),
+                        ControlCmd::Tongue(tongue) => ControlMsg::Tongue(tongue),
+                        ControlCmd::Color(color) => ControlMsg::ColorMode(color),
                         _ => continue,
                     };
                     if tx.send(msg).is_err() {
@@ -1024,9 +1147,52 @@ pub fn run_engine_overlay(
             render_thread(render_state, frame_rx, render_shutdown);
         })?;
 
-    // In overlay mode, strictly no tty reads — wait for frames or signal
+    // In background overlay mode, strictly no tty reads — wait for frames or signal.
+    // In foreground overlay mode, poll keyboard for Ctrl+C, 'q', 'Q', Esc to allow clean exit.
+    let _raw_guard = if !config.background && crossterm::tty::IsTty::is_tty(&std::io::stdin()) {
+        forgum_platform::RawModeGuard::acquire().ok()
+    } else {
+        None
+    };
+
     while !shutdown.is_shutdown() {
-        std::thread::sleep(Duration::from_millis(50));
+        if !config.background && crossterm::tty::IsTty::is_tty(&std::io::stdin()) {
+            if let Ok(true) = crossterm::event::poll(Duration::from_millis(30)) {
+                match crossterm::event::read() {
+                    Ok(crossterm::event::Event::Key(key)) => {
+                        use crossterm::event::{KeyCode, KeyModifiers};
+                        if (key.code == KeyCode::Char('c')
+                            && key.modifiers.contains(KeyModifiers::CONTROL))
+                            || key.code == KeyCode::Char('q')
+                            || key.code == KeyCode::Char('Q')
+                            || key.code == KeyCode::Esc
+                        {
+                            shutdown.trigger();
+                            break;
+                        }
+                    }
+                    Ok(crossterm::event::Event::Resize(w, h)) => {
+                        let w = (w.max(1)) as usize;
+                        let h = (h.max(1)) as usize;
+                        let rows = overlay_rows.min(h.saturating_sub(3)).max(1);
+                        crate::log_debug!(
+                            "engine",
+                            "Terminal resized to {}x{}; overlay rows clamped to {}",
+                            w,
+                            h,
+                            rows
+                        );
+                        let _ = control_tx.send(ControlMsg::Resize {
+                            cols: w as u16,
+                            rows: rows as u16,
+                        });
+                    }
+                    _ => {}
+                }
+            }
+        } else {
+            std::thread::sleep(Duration::from_millis(50));
+        }
     }
 
     let _ = sim_handle.join();
@@ -1063,9 +1229,12 @@ mod tests {
             ControlMsg::Speed(1.5),
             ControlMsg::Cow("dragon".into()),
             ControlMsg::Text("hello".into()),
+            ControlMsg::Eyes("^^".into()),
+            ControlMsg::Tongue("U ".into()),
+            ControlMsg::ColorMode("rainbow".into()),
             ControlMsg::Resize { cols: 80, rows: 24 },
         ];
-        assert_eq!(msgs.len(), 8);
+        assert_eq!(msgs.len(), 11);
     }
 
     #[test]
@@ -1112,6 +1281,30 @@ mod tests {
             !frame.damage.is_empty(),
             "first tick must produce some damage"
         );
+
+        let _ = std::fs::remove_dir_all(&data_dir);
+    }
+
+    #[test]
+    fn sim_hot_swap_eyes_tongue_color_updates_state() {
+        let data_dir = std::env::temp_dir().join("forgum_test_hot_swap");
+        let _ = std::fs::create_dir_all(&data_dir);
+        let config = SceneConfig::default();
+        let cow_dna = CowDna::default();
+        let active = Arc::new(std::sync::RwLock::new(String::new()));
+        let mut sim = SimState::new(&config, 40, 12, cow_dna, 0, None, data_dir.clone(), active);
+
+        // Eyes hot-swap
+        sim.handle_hot_swap(&ControlMsg::Eyes("^^".into()));
+        assert_eq!(sim.config.eyes, "^^");
+
+        // Tongue hot-swap
+        sim.handle_hot_swap(&ControlMsg::Tongue("U ".into()));
+        assert_eq!(sim.config.tongue, "U ");
+
+        // ColorMode hot-swap
+        sim.handle_hot_swap(&ControlMsg::ColorMode("rainbow".into()));
+        assert_eq!(sim.config.color_mode, "rainbow");
 
         let _ = std::fs::remove_dir_all(&data_dir);
     }

@@ -193,6 +193,13 @@ pub fn render_options(category: &str) -> String {
         || cat == "mux";
     let show_eyes = show_all || cat == "eyes" || cat == "eye";
     let show_tongue = show_all || cat == "tongue" || cat == "tongues";
+    let show_logs = show_all
+        || cat == "logs"
+        || cat == "log"
+        || cat == "diagnostics"
+        || cat == "diagnose"
+        || cat == "triage"
+        || cat == "bugradar";
 
     if !show_animals
         && !show_effects
@@ -205,6 +212,7 @@ pub fn render_options(category: &str) -> String {
         && !show_mux
         && !show_eyes
         && !show_tongue
+        && !show_logs
     {
         out.push_str(&format!(
             "\n\x1b[1;33mUnknown options category '{category}'.\x1b[0m\n\n\
@@ -221,7 +229,8 @@ pub fn render_options(category: &str) -> String {
               • \x1b[1mconfig\x1b[0m         - Supported configuration keys, types, and schema\n\
               • \x1b[1mmultiplexers\x1b[0m   - Terminal multiplexers (tmux, zellij, wezterm, screen)\n\
               • \x1b[1meyes\x1b[0m           - Cow eye expressions and glyphs (--eyes)\n\
-              • \x1b[1mtongue\x1b[0m         - Cow tongue glyphs and expressions (--tongue)\n\n\
+              • \x1b[1mtongue\x1b[0m         - Cow tongue glyphs and expressions (--tongue)\n\
+              • \x1b[1mlogs\x1b[0m           - Structured logging, streaming, live triage, and bug radar\n\n\
             \x1b[1;32mUsage:\x1b[0m\n\
               forgum list [category]\n\
               forgum --list [category]\n\
@@ -600,8 +609,8 @@ pub fn render_options(category: &str) -> String {
         out.push_str("\n\x1b[1;35m━━━ Color Modes (--color-mode) ━━━\x1b[0m\n");
         let headers = ["Color Mode", "Color Mapping Algorithm", "Visual Output"];
         let rows = vec![
-            vec!["animal", "Archetype-specific signature color palettes", "Creatures receive authentic hues (dragon=crimson/gold, tux=white/orange, cat=amber, ghost=cyan)"],
-            vec!["rainbow", "Time-harmonic continuous HSV spatial spectrum", "Smooth multi-color rainbow flowing across characters and coordinates in real time"],
+            vec!["default", "Animal-specific natural wildlife color palette (alias: animal)", "Each creature receives its authentic natural wildlife hue (dragon=fire/gold, whale=ocean azure, cat=amber)"],
+            vec!["rainbow", "Refined OKLCH perceptual lightness-uniform chromatic spectrum (alias: lolcat)", "Smooth non-banding perceptual rainbow flowing diagonally across characters in real time"],
             vec!["solid", "Pure single-color monochromatic highlight", "High-contrast focused primary color accentuating ASCII contours cleanly"],
             vec!["none", "Terminal emulator raw default color palette", "Monochrome compatibility output adhering to user's terminal background & foreground"],
         ];
@@ -905,6 +914,76 @@ pub fn render_options(category: &str) -> String {
         out.push_str(&format_table(&tongue_headers, &tongue_rows));
     }
 
+    if show_logs {
+        out.push_str(
+            "\n\x1b[1;35m━━━ Structured Logging & Bug Diagnostics (forgum logs) ━━━\x1b[0m\n",
+        );
+        let l_headers = ["Command / Flag", "Action", "Description"];
+        let l_rows = vec![
+            vec![
+                "forgum logs",
+                "View Table",
+                "Display formatted ANSI table of recent structured log events",
+            ],
+            vec![
+                "forgum logs -w",
+                "Stream Live",
+                "Stream log events in real time as they are produced (Ctrl+C to exit)",
+            ],
+            vec![
+                "forgum logs -o",
+                "Open in Editor",
+                "Launch default system text editor (or explorer) on forgum.log",
+            ],
+            vec![
+                "forgum logs -p",
+                "Print Paths",
+                "Print absolute filesystem paths to log directory, text log, and JSONL store",
+            ],
+            vec![
+                "forgum logs --cat",
+                "Dump Raw",
+                "Print raw unformatted text log directly to stdout for piping",
+            ],
+            vec![
+                "forgum logs -s <q>",
+                "Filter / Grep",
+                "Search log entries by case-insensitive keyword or subsystem",
+            ],
+            vec![
+                "forgum logs -D",
+                "Bug Radar Triage",
+                "Run automated anomaly detection: pinpoints root causes, uprising bugs, and fixes",
+            ],
+            vec![
+                "forgum logs -l <lvl>",
+                "Level Filter",
+                "Filter by minimum severity: TRACE, DEBUG, INFO, WARN, ERROR",
+            ],
+            vec![
+                "forgum logs -n <N>",
+                "Line Limit",
+                "Specify number of recent entries to retrieve (default: 25)",
+            ],
+            vec![
+                "forgum logs --json",
+                "JSON Output",
+                "Export log events as structured JSON Lines",
+            ],
+            vec![
+                "forgum logs --clear",
+                "Clean Logs",
+                "Truncate existing text and JSONL log files to start fresh",
+            ],
+            vec![
+                "forgum diagnose",
+                "Direct Triage",
+                "Top-level shortcut to run full diagnostic bug radar and remediation report",
+            ],
+        ];
+        out.push_str(&format_table(&l_headers, &l_rows));
+    }
+
     out
 }
 
@@ -936,6 +1015,7 @@ mod tests {
         assert!(text.contains("Shell Integration"));
         assert!(text.contains("Configuration Keys"));
         assert!(text.contains("Terminal Multiplexer"));
+        assert!(text.contains("Structured Logging & Bug Diagnostics"));
     }
 
     #[test]
@@ -955,6 +1035,13 @@ mod tests {
         let text_tongue = render_options("tongue");
         assert!(text_tongue.contains("Cow Tongue Expressions"));
         assert!(text_tongue.contains("Serpentine"));
+
+        let text_logs = render_options("logs");
+        assert!(text_logs.contains("Structured Logging & Bug Diagnostics"));
+        assert!(text_logs.contains("forgum logs -w"));
+        assert!(text_logs.contains("forgum logs -o"));
+        assert!(text_logs.contains("forgum logs -D"));
+        assert!(!text_logs.contains("Animal Mascots"));
     }
 
     #[test]

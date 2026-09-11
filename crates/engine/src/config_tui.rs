@@ -60,3 +60,51 @@ pub fn run_standalone(initial_tab: Option<&str>) -> i32 {
         1
     }
 }
+
+/// Open the interactive Celestial Installation Wizard.
+///
+/// Returns `0` on success, `1` on error / unavailable build.
+pub fn run_installer_wizard() -> i32 {
+    #[cfg(feature = "tui")]
+    {
+        match forgum_tui::run_installer_wizard() {
+            Ok(()) => 0,
+            Err(e) => {
+                eprintln!("installer error: {e}");
+                1
+            }
+        }
+    }
+    #[cfg(not(feature = "tui"))]
+    {
+        eprintln!(
+            "this build of forgum-engine was compiled without the `tui` feature; \
+             install a tui-enabled build."
+        );
+        1
+    }
+}
+
+/// Open the interactive Celestial De-Orbit Uninstallation Wizard.
+///
+/// Returns `0` on success, `1` on error / unavailable build.
+pub fn run_uninstaller_wizard() -> i32 {
+    #[cfg(feature = "tui")]
+    {
+        match forgum_tui::run_uninstaller_wizard() {
+            Ok(()) => 0,
+            Err(e) => {
+                eprintln!("uninstaller error: {e}");
+                1
+            }
+        }
+    }
+    #[cfg(not(feature = "tui"))]
+    {
+        eprintln!(
+            "this build of forgum-engine was compiled without the `tui` feature; \
+             install a tui-enabled build."
+        );
+        1
+    }
+}

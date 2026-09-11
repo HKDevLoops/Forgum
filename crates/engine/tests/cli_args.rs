@@ -551,10 +551,53 @@ fn dynamic_scenario_adaptation_adapts_road_mountain_and_motion() {
 fn install_subcommand_parses_cleanly() {
     let (a, cmd) = parse_args(argv(&["forgum", "install"])).unwrap();
     assert_eq!(a.command, Command::Install);
-    assert!(matches!(cmd, Some(Commands::Install)));
+    assert!(matches!(
+        cmd,
+        Some(Commands::Install {
+            headless: false,
+            telemetry: None
+        })
+    ));
+
+    let (a_headless, cmd_headless) = parse_args(argv(&[
+        "forgum",
+        "install",
+        "--headless",
+        "--telemetry",
+        "allow",
+    ]))
+    .unwrap();
+    assert_eq!(a_headless.command, Command::Install);
+    assert!(
+        matches!(cmd_headless, Some(Commands::Install { headless: true, telemetry: Some(ref t) }) if t == "allow")
+    );
 
     let (a_wizard, _) = parse_args(argv(&["forgum", "setup"])).unwrap();
     assert_eq!(a_wizard.command, Command::Install);
+}
+
+#[test]
+fn uninstall_subcommand_parses_cleanly() {
+    let (a, cmd) = parse_args(argv(&["forgum", "uninstall"])).unwrap();
+    assert_eq!(a.command, Command::Uninstall);
+    assert!(matches!(
+        cmd,
+        Some(Commands::Uninstall {
+            method: None,
+            non_interactive: false,
+            tui: false
+        })
+    ));
+
+    let (a_purge, cmd_purge) =
+        parse_args(argv(&["forgum", "uninstall", "--method", "purge", "--yes"])).unwrap();
+    assert_eq!(a_purge.command, Command::Uninstall);
+    assert!(
+        matches!(cmd_purge, Some(Commands::Uninstall { method: Some(ref m), non_interactive: true, tui: false }) if m == "purge")
+    );
+
+    let (a_deorbit, _) = parse_args(argv(&["forgum", "deorbit", "--tui"])).unwrap();
+    assert_eq!(a_deorbit.command, Command::Uninstall);
 }
 
 #[test]
@@ -569,4 +612,43 @@ fn update_subcommand_parses_cleanly() {
 
     let (a_upgrade, _) = parse_args(argv(&["forgum", "upgrade"])).unwrap();
     assert_eq!(a_upgrade.command, Command::Update);
+}
+
+#[test]
+fn logs_and_log_subcommands_parse_cleanly() {
+    let (a, cmd) = parse_args(argv(&["forgum", "logs"])).unwrap();
+    assert_eq!(a.command, Command::Logs);
+    assert!(matches!(cmd, Some(Commands::Logs { .. })));
+
+    let (a_singular, cmd_singular) = parse_args(argv(&["forgum", "log"])).unwrap();
+    assert_eq!(a_singular.command, Command::Logs);
+    assert!(matches!(cmd_singular, Some(Commands::Logs { .. })));
+
+    let (a_diag, cmd_diag) = parse_args(argv(&["forgum", "diagnose"])).unwrap();
+    assert_eq!(a_diag.command, Command::Diagnose);
+    assert!(matches!(cmd_diag, Some(Commands::Diagnose { .. })));
+}
+
+#[test]
+fn logs_flags_open_raw_filter_parse() {
+    let (_, cmd) = parse_args(argv(&["forgum", "logs", "--open"])).unwrap();
+    if let Some(Commands::Logs { open, .. }) = cmd {
+        assert!(open);
+    } else {
+        panic!("expected Commands::Logs with open");
+    }
+
+    let (_, cmd_raw) = parse_args(argv(&["forgum", "log", "--cat"])).unwrap();
+    if let Some(Commands::Logs { raw, .. }) = cmd_raw {
+        assert!(raw);
+    } else {
+        panic!("expected Commands::Logs with raw");
+    }
+
+    let (_, cmd_filter) = parse_args(argv(&["forgum", "logs", "-s", "error"])).unwrap();
+    if let Some(Commands::Logs { filter, .. }) = cmd_filter {
+        assert_eq!(filter.as_deref(), Some("error"));
+    } else {
+        panic!("expected Commands::Logs with filter");
+    }
 }

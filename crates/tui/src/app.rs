@@ -1024,7 +1024,7 @@ impl ConfigApp {
                     r#"# Forgum PowerShell auto-completion script
 Register-ArgumentCompleter -Native -CommandName forgum -ScriptBlock {
     param($wordToComplete, $commandAst, $cursorPosition)
-    $commands = @("render", "think", "fortune", "tui", "init", "completions", "list", "status", "doctor", "checkhealth", "config", "logs", "install", "update")
+    $commands = @("render", "think", "fortune", "tui", "init", "completions", "list", "status", "doctor", "checkhealth", "config", "logs", "log", "diagnose", "install", "update")
     $commands | Where-Object { $_ -like "$wordToComplete*" } | ForEach-Object {
         [System.Management.Automation.CompletionResult]::new($_, $_, 'ParameterValue', $_)
     }
@@ -1035,7 +1035,7 @@ Register-ArgumentCompleter -Native -CommandName forgum -ScriptBlock {
                     r#"# Forgum Bash auto-completion script
 _forgum_completions() {
     local cur="${COMP_WORDS[COMP_CWORD]}"
-    local cmds="render think fortune tui init completions list status doctor checkhealth config logs install update --animal --effect --environment --road --mountain --color-mode"
+    local cmds="render think fortune tui init completions list status doctor checkhealth config logs log diagnose install update --animal --effect --environment --road --mountain --color-mode"
     COMPREPLY=( $(compgen -W "${cmds}" -- "${cur}") )
 }
 complete -F _forgum_completions forgum
@@ -1049,7 +1049,7 @@ _forgum() {
         '--effect[Animation effect]:effect:(walk breathe float fly talk sway pulse glitch particles dissolve)' \
         '--environment[Particle environment]:environment:(pasture inferno ocean arctic city forest savanna swamp space cyber)' \
         '--color-mode[Color palette mode]:color_mode:(animal rainbow solid none)' \
-        '1:subcommand:(render think fortune tui init completions list status doctor checkhealth config logs install update)'
+        '1:subcommand:(render think fortune tui init completions list status doctor checkhealth config logs log diagnose install update)'
 }
 _forgum "$@"
 "#
@@ -1057,7 +1057,7 @@ _forgum "$@"
                 Shell::Fish => {
                     r#"# Forgum Fish auto-completion script
 complete -c forgum -f
-complete -c forgum -n "__fish_use_subcommand" -a "render think fortune tui init completions list status doctor checkhealth config logs install update"
+complete -c forgum -n "__fish_use_subcommand" -a "render think fortune tui init completions list status doctor checkhealth config logs log diagnose install update"
 "#
                 }
                 Shell::Nushell => {
@@ -1202,10 +1202,14 @@ export extern "forgum" [
             KeyCode::Enter => {
                 self.enter_config_edit();
             }
-            KeyCode::Char(' ') | KeyCode::Right | KeyCode::Char('l') => {
+            KeyCode::Char('+')
+            | KeyCode::Char('=')
+            | KeyCode::Char(' ')
+            | KeyCode::Right
+            | KeyCode::Char('l') => {
                 self.cycle_config_field(true);
             }
-            KeyCode::Left | KeyCode::Char('h') => {
+            KeyCode::Char('-') | KeyCode::Char('_') | KeyCode::Left | KeyCode::Char('h') => {
                 self.cycle_config_field(false);
             }
             _ => {}
@@ -1219,18 +1223,26 @@ export extern "forgum" [
             ConfigField::Duration => {
                 self.config_edit_buffer = self.config.duration.to_string();
                 self.editing_config = true;
+                self.status_message = "Editing Duration (seconds): type number (0 = infinite) and press Enter (Esc to cancel)".into();
             }
             ConfigField::Fps => {
                 self.config_edit_buffer = self.config.fps.to_string();
                 self.editing_config = true;
+                self.status_message =
+                    "Editing Target FPS: type number (1..240) and press Enter (Esc to cancel)"
+                        .into();
             }
             ConfigField::Eyes => {
                 self.config_edit_buffer = self.config.eyes.clone();
                 self.editing_config = true;
+                self.status_message =
+                    "Editing Eyes: type characters and press Enter (Esc to cancel)".into();
             }
             ConfigField::Tongue => {
                 self.config_edit_buffer = self.config.tongue.clone();
                 self.editing_config = true;
+                self.status_message =
+                    "Editing Tongue: type characters and press Enter (Esc to cancel)".into();
             }
             _ => {
                 self.cycle_config_field(true);
@@ -1242,21 +1254,59 @@ export extern "forgum" [
         let field = ConfigField::ALL[self.config_field_idx];
         match field {
             ConfigField::Duration => {
-                let step = if forward { 5 } else { -5 };
-                let next = (self.config.duration as i32 + step).max(0) as u32;
+                let current = self.config.duration;
+                let steps = [0, 1, 2, 3, 4, 5, 10, 15, 20, 30, 45, 60, 90, 120];
+                let next = if forward {
+                    steps
+                        .iter()
+                        .copied()
+                        .find(|&s| s > current)
+                        .unwrap_or_else(|| current.saturating_add(5))
+                } else {
+                    steps
+                        .iter()
+                        .copied()
+                        .rev()
+                        .find(|&s| s < current)
+                        .unwrap_or(0)
+                };
                 self.config.duration = next;
-                self.status_message =
-                    format!("Duration adjusted to {}s (Enter to type exact value)", next);
+                self.saved = false;
+                self.status_message = if next == 0 {
+                    "Duration set to 0 (infinite / run until signal) [Enter to type exact seconds]"
+                        .to_string()
+                } else {
+                    format!(
+                        "Duration adjusted to {}s [Enter to type exact seconds]",
+                        next
+                    )
+                };
             }
             ConfigField::Fps => {
-                let step = if forward { 5 } else { -5 };
-                let next = (self.config.fps as i32 + step).clamp(1, 240) as u16;
+                let current = self.config.fps;
+                let presets = [5, 10, 15, 20, 24, 30, 45, 60, 90, 120, 144, 240];
+                let next = if forward {
+                    presets
+                        .iter()
+                        .copied()
+                        .find(|&p| p > current)
+                        .unwrap_or(240)
+                } else {
+                    presets
+                        .iter()
+                        .copied()
+                        .rev()
+                        .find(|&p| p < current)
+                        .unwrap_or(5)
+                };
                 self.config.fps = next;
+                self.saved = false;
                 self.status_message =
-                    format!("FPS adjusted to {} fps (Enter to type exact value)", next);
+                    format!("FPS adjusted to {} fps [Enter to type exact FPS]", next);
             }
             ConfigField::Background => {
                 self.config.background = !self.config.background;
+                self.saved = false;
                 self.status_message = format!(
                     "Background scenery {}",
                     if self.config.background {
@@ -1268,6 +1318,7 @@ export extern "forgum" [
             }
             ConfigField::AutoRenderOnPrompt => {
                 self.config.auto_render_on_prompt = !self.config.auto_render_on_prompt;
+                self.saved = false;
                 self.status_message = format!(
                     "Auto-render on prompt {}",
                     if self.config.auto_render_on_prompt {
@@ -1280,12 +1331,14 @@ export extern "forgum" [
             ConfigField::ShellAttachMode => {
                 self.attach_mode_dropdown.cycle(forward);
                 self.config.shell_attach_mode = self.attach_mode_dropdown.current();
+                self.saved = false;
                 self.status_message =
                     format!("Shell attach mode: {}", self.config.shell_attach_mode);
             }
             ConfigField::ConfigFormat => {
                 self.format_dropdown.cycle(forward);
                 self.format = self.config_format();
+                self.saved = false;
                 self.status_message = format!(
                     "Config format switched to {} (will be used on Save)",
                     self.format_dropdown.current().to_uppercase()
@@ -1308,9 +1361,89 @@ export extern "forgum" [
             }
             KeyCode::Esc => {
                 self.editing_config = false;
+                self.status_message = "Edit cancelled.".to_string();
+            }
+            KeyCode::Up => {
+                let field = ConfigField::ALL[self.config_field_idx];
+                if field == ConfigField::Duration || field == ConfigField::Fps {
+                    let clean = self
+                        .config_edit_buffer
+                        .trim()
+                        .trim_end_matches(|c: char| c.is_alphabetic() || c.is_whitespace());
+                    if let Ok(val) = clean.parse::<f64>() {
+                        self.config_edit_buffer = (val.round() as u32 + 1).to_string();
+                        self.commit_config_edit();
+                    }
+                }
+            }
+            KeyCode::Down => {
+                let field = ConfigField::ALL[self.config_field_idx];
+                if field == ConfigField::Duration || field == ConfigField::Fps {
+                    let clean = self
+                        .config_edit_buffer
+                        .trim()
+                        .trim_end_matches(|c: char| c.is_alphabetic() || c.is_whitespace());
+                    if let Ok(val) = clean.parse::<f64>() {
+                        let floor = if field == ConfigField::Fps { 1 } else { 0 };
+                        let current = val.round() as u32;
+                        self.config_edit_buffer = current.saturating_sub(1).max(floor).to_string();
+                        self.commit_config_edit();
+                    }
+                }
+            }
+            KeyCode::Right => {
+                let field = ConfigField::ALL[self.config_field_idx];
+                if field == ConfigField::Duration || field == ConfigField::Fps {
+                    let clean = self
+                        .config_edit_buffer
+                        .trim()
+                        .trim_end_matches(|c: char| c.is_alphabetic() || c.is_whitespace());
+                    if let Ok(val) = clean.parse::<f64>() {
+                        self.config_edit_buffer = (val.round() as u32 + 5).to_string();
+                        self.commit_config_edit();
+                    }
+                }
+            }
+            KeyCode::Left => {
+                let field = ConfigField::ALL[self.config_field_idx];
+                if field == ConfigField::Duration || field == ConfigField::Fps {
+                    let clean = self
+                        .config_edit_buffer
+                        .trim()
+                        .trim_end_matches(|c: char| c.is_alphabetic() || c.is_whitespace());
+                    if let Ok(val) = clean.parse::<f64>() {
+                        let floor = if field == ConfigField::Fps { 1 } else { 0 };
+                        let current = val.round() as u32;
+                        self.config_edit_buffer = current.saturating_sub(5).max(floor).to_string();
+                        self.commit_config_edit();
+                    }
+                }
+            }
+            KeyCode::Tab => {
+                self.commit_config_edit();
+                self.editing_config = false;
+                self.config_field_idx = (self.config_field_idx + 1) % ConfigField::ALL.len();
+            }
+            KeyCode::BackTab => {
+                self.commit_config_edit();
+                self.editing_config = false;
+                if self.config_field_idx > 0 {
+                    self.config_field_idx -= 1;
+                } else {
+                    self.config_field_idx = ConfigField::ALL.len() - 1;
+                }
             }
             KeyCode::Backspace => {
                 self.config_edit_buffer.pop();
+            }
+            KeyCode::Delete => {
+                self.config_edit_buffer.clear();
+            }
+            KeyCode::Char('u') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                self.config_edit_buffer.clear();
+            }
+            KeyCode::Char('w') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                self.config_edit_buffer.clear();
             }
             KeyCode::Char(c) if !key.modifiers.contains(KeyModifiers::CONTROL) => {
                 self.config_edit_buffer.push(c);
@@ -1324,20 +1457,52 @@ export extern "forgum" [
         let field = ConfigField::ALL[self.config_field_idx];
         match field {
             ConfigField::Duration => {
-                if let Ok(n) = self.config_edit_buffer.trim().parse::<u32>() {
+                let trimmed = self.config_edit_buffer.trim();
+                let clean =
+                    trimmed.trim_end_matches(|c: char| c.is_alphabetic() || c.is_whitespace());
+                if let Ok(val) = clean.parse::<f64>() {
+                    let n = val.max(0.0).round() as u32;
                     self.config.duration = n;
+                    self.saved = false;
+                    self.status_message = if n == 0 {
+                        "✓ Duration set to 0 (infinite / until signal)".to_string()
+                    } else {
+                        format!("✓ Duration set to {}s", n)
+                    };
+                } else if !trimmed.is_empty() {
+                    self.status_message = format!(
+                        "⚠ Invalid duration '{}': enter positive number of seconds",
+                        trimmed
+                    );
                 }
             }
             ConfigField::Fps => {
-                if let Ok(n) = self.config_edit_buffer.trim().parse::<u16>() {
-                    self.config.fps = n.clamp(1, 240);
+                let trimmed = self.config_edit_buffer.trim();
+                let clean =
+                    trimmed.trim_end_matches(|c: char| c.is_alphabetic() || c.is_whitespace());
+                if let Ok(val) = clean.parse::<f64>() {
+                    let n = val.clamp(1.0, 240.0).round() as u16;
+                    self.config.fps = n;
+                    self.saved = false;
+                    self.status_message = format!("✓ Target FPS set to {} fps", n);
+                } else if !trimmed.is_empty() {
+                    self.status_message = format!(
+                        "⚠ Invalid FPS '{}': enter number between 1 and 240",
+                        trimmed
+                    );
                 }
             }
             ConfigField::Eyes => {
                 self.config.eyes = self.config_edit_buffer.clone();
+                self.cow_cache.clear();
+                self.saved = false;
+                self.status_message = format!("✓ Eyes updated to '{}'", self.config.eyes);
             }
             ConfigField::Tongue => {
                 self.config.tongue = self.config_edit_buffer.clone();
+                self.cow_cache.clear();
+                self.saved = false;
+                self.status_message = format!("✓ Tongue updated to '{}'", self.config.tongue);
             }
             _ => {}
         }
@@ -1402,13 +1567,48 @@ export extern "forgum" [
             template
         };
 
+        let eye_chars: Vec<char> = eyes.chars().collect();
+        let left_eye = eye_chars.first().copied().unwrap_or('o').to_string();
+        let right_eye = eye_chars
+            .get(1)
+            .copied()
+            .unwrap_or_else(|| eye_chars.first().copied().unwrap_or('o'))
+            .to_string();
+        let mut eye_idx = 0usize;
+
         let mut out = String::with_capacity(body.len());
         for line in body.lines() {
-            let mut l = line.to_string();
-            l = l.replace("$eyes", eyes);
-            l = l.replace("$tongue", tongue);
-            l = l.replace("$thoughts", "\\");
-            out.push_str(&l);
+            if line.contains('$') {
+                let mut l = line
+                    .replace("${eyes}", eyes)
+                    .replace("$eyes", eyes)
+                    .replace("${tongue}", tongue)
+                    .replace("$tongue", tongue)
+                    .replace("${thoughts}", "\\")
+                    .replace("$thoughts", "\\");
+
+                while let Some(pos) = l.find("${eye}") {
+                    let glyph = if eye_idx % 2 == 0 {
+                        &left_eye
+                    } else {
+                        &right_eye
+                    };
+                    eye_idx += 1;
+                    l.replace_range(pos..pos + 6, glyph);
+                }
+                while let Some(pos) = l.find("$eye") {
+                    let glyph = if eye_idx % 2 == 0 {
+                        &left_eye
+                    } else {
+                        &right_eye
+                    };
+                    eye_idx += 1;
+                    l.replace_range(pos..pos + 4, glyph);
+                }
+                out.push_str(&l);
+            } else {
+                out.push_str(line);
+            }
             out.push('\n');
         }
         while out.ends_with('\n') {
@@ -2279,7 +2479,7 @@ export extern "forgum" [
             .cow_cache
             .get(&self.config.cow)
             .cloned()
-            .unwrap_or_else(|| Self::fallback_cow(&self.config.eyes, &self.config.tongue));
+            .unwrap_or_else(|| self.load_cow_art(&self.config.cow));
 
         let rainbow_colors = [
             Color::Red,
@@ -2304,21 +2504,143 @@ export extern "forgum" [
             )));
         }
 
-        // 2. Mascot ASCII body with dynamic gait simulation
+        // 2. Procedural Animation Engine Execution
+        let blink_cycle = (t * 0.28) % 1.0;
+        let is_blinking = blink_cycle < 0.045 || (blink_cycle > 0.08 && blink_cycle < 0.11);
+        let chew_cycle = (t * 0.36) % 1.0;
+        let is_chewing = chew_cycle > 0.40 && chew_cycle < 0.65;
+        let is_inhale = (t * 2.2).sin() > 0.1;
+        let is_wing_up = ((t * 8.0) as usize % 2) == 0;
         let walk_phase = ((t * 6.0) as usize) % 4;
+
         let cow_lines: Vec<&str> = cow_art.lines().collect();
+        let total_lines = cow_lines.len().max(1);
+
+        let mut leg_line_idx = total_lines.saturating_sub(1);
+        for (idx, line) in cow_lines.iter().enumerate().rev() {
+            if line.chars().any(|c| !c.is_whitespace()) {
+                leg_line_idx = idx;
+                break;
+            }
+        }
 
         for (i, raw_l) in cow_lines.iter().enumerate() {
             let mut l = raw_l.to_string();
 
-            // Animate feet if walking
-            if self.config.effect == "walk" && i + 1 == cow_lines.len() {
-                l = match walk_phase {
-                    0 => l.replace("||     ||", "|/     /|"),
-                    1 => l.replace("||     ||", "/|     |/"),
-                    2 => l.replace("||     ||", "|\\     \\|"),
-                    _ => l.replace("||     ||", "\\|     |\\"),
-                };
+            // Eye blinking animation: blink active eyes to '--' or '- -'
+            if is_blinking {
+                let eyes_to_blink = [
+                    self.config.eyes.as_str(),
+                    "oo",
+                    "OO",
+                    "@@",
+                    "^^",
+                    "**",
+                    "$$",
+                    "..",
+                    "==",
+                    "00",
+                ];
+                for eye in &eyes_to_blink {
+                    if !eye.is_empty() && l.contains(eye) {
+                        l = l.replace(eye, "--");
+                    }
+                }
+                if l.contains("o o") {
+                    l = l.replace("o o", "- -");
+                }
+                if l.contains("O O") {
+                    l = l.replace("O O", "- -");
+                }
+                if l.contains("^ ^") {
+                    l = l.replace("^ ^", "- -");
+                }
+                if l.contains("* *") {
+                    l = l.replace("* *", "- -");
+                }
+            }
+
+            // Cud chewing / mouth cadence
+            if is_chewing && l.contains("(__)") {
+                l = l.replace("(__)", if chew_cycle > 0.52 { "(=-)" } else { "(-=)" });
+            }
+
+            // Effect kinematics
+            match self.config.effect.as_str() {
+                "walk" => {
+                    if i == leg_line_idx {
+                        if l.contains("||     ||") {
+                            l = match walk_phase {
+                                0 => l.replace("||     ||", "|/     /|"),
+                                1 => l.replace("||     ||", "/|     |/"),
+                                2 => l.replace("||     ||", "|\\     \\|"),
+                                _ => l.replace("||     ||", "\\|     |\\"),
+                            };
+                        } else if l.contains("/ \\") {
+                            l = match walk_phase {
+                                0 | 2 => l.replace("/ \\", "| |"),
+                                1 => l.replace("/ \\", "\\ /"),
+                                _ => l,
+                            };
+                        }
+                    }
+                }
+                "breathe" => {
+                    if is_inhale {
+                        if l.contains("___") {
+                            l = l.replace("___", "~~~");
+                        } else if l.contains("__") {
+                            l = l.replace("__", "~~");
+                        }
+                        if l.contains("---") {
+                            l = l.replace("---", "===");
+                        } else if l.contains("--") {
+                            l = l.replace("--", "==");
+                        }
+                    }
+                }
+                "float" => {
+                    let wave_shift = ((t * 2.8 + i as f32 * 0.4).sin() * 1.5) as i32;
+                    let pad = (wave_shift + 2).max(0) as usize;
+                    l = format!("{}{l}", " ".repeat(pad));
+                }
+                "fly" => {
+                    if is_wing_up {
+                        if l.contains('\\') && !l.contains('/') {
+                            l = l.replace('\\', "/");
+                        }
+                    } else if l.contains('/') && !l.contains('\\') {
+                        l = l.replace('/', "\\");
+                    }
+                }
+                "talk" => {
+                    let talk_chars = ['_', '.', 'o', 'O', 'w', '='];
+                    let talk_ch = talk_chars[((t * 12.0) as usize + i) % talk_chars.len()];
+                    if l.contains("(__)") {
+                        l = l.replace("(__)", &format!("({talk_ch}{talk_ch})"));
+                    } else if l.contains("(_)") {
+                        l = l.replace("(_)", &format!("({talk_ch})"));
+                    }
+                }
+                "sway" => {
+                    let rel = (total_lines.saturating_sub(i)) as f32 / total_lines as f32;
+                    let sway_amt = ((t * 3.2).sin() * rel * 3.0) as i32;
+                    let pad = (sway_amt + 3).max(0) as usize;
+                    l = format!("{}{l}", " ".repeat(pad));
+                }
+                "glitch" if ((t * 15.0) as usize + i) % 7 == 0 => {
+                    let mut chars: Vec<char> = l.chars().collect();
+                    if let Some(pos) = chars.iter().position(|c| !c.is_whitespace()) {
+                        chars[pos] = match ((t * 10.0) as usize) % 4 {
+                            0 => '#',
+                            1 => '~',
+                            2 => '?',
+                            _ => '!',
+                        };
+                        l = chars.into_iter().collect();
+                    }
+                }
+                _ => {}
             }
 
             let color = match self.config.color_mode.as_str() {
@@ -2371,8 +2693,8 @@ export extern "forgum" [
 
         let env_name = self.config.environment.as_deref().unwrap_or("pasture");
         let title = format!(
-            " 🐮 Live 30 FPS Canvas: {} [{}] [{}] ",
-            self.config.cow, env_name, self.config.effect
+            " 🐮 Live {} FPS Canvas: {} [{}] [{}] ",
+            self.config.fps, self.config.cow, env_name, self.config.effect
         );
 
         let p = Paragraph::new(lines).block(
@@ -2664,5 +2986,249 @@ mod tests {
                 })
                 .unwrap();
         }
+    }
+
+    #[test]
+    fn config_duration_and_fps_cycling() {
+        let mut app = ConfigApp::new(None, None, Some(Tab::Config));
+        assert_eq!(app.current_tab, Tab::Config);
+        assert_eq!(app.config_field_idx, 0); // ConfigField::Duration
+
+        // Initial duration is 0
+        assert_eq!(app.config.duration, 0);
+
+        // Cycle forward on Duration (+ / Right)
+        app.handle_event(Event::Key(KeyEvent::new(
+            KeyCode::Char('+'),
+            KeyModifiers::NONE,
+        )))
+        .unwrap();
+        assert_eq!(app.config.duration, 1);
+
+        app.handle_event(Event::Key(KeyEvent::new(
+            KeyCode::Right,
+            KeyModifiers::NONE,
+        )))
+        .unwrap();
+        assert_eq!(app.config.duration, 2);
+
+        // Cycle backward on Duration (- / Left)
+        app.handle_event(Event::Key(KeyEvent::new(KeyCode::Left, KeyModifiers::NONE)))
+            .unwrap();
+        assert_eq!(app.config.duration, 1);
+
+        // Move to FPS (field 1)
+        app.handle_event(Event::Key(KeyEvent::new(KeyCode::Down, KeyModifiers::NONE)))
+            .unwrap();
+        assert_eq!(app.config_field_idx, 1); // ConfigField::Fps
+        assert_eq!(app.config.fps, 30);
+
+        // Cycle forward on FPS -> 45
+        app.handle_event(Event::Key(KeyEvent::new(
+            KeyCode::Char('+'),
+            KeyModifiers::NONE,
+        )))
+        .unwrap();
+        assert_eq!(app.config.fps, 45);
+
+        // Cycle forward again -> 60
+        app.handle_event(Event::Key(KeyEvent::new(
+            KeyCode::Right,
+            KeyModifiers::NONE,
+        )))
+        .unwrap();
+        assert_eq!(app.config.fps, 60);
+
+        // Cycle backward on FPS -> 45
+        app.handle_event(Event::Key(KeyEvent::new(
+            KeyCode::Char('-'),
+            KeyModifiers::NONE,
+        )))
+        .unwrap();
+        assert_eq!(app.config.fps, 45);
+    }
+
+    #[test]
+    fn config_duration_and_fps_text_editing() {
+        let mut app = ConfigApp::new(None, None, Some(Tab::Config));
+        assert_eq!(app.current_tab, Tab::Config);
+
+        // 1. Edit Duration (field 0)
+        app.config_field_idx = 0;
+        app.handle_event(Event::Key(KeyEvent::new(
+            KeyCode::Enter,
+            KeyModifiers::NONE,
+        )))
+        .unwrap();
+        assert!(app.editing_config);
+
+        // Clear buffer and type "25s"
+        app.handle_event(Event::Key(KeyEvent::new(
+            KeyCode::Delete,
+            KeyModifiers::NONE,
+        )))
+        .unwrap();
+        for ch in "25s".chars() {
+            app.handle_event(Event::Key(KeyEvent::new(
+                KeyCode::Char(ch),
+                KeyModifiers::NONE,
+            )))
+            .unwrap();
+        }
+        app.handle_event(Event::Key(KeyEvent::new(
+            KeyCode::Enter,
+            KeyModifiers::NONE,
+        )))
+        .unwrap();
+        assert!(!app.editing_config);
+        assert_eq!(app.config.duration, 25);
+
+        // 2. Edit FPS (field 1)
+        app.config_field_idx = 1;
+        app.handle_event(Event::Key(KeyEvent::new(
+            KeyCode::Enter,
+            KeyModifiers::NONE,
+        )))
+        .unwrap();
+        assert!(app.editing_config);
+
+        // Clear buffer and type "120fps"
+        app.handle_event(Event::Key(KeyEvent::new(
+            KeyCode::Delete,
+            KeyModifiers::NONE,
+        )))
+        .unwrap();
+        for ch in "120fps".chars() {
+            app.handle_event(Event::Key(KeyEvent::new(
+                KeyCode::Char(ch),
+                KeyModifiers::NONE,
+            )))
+            .unwrap();
+        }
+        app.handle_event(Event::Key(KeyEvent::new(
+            KeyCode::Enter,
+            KeyModifiers::NONE,
+        )))
+        .unwrap();
+        assert!(!app.editing_config);
+        assert_eq!(app.config.fps, 120);
+    }
+
+    #[test]
+    fn config_numeric_fuzz_bad_input_graceful_recovery() {
+        let mut app = ConfigApp::new(None, None, Some(Tab::Config));
+
+        // Start with known baseline
+        app.config.duration = 10;
+        app.config.fps = 60;
+
+        // Fuzz Duration with invalid inputs
+        app.config_field_idx = 0; // Duration
+        for bad_input in &["garbage", "!!!", "abc_xyz", ""] {
+            app.handle_event(Event::Key(KeyEvent::new(
+                KeyCode::Enter,
+                KeyModifiers::NONE,
+            )))
+            .unwrap();
+            app.handle_event(Event::Key(KeyEvent::new(
+                KeyCode::Delete,
+                KeyModifiers::NONE,
+            )))
+            .unwrap();
+            for ch in bad_input.chars() {
+                app.handle_event(Event::Key(KeyEvent::new(
+                    KeyCode::Char(ch),
+                    KeyModifiers::NONE,
+                )))
+                .unwrap();
+            }
+            app.handle_event(Event::Key(KeyEvent::new(
+                KeyCode::Enter,
+                KeyModifiers::NONE,
+            )))
+            .unwrap();
+            // In bad input cases, previous valid duration remains intact or is clamped safely
+            assert!(
+                app.config.duration <= 120,
+                "Duration must stay within safe bounds"
+            );
+        }
+
+        // Fuzz FPS with out-of-range / bad inputs
+        app.config_field_idx = 1; // Fps
+        for bad_input in &["99999", "-50", "none"] {
+            app.handle_event(Event::Key(KeyEvent::new(
+                KeyCode::Enter,
+                KeyModifiers::NONE,
+            )))
+            .unwrap();
+            app.handle_event(Event::Key(KeyEvent::new(
+                KeyCode::Delete,
+                KeyModifiers::NONE,
+            )))
+            .unwrap();
+            for ch in bad_input.chars() {
+                app.handle_event(Event::Key(KeyEvent::new(
+                    KeyCode::Char(ch),
+                    KeyModifiers::NONE,
+                )))
+                .unwrap();
+            }
+            app.handle_event(Event::Key(KeyEvent::new(
+                KeyCode::Enter,
+                KeyModifiers::NONE,
+            )))
+            .unwrap();
+            // FPS must always be clamped to [1, 240]
+            assert!(
+                app.config.fps >= 1 && app.config.fps <= 240,
+                "FPS must be clamped between 1 and 240"
+            );
+        }
+    }
+
+    #[test]
+    fn config_dropdown_field_cycling() {
+        let mut app = ConfigApp::new(None, None, Some(Tab::Config));
+
+        // 1. Toggle Background (idx 4)
+        app.config_field_idx = 4; // Background
+        let initial_bg = app.config.background;
+        app.handle_event(Event::Key(KeyEvent::new(
+            KeyCode::Char(' '),
+            KeyModifiers::NONE,
+        )))
+        .unwrap();
+        assert_eq!(app.config.background, !initial_bg);
+
+        // 2. Toggle AutoRenderOnPrompt (idx 5)
+        app.config_field_idx = 5; // AutoRenderOnPrompt
+        let initial_auto = app.config.auto_render_on_prompt;
+        app.handle_event(Event::Key(KeyEvent::new(
+            KeyCode::Right,
+            KeyModifiers::NONE,
+        )))
+        .unwrap();
+        assert_eq!(app.config.auto_render_on_prompt, !initial_auto);
+
+        // 3. Cycle ShellAttachMode (idx 6)
+        app.config_field_idx = 6; // ShellAttachMode
+        let initial_mode = app.config.shell_attach_mode.clone();
+        app.handle_event(Event::Key(KeyEvent::new(
+            KeyCode::Right,
+            KeyModifiers::NONE,
+        )))
+        .unwrap();
+        assert_ne!(app.config.shell_attach_mode, initial_mode);
+
+        // 4. Cycle ConfigFormat (idx 7)
+        app.config_field_idx = 7; // ConfigFormat
+        let initial_fmt = app.format;
+        app.handle_event(Event::Key(KeyEvent::new(
+            KeyCode::Right,
+            KeyModifiers::NONE,
+        )))
+        .unwrap();
+        assert_ne!(app.format, initial_fmt);
     }
 }

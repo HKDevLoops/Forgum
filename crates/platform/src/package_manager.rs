@@ -15,6 +15,14 @@ pub enum PackageManager {
     Homebrew,
     Pacman,
     Apt,
+    Dnf,
+    Zypper,
+    Nix,
+    Apk,
+    Xbps,
+    Gentoo,
+    MacPorts,
+    FreeBsdPkg,
     Cargo,
     DirectBinary,
 }
@@ -30,6 +38,14 @@ impl PackageManager {
             Self::Homebrew => "Homebrew",
             Self::Pacman => "Pacman",
             Self::Apt => "APT",
+            Self::Dnf => "DNF",
+            Self::Zypper => "Zypper",
+            Self::Nix => "Nix",
+            Self::Apk => "APK",
+            Self::Xbps => "XBPS",
+            Self::Gentoo => "Gentoo / Portage",
+            Self::MacPorts => "MacPorts",
+            Self::FreeBsdPkg => "FreeBSD pkg",
             Self::Cargo => "Cargo",
             Self::DirectBinary => "Standalone Binary",
         }
@@ -45,6 +61,14 @@ impl PackageManager {
             Self::Homebrew => "brew upgrade forgum",
             Self::Pacman => "sudo pacman -S forgum",
             Self::Apt => "sudo apt update && sudo apt install --only-upgrade forgum",
+            Self::Dnf => "sudo dnf upgrade forgum",
+            Self::Zypper => "sudo zypper update forgum",
+            Self::Nix => "nix profile upgrade forgum",
+            Self::Apk => "sudo apk upgrade forgum",
+            Self::Xbps => "sudo xbps-install -Su forgum",
+            Self::Gentoo => "sudo emerge --ask --update app-misc/forgum",
+            Self::MacPorts => "sudo port upgrade forgum",
+            Self::FreeBsdPkg => "sudo pkg upgrade forgum",
             Self::Cargo => "cargo install --force forgum-cli",
             Self::DirectBinary => {
                 "gh release download or https://github.com/HKDevLoops/Forgum/releases/latest"
@@ -62,8 +86,39 @@ impl PackageManager {
             Self::Homebrew => "brew outdated forgum",
             Self::Pacman => "pacman -Qu forgum",
             Self::Apt => "apt list --upgradable forgum",
+            Self::Dnf => "dnf check-update forgum",
+            Self::Zypper => "zypper list-updates",
+            Self::Nix => "nix profile list",
+            Self::Apk => "apk version -v",
+            Self::Xbps => "xbps-install -un",
+            Self::Gentoo => "emerge -pv app-misc/forgum",
+            Self::MacPorts => "port outdated forgum",
+            Self::FreeBsdPkg => "pkg version -v",
             Self::Cargo => "cargo search forgum-cli",
             Self::DirectBinary => "https://github.com/HKDevLoops/Forgum/releases/latest",
+        }
+    }
+
+    /// Primary command string to cleanly uninstall via the package manager.
+    #[must_use]
+    pub const fn uninstall_command(&self) -> &'static str {
+        match self {
+            Self::Scoop => "scoop uninstall forgum",
+            Self::Winget => "winget uninstall HKDevLoops.Forgum",
+            Self::Chocolatey => "choco uninstall forgum -y",
+            Self::Homebrew => "brew uninstall forgum",
+            Self::Pacman => "sudo pacman -Rns forgum",
+            Self::Apt => "sudo apt remove --purge forgum",
+            Self::Dnf => "sudo dnf remove forgum",
+            Self::Zypper => "sudo zypper remove forgum",
+            Self::Nix => "nix profile remove forgum",
+            Self::Apk => "sudo apk del forgum",
+            Self::Xbps => "sudo xbps-remove forgum",
+            Self::Gentoo => "sudo emerge --unmerge app-misc/forgum",
+            Self::MacPorts => "sudo port uninstall forgum",
+            Self::FreeBsdPkg => "sudo pkg delete forgum",
+            Self::Cargo => "cargo uninstall forgum-cli",
+            Self::DirectBinary => "forgum uninstall",
         }
     }
 
@@ -76,7 +131,15 @@ impl PackageManager {
             Self::Chocolatey => is_cmd_available("choco"),
             Self::Homebrew => is_cmd_available("brew"),
             Self::Pacman => is_cmd_available("pacman"),
-            Self::Apt => is_cmd_available("apt"),
+            Self::Apt => is_cmd_available("apt") || is_cmd_available("dpkg"),
+            Self::Dnf => is_cmd_available("dnf"),
+            Self::Zypper => is_cmd_available("zypper"),
+            Self::Nix => is_cmd_available("nix") || is_cmd_available("nix-env"),
+            Self::Apk => is_cmd_available("apk"),
+            Self::Xbps => is_cmd_available("xbps-install"),
+            Self::Gentoo => is_cmd_available("emerge"),
+            Self::MacPorts => is_cmd_available("port"),
+            Self::FreeBsdPkg => is_cmd_available("pkg"),
             Self::Cargo => is_cmd_available("cargo"),
             Self::DirectBinary => true,
         }
@@ -145,6 +208,12 @@ pub fn detect_source_from_path(path: &Path) -> PackageManager {
     {
         return PackageManager::Cargo;
     }
+    if path_str.contains("/nix/store") || path_str.contains("/nix/var") {
+        return PackageManager::Nix;
+    }
+    if path_str.contains("/opt/local/") || path_str.contains("macports") {
+        return PackageManager::MacPorts;
+    }
 
     // Secondary heuristic: if binary is in a system path, check package manager registration
     #[cfg(windows)]
@@ -171,6 +240,48 @@ pub fn detect_source_from_path(path: &Path) -> PackageManager {
             if let Ok(out) = Command::new("pacman").args(["-Q", "forgum"]).output() {
                 if out.status.success() {
                     return PackageManager::Pacman;
+                }
+            }
+        }
+        if PackageManager::Apt.is_available_on_host() {
+            if let Ok(out) = Command::new("dpkg").args(["-s", "forgum"]).output() {
+                if out.status.success() {
+                    return PackageManager::Apt;
+                }
+            }
+        }
+        if PackageManager::Dnf.is_available_on_host() {
+            if let Ok(out) = Command::new("rpm").args(["-q", "forgum"]).output() {
+                if out.status.success() {
+                    return PackageManager::Dnf;
+                }
+            }
+        }
+        if PackageManager::Zypper.is_available_on_host() {
+            if let Ok(out) = Command::new("rpm").args(["-q", "forgum"]).output() {
+                if out.status.success() {
+                    return PackageManager::Zypper;
+                }
+            }
+        }
+        if PackageManager::Apk.is_available_on_host() {
+            if let Ok(out) = Command::new("apk").args(["info", "-e", "forgum"]).output() {
+                if out.status.success() {
+                    return PackageManager::Apk;
+                }
+            }
+        }
+        if PackageManager::Xbps.is_available_on_host() {
+            if let Ok(out) = Command::new("xbps-query").args(["forgum"]).output() {
+                if out.status.success() {
+                    return PackageManager::Xbps;
+                }
+            }
+        }
+        if PackageManager::FreeBsdPkg.is_available_on_host() {
+            if let Ok(out) = Command::new("pkg").args(["info", "forgum"]).output() {
+                if out.status.success() {
+                    return PackageManager::FreeBsdPkg;
                 }
             }
         }
@@ -217,6 +328,38 @@ pub fn detect_available_package_managers() -> Vec<(PackageManager, bool)> {
         managers.push((
             PackageManager::Apt,
             PackageManager::Apt.is_available_on_host(),
+        ));
+        managers.push((
+            PackageManager::Dnf,
+            PackageManager::Dnf.is_available_on_host(),
+        ));
+        managers.push((
+            PackageManager::Zypper,
+            PackageManager::Zypper.is_available_on_host(),
+        ));
+        managers.push((
+            PackageManager::Nix,
+            PackageManager::Nix.is_available_on_host(),
+        ));
+        managers.push((
+            PackageManager::Apk,
+            PackageManager::Apk.is_available_on_host(),
+        ));
+        managers.push((
+            PackageManager::Xbps,
+            PackageManager::Xbps.is_available_on_host(),
+        ));
+        managers.push((
+            PackageManager::Gentoo,
+            PackageManager::Gentoo.is_available_on_host(),
+        ));
+        managers.push((
+            PackageManager::MacPorts,
+            PackageManager::MacPorts.is_available_on_host(),
+        ));
+        managers.push((
+            PackageManager::FreeBsdPkg,
+            PackageManager::FreeBsdPkg.is_available_on_host(),
         ));
         managers.push((
             PackageManager::Cargo,
@@ -342,5 +485,33 @@ mod tests {
         assert!(PackageManager::Winget
             .update_command()
             .contains("winget upgrade"));
+        assert!(PackageManager::Dnf.update_command().contains("dnf upgrade"));
+        assert!(PackageManager::Nix
+            .update_command()
+            .contains("nix profile upgrade"));
+        assert_eq!(
+            PackageManager::Scoop.uninstall_command(),
+            "scoop uninstall forgum"
+        );
+        assert_eq!(
+            PackageManager::Homebrew.uninstall_command(),
+            "brew uninstall forgum"
+        );
+        assert_eq!(
+            PackageManager::Apt.uninstall_command(),
+            "sudo apt remove --purge forgum"
+        );
+    }
+
+    #[test]
+    fn detect_from_nix_and_macports_paths() {
+        assert_eq!(
+            detect_source_from_path(&PathBuf::from("/nix/store/abc-forgum-0.4.0/bin/forgum")),
+            PackageManager::Nix
+        );
+        assert_eq!(
+            detect_source_from_path(&PathBuf::from("/opt/local/bin/forgum")),
+            PackageManager::MacPorts
+        );
     }
 }

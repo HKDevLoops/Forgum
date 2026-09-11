@@ -9,7 +9,7 @@ use std::path::Path;
 
 use serde::Deserialize;
 
-/// The 10 base animation types.
+/// The base animation types.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "PascalCase")]
 pub enum BaseAnim {
@@ -24,6 +24,14 @@ pub enum BaseAnim {
     Talk,
     Sway,
     Dissolve,
+    /// Smooth sinusoidal liquid flow — maps to Sway physics with damped phase.
+    Liquid,
+    /// Vertical compression/decompression squash & stretch — maps to Breathe physics.
+    Squish,
+    /// Digital rain / cyberpunk aesthetic — maps to Glitch with scanline artifacts.
+    Matrix,
+    /// Eerie upward levitation with flicker — maps to Float with spectral phase.
+    Abduction,
 }
 
 impl BaseAnim {
@@ -39,6 +47,10 @@ impl BaseAnim {
             "talk" | "talking" | "speak" | "speech" => Some(Self::Talk),
             "sway" | "swaying" | "pendulum" => Some(Self::Sway),
             "dissolve" | "dissolving" | "fade" => Some(Self::Dissolve),
+            "liquid" | "flow" | "fluid" => Some(Self::Liquid),
+            "squish" | "squash" | "stretch" | "bounce" => Some(Self::Squish),
+            "matrix" | "digital" | "cyber" | "rain" => Some(Self::Matrix),
+            "abduction" | "abduct" | "beam" | "lift" => Some(Self::Abduction),
             _ => None,
         }
     }
@@ -55,6 +67,10 @@ impl BaseAnim {
             Self::Talk => "talk",
             Self::Sway => "sway",
             Self::Dissolve => "dissolve",
+            Self::Liquid => "liquid",
+            Self::Squish => "squish",
+            Self::Matrix => "matrix",
+            Self::Abduction => "abduction",
         }
     }
 }
@@ -106,6 +122,44 @@ impl Default for ParticleDna {
             speed: default_particle_speed(),
             palette: vec![],
         }
+    }
+}
+
+/// Custom deserializer for the `particles` field that accepts:
+/// - `null` → default (rate 0, no particles)
+/// - `"Fire"` / `"Bubbles"` / etc. → ParticleDna with that type and rate=8
+/// - `{ "type": "Fire", "rate": 10, ... }` → full struct
+fn deserialize_particles<'de, D>(deserializer: D) -> Result<ParticleDna, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    use serde::de;
+
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum ParticlesField {
+        Null,
+        Shorthand(String),
+        Full(ParticleDna),
+    }
+
+    // Handle Option first to catch null
+    let opt: Option<ParticlesField> = Option::deserialize(deserializer)?;
+    match opt {
+        None | Some(ParticlesField::Null) => Ok(ParticleDna {
+            rate: 0,
+            ..ParticleDna::default()
+        }),
+        Some(ParticlesField::Shorthand(s)) => {
+            let ptype: ParticleType = serde_json::from_value(serde_json::Value::String(s.clone()))
+                .map_err(|_| de::Error::custom(format!("unknown particle type: {s}")))?;
+            Ok(ParticleDna {
+                r#type: ptype,
+                rate: 8,
+                ..ParticleDna::default()
+            })
+        }
+        Some(ParticlesField::Full(p)) => Ok(p),
     }
 }
 
@@ -207,7 +261,7 @@ impl Default for GlowDna {
 pub struct CowDna {
     #[serde(default)]
     pub base: BaseAnim,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_particles")]
     pub particles: ParticleDna,
     #[serde(default = "default_speed")]
     pub speed: f32,
@@ -246,13 +300,59 @@ impl Default for CowDna {
 }
 
 /// Load all cow DNA profiles from `animations.json`.
+///
+/// Deserializes entry-by-entry so that a single corrupted or malformed record
+/// in `animations.json` never invalidates the entire animation database.
 pub fn load_animations(data_dir: &Path) -> HashMap<String, CowDna> {
     let path = data_dir.join("animations.json");
     let content = match std::fs::read_to_string(&path) {
         Ok(c) => c,
-        Err(_) => return HashMap::new(),
+        Err(e) => {
+            crate::log_warn!(
+                "dna",
+                "Cannot read animations.json at {}: {e}",
+                path.display()
+            );
+            return HashMap::new();
+        }
     };
-    serde_json::from_str(&content).unwrap_or_default()
+    // Parse as map of raw JSON values first
+    let raw_map: HashMap<String, serde_json::Value> = match serde_json::from_str(&content) {
+        Ok(m) => m,
+        Err(e) => {
+            crate::log_diag!(
+                crate::logger::LogLevel::Error,
+                "dna",
+                &format!("Syntax error parsing {}: {e}", path.display()),
+                "Animation DNA catalog is corrupted. Run `forgum doctor` to verify installation.",
+                "Inspect animations.json syntax in data/Cows/animations.json"
+            );
+            return HashMap::new();
+        }
+    };
+    let mut result = HashMap::with_capacity(raw_map.len());
+    for (name, val) in raw_map {
+        match serde_json::from_value::<CowDna>(val) {
+            Ok(dna) => {
+                result.insert(name, dna);
+            }
+            Err(e) => {
+                crate::log_diag!(
+                    crate::logger::LogLevel::Warn,
+                    "dna",
+                    &format!("Failed to parse DNA for mascot '{name}': {e}"),
+                    "One mascot animation failed to load and used default Walk.",
+                    &format!("Check CowDna schema in dna.rs for record '{name}'")
+                );
+            }
+        }
+    }
+    crate::log_info!(
+        "dna",
+        "Loaded {} animal DNA profiles from animations.json",
+        result.len()
+    );
+    result
 }
 
 /// Get DNA for a specific cow, falling back to defaults.

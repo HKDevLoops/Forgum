@@ -80,7 +80,7 @@ Solid background, calm and clean. Tux the penguin with dollar-sign eyes
 Pass a sample via the global `--config` flag, then a render command:
 
 ```bash
-forgum-engine --config docs/samples/config.rainbow.json say "hello"
+forgum --config docs/samples/config.rainbow.json say "hello"
 ```
 
 Or just copy a sample to your config location:

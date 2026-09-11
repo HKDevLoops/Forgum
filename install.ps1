@@ -1,32 +1,40 @@
 <#>
 .SYNOPSIS
-    One-command installer for forgum-engine (Phase 7).
+    One-command celestial installer for Forgum.
 
 .DESCRIPTION
-    Detects the Windows architecture, downloads the correct prebuilt
-    forgum-<version>-windows-<arch>.zip from the GitHub releases page (tag
-    derived from Cargo.toml, or override with -Version), extracts
-    forgum-engine.exe into a sensible location, and adds that location to the
-    current user's PATH.
+    Detects the Windows architecture, installs forgum-engine and forgum into
+    %LOCALAPPDATA%\Forgum, ensures the directory is on the current user's PATH,
+    and launches the rich Celestial Terminal UI Wizard for interactive configuration,
+    shell integration, and transparent motivation telemetry consent.
 
 .PARAMETER Version
-    Release version to install (e.g. 0.4.0). Defaults to the version in
-    Cargo.toml at the current directory, then to the latest GitHub release.
+    Release version to install. Defaults to the version in Cargo.toml at the
+    current directory, then to the latest GitHub release.
 
 .PARAMETER Repo
     owner/name of the GitHub repo. Defaults to HKDevLoops/Forgum.
+
+.PARAMETER Headless
+    Perform non-interactive installation without launching the Celestial TUI.
+
+.PARAMETER Telemetry
+    In headless mode, 'allow' (yes) or 'decline' (no) motivation telemetry.
 
 .PARAMETER FirstRun
     If set, prints first-run guidance after install.
 
 .EXAMPLE
     ./install.ps1
-    ./install.ps1 -Version 0.4.0
+    ./install.ps1 -Headless -Telemetry decline
 #>
 [CmdletBinding()]
 param(
     [string] $Version,
     [string] $Repo = 'HKDevLoops/Forgum',
+    [switch] $Headless,
+    [ValidateSet('allow', 'decline', '')]
+    [string] $Telemetry = '',
     [switch] $FirstRun
 )
 
@@ -53,24 +61,23 @@ if (-not $Version) {
 }
 
 $Tag = "v$Version"
-Write-Host ">> Installing forgum-engine $Version from $Repo ($Tag)"
+Write-Host ">> Installing Forgum $Version from $Repo ($Tag)" -ForegroundColor Cyan
 
 # --- detect architecture ----------------------------------------------------
 $arch = if ($env:PROCESSOR_ARCHITECTURE -eq 'ARM64') { 'arm64' } `
         elseif ($env:PROCESSOR_ARCHITECTURE -eq 'AMD64') { 'x64' } `
+        elseif ($env:PROCESSOR_ARCHITECTURE -eq 'x86') { 'x86' } `
         else { $env:PROCESSOR_ARCHITECTURE }
 
 switch ($arch) {
     'x64'   { $asset = "forgum-$Version-windows-x64.zip" }
     'arm64' { $asset = "forgum-$Version-windows-arm64.zip" }
+    'x86'   { $asset = "forgum-$Version-windows-x86.zip" }
     default {
-        Write-Error "Unsupported Windows architecture '$arch'. Expected x64 or arm64."
+        Write-Error "Unsupported Windows architecture '$arch'. Expected x64, arm64, or x86."
         exit 1
     }
 }
-
-$url = "https://github.com/$Repo/releases/download/$Tag/$asset"
-Write-Host ">> Downloading $asset"
 
 # --- install location -------------------------------------------------------
 $installDir = if ($env:FORGUM_INSTALL_DIR) { $env:FORGUM_INSTALL_DIR } `
@@ -79,77 +86,92 @@ if (-not (Test-Path -LiteralPath $installDir)) {
     New-Item -ItemType Directory -Path $installDir -Force | Out-Null
 }
 $binPath = Join-Path $installDir 'forgum-engine.exe'
+$aliasPath = Join-Path $installDir 'forgum.exe'
 
-# --- download + extract (no external deps beyond Invoke-WebRequest/Shell) ----
-$tmp = Join-Path ([System.IO.Path]::GetTempPath()) ("forgum-" + [guid]::NewGuid().ToString('N'))
-New-Item -ItemType Directory -Path $tmp -Force | Out-Null
-$zipPath = Join-Path $tmp $asset
+# Check if local build binary exists first (fast developer install)
+$localDebug = Join-Path $PWD 'target\debug\forgum.exe'
+$localRelease = Join-Path $PWD 'target\release\forgum.exe'
+if (Test-Path -LiteralPath $localRelease) {
+    Copy-Item -LiteralPath $localRelease -Destination $binPath -Force
+    Copy-Item -LiteralPath $localRelease -Destination $aliasPath -Force
+    Write-Host ">> Installed from local release build: $binPath" -ForegroundColor Green
+} elseif (Test-Path -LiteralPath $localDebug) {
+    Copy-Item -LiteralPath $localDebug -Destination $binPath -Force
+    Copy-Item -LiteralPath $localDebug -Destination $aliasPath -Force
+    Write-Host ">> Installed from local debug build: $binPath" -ForegroundColor Green
+} else {
+    $url = "https://github.com/$Repo/releases/download/$Tag/$asset"
+    Write-Host ">> Downloading $asset" -ForegroundColor Cyan
 
-try {
-    Invoke-WebRequest -Uri $url -OutFile $zipPath -UseBasicParsing -Headers @{ 'User-Agent' = 'forgum-install' }
-    if (-not (Test-Path -LiteralPath $zipPath)) {
-        Write-Error "Download failed: $url"
-        exit 1
+    $tmp = Join-Path ([System.IO.Path]::GetTempPath()) ("forgum-" + [guid]::NewGuid().ToString('N'))
+    New-Item -ItemType Directory -Path $tmp -Force | Out-Null
+    $zipPath = Join-Path $tmp $asset
+
+    try {
+        Invoke-WebRequest -Uri $url -OutFile $zipPath -UseBasicParsing -Headers @{ 'User-Agent' = 'forgum-install' }
+        if (-not (Test-Path -LiteralPath $zipPath)) {
+            throw "Download failed: $url"
+        }
+
+        $shell = New-Object -ComObject Shell.Application
+        $zipNs = $shell.NameSpace($zipPath)
+        $destNs = $shell.NameSpace($tmp)
+        $destNs.CopyHere($zipNs.Items(), 0x10)
+
+        $extracted = Join-Path $tmp 'forgum-engine.exe'
+        if (-not (Test-Path -LiteralPath $extracted)) {
+            $extracted = Join-Path $tmp 'forgum.exe'
+        }
+        if (-not (Test-Path -LiteralPath $extracted)) {
+            throw "forgum binary not found inside $asset"
+        }
+
+        Copy-Item -LiteralPath $extracted -Destination $binPath -Force
+        Copy-Item -LiteralPath $extracted -Destination $aliasPath -Force
+        Write-Host ">> Installed: $binPath" -ForegroundColor Green
+    } catch {
+        if (Get-Command cargo -ErrorAction SilentlyContinue) {
+            Write-Host ">> Release archive download unavailable. Compiling via Cargo..." -ForegroundColor Yellow
+            if (Test-Path -LiteralPath (Join-Path $PWD 'Cargo.toml')) {
+                cargo build --release --bin forgum-engine --bin forgum
+                Copy-Item -LiteralPath 'target\release\forgum.exe' -Destination $binPath -Force
+                Copy-Item -LiteralPath 'target\release\forgum.exe' -Destination $aliasPath -Force
+            } else {
+                cargo install forgum-cli
+                $cargoBin = Join-Path $HOME '.cargo\bin\forgum.exe'
+                if (Test-Path -LiteralPath $cargoBin) {
+                    Copy-Item -LiteralPath $cargoBin -Destination $binPath -Force
+                    Copy-Item -LiteralPath $cargoBin -Destination $aliasPath -Force
+                }
+            }
+            Write-Host ">> Installed via Cargo: $binPath" -ForegroundColor Green
+        } else {
+            Write-Error "Failed to install Forgum: $_"
+            exit 1
+        }
+    } finally {
+        Remove-Item -LiteralPath $tmp -Recurse -Force -ErrorAction SilentlyContinue
     }
-
-    # Use the Shell.Application COM object so we don't depend on Expand-Archive
-    # quirks; it handles the zip natively on all supported Windows builds.
-    $shell = New-Object -ComObject Shell.Application
-    $zipNs = $shell.NameSpace($zipPath)
-    $destNs = $shell.NameSpace($tmp)
-    $destNs.CopyHere($zipNs.Items(), 0x10)
-
-    $extracted = Join-Path $tmp 'forgum-engine.exe'
-    if (-not (Test-Path -LiteralPath $extracted)) {
-        Write-Error "forgum-engine.exe not found inside $asset"
-        exit 1
-    }
-
-    Copy-Item -LiteralPath $extracted -Destination $binPath -Force
-    Write-Host ">> Installed: $binPath"
-} finally {
-    Remove-Item -LiteralPath $tmp -Recurse -Force -ErrorAction SilentlyContinue
 }
 
-# --- add to User PATH (idempotent) -----------------------------------------
+# --- add to User PATH (idempotent) & activate in current session ------------
 $userPath = [Environment]::GetEnvironmentVariable('PATH', 'User') -split ';' | Where-Object { $_ }
 if ($installDir -notin $userPath) {
     $userPath += $installDir
     [Environment]::SetEnvironmentVariable('PATH', ($userPath -join ';'), 'User')
-    Write-Host ">> Added $installDir to User PATH (reopen your terminal to use 'forgum-engine')"
+    Write-Host ">> Added $installDir to User PATH" -ForegroundColor Green
 } else {
     Write-Host ">> $installDir already on User PATH"
 }
-
-# --- fun: fortune + shell hook ---------------------------------------------
-Write-Host
-Write-Host "=============================================="
-Write-Host "  Moooo! Wrapping up your forgum install..."
-Write-Host "=============================================="
-
-Write-Host
-Write-Host "Here's a fortune to chew on while we finish up:"
-try {
-    & "$installDir\forgum-engine.exe" fortune 2>$null
-} catch {
-    # fortune subcommand is best-effort; never fail the install
+if ($installDir -notin ($env:PATH -split ';')) {
+    $env:PATH = "$installDir;$env:PATH"
 }
 
-Write-Host
-Write-Host ">> Injecting the shell hook so forgum runs on every prompt..."
-$initShell = if (Get-Command pwsh -ErrorAction SilentlyContinue) { 'pwsh' } else { 'powershell' }
-try {
-    & "$installDir\forgum-engine.exe" init $initShell 2>$null
-} catch {
-    # init is best-effort; never fail the install
+# --- launch wizard or headless setup ---------------------------------------
+if ($Headless) {
+    $telemetryArg = if ($Telemetry) { @("--telemetry", $Telemetry) } else { @() }
+    & "$binPath" install --headless @telemetryArg
+} else {
+    # Launch celestial Terminal UI wizard
+    & "$binPath" install
 }
-
-# --- next steps -------------------------------------------------------------
-Write-Host
-Write-Host "Done. Reopen your terminal, then try: forgum-engine --help"
-if ($FirstRun) {
-    Write-Host "First run: forgum-engine --daemon start"
-}
-
-Write-Host
-Write-Host "Customize your cow anytime:  forgum-engine config --tui"

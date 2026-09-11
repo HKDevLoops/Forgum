@@ -202,7 +202,7 @@ fn default_auto_render() -> bool {
 }
 
 fn default_color_mode() -> String {
-    "animal".to_string()
+    "default".to_string()
 }
 
 fn default_thought_interval() -> u32 {

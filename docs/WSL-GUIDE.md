@@ -35,7 +35,7 @@ Use the Windows binary from WSL:
 export PATH="$PATH:/mnt/c/Program Files/Forgum"
 
 # Or create a symlink
-sudo ln -s /mnt/c/Program\ Files/Forgum/forgum-engine.exe /usr/local/bin/forgum-engine
+sudo ln -s /mnt/c/Program\ Files/Forgum/forgum.exe /usr/local/bin/forgum
 ```
 
 **Caveat:** Windows binaries may have different path handling (backslashes vs forward slashes).
@@ -46,10 +46,10 @@ Download the Linux binary from GitHub releases:
 
 ```bash
 # Download
-curl -sL https://github.com/HKDevLoops/Forgum/releases/latest/download/forgum-engine-x86_64-unknown-linux-gnu.tar.gz | tar xz
+curl -sL https://github.com/HKDevLoops/Forgum/releases/latest/download/forgum-x86_64-unknown-linux-gnu.tar.gz | tar xz
 
 # Install
-sudo install forgum-engine /usr/local/bin/
+sudo install forgum /usr/local/bin/
 ```
 
 ## Shell Hook Setup
@@ -57,7 +57,7 @@ sudo install forgum-engine /usr/local/bin/
 ### Bash (default in most WSL distros)
 
 ```bash
-eval "$(forgum-engine init bash)"
+eval "$(forgum init bash)"
 ```
 
 Add to `~/.bashrc` for persistence.
@@ -65,7 +65,7 @@ Add to `~/.bashrc` for persistence.
 ### Zsh
 
 ```bash
-eval "$(forgum-engine init zsh)"
+eval "$(forgum init zsh)"
 ```
 
 Add to `~/.zshrc` for persistence.
@@ -73,7 +73,7 @@ Add to `~/.zshrc` for persistence.
 ### Fish
 
 ```fish
-forgum-engine init fish | source
+forgum init fish | source
 ```
 
 Add to `~/.config/fish/config.fish` for persistence.
@@ -138,7 +138,7 @@ If using tmux in WSL:
 sudo apt-get install tmux
 
 # Generate config
-forgum-engine tmux install >> ~/.tmux.conf
+forgum tmux install >> ~/.tmux.conf
 
 # Reload
 tmux source-file ~/.tmux.conf
@@ -175,16 +175,16 @@ docker run --rm forgum-test
 
 ## Troubleshooting
 
-### "command not found: forgum-engine"
+### "command not found: forgum"
 
-1. Check installation: `which forgum-engine`
-2. If using Windows binary: `ls /mnt/c/Program\ Files/Forgum/forgum-engine.exe`
+1. Check installation: `which forgum`
+2. If using Windows binary: `ls /mnt/c/Program\ Files/Forgum/forgum.exe`
 3. Add to PATH: `export PATH="$PATH:/usr/local/bin"`
 
 ### "Permission denied"
 
-1. Check binary permissions: `ls -la $(which forgum-engine)`
-2. Fix: `chmod +x $(which forgum-engine)`
+1. Check binary permissions: `ls -la $(which forgum)`
+2. Fix: `chmod +x $(which forgum)`
 
 ### "No cows found"
 

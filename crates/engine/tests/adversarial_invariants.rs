@@ -208,3 +208,67 @@ fn frame_period_delta_compensation_invariants() {
     let clamped_dt = raw_dt_frozen.clamp(Duration::from_millis(1), Duration::from_millis(100));
     assert_eq!(clamped_dt, Duration::from_millis(100));
 }
+
+// ── Invariant 6: Mascot Universal Dynamic Eye Glyphs ────────────────
+
+#[test]
+fn mascot_eyes_update_invariance() {
+    let dd = data_dir();
+    let cows_dir = dd.join("Cows");
+
+    let mut tested_count = 0;
+    for entry in std::fs::read_dir(&cows_dir)
+        .expect("data/Cows exists")
+        .flatten()
+    {
+        let path = entry.path();
+        if path.extension().is_some_and(|ext| ext == "cow") {
+            let stem = path.file_stem().unwrap().to_string_lossy().to_string();
+            let raw = std::fs::read_to_string(&path).unwrap_or_default();
+            // If the cow template defines dynamic eyes ($eyes, ${eyes}, $eye, ${eye})
+            if raw.contains("$eyes")
+                || raw.contains("${eyes}")
+                || raw.contains("$eye")
+                || raw.contains("${eye}")
+            {
+                let expanded = load_cow(&stem, &dd, "§§", "  ", "\\");
+                assert!(
+                    expanded.contains('§'),
+                    "Cow '{stem}' has eye placeholder but failed to render custom eye glyph '§'"
+                );
+                tested_count += 1;
+            }
+        }
+    }
+    assert!(
+        tested_count >= 100,
+        "Expected at least 100 dynamic creatures with eye placeholders, found {tested_count}"
+    );
+}
+
+// ── Invariant 7: API Animation Control & Mutation ───────────────────
+
+#[test]
+fn api_control_cmd_wire_roundtrip_invariance() {
+    use forgum_engine::control_socket::{parse_cmd, ControlCmd};
+
+    let test_cases = [
+        (r#"{"cmd":"EYES","arg":"^^"}"#, "eyes", "^^"),
+        (r#"{"cmd":"TONGUE","arg":"U "}"#, "tongue", "U "),
+        (r#"{"cmd":"COLOR","arg":"rainbow"}"#, "color", "rainbow"),
+        (r#"{"cmd":"EFFECT","arg":"fly"}"#, "effect", "fly"),
+        (r#"{"cmd":"COW","arg":"tux"}"#, "cow", "tux"),
+    ];
+
+    for (json, kind, expected) in test_cases {
+        let cmd = parse_cmd(json);
+        match (kind, cmd) {
+            ("eyes", ControlCmd::Eyes(v)) => assert_eq!(v, expected),
+            ("tongue", ControlCmd::Tongue(v)) => assert_eq!(v, expected),
+            ("color", ControlCmd::Color(v)) => assert_eq!(v, expected),
+            ("effect", ControlCmd::Effect(v)) => assert_eq!(v, expected),
+            ("cow", ControlCmd::Cow(v)) => assert_eq!(v, expected),
+            other => panic!("Unexpected parsed command for {kind}: {other:?}"),
+        }
+    }
+}

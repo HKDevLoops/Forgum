@@ -26,6 +26,7 @@ fn cli_commands_include_documented_set() {
         "say",
         "timer",
         "battle",
+        "sweep",
     ];
 
     // Developer-only subcommands that exist in the enum but are not part of
@@ -70,5 +71,6 @@ fn all_command_variants() -> Vec<&'static str> {
         "say",
         "timer",
         "battle",
+        "sweep",
     ]
 }

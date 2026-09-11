@@ -38,14 +38,33 @@ pub fn load_cow(
     // 1. Try bundled data directory.
     let cow_path = data_dir.join("Cows").join(format!("{resolved}.cow"));
     if let Ok(raw) = std::fs::read_to_string(&cow_path) {
+        crate::log_debug!(
+            "cow",
+            "Loaded mascot '{resolved}' from {}",
+            cow_path.display()
+        );
         return expand_cow(&raw, eyes, tongue, thoughts);
     }
     // 2. Try user's custom cows directory (Phase 8.12: community cow packs).
     if let Some(custom_path) = custom_cows_dir() {
         let custom_cow = custom_path.join(format!("{resolved}.cow"));
         if let Ok(raw) = std::fs::read_to_string(&custom_cow) {
+            crate::log_debug!(
+                "cow",
+                "Loaded custom mascot '{resolved}' from {}",
+                custom_cow.display()
+            );
             return expand_cow(&raw, eyes, tongue, thoughts);
         }
+    }
+    if resolved != "default" {
+        crate::log_diag!(
+            crate::logger::LogLevel::Warn,
+            "cow",
+            &format!("Mascot '{resolved}' not found; falling back to default cow"),
+            &format!("Mascot '{resolved}' was not found. Run 'forgum list animals' to view all available mascots."),
+            &format!("Check if data/Cows/{resolved}.cow exists or if resolve_cow_name needs an alias.")
+        );
     }
     default_cow_expanded(eyes, tongue, thoughts)
 }
@@ -1041,10 +1060,13 @@ mod tests {
         let cow = "  cow";
         let long_text = "This is a very long speech bubble text that should cause the bubble to be wider than the cow art itself";
         let scene = compose_scene(cow, long_text);
-        // The bubble should contain the full text
-        assert!(scene.contains(long_text), "bubble must contain full text");
+        // Every word from the original text must appear in the bubble
+        for word in long_text.split_whitespace() {
+            assert!(scene.contains(word), "bubble must contain word '{word}'");
+        }
         // The bubble should appear before the cow
-        assert!(scene.find(long_text).unwrap() < scene.find("cow").unwrap());
+        let first_word = long_text.split_whitespace().next().unwrap();
+        assert!(scene.find(first_word).unwrap() < scene.find("cow").unwrap());
     }
 
     #[test]

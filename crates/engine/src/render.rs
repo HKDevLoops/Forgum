@@ -156,7 +156,15 @@ pub fn render_loop_background(
 
     let cow_foot = effects::find_cow_foot_y(cow_display);
     let line_count = (cow_foot + 2).max(cow_display.lines().count()).max(1);
-    let overlay_rows = line_count.min((rows as usize).saturating_sub(3)).max(1);
+    let overlay_rows = if config.split_scroll {
+        let split_pane = ((rows as usize) * 38 / 100).clamp(10, 16);
+        line_count
+            .max(split_pane)
+            .min((rows as usize).saturating_sub(5))
+            .max(1)
+    } else {
+        line_count.min((rows as usize).saturating_sub(3)).max(1)
+    };
 
     crate::engine_core::run_engine_overlay(
         out,

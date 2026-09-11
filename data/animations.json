@@ -559,6 +559,48 @@
       "falloff": "gaussian"
     }
   },
+  "charizardvice": {
+    "base": "Breathe",
+    "particles": {
+      "type": "Fire",
+      "rate": 16,
+      "life": [
+        0.6,
+        1.4
+      ],
+      "speed": [
+        0.3,
+        0.8
+      ],
+      "palette": [
+        "#ff6f00",
+        "#ffab00",
+        "#00b0ff"
+      ]
+    },
+    "speed": 1.0,
+    "amplitude": {
+      "breath": 0.6,
+      "sway": 0.2,
+      "float": 0.1
+    },
+    "palette": [
+      "#ff6f00",
+      "#ffab00",
+      "#00b0ff"
+    ],
+    "easing": {
+      "base": "sine_inout",
+      "particle_alpha": "expo_out",
+      "particle_velocity": "cubic_out"
+    },
+    "phase_seed": 5002,
+    "glow": {
+      "color": "#ff6600",
+      "radius": 5.0,
+      "falloff": "gaussian"
+    }
+  },
   "dragon": {
     "base": "Breathe",
     "particles": {
@@ -602,7 +644,7 @@
     }
   },
   "dragon-and-cow": {
-    "base": "Fly",
+    "base": "Breathe",
     "particles": {
       "type": "Fire",
       "rate": 12,
@@ -621,9 +663,9 @@
     },
     "speed": 1.0,
     "amplitude": {
-      "breath": 0.0,
+      "breath": 0.6,
       "sway": 0.2,
-      "float": 0.4
+      "float": 0.1
     },
     "palette": [
       "#ff8800",

@@ -72,6 +72,9 @@ fn control_cmd_to_json(cmd: &ControlCmd) -> String {
         }
         ControlCmd::Cow(c) => serde_json::json!({"cmd": "COW", "arg": c}).to_string(),
         ControlCmd::Text(t) => serde_json::json!({"cmd": "TEXT", "arg": t}).to_string(),
+        ControlCmd::Eyes(e) => serde_json::json!({"cmd": "EYES", "arg": e}).to_string(),
+        ControlCmd::Tongue(t) => serde_json::json!({"cmd": "TONGUE", "arg": t}).to_string(),
+        ControlCmd::Color(c) => serde_json::json!({"cmd": "COLOR", "arg": c}).to_string(),
         ControlCmd::Status => r#"{"cmd":"STATUS"}"#.to_string(),
         ControlCmd::Ping => r#"{"cmd":"PING"}"#.to_string(),
         ControlCmd::PeerJoin { session_id } => {

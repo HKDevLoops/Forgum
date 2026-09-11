@@ -19,7 +19,11 @@ fn log_level_ordering_and_parsing() {
 
 #[test]
 fn log_write_and_read_roundtrip() {
-    let token = format!("audit-token-{}", std::process::id());
+    let nanos = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    let token = format!("audit-token-{}-{}", std::process::id(), nanos);
     logger::log(LogLevel::Info, "test::audit", &format!("Msg 1 {}", token));
     logger::log(LogLevel::Warn, "test::audit", &format!("Msg 2 {}", token));
     logger::log(LogLevel::Error, "test::audit", &format!("Msg 3 {}", token));
@@ -37,7 +41,11 @@ fn log_write_and_read_roundtrip() {
 
 #[test]
 fn log_level_filtering() {
-    let token = format!("filter-token-{}", std::process::id());
+    let nanos = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    let token = format!("filter-token-{}-{}", std::process::id(), nanos);
     logger::log(LogLevel::Debug, "test::filter", &format!("Debug {}", token));
     logger::log(LogLevel::Info, "test::filter", &format!("Info {}", token));
     logger::log(LogLevel::Warn, "test::filter", &format!("Warn {}", token));
@@ -61,12 +69,16 @@ fn log_table_formatting_strict_alignment() {
             level: "INFO".into(),
             target: "engine::core".into(),
             message: "System initialized with 0 anomalies".into(),
+            user_hint: None,
+            developer_hint: None,
         },
         LogEntry {
             timestamp: "2026-08-20T11:00:01.456+05:30".into(),
             level: "ERROR".into(),
             target: "engine::config".into(),
             message: "Fatal format conflict detected between json and yaml".into(),
+            user_hint: None,
+            developer_hint: None,
         },
     ];
 

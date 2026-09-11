@@ -165,6 +165,66 @@ pub fn herd_effect(name: &str, filter: &HerdFilter) -> Result<usize, String> {
     Ok(count)
 }
 
+pub fn herd_cow(name: &str, filter: &HerdFilter) -> Result<usize, String> {
+    let entries = filter_daemons(discover_daemons(), filter);
+    let mut count = 0;
+    for entry in &entries {
+        if entry.alive {
+            let cmd = serde_json::json!({"cmd": "COW", "arg": name}).to_string();
+            let resp = send_command(&entry.socket_path, &cmd)?;
+            if resp.ok {
+                count += 1;
+            }
+        }
+    }
+    Ok(count)
+}
+
+pub fn herd_eyes(eyes: &str, filter: &HerdFilter) -> Result<usize, String> {
+    let entries = filter_daemons(discover_daemons(), filter);
+    let mut count = 0;
+    for entry in &entries {
+        if entry.alive {
+            let cmd = serde_json::json!({"cmd": "EYES", "arg": eyes}).to_string();
+            let resp = send_command(&entry.socket_path, &cmd)?;
+            if resp.ok {
+                count += 1;
+            }
+        }
+    }
+    Ok(count)
+}
+
+pub fn herd_tongue(tongue: &str, filter: &HerdFilter) -> Result<usize, String> {
+    let entries = filter_daemons(discover_daemons(), filter);
+    let mut count = 0;
+    for entry in &entries {
+        if entry.alive {
+            let cmd = serde_json::json!({"cmd": "TONGUE", "arg": tongue}).to_string();
+            let resp = send_command(&entry.socket_path, &cmd)?;
+            if resp.ok {
+                count += 1;
+            }
+        }
+    }
+    Ok(count)
+}
+
+pub fn herd_color(color: &str, filter: &HerdFilter) -> Result<usize, String> {
+    let entries = filter_daemons(discover_daemons(), filter);
+    let mut count = 0;
+    for entry in &entries {
+        if entry.alive {
+            let cmd = serde_json::json!({"cmd": "COLOR", "arg": color}).to_string();
+            let resp = send_command(&entry.socket_path, &cmd)?;
+            if resp.ok {
+                count += 1;
+            }
+        }
+    }
+    Ok(count)
+}
+
 pub fn herd_speed(speed: f32, filter: &HerdFilter) -> Result<usize, String> {
     let entries = filter_daemons(discover_daemons(), filter);
     let mut count = 0;

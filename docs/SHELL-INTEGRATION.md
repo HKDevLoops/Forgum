@@ -5,7 +5,7 @@ Forgum hooks into your shell so the cow shows up automatically above your prompt
 ## Quick Setup
 
 ```bash
-forgum-engine init <shell>
+forgum init <shell>
 ```
 
 Where `<shell>` is one of: `bash`, `zsh`, `fish`, `pwsh`, `cmd`, `powershell`.
@@ -15,7 +15,7 @@ Where `<shell>` is one of: `bash`, `zsh`, `fish`, `pwsh`, `cmd`, `powershell`.
 ### Bash
 
 ```bash
-eval "$(forgum-engine init bash)"
+eval "$(forgum init bash)"
 ```
 
 **What it does:**
@@ -31,7 +31,7 @@ eval "$(forgum-engine init bash)"
 ### Zsh
 
 ```bash
-eval "$(forgum-engine init zsh)"
+eval "$(forgum init zsh)"
 ```
 
 **What it does:**
@@ -46,7 +46,7 @@ eval "$(forgum-engine init zsh)"
 ### Fish
 
 ```fish
-forgum-engine init fish | source
+forgum init fish | source
 ```
 
 **What it does:**
@@ -61,7 +61,7 @@ forgum-engine init fish | source
 ### PowerShell 7+ (pwsh)
 
 ```powershell
-forgum-engine init pwsh | Out-String | Invoke-Expression
+forgum init pwsh | Out-String | Invoke-Expression
 ```
 
 **What it does:**
@@ -77,7 +77,7 @@ forgum-engine init pwsh | Out-String | Invoke-Expression
 ### PowerShell 5.1 (Windows PowerShell)
 
 ```powershell
-forgum-engine init powershell | Out-String | Invoke-Expression
+forgum init powershell | Out-String | Invoke-Expression
 ```
 
 Same as pwsh but for Windows PowerShell 5.1.
@@ -85,7 +85,7 @@ Same as pwsh but for Windows PowerShell 5.1.
 ### CMD
 
 ```cmd
-forgum-engine init cmd
+forgum init cmd
 ```
 
 **What it does:**
@@ -105,7 +105,7 @@ reg add "HKCU\Software\Microsoft\Command Processor" /v AutoRun /t REG_SZ /d "<pa
 ### tmux
 
 ```bash
-forgum-engine tmux install >> ~/.tmux.conf
+forgum tmux install >> ~/.tmux.conf
 ```
 
 Adds:
@@ -116,7 +116,7 @@ Adds:
 ### Zellij
 
 ```bash
-forgum-engine tmux zellij
+forgum tmux zellij
 ```
 
 Generates a `zellij run` command for the daemon.
@@ -124,7 +124,7 @@ Generates a `zellij run` command for the daemon.
 ### WezTerm
 
 ```bash
-forgum-engine tmux wezterm
+forgum tmux wezterm
 ```
 
 Generates Lua config with `update-status` event handler.
@@ -132,7 +132,7 @@ Generates Lua config with `update-status` event handler.
 ### GNU Screen
 
 ```bash
-forgum-engine tmux screen
+forgum tmux screen
 ```
 
 Generates `.screenrc` configuration block.
@@ -142,8 +142,8 @@ Generates `.screenrc` configuration block.
 ### Cow doesn't appear
 
 1. Verify hook is loaded: `type forgum` (bash/zsh) or `Get-Command forgum` (pwsh)
-2. Check engine path: `which forgum-engine` or `Get-Command forgum-engine`
-3. Test manually: `forgum-engine render --text "hello" --duration 3`
+2. Check engine path: `which forgum` or `Get-Command forgum`
+3. Test manually: `forgum render --text "hello" --duration 3`
 
 ### Dead daemon overlay not cleaning up
 

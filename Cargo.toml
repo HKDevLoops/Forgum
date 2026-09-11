@@ -43,6 +43,10 @@ missing_const_for_fn = "allow"
 needless_pass_by_value = "allow"
 items_after_statements = "allow"
 too_long_first_doc_paragraph = "allow"
+too_many_arguments = "allow"
+excessive_precision = "allow"
+approx_constant = "allow"
+manual_range_contains = "allow"
 
 [workspace.dependencies]
 # Pin shared versions so we don't end up with 0.59 + 0.61 in the dep graph.

@@ -4,7 +4,7 @@
 # ║   Build a native Windows .msi installer for Forgum.                    ║
 # ╚══════════════════════════════════════════════════════════════════════════╝
 
-This directory builds a native Windows `.msi` installer for `forgum-engine` using
+This directory builds a native Windows `.msi` installer for `forgum` using
 the [WiX Toolset](https://wixtoolset.org/).
 
 ---
@@ -19,7 +19,7 @@ candle.exe -dBinDir=<path-to-bin> forgum.wxs
 light.exe -out forgum.msi forgum.wixobj
 ```
 
-`<path-to-bin>` is the directory containing the built `forgum-engine.exe`.
+`<path-to-bin>` is the directory containing the built `forgum.exe`.
 Alternatively, `cargo wix` can drive the same source.
 
 ---

@@ -45,7 +45,9 @@ pub mod shell;
 pub mod signal;
 pub mod sixel;
 pub mod spawn;
+pub mod telemetry;
 pub mod terminal;
+pub mod uninstaller;
 
 // Built-in 8×8 bitmap font for real glyph rasterization and video capture.
 pub mod font;
@@ -75,7 +77,12 @@ pub use platform_unix::parent_pid;
 #[cfg(windows)]
 pub use platform_windows::parent_pid;
 pub use protocol::{ConfigFormat, SceneConfig};
-pub use shell::{update_delimited_block, write_file_if_changed, Shell};
+pub use shell::{
+    remove_all_forgum_blocks, remove_delimited_block, uninstall_all_shell_integrations,
+    uninstall_shell_integration, update_delimited_block, write_file_if_changed, Shell,
+    ALL_FORGUM_MARKER_PAIRS, COMPLETIONS_MARKER_BEGIN, COMPLETIONS_MARKER_END, HOOK_MARKER_BEGIN,
+    HOOK_MARKER_END,
+};
 pub use signal::{ShutdownFlag, SignalGuard};
 pub use sixel::{
     create_graphics_renderer, graphics_renderer_available, CellView, FrameBufferLike,
@@ -87,6 +94,11 @@ pub use spawn::{
     daemon_bootstrap, daemonize, execute_command_with_shell_fallback, prefer_fork_exec,
     process_is_alive, spawn_detached, DetachedChild,
 };
+pub use telemetry::{
+    is_telemetry_allowed, record_active_pulse, record_installed, record_tried,
+    set_telemetry_consent, Metric,
+};
+pub use uninstaller::{perform_uninstallation, UninstallMode, UninstallReport};
 
 /// Returns the current process's open handle/fd count, or `None` if the OS
 /// doesn't expose a reliable signal. Used by the daemon soak test to assert
@@ -230,6 +242,45 @@ pub fn check_battery_percent() -> Option<f32> {
     #[cfg(not(any(target_os = "linux", target_os = "macos")))]
     {
         None
+    }
+}
+
+/// Open a file or folder in the host operating system's default viewer or editor.
+pub fn open_in_system_viewer(target_path: &std::path::Path) -> std::io::Result<()> {
+    #[cfg(target_os = "windows")]
+    {
+        if target_path.is_dir() {
+            std::process::Command::new("explorer")
+                .arg(target_path)
+                .spawn()?;
+        } else {
+            let status = std::process::Command::new("cmd")
+                .args(["/c", "start", ""])
+                .arg(target_path)
+                .spawn();
+            if status.is_err() {
+                std::process::Command::new("notepad")
+                    .arg(target_path)
+                    .spawn()?;
+            }
+        }
+        Ok(())
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("open")
+            .arg(target_path)
+            .spawn()?;
+        Ok(())
+    }
+
+    #[cfg(not(any(target_os = "windows", target_os = "macos")))]
+    {
+        std::process::Command::new("xdg-open")
+            .arg(target_path)
+            .spawn()?;
+        Ok(())
     }
 }
 

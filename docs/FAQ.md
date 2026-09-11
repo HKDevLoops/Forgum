@@ -37,13 +37,13 @@ You can override this anytime by setting the `FORGUM_CONFIG` environment variabl
 **A:** Forgum strictly enforces the **Law of Single-Format Exclusivity**. You cannot have both `config.json` and `config.toml` in the same directory.
 To safely switch formats without losing any settings, use the built-in migration command:
 ```bash
-forgum-engine config --migrate toml    # or yaml / json
+forgum config --migrate toml    # or yaml / json
 ```
 
 ### Q: Can I configure Forgum using a GUI/TUI menu?
 **A:** Yes! Run:
 ```bash
-forgum-engine config --tui
+forgum config --tui
 ```
 This launches an interactive terminal interface where you can browse options, cycle through 109+ cows, preview color palettes, and save your settings.
 
@@ -62,23 +62,23 @@ This launches an interactive terminal interface where you can browse options, cy
 **A:**
 - **PowerShell / pwsh:**
   ```powershell
-  forgum-engine init pwsh | Out-String | Invoke-Expression
+  forgum init pwsh | Out-String | Invoke-Expression
   ```
 - **Bash:**
   ```bash
-  eval "$(forgum-engine init bash)"
+  eval "$(forgum init bash)"
   ```
 - **Zsh:**
   ```bash
-  eval "$(forgum-engine init zsh)"
+  eval "$(forgum init zsh)"
   ```
 - **Fish:**
   ```fish
-  forgum-engine init fish | source
+  forgum init fish | source
   ```
 - **CMD:**
   ```cmd
-  forgum-engine init cmd
+  forgum init cmd
   ```
 
 ---
@@ -88,7 +88,7 @@ This launches an interactive terminal interface where you can browse options, cy
 ### Q: How do I verify my setup or debug terminal rendering issues?
 **A:** Run Neovim-style health checks:
 ```bash
-forgum-engine checkhealth
+forgum checkhealth
 ```
 This inspects:
 - **System:** OS, architecture, PID, binary paths.
@@ -101,7 +101,7 @@ This inspects:
 
 For CI/CD or automation, pass `--json`:
 ```bash
-forgum-engine checkhealth --json
+forgum checkhealth --json
 ```
 
 ---
@@ -109,19 +109,19 @@ forgum-engine checkhealth --json
 ## 🪵 Logging & Daemon Life-Cycle
 
 ### Q: Can background daemons leak memory or linger forever?
-**A:** No. Forgum implements a **Precmd Reaper** that runs via your shell's precmd hook (installed by `forgum-engine init <shell>`). Every time your shell displays a new prompt, it checks for dead daemons, stale socket pipes, and orphaned lock files in under 1 millisecond and cleans them up automatically.
+**A:** No. Forgum implements a **Precmd Reaper** that runs via your shell's precmd hook (installed by `forgum init <shell>`). Every time your shell displays a new prompt, it checks for dead daemons, stale socket pipes, and orphaned lock files in under 1 millisecond and cleans them up automatically.
 
 ### Q: How do I inspect logs?
 **A:**
 ```bash
 # View recent logs in a formatted table
-forgum-engine logs
+forgum logs
 
 # Filter by severity
-forgum-engine logs --level warn
+forgum logs --level warn
 
 # Follow logs in real-time
-forgum-engine logs -f
+forgum logs -f
 ```
 Logs are stored in `~/.config/forgum/logs/` (or OS state directory) as human-readable `forgum.log` and machine-parseable `forgum.jsonl`.
 
@@ -132,7 +132,7 @@ Logs are stored in `~/.config/forgum/logs/` (or OS state directory) as human-rea
 ### Q: How many creatures are available?
 **A:** Over 109 creatures are embedded directly into the binary (including `default`, `tux`, `dragon`, `dolphin`, `koala`, `nyan`, `daemon`, `stegosaurus`, and many more). You can list them with:
 ```bash
-forgum-engine herd list
+forgum herd list
 ```
 
 ### Q: How do I add my own custom cow?
