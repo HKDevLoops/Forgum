@@ -451,6 +451,9 @@ complete -c forgum -l duration -s d -d 'Duration in seconds (0 = infinite)'
 complete -c forgum -l fps -d 'Target frames per second'
 complete -c forgum -l thought-interval -d 'Interval in seconds for rotating fortunes'
 complete -c forgum -l split-scroll -d 'Lock scroll margins below animation'
+complete -c forgum -l reserve-rows -d 'Reserve top N rows for persistent animation canvas'
+complete -c forgum -l reserve-cols -d 'Reserve top N columns for animation canvas'
+complete -c forgum -l split-ratio -d 'Fractional ratio of terminal height to reserve (0.1..0.8)'
 complete -c forgum -l eyes -d 'Custom eyes (e.g. oo, $$, @@)'
 complete -c forgum -l tongue -d 'Custom tongue (e.g. U)'
 "#.to_string()
@@ -693,6 +696,7 @@ Register-ArgumentCompleter -Native -CommandName 'forgum' -ScriptBlock {
         '--cow', '--animal', '--effect', '--mountain', '--road', '--environment',
         '--color-mode', '--text', '--think', '--background', '--banner',
         '--duration', '--fps', '--thought-interval', '--split-scroll',
+        '--reserve-rows', '--reserve-cols', '--split-ratio',
         '--eyes', '--tongue', '--palette'
     )
     $subcommands = @(
@@ -738,6 +742,9 @@ export extern "forgum" [
     --fps: int                                         # Target FPS
     --thought-interval: int                            # Seconds between thought rotations
     --split-scroll                                     # Lock scroll margins below animation
+    --reserve-rows: int                                # Reserve top N rows for persistent animation canvas
+    --reserve-cols: int                                # Reserve top N columns for animation canvas
+    --split-ratio: string                              # Fractional ratio of terminal height to reserve (0.1..0.8)
 ]
 
 def "nu_forgum_effects" [] {
@@ -986,6 +993,9 @@ flags:
   --background: Render above prompt as non-blocking overlay
   --banner: Render inline as animated banner
   --split-scroll: Lock terminal scroll margins below animation
+  --reserve-rows=: Reserve top N rows for persistent animation canvas
+  --reserve-cols=: Reserve top N columns for animation canvas
+  --split-ratio=: Fractional ratio of terminal height to reserve (0.1..0.8)
 completion:
   flag:
     cow: ["default\tStandard bovine mascot", "dragon\tFire-breathing dragon", "tux\tLinux penguin", "cat\tPlayful feline", "ghost\tSpooky phantom", "elephant\tGentle giant", "bunny\tCute rabbit", "corgi\tPlayful corgi", "fox\tWoodland fox", "random\tPick random mascot"]
@@ -1044,6 +1054,7 @@ def _forgum_completer(command):
         "--environment", "--color-mode", "--text", "--duration", "-d",
         "--fps", "--thought-interval", "--eyes", "--tongue", "--palette",
         "--think", "--background", "-b", "--banner", "-B", "--split-scroll",
+        "--reserve-rows", "--reserve-cols", "--split-ratio",
         "render", "think", "fortune", "options", "list", "completions",
         "init", "tui", "status", "doctor", "checkhealth", "config", "logs",
         "herd", "theme", "demo", "showcase", "say", "help"

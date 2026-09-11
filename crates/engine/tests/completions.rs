@@ -231,3 +231,109 @@ fn completions_marker_block_is_cleanly_uninstalled() {
         "clean uninstallation must leave user config intact"
     );
 }
+
+#[test]
+fn completions_contain_split_scroll_and_reservation_flags() {
+    let mut cmd = Cli::command();
+
+    // Fish
+    let fish = generate_completion_script(Shell::Fish, &mut cmd);
+    assert!(
+        fish.contains("-l split-scroll"),
+        "fish must complete -l split-scroll"
+    );
+    assert!(
+        fish.contains("-l reserve-rows"),
+        "fish must complete -l reserve-rows"
+    );
+    assert!(
+        fish.contains("-l reserve-cols"),
+        "fish must complete -l reserve-cols"
+    );
+    assert!(
+        fish.contains("-l split-ratio"),
+        "fish must complete -l split-ratio"
+    );
+
+    // PowerShell / Pwsh
+    let pwsh = generate_completion_script(Shell::Pwsh, &mut cmd);
+    assert!(
+        pwsh.contains("'--split-scroll'"),
+        "pwsh must contain --split-scroll flag"
+    );
+    assert!(
+        pwsh.contains("'--reserve-rows'"),
+        "pwsh must contain --reserve-rows flag"
+    );
+    assert!(
+        pwsh.contains("'--reserve-cols'"),
+        "pwsh must contain --reserve-cols flag"
+    );
+    assert!(
+        pwsh.contains("'--split-ratio'"),
+        "pwsh must contain --split-ratio flag"
+    );
+
+    let ps = generate_completion_script(Shell::PowerShell, &mut cmd);
+    assert!(
+        ps.contains("'--reserve-rows'"),
+        "powershell must contain --reserve-rows flag"
+    );
+
+    // Nushell
+    let nushell = generate_completion_script(Shell::Nushell, &mut cmd);
+    assert!(
+        nushell.contains("--split-scroll"),
+        "nushell must complete --split-scroll"
+    );
+    assert!(
+        nushell.contains("--reserve-rows"),
+        "nushell must complete --reserve-rows"
+    );
+    assert!(
+        nushell.contains("--reserve-cols"),
+        "nushell must complete --reserve-cols"
+    );
+    assert!(
+        nushell.contains("--split-ratio"),
+        "nushell must complete --split-ratio"
+    );
+
+    // Carapace
+    let carapace = generate_completion_script(Shell::Carapace, &mut cmd);
+    assert!(
+        carapace.contains("--split-scroll:"),
+        "carapace must define --split-scroll"
+    );
+    assert!(
+        carapace.contains("--reserve-rows=:"),
+        "carapace must define --reserve-rows"
+    );
+    assert!(
+        carapace.contains("--reserve-cols=:"),
+        "carapace must define --reserve-cols"
+    );
+    assert!(
+        carapace.contains("--split-ratio=:"),
+        "carapace must define --split-ratio"
+    );
+
+    // Xonsh
+    let xonsh = generate_completion_script(Shell::Xonsh, &mut cmd);
+    assert!(
+        xonsh.contains("\"--split-scroll\""),
+        "xonsh must contain --split-scroll"
+    );
+    assert!(
+        xonsh.contains("\"--reserve-rows\""),
+        "xonsh must contain --reserve-rows"
+    );
+    assert!(
+        xonsh.contains("\"--reserve-cols\""),
+        "xonsh must contain --reserve-cols"
+    );
+    assert!(
+        xonsh.contains("\"--split-ratio\""),
+        "xonsh must contain --split-ratio"
+    );
+}

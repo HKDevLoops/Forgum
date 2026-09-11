@@ -185,8 +185,12 @@ pub fn merge(base: SceneConfig, overlay: SceneConfig) -> SceneConfig {
             overlay.thought_interval
         },
         split_scroll: overlay.split_scroll || base.split_scroll,
+        reserve_rows: overlay.reserve_rows.or(base.reserve_rows),
+        reserve_cols: overlay.reserve_cols.or(base.reserve_cols),
+        split_ratio: overlay.split_ratio.or(base.split_ratio),
         animation: overlay.animation.or(base.animation),
         animation_type: overlay.animation_type.or(base.animation_type),
+        image: overlay.image.or(base.image),
     }
 }
 

@@ -156,15 +156,8 @@ pub fn render_loop_background(
 
     let cow_foot = effects::find_cow_foot_y(cow_display);
     let line_count = (cow_foot + 2).max(cow_display.lines().count()).max(1);
-    let overlay_rows = if config.split_scroll {
-        let split_pane = ((rows as usize) * 38 / 100).clamp(10, 16);
-        line_count
-            .max(split_pane)
-            .min((rows as usize).saturating_sub(5))
-            .max(1)
-    } else {
-        line_count.min((rows as usize).saturating_sub(3)).max(1)
-    };
+    let (overlay_cols, overlay_rows) =
+        compute_reserved_dimensions(cols as usize, rows as usize, line_count, &config);
 
     crate::engine_core::run_engine_overlay(
         out,
@@ -177,7 +170,51 @@ pub fn render_loop_background(
         cmd_rx,
         max_frames,
         overlay_rows,
+        overlay_cols,
     )
+}
+
+/// Compute dynamic reserved rows and columns based on terminal resolution,
+/// mascot height, config overrides, and width consciousness.
+pub fn compute_reserved_dimensions(
+    total_cols: usize,
+    total_rows: usize,
+    mascot_lines: usize,
+    config: &SceneConfig,
+) -> (usize, usize) {
+    let cols = if let Some(rc) = config.reserve_cols {
+        (rc as usize).min(total_cols).max(20)
+    } else {
+        total_cols.max(20)
+    };
+
+    let raw_rows = if let Some(rr) = config.reserve_rows {
+        rr as usize
+    } else if let Some(ratio) = config.split_ratio {
+        let clamped_ratio = ratio.clamp(0.10, 0.75);
+        ((total_rows as f32) * clamped_ratio).round() as usize
+    } else if config.split_scroll || config.shell_attach_mode == "split" {
+        // Dynamic adaptive sizing based on terminal width consciousness and height:
+        let target = if total_cols >= 160 {
+            // Ultrawide: expansive panoramic canvas
+            mascot_lines.max(12).min(total_rows * 40 / 100)
+        } else if total_cols >= 100 {
+            // Standard widescreen
+            mascot_lines.max(10).min(total_rows * 38 / 100)
+        } else {
+            // Compact terminal (<100 cols)
+            mascot_lines.max(8).min(total_rows * 35 / 100)
+        };
+        target.clamp(6, 22)
+    } else {
+        mascot_lines
+    };
+
+    // Guarantee user gets at least 4 prompt rows in unreserved area if total_rows allows
+    let max_safe_rows = total_rows.saturating_sub(4).max(1);
+    let rows = raw_rows.min(max_safe_rows).max(1);
+
+    (cols, rows)
 }
 
 /// Run the banner render loop. Renders inline directly in the terminal scrollback

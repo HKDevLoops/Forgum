@@ -680,6 +680,28 @@ impl RenderState {
             self.rows = frame.rows;
         }
 
+        if dims_changed && self.is_overlay && self.split_scroll {
+            let total_rows = crossterm::terminal::size()
+                .map(|(_, h)| h as usize)
+                .unwrap_or(self._total_rows);
+            self._total_rows = total_rows;
+            if total_rows > frame.rows + 2 {
+                let scroll_top = frame.rows + 1;
+                let _ = self
+                    .out
+                    .write_all(format!("\x1b7\x1b[{scroll_top};{total_rows}r\x1b8").as_bytes());
+            }
+            if self.overlay_rows > frame.rows {
+                for y in (frame.rows + 1)..=self.overlay_rows {
+                    let _ = self
+                        .out
+                        .write_all(format!("\x1b7\x1b[{y};1H\x1b[2K\x1b8").as_bytes());
+                }
+            }
+            self.overlay_rows = frame.rows;
+            let _ = self.out.flush();
+        }
+
         if (frame.full_redraw || dims_changed) && !self.is_banner && !self.is_overlay {
             let _ = self.out.write_all(b"\x1b[2J\x1b[H");
         }
@@ -1050,10 +1072,12 @@ pub fn run_engine_overlay(
     cmd_rx: &Option<crossbeam_channel::Receiver<ControlCmd>>,
     max_frames: u64,
     overlay_rows: usize,
+    overlay_cols: usize,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let caps = forgum_platform::detect_capabilities();
-    let cols = caps.width.max(20) as usize;
+    let total_cols = caps.width.max(20) as usize;
     let total_rows = caps.height.max(1) as usize;
+    let cols = overlay_cols.min(total_cols).max(20);
     let rows = overlay_rows.min(total_rows.saturating_sub(3)).max(1);
 
     if cols < 20 || rows < 1 {
@@ -1155,6 +1179,10 @@ pub fn run_engine_overlay(
         None
     };
 
+    let mut cur_total_cols = total_cols;
+    let mut cur_total_rows = total_rows;
+    let line_count = overlay_rows;
+
     while !shutdown.is_shutdown() {
         if !config.background && crossterm::tty::IsTty::is_tty(&std::io::stdin()) {
             if let Ok(true) = crossterm::event::poll(Duration::from_millis(30)) {
@@ -1172,25 +1200,54 @@ pub fn run_engine_overlay(
                         }
                     }
                     Ok(crossterm::event::Event::Resize(w, h)) => {
-                        let w = (w.max(1)) as usize;
+                        let w = (w.max(20)) as usize;
                         let h = (h.max(1)) as usize;
-                        let rows = overlay_rows.min(h.saturating_sub(3)).max(1);
-                        crate::log_debug!(
-                            "engine",
-                            "Terminal resized to {}x{}; overlay rows clamped to {}",
-                            w,
-                            h,
-                            rows
-                        );
-                        let _ = control_tx.send(ControlMsg::Resize {
-                            cols: w as u16,
-                            rows: rows as u16,
-                        });
+                        if w != cur_total_cols || h != cur_total_rows {
+                            cur_total_cols = w;
+                            cur_total_rows = h;
+                            let (new_cols, new_rows) = crate::render::compute_reserved_dimensions(
+                                w, h, line_count, &config,
+                            );
+                            crate::log_debug!(
+                                "engine",
+                                "Terminal resized to {}x{}; reserved canvas set to {}x{}",
+                                w,
+                                h,
+                                new_cols,
+                                new_rows
+                            );
+                            let _ = control_tx.send(ControlMsg::Resize {
+                                cols: new_cols as u16,
+                                rows: new_rows as u16,
+                            });
+                        }
                     }
                     _ => {}
                 }
             }
         } else {
+            if let Ok((w, h)) = crossterm::terminal::size() {
+                let w = (w.max(20)) as usize;
+                let h = (h.max(1)) as usize;
+                if w != cur_total_cols || h != cur_total_rows {
+                    cur_total_cols = w;
+                    cur_total_rows = h;
+                    let (new_cols, new_rows) =
+                        crate::render::compute_reserved_dimensions(w, h, line_count, &config);
+                    crate::log_debug!(
+                        "engine",
+                        "Terminal resized to {}x{}; reserved canvas set to {}x{}",
+                        w,
+                        h,
+                        new_cols,
+                        new_rows
+                    );
+                    let _ = control_tx.send(ControlMsg::Resize {
+                        cols: new_cols as u16,
+                        rows: new_rows as u16,
+                    });
+                }
+            }
             std::thread::sleep(Duration::from_millis(50));
         }
     }

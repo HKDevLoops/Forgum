@@ -335,6 +335,18 @@ Forgum enforces a strict memory ceiling across all execution modes:
 - In multi-threaded benchmarking (8 concurrent simulation and rendering threads generating 200 frames each), resident set size measures **~13MB RAM**.
 - All mathematical evaluations operate exclusively on zero-allocation stack primitives and pre-allocated double buffers, avoiding runtime heap allocation during active rendering.
 
+### 12. Built-in Image to ASCII Art Converter & Mascot Integration
+Forgum includes a built-in image conversion engine that translates image files (PNG, JPEG, WebP, BMP, GIF) into monospace ASCII art and living mascots:
+- **Aspect Ratio Geometry**: Applies a vertical factor of 0.5 to compensate for typical 1:2 monospace terminal font cell dimensions, preserving true circular and rectilinear geometry.
+- **ITU-R BT.601 Luminance**: Maps pixel luminance to standard, detailed, or block element ramps with TrueColor 24-bit RGB ANSI escapes.
+- **Dynamic Scene Mascots**: Use any image as a living mascot on the fly with `forgum render --image ./cat.png` or `forgum say --image ./logo.png <command>`, or export directly into standard `.cow` files with automated speech bubble pointers via `forgum image <file> --save-cow <name>`.
+
+### 13. Terminal Viewport Reservation & DECSTBM Split-Scroll Multitasking
+Forgum supports dynamic screen partitioning using standard DEC Set Top and Bottom Margins (DECSTBM):
+- **Reserved Animation Header**: Fixes the top $K$ rows for physical creature kinematics and procedural nature horizons updating at 30/60 FPS.
+- **Simultaneous Shell Workspace**: Sets scrolling margins to lines $(K+1) \dots N$, allowing the user to simultaneously execute commands, view build outputs, and type at the prompt without visual interference or cursor flicker.
+- **Width Consciousness & Resolution Scalability**: Adapts dynamically across compact (80 cols), standard (120 cols), and ultrawide (160+ cols) viewports, automatically adjusting mountain peaks, tree stands, and safe prompt headroom upon terminal resize.
+
 ---
 
 ## ⚡ Quick install

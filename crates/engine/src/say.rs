@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use crate::cow;
 
-pub fn run_say(cmd: &[String]) -> String {
+pub fn execute_say_cmd(cmd: &[String]) -> String {
     let output = forgum_platform::execute_command_with_shell_fallback(cmd)
         .map(|o| {
             let mut out = String::from_utf8_lossy(&o.stdout).to_string();
@@ -20,15 +20,26 @@ pub fn run_say(cmd: &[String]) -> String {
         });
 
     let text = output.trim().to_string();
-    let display_text = if text.is_empty() {
+    if text.is_empty() {
         "No output.".to_string()
     } else {
         text
-    };
+    }
+}
 
+pub fn run_say(cmd: &[String]) -> String {
+    let display_text = execute_say_cmd(cmd);
     let data_dir = forgum_platform::data_dir().unwrap_or_else(|_| PathBuf::from("."));
     let cow_text = cow::load_cow("default", &data_dir, "oo", "U", "\\\\");
     cow::compose_scene(&cow_text, &display_text)
+}
+
+pub fn run_say_with_image(cmd: &[String], image_path: &std::path::Path) -> Result<String, String> {
+    let display_text = execute_say_cmd(cmd);
+    let raw_cow = crate::image_ascii::image_to_cow(image_path, "say_mascot", Some(40))
+        .map_err(|e| format!("Failed to convert image: {e}"))?;
+    let cow_text = cow::expand_cow(&raw_cow, "oo", "U", "\\\\");
+    Ok(cow::compose_scene(&cow_text, &display_text))
 }
 
 pub fn wrap_text(text: &str, max_width: usize) -> Vec<String> {

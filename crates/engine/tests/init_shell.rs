@@ -345,3 +345,60 @@ export PS1="\u@\h:\w\$ "
     assert!(cleaned.contains("alias gs=\"git status\""));
     assert!(cleaned.contains("export PS1=\"\\u@\\h:\\w\\$ \""));
 }
+
+#[test]
+fn shell_sweepers_reset_scroll_margins_and_guard_split_launch() {
+    // Bash
+    let bash = generate_hook(Shell::Bash, ENGINE);
+    assert!(
+        bash.contains("printf '\\x1b[r'"),
+        "bash sweeper must reset scroll margins with \\x1b[r"
+    );
+    assert!(
+        bash.contains("if [ ! -f \"$state\" ]; then"),
+        "bash split mode must guard against duplicate daemon launch"
+    );
+
+    // Zsh
+    let zsh = generate_hook(Shell::Zsh, ENGINE);
+    assert!(
+        zsh.contains("printf '\\x1b[r'"),
+        "zsh sweeper must reset scroll margins with \\x1b[r"
+    );
+    assert!(
+        zsh.contains("if [ ! -f \"$state\" ]; then"),
+        "zsh split mode must guard against duplicate daemon launch"
+    );
+
+    // Fish
+    let fish = generate_hook(Shell::Fish, ENGINE);
+    assert!(
+        fish.contains("printf '\\x1b[r'"),
+        "fish sweeper must reset scroll margins with \\x1b[r"
+    );
+    assert!(
+        fish.contains("if not test -f $state"),
+        "fish split mode must guard against duplicate daemon launch"
+    );
+
+    // PowerShell / Pwsh
+    let pwsh = generate_hook(Shell::Pwsh, ENGINE);
+    assert!(
+        pwsh.contains("[Console]::Write(\"$esc[r\")"),
+        "pwsh sweeper must reset scroll margins with $esc[r"
+    );
+    assert!(
+        pwsh.contains("if (-not (Test-Path $state))"),
+        "pwsh split mode must guard against duplicate daemon launch"
+    );
+
+    let ps = generate_hook(Shell::PowerShell, ENGINE);
+    assert!(
+        ps.contains("[Console]::Write(\"$esc[r\")"),
+        "powershell sweeper must reset scroll margins with $esc[r"
+    );
+    assert!(
+        ps.contains("if (-not (Test-Path $state))"),
+        "powershell split mode must guard against duplicate daemon launch"
+    );
+}

@@ -57,6 +57,7 @@ chrono = "0.4"
 crossbeam-channel = "0.5"
 bumpalo = "3"
 slotmap = "1"
+image = { version = "0.25", default-features = false, features = ["png", "jpeg", "webp", "bmp", "gif"] }
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"

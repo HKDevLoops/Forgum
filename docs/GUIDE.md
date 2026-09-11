@@ -55,6 +55,16 @@ Welcome to the comprehensive user guide for **Forgum** — the high-performance 
     - [Biological Flora Placement & Fibonacci Phyllotaxis](#112-biological-flora-placement--fibonacci-phyllotaxis)
     - [Multi-Harmonic Road Roughness & Terrain Friction](#113-multi-harmonic-road-roughness--terrain-friction)
     - [Memory Architecture & Strict <100MB RAM Mandate](#114-memory-architecture--strict-100mb-ram-mandate)
+12. [Image to ASCII Art Converter & Dynamic Scene Mascot Integration](#12-image-to-ascii-art-converter--dynamic-scene-mascot-integration)
+    - [Aspect Ratio Correction & Monospace Geometry](#121-aspect-ratio-correction--monospace-geometry)
+    - [Luminance Character Ramps & Color Modes](#122-luminance-character-ramps--color-modes)
+    - [Direct Mascot Rendering with `--image`](#123-direct-mascot-rendering-with---image)
+    - [Converting Images to Standard `.cow` Mascots](#124-converting-images-to-standard-cow-mascots)
+13. [Terminal Viewport Reservation & DECSTBM Split-Scroll Multitasking](#13-terminal-viewport-reservation--decstbm-split-scroll-multitasking)
+    - [DECSTBM Margin Architecture](#131-decstbm-margin-architecture)
+    - [Resolution Scalability & Width Consciousness](#132-resolution-scalability--width-consciousness)
+    - [Simultaneous Shell Interaction in Unreserved Space](#133-simultaneous-shell-interaction-in-unreserved-space)
+    - [Startup Script Integration across All Shells](#134-startup-script-integration-across-all-shells)
 
 ---
 
@@ -446,6 +456,168 @@ Forgum is architected with a strict, permanent memory ceiling:
 - **Zero-Heap Hot Loops**: All mathematical evaluations for mountain elevations, tree phyllotaxis, and road roughness execute entirely on stack primitives without allocating heap memory per frame.
 - **Pre-Allocated Double Buffers**: Frame buffers are allocated once on startup or terminal resize and reused continuously.
 - **Verified Resource Footprint**: Under load testing with 8 concurrent simulation and rendering threads generating 200 frames each, total resident memory measures **~13.06 MB RAM**, operating well within the **100 MB RAM** mandate.
+
+---
+
+## 12. Image to ASCII Art Converter & Dynamic Scene Mascot Integration
+
+Forgum provides a built-in, zero-dependency image-to-ASCII processing subsystem (`forgum image` and `--image <PATH>`) capable of converting images (PNG, JPEG, WebP, BMP, GIF) into rich TrueColor terminal graphics and interactive mascots.
+
+```
+                  ┌───────────────────────────────┐
+                  │    Image File (PNG/JPG/BMP)   │
+                  └───────────────┬───────────────┘
+                                  │
+                                  ▼
+                  ┌───────────────────────────────┐
+                  │ Aspect Ratio Geometry (1:2)   │
+                  │ Font Cell Correction (×0.5)   │
+                  └───────────────┬───────────────┘
+                                  │
+                                  ▼
+                  ┌───────────────────────────────┐
+                  │ ITU-R BT.601 Luminance Ramp   │
+                  │  Standard / Detailed / Blocks │
+                  └───────┬───────────────┬───────┘
+                          │               │
+                          ▼               ▼
+              ┌──────────────────────┐  ┌──────────────────────┐
+              │ TrueColor 24-bit RGB │  │ Standard .cow Mascot │
+              │ Terminal Art Output  │  │ with $thoughts/$eyes │
+              └──────────────────────┘  └──────────────────────┘
+```
+
+### 12.1 Aspect Ratio Correction & Monospace Geometry
+Terminal monospace font glyphs are typically ~1:2 aspect ratio (characters are approximately twice as tall as they are wide). Directly mapping pixel grids to character matrices produces squashed, elongated shapes. Forgum automatically compensates with a vertical scaling correction factor of 0.5:
+
+$$H_{\text{ascii}} = \left\lfloor \left(\frac{H_{\text{img}}}{W_{\text{img}}} \cdot W_{\text{ascii}}\right) \cdot 0.5 \right\rceil$$
+
+This ensures circles remain round and squares remain rectilinear in the monospace grid.
+
+### 12.2 Luminance Character Ramps & Color Modes
+Pixels are evaluated using standard ITU-R BT.601 luminance weighting:
+$$Y = 0.299 R + 0.587 G + 0.114 B$$
+
+Mapped across customizable character ramps:
+- **Standard** (`--ramp standard`): ` .:-=+*#%@`
+- **Detailed** (`--ramp detailed`): ` .'`^",:;Il!i><~+_-?][}{1)(|\/tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$`
+- **Blocks** (`--ramp blocks`): ` ░▒▓█`
+
+Color modes:
+- **TrueColor** (`--color truecolor`): Full 24-bit RGB ANSI escapes (`\x1b[38;2;R;G;Bm`).
+- **Ansi256** (`--color ansi256`): Clamped to standard 256-color xterm color cubes.
+- **Grayscale** (`--color grayscale`): 24-level smooth grayscale ANSI ramp.
+- **Monochrome** (`--color monochrome`): Plain ASCII text with zero escape sequences, suitable for copy-pasting and lightweight scripts.
+
+### 12.3 Direct Mascot Rendering with `--image`
+Any image can be used directly as the scene mascot across CLI commands:
+```bash
+# Render an image as an animated mascot with speech bubble:
+forgum render --image ./avatar.png --text "Hello from an image mascot!"
+
+# Execute command output inside an image mascot:
+forgum say --image ./logo.png git status
+
+# Animate an image mascot with physical kinematics across procedural horizons:
+forgum render --image ./character.png --animation dynamic --effect walk --scenery pasture
+```
+
+In scene configuration JSON (`config.json` or `-f scene.json`):
+```json
+{
+  "image": "/path/to/custom_avatar.png",
+  "text": "Living image mascot in procedural scenery",
+  "effect": "float",
+  "scenery": "ocean"
+}
+```
+
+### 12.4 Converting Images to Standard `.cow` Mascots
+Use the `forgum image` subcommand to inspect, convert, and save custom `.cow` files into `~/.config/forgum/cows/`:
+```bash
+# Print high-resolution TrueColor ASCII art directly to terminal:
+forgum image photo.png --width 50
+
+# Convert image into a standard .cow file with automated $thoughts and $eyes anchors:
+forgum image mascot.png --save-cow my_mascot --width 40
+
+# Render with the newly converted mascot:
+forgum render --cow my_mascot --text "Saved as a permanent .cow mascot!"
+```
+
+---
+
+## 13. Terminal Viewport Reservation & DECSTBM Split-Scroll Multitasking
+
+Forgum features a dynamic **terminal viewport reservation system** that divides your terminal into two distinct functional zones:
+1. **Reserved Header Region ($1 \dots K$)**: Houses continuous, high-performance physical animations (mascots, harmonic mountains, Fibonacci flora) updating at 30/60 FPS.
+2. **Unreserved User Workspace ($(K+1) \dots N$)**: Where the user actively types, navigates shells, runs compilers, and views command output simultaneously without interference or cursor flicker.
+
+```text
+ ┌────────────────────────────────────────────────────────────┐
+ │ Row 1..K: RESERVED ANIMATION VIEWPORT (30/60 FPS)          │
+ │  * Procedural harmonic mountains & Fibonacci trees         │
+ │  * Walking/flying mascots with stride-velocity kinematics  │
+ │  * Dirty-damage diff tracking (sub-millisecond updates)    │
+ ├────────────────────────────────────────────────────────────┤
+ │ Row (K+1)..Total: UNRESERVED SHELL WORKSPACE (DECSTBM)     │
+ │  * Normal terminal output & shell commands scroll HERE     │
+ │  * Active prompt: $ cargo build / ls -la / git status      │
+ │  * Unrestricted scrollback & typing without interference   │
+ └────────────────────────────────────────────────────────────┘
+```
+
+### 13.1 DECSTBM Margin Architecture
+ANSI / VT100 terminals support DEC Set Top and Bottom Margins (`\x1b[top;bottomr`):
+- When split mode initializes, the scrolling region is set to rows `K+1` through `total_rows`:
+  $$\text{ESC } [ \; (K + 1) \; ; \; \text{total\_rows} \; r$$
+- The shell's standard output (`cat`, `ls`, `git diff`) and interactive prompts are strictly confined to the unreserved region. Lines above `K+1` remain locked and protected from terminal scrolling!
+- The background animation thread writes damage updates using atomic cursor isolation:
+  $$\text{Save Cursor: } \text{ESC } 7 \quad\longrightarrow\quad \text{Position: } \text{ESC } [ y ; x \text{H} \quad\longrightarrow\quad \text{Damage} \quad\longrightarrow\quad \text{Restore Cursor: } \text{ESC } 8$$
+  This operates in sub-millisecond timeframes, ensuring your typing cursor at the prompt never flickers or loses focus.
+
+### 13.2 Resolution Scalability & Width Consciousness
+Forgum's viewport calculator dynamically adapts canvas resolution across different terminal widths:
+- **Ultrawide ($W \ge 160$)**: Expands to panoramic horizon lines with up to 12 mountain peaks, rich Fibonacci tree spacing, and wide flight sweeps.
+- **Standard Widescreen ($100 \le W < 160$)**: Balanced 10-row header framing the mascot naturally.
+- **Compact Viewports ($W < 100$)**: Gracefully clamps to compact height (8 rows) while ensuring a minimum of 4 safe prompt rows always remain available for shell interaction.
+- **Responsive Dynamic Resizing**: When window geometry changes (`SIGWINCH`), the engine recalculates dimensions, emits updated DECSTBM bounds, resizes framebuffers, and adapts procedural scenery instantly without crashing or line wrapping.
+
+CLI Controls:
+```bash
+# Reserve a fixed height of 12 rows:
+forgum render --split-scroll --reserve-rows 12 --background
+
+# Dynamically scale reserved height to 35% of terminal height:
+forgum render --split-scroll --split-ratio 0.35 --background
+
+# Constrain canvas width to 90 columns:
+forgum render --split-scroll --reserve-cols 90 --background
+```
+
+### 13.3 Simultaneous Shell Interaction in Unreserved Space
+Because terminal scrolling margins isolate shell execution from the animation canvas, you can run full interactive terminal workflows while Forgum animates overhead:
+- Run interactive editors (`vim`, `nano`), pagers (`less`), and build tools (`cargo`, `npm`).
+- Scroll terminal history without disrupting the top animation banner.
+- On clean exit or `forgum sweep`, DECSTBM is reset (`\x1b[r`), and the reserved rows are cleanly cleared.
+
+### 13.4 Startup Script Integration across All Shells
+In your shell rc file (`~/.bashrc`, `~/.zshrc`, `config.fish`, `$PROFILE`):
+```bash
+# Initialize shell hooks with split-scroll attach mode:
+eval "$(forgum init bash)"
+```
+In `~/.config/forgum/config.json`:
+```json
+{
+  "shell_attach_mode": "split",
+  "auto_render_on_prompt": true,
+  "split_ratio": 0.35,
+  "scenery": "pasture",
+  "effect": "walk"
+}
+```
+Whenever a new terminal window or shell session opens, Forgum automatically locks the top reserved rows, launches the non-blocking background daemon, and positions your shell prompt in the unreserved area for immediate typing!
 
 ---
 

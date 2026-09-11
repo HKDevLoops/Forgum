@@ -155,6 +155,7 @@ __forgum_precmd() {{
       local cols=${{COLUMNS:-80}}
       printf '\x1b7'
       local y=1; while [ "$y" -le "$rows" ]; do printf '\x1b[%d;1H%*s' "$y" "$cols" ''; y=$((y+1)); done
+      printf '\x1b[r'
       printf '\x1b8\x1b[0m'
       rm -f "$state"
     fi
@@ -166,8 +167,16 @@ __forgum_precmd() {{
     if [ "$auto" != "false" ]; then
       case "$mode" in
         banner) "$__FORGUM_ENGINE" render --banner --duration 1{extra} 2>/dev/null ;;
-        split) "$__FORGUM_ENGINE" render --split-scroll --daemon --duration 0{extra} >/dev/null 2>&1 ;;
-        reactive) "$__FORGUM_ENGINE" render --background --daemon --duration 0{extra} >/dev/null 2>&1 ;;
+        split)
+          if [ ! -f "$state" ]; then
+            "$__FORGUM_ENGINE" render --split-scroll --daemon --duration 0{extra} >/dev/null 2>&1
+          fi
+          ;;
+        reactive)
+          if [ ! -f "$state" ]; then
+            "$__FORGUM_ENGINE" render --background --daemon --duration 0{extra} >/dev/null 2>&1
+          fi
+          ;;
         *) ;;
       esac
     fi
@@ -223,6 +232,7 @@ __forgum_precmd() {{
       local cols=${{COLUMNS:-80}}
       printf '\x1b7'
       local y=1; while [ "$y" -le "$rows" ]; do printf '\x1b[%d;1H%*s' "$y" "$cols" ''; y=$((y+1)); done
+      printf '\x1b[r'
       printf '\x1b8\x1b[0m'
       rm -f "$state"
     fi
@@ -234,8 +244,16 @@ __forgum_precmd() {{
     if [ "$auto" != "false" ]; then
       case "$mode" in
         banner) "$__FORGUM_ENGINE" render --banner --duration 1{extra} 2>/dev/null ;;
-        split) "$__FORGUM_ENGINE" render --split-scroll --daemon --duration 0{extra} >/dev/null 2>&1 ;;
-        reactive) "$__FORGUM_ENGINE" render --background --daemon --duration 0{extra} >/dev/null 2>&1 ;;
+        split)
+          if [ ! -f "$state" ]; then
+            "$__FORGUM_ENGINE" render --split-scroll --daemon --duration 0{extra} >/dev/null 2>&1
+          fi
+          ;;
+        reactive)
+          if [ ! -f "$state" ]; then
+            "$__FORGUM_ENGINE" render --background --daemon --duration 0{extra} >/dev/null 2>&1
+          fi
+          ;;
         *) ;;
       esac
     fi
@@ -284,8 +302,27 @@ function __forgum_sweep --on-event fish_prompt
             set cols $COLUMNS
             printf '\x1b7'
             for y in (seq 1 $rows); printf '\x1b[%d;1H%*s' $y $cols ''; end
+            printf '\x1b[r'
             printf '\x1b8\x1b[0m'
             rm -f $state
+        end
+    end
+    if test -f "$__forgum_config"
+        set -l auto (grep -o '"auto_render_on_prompt":\s*[^,}}]*' "$__forgum_config" 2>/dev/null | awk '{{print $2}}')
+        set -l mode (grep -o '"shell_attach_mode":\s*"[^"]*"' "$__forgum_config" 2>/dev/null | cut -d'"' -f4)
+        if test "$auto" != "false"
+            switch "$mode"
+                case banner
+                    $__forgum_engine render --banner --duration 1{extra} 2>/dev/null
+                case split
+                    if not test -f $state
+                        $__forgum_engine render --split-scroll --daemon --duration 0{extra} >/dev/null 2>&1
+                    end
+                case reactive
+                    if not test -f $state
+                        $__forgum_engine render --background --daemon --duration 0{extra} >/dev/null 2>&1
+                    end
+            end
         end
     end
 end
@@ -331,6 +368,7 @@ function global:prompt {{
                 [Console]::Write("$esc7")
                 $w = if ($Host.UI.RawUI) {{ $Host.UI.RawUI.WindowSize.Width }} else {{ 80 }}
                 1..$info.ob_y1 | ForEach-Object {{ [Console]::Write("$esc[$($_);1H$(' ' * $w)") }}
+                [Console]::Write("$esc[r")
                 [Console]::Write("$esc8$esc[0m")
                 Remove-Item $state -Force
             }}
@@ -347,10 +385,14 @@ function global:prompt {{
                         & $__ForgumEngine render --banner --duration 1{extra} 2>$null
                     }}
                     'split' {{
-                        & $__ForgumEngine render --split-scroll --daemon --duration 0{extra} 2>$null
+                        if (-not (Test-Path $state)) {{
+                            & $__ForgumEngine render --split-scroll --daemon --duration 0{extra} 2>$null
+                        }}
                     }}
                     'reactive' {{
-                        & $__ForgumEngine render --background --daemon --duration 0{extra} 2>$null
+                        if (-not (Test-Path $state)) {{
+                            & $__ForgumEngine render --background --daemon --duration 0{extra} 2>$null
+                        }}
                     }}
                     default {{ }}
                 }}
@@ -425,6 +467,7 @@ function global:prompt {{
                 [Console]::Write("$esc7")
                 $w = if ($Host.UI.RawUI) {{ $Host.UI.RawUI.WindowSize.Width }} else {{ 80 }}
                 1..$info.ob_y1 | ForEach-Object {{ [Console]::Write("$esc[$($_);1H$(' ' * $w)") }}
+                [Console]::Write("$esc[r")
                 [Console]::Write("$esc8$esc[0m")
                 Remove-Item $state -Force
             }}
@@ -441,10 +484,14 @@ function global:prompt {{
                         & $__ForgumEngine render --banner --duration 1{extra} 2>$null
                     }}
                     'split' {{
-                        & $__ForgumEngine render --split-scroll --daemon --duration 0{extra} 2>$null
+                        if (-not (Test-Path $state)) {{
+                            & $__ForgumEngine render --split-scroll --daemon --duration 0{extra} 2>$null
+                        }}
                     }}
                     'reactive' {{
-                        & $__ForgumEngine render --background --daemon --duration 0{extra} 2>$null
+                        if (-not (Test-Path $state)) {{
+                            & $__ForgumEngine render --background --daemon --duration 0{extra} 2>$null
+                        }}
                     }}
                     default {{ }}
                 }}

@@ -222,6 +222,15 @@ pub fn run() -> ExitCode {
             if args.split_scroll {
                 combined_render_args.push("--split-scroll".to_string());
             }
+            if let Some(rr) = args.reserve_rows {
+                combined_render_args.push(format!("--reserve-rows {rr}"));
+            }
+            if let Some(rc) = args.reserve_cols {
+                combined_render_args.push(format!("--reserve-cols {rc}"));
+            }
+            if let Some(sr) = args.split_ratio {
+                combined_render_args.push(format!("--split-ratio {sr}"));
+            }
             if let Some(eff) = &args.effect {
                 combined_render_args.push(format!("--effect {eff}"));
             }
@@ -1193,9 +1202,24 @@ pub fn run() -> ExitCode {
 
         // ── say ─────────────────────────────────────────────────────
         Some(cli::Commands::Say { cmd }) => {
-            let output = forgum_engine::say::run_say(&cmd);
-            print!("{output}");
-            ExitCode::SUCCESS
+            let cmd_output = forgum_engine::say::execute_say_cmd(&cmd);
+            if args.image.is_some() {
+                let mut scene = match build_scene_config(&args) {
+                    Ok(s) => s,
+                    Err(e) => {
+                        eprintln!("{PROGRAM}: {e}");
+                        return ExitCode::from(65);
+                    }
+                };
+                scene.text = cmd_output;
+                render_subcommand_with_scene(args, scene)
+            } else {
+                let data_dir = forgum_platform::data_dir().unwrap_or_else(|_| PathBuf::from("."));
+                let cow_text = cow::load_cow("default", &data_dir, "oo", "U", "\\\\");
+                let output = cow::compose_scene(&cow_text, &cmd_output);
+                print!("{output}");
+                ExitCode::SUCCESS
+            }
         }
 
         // ── timer ───────────────────────────────────────────────────
@@ -1275,15 +1299,105 @@ pub fn run() -> ExitCode {
             if path.exists() {
                 if let Ok(state) = forgum_engine::daemon::DaemonState::read(&path) {
                     if !state.is_alive() {
+                        let _ = std::io::Write::write_all(&mut std::io::stdout(), b"\x1b[r");
                         forgum_engine::daemon::cleanup_daemon_state(&session_id);
                     }
                 } else {
+                    let _ = std::io::Write::write_all(&mut std::io::stdout(), b"\x1b[r");
                     forgum_engine::daemon::cleanup_daemon_state(&session_id);
                 }
             }
             let _ = crossterm::terminal::disable_raw_mode();
             let _ = crossterm::execute!(std::io::stdout(), crossterm::cursor::Show);
             ExitCode::SUCCESS
+        }
+
+        // ── image ───────────────────────────────────────────────────
+        Some(cli::Commands::Image {
+            path,
+            width,
+            height,
+            color,
+            ramp,
+            save_cow,
+            output,
+            invert,
+        }) => {
+            let color_mode = match color.parse::<forgum_engine::image_ascii::ColorMode>() {
+                Ok(cm) => cm,
+                Err(e) => {
+                    eprintln!("{PROGRAM}: {e}");
+                    return ExitCode::from(64);
+                }
+            };
+            let ramp_style = match ramp.parse::<forgum_engine::image_ascii::LuminanceRamp>() {
+                Ok(r) => r,
+                Err(e) => {
+                    eprintln!("{PROGRAM}: {e}");
+                    return ExitCode::from(64);
+                }
+            };
+
+            if let Some(cow_name) = save_cow {
+                match forgum_engine::image_ascii::image_to_cow(&path, &cow_name, width) {
+                    Ok(cow_content) => {
+                        match forgum_engine::image_ascii::save_custom_cow(&cow_name, &cow_content) {
+                            Ok(saved_path) => {
+                                println!(
+                                    "Saved custom mascot cow '{cow_name}' to {}",
+                                    saved_path.display()
+                                );
+                                if let Some(out_path) = output {
+                                    if let Err(e) = std::fs::write(&out_path, &cow_content) {
+                                        eprintln!(
+                                            "{PROGRAM}: failed to write output file {}: {e}",
+                                            out_path.display()
+                                        );
+                                        return ExitCode::from(1);
+                                    }
+                                }
+                                ExitCode::SUCCESS
+                            }
+                            Err(e) => {
+                                eprintln!("{PROGRAM}: failed to save custom cow: {e}");
+                                ExitCode::from(1)
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        eprintln!("{PROGRAM}: failed to convert image to cow: {e}");
+                        ExitCode::from(1)
+                    }
+                }
+            } else {
+                let config = forgum_engine::image_ascii::AsciiConverterConfig {
+                    target_width: width,
+                    target_height: height,
+                    color_mode,
+                    ramp: ramp_style,
+                    invert,
+                };
+                match forgum_engine::image_ascii::convert_image_path_to_ascii(&path, &config) {
+                    Ok(ascii_art) => {
+                        if let Some(out_path) = output {
+                            if let Err(e) = std::fs::write(&out_path, &ascii_art) {
+                                eprintln!(
+                                    "{PROGRAM}: failed to write output file {}: {e}",
+                                    out_path.display()
+                                );
+                                return ExitCode::from(1);
+                            }
+                        } else {
+                            println!("{ascii_art}");
+                        }
+                        ExitCode::SUCCESS
+                    }
+                    Err(e) => {
+                        eprintln!("{PROGRAM}: image conversion error: {e}");
+                        ExitCode::from(1)
+                    }
+                }
+            }
         }
 
         // ── render (default) ────────────────────────────────────────
@@ -1311,7 +1425,13 @@ fn render_subcommand(args: cli::Args) -> ExitCode {
         }
     };
     scene = forgum_engine::config::merge(scene_input, scene);
+    render_subcommand_with_scene(args, scene)
+}
 
+fn render_subcommand_with_scene(
+    args: cli::Args,
+    mut scene: forgum_engine::protocol::SceneConfig,
+) -> ExitCode {
     if args.internal_daemon_runner {
         // ── DAEMON MODE — CHILD PATH (respawned by the parent) ──────
         // Checked FIRST because the spawned child still carries the
@@ -1390,15 +1510,38 @@ fn render_subcommand(args: cli::Args) -> ExitCode {
         }
     };
 
-    scene.cow = cow::resolve_cow_name(&scene.cow, &data);
     let thoughts_glyph = if is_thought { "o" } else { "\\" };
-    let cow_text = cow::load_cow(
-        &scene.cow,
-        &data,
-        &scene.eyes,
-        &scene.tongue,
-        thoughts_glyph,
-    );
+    let cow_text = if let Some(img_path) = &scene.image {
+        let term_w = crossterm::terminal::size()
+            .map(|s| s.0 as usize)
+            .unwrap_or(80);
+        let max_w = (term_w * 45 / 100)
+            .clamp(24, 55)
+            .min(term_w.saturating_sub(6));
+        match forgum_engine::image_ascii::image_to_cow(img_path, "image_mascot", Some(max_w)) {
+            Ok(raw_cow) => cow::expand_cow(&raw_cow, &scene.eyes, &scene.tongue, thoughts_glyph),
+            Err(e) => {
+                eprintln!("{PROGRAM}: warning: failed to load image '{img_path}': {e}. Falling back to default mascot.");
+                scene.cow = cow::resolve_cow_name(&scene.cow, &data);
+                cow::load_cow(
+                    &scene.cow,
+                    &data,
+                    &scene.eyes,
+                    &scene.tongue,
+                    thoughts_glyph,
+                )
+            }
+        }
+    } else {
+        scene.cow = cow::resolve_cow_name(&scene.cow, &data);
+        cow::load_cow(
+            &scene.cow,
+            &data,
+            &scene.eyes,
+            &scene.tongue,
+            thoughts_glyph,
+        )
+    };
     let composed = cow::compose_scene_with_mode(&cow_text, &scene.text, is_thought);
 
     let animations = dna::load_animations(&data);

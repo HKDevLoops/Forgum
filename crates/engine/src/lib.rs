@@ -26,6 +26,7 @@ pub mod error;
 pub mod fortune;
 pub mod framebuffer;
 pub mod herd;
+pub mod image_ascii;
 pub mod init;
 pub mod kinematics;
 pub mod logger;

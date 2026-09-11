@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 
 /// The full scene description. Mirrors `default-config.json` plus per-call
 /// overrides from the CLI.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct SceneConfig {
     /// Cow file basename (without `.cow`). Phase 0: only `"default"` works.
@@ -92,6 +92,18 @@ pub struct SceneConfig {
     #[serde(default)]
     pub split_scroll: bool,
 
+    /// Explicit rows reserved at the top of terminal for animation canvas.
+    #[serde(default)]
+    pub reserve_rows: Option<u16>,
+
+    /// Explicit columns reserved for animation canvas.
+    #[serde(default)]
+    pub reserve_cols: Option<u16>,
+
+    /// Dynamic ratio of total terminal height reserved for canvas (0.1..0.8).
+    #[serde(default)]
+    pub split_ratio: Option<f32>,
+
     /// Animation mode: "static" | "dynamic".
     #[serde(default)]
     pub animation: Option<String>,
@@ -99,6 +111,10 @@ pub struct SceneConfig {
     /// Specific animation type: "walk" | "breathe" | "float" | "particles" | "pulse" | etc.
     #[serde(default)]
     pub animation_type: Option<String>,
+
+    /// Path to image file for rendering mascot directly from an image.
+    #[serde(default)]
+    pub image: Option<String>,
 }
 
 /// Supported configuration file formats.
@@ -235,8 +251,12 @@ impl Default for SceneConfig {
             palette: None,
             thought_interval: default_thought_interval(),
             split_scroll: false,
+            reserve_rows: None,
+            reserve_cols: None,
+            split_ratio: None,
             animation: None,
             animation_type: None,
+            image: None,
         }
     }
 }

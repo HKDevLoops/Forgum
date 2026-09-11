@@ -76,6 +76,16 @@ pub struct Cli {
     )]
     pub cow: Option<String>,
 
+    /// Load mascot directly from an image file (PNG, JPG, BMP, etc.) instead of a .cow file.
+    #[arg(
+        long,
+        global = true,
+        value_name = "PATH",
+        help = "Load mascot from an image file (PNG, JPG, BMP, etc.)",
+        long_help = "Convert an image to ASCII art and use it as the mascot instead of a .cow file."
+    )]
+    pub image: Option<PathBuf>,
+
     /// Animation mode: static (stationary mascot) or dynamic (motion).
     #[arg(
         long,
@@ -166,6 +176,36 @@ pub struct Cli {
         long_help = "Configure DECSTBM terminal scroll margins so terminal output scrolls cleanly beneath the persistent animation banner without pushing it off screen."
     )]
     pub split_scroll: bool,
+
+    /// Explicit rows reserved at the top of the terminal for animation canvas.
+    #[arg(
+        long,
+        global = true,
+        value_name = "ROWS",
+        help = "Reserve top N rows for persistent animation canvas (e.g. 8, 12, 16)",
+        long_help = "Explicitly reserve N rows at the top of the terminal for the animation canvas, restricting terminal scrolling and shell interaction to the bottom unreserved area."
+    )]
+    pub reserve_rows: Option<u16>,
+
+    /// Explicit columns reserved for animation canvas.
+    #[arg(
+        long,
+        global = true,
+        value_name = "COLS",
+        help = "Reserve top N columns for animation canvas",
+        long_help = "Explicitly constrain animation canvas to N columns, leaving excess horizontal space unoccupied."
+    )]
+    pub reserve_cols: Option<u16>,
+
+    /// Fractional ratio of terminal rows to reserve for animation canvas (0.1..0.8).
+    #[arg(
+        long,
+        global = true,
+        value_name = "RATIO",
+        help = "Fractional ratio of terminal height reserved for canvas (e.g. 0.35)",
+        long_help = "Dynamically scale the reserved canvas height to a fraction of the terminal height (e.g. 0.35 for 35%), adapting smoothly on window resize."
+    )]
+    pub split_ratio: Option<f32>,
 
     /// Text inside the speech bubble.
     #[arg(
@@ -503,6 +543,40 @@ pub enum Commands {
     /// Emergency recovery command to restore terminal cursor, disable raw mode, clear temporary pipes, and exit cleanly.
     #[command(alias = "clean")]
     Sweep,
+    /// Convert an image to ASCII art or save as a custom cow mascot.
+    Image {
+        /// Path to the image file.
+        #[arg(value_name = "PATH")]
+        path: PathBuf,
+
+        /// Target width in character columns (auto-scales height by default).
+        #[arg(short = 'w', long, value_name = "WIDTH")]
+        width: Option<usize>,
+
+        /// Target height in character rows.
+        #[arg(short = 'H', long, value_name = "HEIGHT")]
+        height: Option<usize>,
+
+        /// Color mode: truecolor, ansi256, grayscale, monochrome (plain text).
+        #[arg(short = 'C', long, value_name = "MODE", default_value = "truecolor")]
+        color: String,
+
+        /// Luminance ramp: standard, detailed, blocks.
+        #[arg(short = 'r', long, value_name = "RAMP", default_value = "standard")]
+        ramp: String,
+
+        /// Save generated ASCII art as a custom cow mascot (~/.config/forgum/cows/<NAME>.cow).
+        #[arg(long, value_name = "NAME")]
+        save_cow: Option<String>,
+
+        /// Output file path to write ASCII art to (instead of stdout).
+        #[arg(short = 'o', long, value_name = "FILE")]
+        output: Option<PathBuf>,
+
+        /// Invert luminance mapping.
+        #[arg(short = 'i', long)]
+        invert: bool,
+    },
 }
 
 #[derive(Debug, Subcommand)]
@@ -741,6 +815,7 @@ pub enum Command {
     Uninstall,
     Update,
     Sweep,
+    Image,
     Unknown(String),
 }
 
@@ -755,6 +830,7 @@ pub struct Args {
     pub duration: Option<u32>,
     pub fps: Option<u16>,
     pub cow: Option<String>,
+    pub image: Option<PathBuf>,
     pub animation: Option<String>,
     pub animation_type: Option<String>,
     pub environment: Option<String>,
@@ -764,6 +840,9 @@ pub struct Args {
     pub palette: Option<String>,
     pub thought_interval: Option<u32>,
     pub split_scroll: bool,
+    pub reserve_rows: Option<u16>,
+    pub reserve_cols: Option<u16>,
+    pub split_ratio: Option<f32>,
     pub text: Option<String>,
     pub effect: Option<String>,
     pub eyes: Option<String>,
@@ -898,6 +977,7 @@ pub fn parse_args(argv: Vec<String>) -> Result<(Args, Option<Commands>), CliErro
         Some(Commands::Uninstall { .. }) => (Command::Uninstall, None, false),
         Some(Commands::Update { .. }) => (Command::Update, None, false),
         Some(Commands::Sweep) => (Command::Sweep, None, false),
+        Some(Commands::Image { .. }) => (Command::Image, None, false),
     };
 
     let max_len = match &cli.command {
@@ -917,6 +997,7 @@ pub fn parse_args(argv: Vec<String>) -> Result<(Args, Option<Commands>), CliErro
         duration: cli.duration,
         fps: cli.fps,
         cow: cli.cow,
+        image: cli.image,
         animation: cli.animation,
         animation_type: cli.animation_type,
         environment: cli.environment,
@@ -926,6 +1007,9 @@ pub fn parse_args(argv: Vec<String>) -> Result<(Args, Option<Commands>), CliErro
         palette: cli.palette,
         thought_interval: cli.thought_interval,
         split_scroll: cli.split_scroll,
+        reserve_rows: cli.reserve_rows,
+        reserve_cols: cli.reserve_cols,
+        split_ratio: cli.split_ratio,
         text,
         effect: cli.effect,
         eyes: cli.eyes,
@@ -1054,6 +1138,17 @@ pub fn build_scene_config(args: &Args) -> Result<SceneConfig, String> {
     if args.split_scroll {
         cfg.split_scroll = true;
     }
+    if let Some(rr) = args.reserve_rows {
+        cfg.reserve_rows = Some(rr);
+        cfg.split_scroll = true;
+    }
+    if let Some(rc) = args.reserve_cols {
+        cfg.reserve_cols = Some(rc);
+    }
+    if let Some(sr) = args.split_ratio {
+        cfg.split_ratio = Some(sr);
+        cfg.split_scroll = true;
+    }
     if let Some(t) = &args.text {
         cfg.text = t.clone();
     }
@@ -1080,6 +1175,9 @@ pub fn build_scene_config(args: &Args) -> Result<SceneConfig, String> {
     }
     if args.banner {
         cfg.shell_attach_mode = "banner".to_string();
+    }
+    if let Some(img) = &args.image {
+        cfg.image = Some(img.to_string_lossy().to_string());
     }
 
     // If --background and no explicit duration, default to 0 (infinite).
