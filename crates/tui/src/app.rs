@@ -1436,7 +1436,20 @@ export extern "forgum" [
             KeyCode::Down | KeyCode::Char('j') => {
                 self.config_field_idx = (self.config_field_idx + 1) % ConfigField::ALL.len();
             }
-            KeyCode::Enter | KeyCode::Char('e') | KeyCode::Char('i') => {
+            KeyCode::Enter => {
+                let field = ConfigField::ALL[self.config_field_idx];
+                if field == ConfigField::Duration || field == ConfigField::Fps {
+                    self.cycle_config_field(true);
+                } else if field == ConfigField::Eyes
+                    || field == ConfigField::Tongue
+                    || field == ConfigField::Palette
+                {
+                    self.enter_config_edit();
+                } else {
+                    self.cycle_config_field(true);
+                }
+            }
+            KeyCode::Char('e') | KeyCode::Char('E') | KeyCode::Char('i') | KeyCode::Char('I') => {
                 self.enter_config_edit();
             }
             KeyCode::Char(c @ '0'..='9') => {
@@ -1452,7 +1465,9 @@ export extern "forgum" [
                     );
                 }
             }
-            KeyCode::Char('+')
+            KeyCode::Char('t')
+            | KeyCode::Char('T')
+            | KeyCode::Char('+')
             | KeyCode::Char('=')
             | KeyCode::Char(' ')
             | KeyCode::Right
@@ -1521,55 +1536,72 @@ export extern "forgum" [
         let field = ConfigField::ALL[self.config_field_idx];
         match field {
             ConfigField::Duration => {
+                const DURATION_PRESETS: [u32; 9] = [0, 1, 2, 3, 5, 10, 15, 30, 60];
                 let current = self.config.duration;
-                let steps = [0, 1, 2, 3, 4, 5, 10, 15, 20, 30, 45, 60, 90, 120];
                 let next = if forward {
-                    steps
-                        .iter()
-                        .copied()
-                        .find(|&s| s > current)
-                        .unwrap_or_else(|| current.saturating_add(5))
+                    if let Some(pos) = DURATION_PRESETS.iter().position(|&s| s == current) {
+                        DURATION_PRESETS[(pos + 1) % DURATION_PRESETS.len()]
+                    } else {
+                        DURATION_PRESETS
+                            .iter()
+                            .copied()
+                            .find(|&s| s > current)
+                            .unwrap_or(DURATION_PRESETS[0])
+                    }
                 } else {
-                    steps
-                        .iter()
-                        .copied()
-                        .rev()
-                        .find(|&s| s < current)
-                        .unwrap_or(0)
+                    if let Some(pos) = DURATION_PRESETS.iter().position(|&s| s == current) {
+                        DURATION_PRESETS[(pos + DURATION_PRESETS.len() - 1) % DURATION_PRESETS.len()]
+                    } else {
+                        DURATION_PRESETS
+                            .iter()
+                            .copied()
+                            .rev()
+                            .find(|&s| s < current)
+                            .unwrap_or(DURATION_PRESETS[DURATION_PRESETS.len() - 1])
+                    }
                 };
                 self.config.duration = next;
                 self.saved = false;
                 self.status_message = if next == 0 {
-                    "Duration set to 0 (infinite / run until signal) [Enter to type exact seconds]"
-                        .to_string()
+                    "Duration set to 0 (infinite loop) [Space/Enter: Toggle | ←/→: Adjust | e: Type]".to_string()
                 } else {
                     format!(
-                        "Duration adjusted to {}s [Enter to type exact seconds]",
+                        "Duration adjusted to {}s [Space/Enter: Toggle | ←/→: Adjust | e: Type]",
                         next
                     )
                 };
             }
             ConfigField::Fps => {
+                const FPS_PRESETS: [u16; 6] = [15, 24, 30, 60, 120, 240];
                 let current = self.config.fps;
-                let presets = [5, 10, 15, 20, 24, 30, 45, 60, 90, 120, 144, 240];
                 let next = if forward {
-                    presets
-                        .iter()
-                        .copied()
-                        .find(|&p| p > current)
-                        .unwrap_or(240)
+                    if let Some(pos) = FPS_PRESETS.iter().position(|&p| p == current) {
+                        FPS_PRESETS[(pos + 1) % FPS_PRESETS.len()]
+                    } else {
+                        FPS_PRESETS
+                            .iter()
+                            .copied()
+                            .find(|&p| p > current)
+                            .unwrap_or(FPS_PRESETS[0])
+                    }
                 } else {
-                    presets
-                        .iter()
-                        .copied()
-                        .rev()
-                        .find(|&p| p < current)
-                        .unwrap_or(5)
+                    if let Some(pos) = FPS_PRESETS.iter().position(|&p| p == current) {
+                        FPS_PRESETS[(pos + FPS_PRESETS.len() - 1) % FPS_PRESETS.len()]
+                    } else {
+                        FPS_PRESETS
+                            .iter()
+                            .copied()
+                            .rev()
+                            .find(|&p| p < current)
+                            .unwrap_or(FPS_PRESETS[FPS_PRESETS.len() - 1])
+                    }
                 };
                 self.config.fps = next;
                 self.saved = false;
-                self.status_message =
-                    format!("FPS adjusted to {} fps [Enter to type exact FPS]", next);
+                self.status_message = format!(
+                    "FPS adjusted to {} fps [Space/Enter: Toggle | ←/→: Adjust | e: Type]",
+                    next
+                );
             }
             ConfigField::Eyes => {
                 self.enter_config_edit();
@@ -1676,6 +1708,7 @@ export extern "forgum" [
     }
 
     fn handle_config_edit_key(&mut self, key: KeyEvent) -> anyhow::Result<Option<Action>> {
+        let field = ConfigField::ALL[self.config_field_idx];
         match key.code {
             KeyCode::Enter => {
                 self.commit_config_edit();
@@ -1685,9 +1718,35 @@ export extern "forgum" [
                 self.editing_config = false;
                 self.status_message = "Edit cancelled.".to_string();
             }
+            KeyCode::Char(' ') if field == ConfigField::Duration || field == ConfigField::Fps => {
+                self.commit_config_edit();
+                self.editing_config = false;
+                self.cycle_config_field(true);
+            }
+            KeyCode::Char('+') | KeyCode::Char('=')
+                if field == ConfigField::Duration || field == ConfigField::Fps =>
+            {
+                self.commit_config_edit();
+                self.cycle_config_field(true);
+                self.config_edit_buffer = match field {
+                    ConfigField::Duration => self.config.duration.to_string(),
+                    ConfigField::Fps => self.config.fps.to_string(),
+                    _ => self.config_edit_buffer.clone(),
+                };
+            }
+            KeyCode::Char('-') | KeyCode::Char('_')
+                if field == ConfigField::Duration || field == ConfigField::Fps =>
+            {
+                self.commit_config_edit();
+                self.cycle_config_field(false);
+                self.config_edit_buffer = match field {
+                    ConfigField::Duration => self.config.duration.to_string(),
+                    ConfigField::Fps => self.config.fps.to_string(),
+                    _ => self.config_edit_buffer.clone(),
+                };
+            }
             KeyCode::Up => {
                 self.edit_initial = false;
-                let field = ConfigField::ALL[self.config_field_idx];
                 if field == ConfigField::Duration || field == ConfigField::Fps {
                     let clean = self
                         .config_edit_buffer
@@ -1701,7 +1760,6 @@ export extern "forgum" [
             }
             KeyCode::Down => {
                 self.edit_initial = false;
-                let field = ConfigField::ALL[self.config_field_idx];
                 if field == ConfigField::Duration || field == ConfigField::Fps {
                     let clean = self
                         .config_edit_buffer
@@ -1717,7 +1775,6 @@ export extern "forgum" [
             }
             KeyCode::Right => {
                 self.edit_initial = false;
-                let field = ConfigField::ALL[self.config_field_idx];
                 if field == ConfigField::Duration || field == ConfigField::Fps {
                     let clean = self
                         .config_edit_buffer
@@ -1731,7 +1788,6 @@ export extern "forgum" [
             }
             KeyCode::Left => {
                 self.edit_initial = false;
-                let field = ConfigField::ALL[self.config_field_idx];
                 if field == ConfigField::Duration || field == ConfigField::Fps {
                     let clean = self
                         .config_edit_buffer
@@ -1778,7 +1834,14 @@ export extern "forgum" [
                 self.config_edit_buffer.clear();
             }
             KeyCode::Char(c) if !key.modifiers.contains(KeyModifiers::CONTROL) => {
-                if self.edit_initial {
+                if (field == ConfigField::Duration || field == ConfigField::Fps)
+                    && !c.is_ascii_digit()
+                    && c != 's'
+                    && c != 'f'
+                    && c != 'p'
+                {
+                    // Ignore non-digit characters on numeric fields so buffer isn't corrupted
+                } else if self.edit_initial {
                     self.config_edit_buffer = c.to_string();
                     self.edit_initial = false;
                 } else {
@@ -2808,16 +2871,22 @@ export extern "forgum" [
                 if is_sel && self.editing_config {
                     format!("✎ [ {}_ ]", self.config_edit_buffer)
                 } else if self.config.duration == 0 {
-                    "0 (infinite) [←/→/Enter]".into()
+                    "0 (infinite) [Space/Enter: Toggle | ←/→: Adjust | e: Type]".into()
                 } else {
-                    format!("{}s [←/→/Enter]", self.config.duration)
+                    format!(
+                        "{}s [Space/Enter: Toggle | ←/→: Adjust | e: Type]",
+                        self.config.duration
+                    )
                 }
             }
             ConfigField::Fps => {
                 if is_sel && self.editing_config {
                     format!("✎ [ {}_ ]", self.config_edit_buffer)
                 } else {
-                    format!("{} fps [←/→/Enter]", self.config.fps)
+                    format!(
+                        "{} fps [Space/Enter: Toggle | ←/→: Adjust | e: Type]",
+                        self.config.fps
+                    )
                 }
             }
             ConfigField::Eyes => {
@@ -2934,11 +3003,31 @@ export extern "forgum" [
         f.render_widget(list, area);
     }
 
-    // ── RIGHT PANELS ─────────────────────────────────────────────────────────
+    /// Quantize animation time according to target FPS.
+    #[inline]
+    pub fn quantize_time(time: f32, fps: u16) -> f32 {
+        let target_fps = (fps as f32).max(1.0);
+        (time * target_fps).floor() / target_fps
+    }
 
-    /// 30 FPS Live Holographic Preview Canvas rendering ASCII mascot + procedural scenery & road.
+    /// Calculate cycle time and progress fraction (0.0..=1.0) for a given duration.
+    #[inline]
+    pub fn cycle_duration_time(quantized_t: f32, duration: u32) -> (f32, f32) {
+        if duration > 0 {
+            let dur = duration as f32;
+            let cycle_t = quantized_t % dur;
+            let frac = (cycle_t / dur).clamp(0.0, 1.0);
+            (cycle_t, frac)
+        } else {
+            (quantized_t, 1.0)
+        }
+    }
+
+    /// Live Holographic Preview Canvas rendering ASCII mascot + procedural scenery & road.
     fn render_live_preview(&self, f: &mut Frame, area: Rect) {
-        let t = self.animation_time;
+        let quantized_t = Self::quantize_time(self.animation_time, self.config.fps);
+        let (t, progress_fraction) = Self::cycle_duration_time(quantized_t, self.config.duration);
+        let elapsed_display = t;
 
         let cow_art = self
             .cow_cache
@@ -2956,6 +3045,34 @@ export extern "forgum" [
         ];
 
         let mut lines: Vec<Line> = Vec::new();
+
+        // 0. Live HUD Timeline Status Bar
+        let hud_line = if self.config.duration > 0 {
+            let percent = (progress_fraction * 100.0) as u32;
+            let bar_width = 14;
+            let filled = ((progress_fraction * bar_width as f32).round() as usize).min(bar_width);
+            let empty = bar_width.saturating_sub(filled);
+            let bar = format!("[{}{}]", "█".repeat(filled), "░".repeat(empty));
+            format!(
+                "⏱ {:.1}s / {}s {} {:>3}% • {} FPS Live",
+                elapsed_display, self.config.duration, bar, percent, self.config.fps
+            )
+        } else {
+            format!(
+                "⏱ {:.1}s / ∞ (Infinite Loop) • {} FPS Live",
+                elapsed_display, self.config.fps
+            )
+        };
+
+        lines.push(Line::from(vec![
+            Span::styled(
+                format!("  {hud_line}"),
+                Style::default()
+                    .fg(Color::Cyan)
+                    .add_modifier(Modifier::BOLD),
+            ),
+        ]));
+        lines.push(Line::from(""));
 
         // 1. Procedural background mountains (slow parallax scroll, when background enabled)
         if self.config.background {
@@ -3676,25 +3793,58 @@ mod tests {
         // Initial duration is 0
         assert_eq!(app.config.duration, 0);
 
-        // Cycle forward on Duration (+ / Right)
+        // Toggle forward on Duration using Enter (0 -> 1)
         app.handle_event(Event::Key(KeyEvent::new(
-            KeyCode::Char('+'),
+            KeyCode::Enter,
             KeyModifiers::NONE,
         )))
         .unwrap();
         assert_eq!(app.config.duration, 1);
 
+        // Toggle forward using Space (1 -> 2)
         app.handle_event(Event::Key(KeyEvent::new(
-            KeyCode::Right,
+            KeyCode::Char(' '),
             KeyModifiers::NONE,
         )))
         .unwrap();
         assert_eq!(app.config.duration, 2);
 
-        // Cycle backward on Duration (- / Left)
+        // Toggle forward using 't' (2 -> 3)
+        app.handle_event(Event::Key(KeyEvent::new(
+            KeyCode::Char('t'),
+            KeyModifiers::NONE,
+        )))
+        .unwrap();
+        assert_eq!(app.config.duration, 3);
+
+        // Cycle forward using '+' (3 -> 5)
+        app.handle_event(Event::Key(KeyEvent::new(
+            KeyCode::Char('+'),
+            KeyModifiers::NONE,
+        )))
+        .unwrap();
+        assert_eq!(app.config.duration, 5);
+
+        // Cycle forward using Right arrow (5 -> 10)
+        app.handle_event(Event::Key(KeyEvent::new(
+            KeyCode::Right,
+            KeyModifiers::NONE,
+        )))
+        .unwrap();
+        assert_eq!(app.config.duration, 10);
+
+        // Cycle backward using '-' (10 -> 5)
+        app.handle_event(Event::Key(KeyEvent::new(
+            KeyCode::Char('-'),
+            KeyModifiers::NONE,
+        )))
+        .unwrap();
+        assert_eq!(app.config.duration, 5);
+
+        // Cycle backward using Left arrow (5 -> 3)
         app.handle_event(Event::Key(KeyEvent::new(KeyCode::Left, KeyModifiers::NONE)))
             .unwrap();
-        assert_eq!(app.config.duration, 1);
+        assert_eq!(app.config.duration, 3);
 
         // Move to FPS (field 1)
         app.handle_event(Event::Key(KeyEvent::new(KeyCode::Down, KeyModifiers::NONE)))
@@ -3702,29 +3852,58 @@ mod tests {
         assert_eq!(app.config_field_idx, 1); // ConfigField::Fps
         assert_eq!(app.config.fps, 30);
 
-        // Cycle forward on FPS -> 45
+        // Toggle forward on FPS using Enter (30 -> 60)
         app.handle_event(Event::Key(KeyEvent::new(
-            KeyCode::Char('+'),
-            KeyModifiers::NONE,
-        )))
-        .unwrap();
-        assert_eq!(app.config.fps, 45);
-
-        // Cycle forward again -> 60
-        app.handle_event(Event::Key(KeyEvent::new(
-            KeyCode::Right,
+            KeyCode::Enter,
             KeyModifiers::NONE,
         )))
         .unwrap();
         assert_eq!(app.config.fps, 60);
 
-        // Cycle backward on FPS -> 45
+        // Toggle forward using Space (60 -> 120)
+        app.handle_event(Event::Key(KeyEvent::new(
+            KeyCode::Char(' '),
+            KeyModifiers::NONE,
+        )))
+        .unwrap();
+        assert_eq!(app.config.fps, 120);
+
+        // Toggle forward using 't' (120 -> 240)
+        app.handle_event(Event::Key(KeyEvent::new(
+            KeyCode::Char('t'),
+            KeyModifiers::NONE,
+        )))
+        .unwrap();
+        assert_eq!(app.config.fps, 240);
+
+        // Cycle forward using Right arrow (240 -> wraps to 15)
+        app.handle_event(Event::Key(KeyEvent::new(
+            KeyCode::Right,
+            KeyModifiers::NONE,
+        )))
+        .unwrap();
+        assert_eq!(app.config.fps, 15);
+
+        // Cycle forward using '+' (15 -> 24)
+        app.handle_event(Event::Key(KeyEvent::new(
+            KeyCode::Char('+'),
+            KeyModifiers::NONE,
+        )))
+        .unwrap();
+        assert_eq!(app.config.fps, 24);
+
+        // Cycle backward using '-' (24 -> 15)
         app.handle_event(Event::Key(KeyEvent::new(
             KeyCode::Char('-'),
             KeyModifiers::NONE,
         )))
         .unwrap();
-        assert_eq!(app.config.fps, 45);
+        assert_eq!(app.config.fps, 15);
+
+        // Cycle backward using Left arrow (15 -> wraps to 240)
+        app.handle_event(Event::Key(KeyEvent::new(KeyCode::Left, KeyModifiers::NONE)))
+            .unwrap();
+        assert_eq!(app.config.fps, 240);
     }
 
     #[test]
@@ -3735,7 +3914,7 @@ mod tests {
         // 1. Edit Duration (field 0)
         app.config_field_idx = 0;
         app.handle_event(Event::Key(KeyEvent::new(
-            KeyCode::Enter,
+            KeyCode::Char('e'),
             KeyModifiers::NONE,
         )))
         .unwrap();
@@ -3765,7 +3944,7 @@ mod tests {
         // 2. Edit FPS (field 1)
         app.config_field_idx = 1;
         app.handle_event(Event::Key(KeyEvent::new(
-            KeyCode::Enter,
+            KeyCode::Char('e'),
             KeyModifiers::NONE,
         )))
         .unwrap();
@@ -3805,7 +3984,7 @@ mod tests {
         app.config_field_idx = 0; // Duration
         for bad_input in &["garbage", "!!!", "abc_xyz", ""] {
             app.handle_event(Event::Key(KeyEvent::new(
-                KeyCode::Enter,
+                KeyCode::Char('e'),
                 KeyModifiers::NONE,
             )))
             .unwrap();
@@ -3837,7 +4016,7 @@ mod tests {
         app.config_field_idx = 1; // Fps
         for bad_input in &["99999", "-50", "none"] {
             app.handle_event(Event::Key(KeyEvent::new(
-                KeyCode::Enter,
+                KeyCode::Char('e'),
                 KeyModifiers::NONE,
             )))
             .unwrap();
@@ -4123,9 +4302,9 @@ mod tests {
         app.config_field_idx = 1; // FPS
         app.config.fps = 30;
 
-        // Enter edit mode via Enter (edit_initial = true, buffer = "30")
+        // Enter edit mode via 'e' (edit_initial = true, buffer = "30")
         app.handle_event(Event::Key(KeyEvent::new(
-            KeyCode::Enter,
+            KeyCode::Char('e'),
             KeyModifiers::NONE,
         )))
         .unwrap();
@@ -4190,5 +4369,36 @@ mod tests {
             "Status message must report directory open status: {}",
             app.status_message
         );
+    }
+
+    #[test]
+    fn fps_quantization_and_duration_cycle_determinism() {
+        // Test quantize_time at 15 FPS: 1 frame = 1/15s = 0.0666...
+        let t1 = ConfigApp::quantize_time(0.05, 15);
+        let t2 = ConfigApp::quantize_time(0.065, 15);
+        let t3 = ConfigApp::quantize_time(0.07, 15);
+        assert_eq!(t1, 0.0);
+        assert_eq!(t2, 0.0);
+        assert!((t3 - (1.0 / 15.0)).abs() < 1e-4);
+
+        // Test quantize_time at 60 FPS: 1 frame = 1/60s = 0.01666...
+        let t60_a = ConfigApp::quantize_time(0.010, 60);
+        let t60_b = ConfigApp::quantize_time(0.017, 60);
+        assert_eq!(t60_a, 0.0);
+        assert!((t60_b - (1.0 / 60.0)).abs() < 1e-4);
+
+        // Test cycle_duration_time when duration > 0 (e.g. 5s)
+        let (cycle_t, frac) = ConfigApp::cycle_duration_time(2.5, 5);
+        assert!((cycle_t - 2.5).abs() < 1e-4);
+        assert!((frac - 0.5).abs() < 1e-4);
+
+        let (cycle_t_wrap, frac_wrap) = ConfigApp::cycle_duration_time(7.5, 5);
+        assert!((cycle_t_wrap - 2.5).abs() < 1e-4);
+        assert!((frac_wrap - 0.5).abs() < 1e-4);
+
+        // Test cycle_duration_time when duration == 0 (infinite loop)
+        let (cycle_inf, frac_inf) = ConfigApp::cycle_duration_time(12.34, 0);
+        assert!((cycle_inf - 12.34).abs() < 1e-4);
+        assert_eq!(frac_inf, 1.0);
     }
 }
