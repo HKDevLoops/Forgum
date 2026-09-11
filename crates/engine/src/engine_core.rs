@@ -139,6 +139,18 @@ impl SimState {
         }
         let cow_foot_y = effects::find_cow_foot_y(&cow_text);
 
+        let mut cow_dna = cow_dna;
+        if let Some(ref pal_str) = config.palette {
+            let hexes: Vec<String> = pal_str
+                .split(',')
+                .map(|s| s.trim().to_string())
+                .filter(|s| !s.is_empty())
+                .collect();
+            if !hexes.is_empty() {
+                cow_dna.palette = hexes;
+            }
+        }
+
         let effect = effects::create_scene_effect(
             &config.effect,
             cow_text,
@@ -343,6 +355,16 @@ impl SimState {
                 self.cow_foot_y = effects::find_cow_foot_y(&composed);
                 let animations = crate::dna::load_animations(&self.data_dir);
                 self.cow_dna = crate::dna::get_dna(&animations, &self.config.cow);
+                if let Some(ref pal_str) = self.config.palette {
+                    let hexes: Vec<String> = pal_str
+                        .split(',')
+                        .map(|s| s.trim().to_string())
+                        .filter(|s| !s.is_empty())
+                        .collect();
+                    if !hexes.is_empty() {
+                        self.cow_dna.palette = hexes;
+                    }
+                }
                 let env_override = self
                     .config
                     .environment

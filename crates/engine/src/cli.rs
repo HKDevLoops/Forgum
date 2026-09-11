@@ -96,13 +96,14 @@ pub struct Cli {
     )]
     pub animation: Option<String>,
 
-    /// Specific animation type (e.g. static, walk, breathe, float, etc.).
+    /// Specific animation type (e.g. animal_natural, walk, breathe, float, etc.).
     #[arg(
         long,
+        visible_alias = "anim-type",
         global = true,
         value_name = "TYPE",
-        help = "Specific animation type (walk, breathe, float...). Run 'forgum list effects'",
-        long_help = "Specific animation motion to apply (walk, breathe, float, fly, talk, sway, pulse, glitch, particles, dissolve). Run 'forgum list effects' for detailed physics descriptions."
+        help = "Specific animation type (animal_natural, walk, breathe...). Run 'forgum list effects'",
+        long_help = "Specific animation motion to apply ('animal_natural' for creature's signature DNA animation, walk, breathe, float, fly, talk, sway, pulse, glitch, particles, dissolve). Run 'forgum list effects' for detailed physics descriptions."
     )]
     pub animation_type: Option<String>,
 
@@ -137,13 +138,13 @@ pub struct Cli {
     )]
     pub mountain: Option<String>,
 
-    /// Color mode (animal, rainbow, solid, none). Defaults to animal.
+    /// Color mode (natural, animal, rainbow, solid, none). Defaults to natural.
     #[arg(
         long,
         global = true,
         value_name = "MODE",
-        help = "Color styling mode (animal, rainbow, solid, none). Defaults to animal",
-        long_help = "Color styling mode: 'animal' (thematic authentic creature colors), 'rainbow' (lolcat chromatic wave), 'solid' (uniform highlight), 'none' (monochrome ASCII). Run 'forgum list colors' for details."
+        help = "Color styling mode (natural, animal, rainbow, solid, none). Defaults to natural",
+        long_help = "Color styling mode: 'natural' / 'animal_natural' (authentic creature colors), 'animal' (alias for natural), 'rainbow' (lolcat chromatic wave), 'solid' (uniform highlight), 'none' (monochrome ASCII). Run 'forgum list colors' for details."
     )]
     pub color_mode: Option<String>,
 
@@ -232,10 +233,12 @@ pub struct Cli {
     #[arg(
         long,
         short = 'e',
+        visible_alias = "fx",
+        visible_alias = "anim",
         global = true,
         value_name = "NAME",
-        help = "Animation effect name. Run 'forgum list effects' for all options",
-        long_help = "Animation effect to apply (walk, breathe, float, fly, talk, sway, pulse, glitch, particles, dissolve). Run 'forgum list effects' for complete options."
+        help = "Animation effect name (animal_natural, walk, breathe...). Run 'forgum list effects'",
+        long_help = "Animation effect to apply ('animal_natural' for creature's signature DNA animation, walk, breathe, float, fly, talk, sway, pulse, glitch, particles, dissolve). Run 'forgum list effects' for complete options."
     )]
     pub effect: Option<String>,
 
@@ -1067,10 +1070,10 @@ pub fn build_scene_config(args: &Args) -> Result<SceneConfig, String> {
     }
 
     // Auto-apply animal profile defaults if custom cow was provided or configured
-    if args.cow.is_some() || cfg.cow != "default" {
+    let cli_cow_passed = args.cow.is_some();
+    if cli_cow_passed || cfg.cow != "default" {
         let animal_name = args.cow.as_deref().unwrap_or(&cfg.cow);
         let profile = crate::scenery::get_animal_profile(animal_name);
-        let cli_cow_passed = args.cow.is_some();
 
         if args.environment.is_none() && (cli_cow_passed || cfg.environment.is_none()) {
             cfg.environment = Some(profile.environment.as_str().to_string());
@@ -1086,16 +1089,20 @@ pub fn build_scene_config(args: &Args) -> Result<SceneConfig, String> {
             && (cli_cow_passed
                 || cfg.effect == "default"
                 || cfg.effect == "static"
+                || cfg.effect == "animal_natural"
+                || cfg.effect == "natural"
                 || cfg.effect.is_empty())
         {
             cfg.animation_type = Some(profile.base_anim.as_str().to_string());
             cfg.effect = profile.base_anim.as_str().to_string();
         }
-        if args.palette.is_none()
-            && (cli_cow_passed || cfg.palette.is_none())
-            && !profile.wildlife_palette.is_empty()
-        {
-            cfg.palette = Some(profile.wildlife_palette.join(","));
+        if args.palette.is_none() && (cli_cow_passed || cfg.palette.is_none()) {
+            let natural_hexes = crate::color::get_natural_hex_palette(animal_name);
+            if !natural_hexes.is_empty() {
+                cfg.palette = Some(natural_hexes.join(","));
+            } else if !profile.wildlife_palette.is_empty() {
+                cfg.palette = Some(profile.wildlife_palette.join(","));
+            }
         }
         if args.eyes.is_none() && (cli_cow_passed || cfg.eyes.is_empty()) {
             cfg.eyes = profile.eyes.to_string();
@@ -1105,15 +1112,22 @@ pub fn build_scene_config(args: &Args) -> Result<SceneConfig, String> {
         }
     }
 
-    // Dynamic scenario adaptation when environment is passed or overridden
-    if let Some(e) = &args.environment {
+    // Dynamic scenario adaptation when environment is passed or configured
+    let env_to_adapt = args.environment.clone().or_else(|| {
+        if !cli_cow_passed {
+            cfg.environment.clone()
+        } else {
+            None
+        }
+    });
+    if let Some(ref e) = env_to_adapt {
         cfg.environment = Some(e.clone());
         let env_style = crate::scenery::EnvironmentStyle::parse(e);
         let (dyn_mtn, dyn_road) = crate::scenery::environment_scenery_defaults(env_style);
-        if args.mountain.is_none() {
+        if args.mountain.is_none() && (args.environment.is_some() || cfg.mountain.is_none()) {
             cfg.mountain = Some(dyn_mtn.as_str().to_string());
         }
-        if args.road.is_none() {
+        if args.road.is_none() && (args.environment.is_some() || cfg.road.is_none()) {
             cfg.road = Some(dyn_road.as_str().to_string());
         }
         if args.animation_type.is_none()
@@ -1142,11 +1156,42 @@ pub fn build_scene_config(args: &Args) -> Result<SceneConfig, String> {
     if let Some(m) = &args.mountain {
         cfg.mountain = Some(m.clone());
     }
+    if let Some(e) = &args.effect {
+        cfg.effect = e.clone();
+    }
     if let Some(cm) = &args.color_mode {
         cfg.color_mode = cm.clone();
     }
     if let Some(p) = &args.palette {
         cfg.palette = Some(p.clone());
+    }
+
+    // If color_mode is natural or animal_natural and no palette was provided, delegate to mascot's natural palette
+    if (cfg.color_mode == "natural" || cfg.color_mode == "animal_natural")
+        && args.palette.is_none()
+        && cfg.palette.is_none()
+    {
+        let animal_name = args.cow.as_deref().unwrap_or(&cfg.cow);
+        let natural_hexes = crate::color::get_natural_hex_palette(animal_name);
+        if !natural_hexes.is_empty() {
+            cfg.palette = Some(natural_hexes.join(","));
+        }
+    }
+
+    // If effect or animation_type is animal_natural / natural, ensure animation_type reflects mascot signature DNA
+    if cfg.effect == "animal_natural"
+        || cfg.effect == "natural"
+        || cfg.animation_type.as_deref() == Some("animal_natural")
+        || cfg.animation_type.as_deref() == Some("natural")
+    {
+        let animal_name = args.cow.as_deref().unwrap_or(&cfg.cow);
+        let profile = crate::scenery::get_animal_profile(animal_name);
+        if cfg.animation_type.is_none()
+            || cfg.animation_type.as_deref() == Some("animal_natural")
+            || cfg.animation_type.as_deref() == Some("natural")
+        {
+            cfg.animation_type = Some(profile.base_anim.as_str().to_string());
+        }
     }
     if let Some(ti) = args.thought_interval {
         cfg.thought_interval = ti;
@@ -1167,9 +1212,6 @@ pub fn build_scene_config(args: &Args) -> Result<SceneConfig, String> {
     }
     if let Some(t) = &args.text {
         cfg.text = t.clone();
-    }
-    if let Some(e) = &args.effect {
-        cfg.effect = e.clone();
     }
     if let Some(eyes) = &args.eyes {
         cfg.eyes = eyes.clone();
@@ -1537,4 +1579,78 @@ mod tests {
         let err2 = parse_args(vec!["forgum".to_string(), "effect".to_string()]).unwrap_err();
         assert!(err2.message.contains("forgum list effects"));
     }
+
+    #[test]
+    fn test_color_mode_natural_and_aliases() {
+        let (a1, _) = parse(&["forgum", "--color-mode", "natural"]);
+        assert_eq!(a1.color_mode, Some("natural".to_string()));
+        let cfg1 = build_scene_config(&a1).unwrap();
+        assert_eq!(cfg1.color_mode, "natural");
+        assert!(cfg1.palette.is_some());
+
+        let (a2, _) = parse(&["forgum", "--color-mode", "animal_natural"]);
+        assert_eq!(a2.color_mode, Some("animal_natural".to_string()));
+        let cfg2 = build_scene_config(&a2).unwrap();
+        assert_eq!(cfg2.color_mode, "animal_natural");
+    }
+
+    #[test]
+    fn test_effect_animal_natural_and_aliases() {
+        let (a1, _) = parse(&["forgum", "--effect", "animal_natural", "--cow", "dragon"]);
+        assert_eq!(a1.effect, Some("animal_natural".to_string()));
+        let cfg1 = build_scene_config(&a1).unwrap();
+        assert_eq!(cfg1.effect, "animal_natural");
+        assert_eq!(cfg1.animation_type, Some("breathe".to_string()));
+
+        let (a2, _) = parse(&["forgum", "--fx", "animal_natural"]);
+        assert_eq!(a2.effect, Some("animal_natural".to_string()));
+
+        let (a3, _) = parse(&["forgum", "--anim", "animal_natural"]);
+        assert_eq!(a3.effect, Some("animal_natural".to_string()));
+
+        let (a4, _) = parse(&["forgum", "--animation-type", "animal_natural", "--cow", "ghost"]);
+        assert_eq!(a4.animation_type, Some("animal_natural".to_string()));
+        let cfg4 = build_scene_config(&a4).unwrap();
+        assert_eq!(cfg4.animation_type, Some("float".to_string()));
+
+        let (a5, _) = parse(&["forgum", "--anim-type", "animal_natural"]);
+        assert_eq!(a5.animation_type, Some("animal_natural".to_string()));
+    }
+
+    #[test]
+    fn test_custom_hex_palette_override() {
+        let (a, _) = parse(&[
+            "forgum",
+            "--cow",
+            "dragon",
+            "--palette",
+            "#112233,#445566,#778899",
+        ]);
+        assert_eq!(a.palette, Some("#112233,#445566,#778899".to_string()));
+        let cfg = build_scene_config(&a).unwrap();
+        assert_eq!(cfg.palette, Some("#112233,#445566,#778899".to_string()));
+    }
+
+    #[test]
+    fn test_scenery_nature_math_environment_adaptation() {
+        let (a, _) = parse(&["forgum", "--environment", "ocean", "--cow", "cat"]);
+        let cfg = build_scene_config(&a).unwrap();
+        assert_eq!(cfg.environment, Some("ocean".to_string()));
+        assert_eq!(cfg.mountain, Some("seamount".to_string()));
+        assert_eq!(cfg.road, Some("seabed".to_string()));
+
+        // Explicit road override
+        let (a2, _) = parse(&[
+            "forgum",
+            "--environment",
+            "ocean",
+            "--road",
+            "magma",
+        ]);
+        let cfg2 = build_scene_config(&a2).unwrap();
+        assert_eq!(cfg2.environment, Some("ocean".to_string()));
+        assert_eq!(cfg2.mountain, Some("seamount".to_string()));
+        assert_eq!(cfg2.road, Some("magma".to_string()));
+    }
 }
+

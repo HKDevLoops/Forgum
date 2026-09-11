@@ -93,6 +93,83 @@ impl Dropdown {
     }
 }
 
+/// Dropdown option choices for ColorMode.
+pub const COLOR_MODE_OPTIONS: &[&str] = &[
+    "natural",
+    "animal",
+    "rainbow",
+    "solid",
+    "none",
+];
+
+/// Dropdown option choices for Environment.
+pub const ENVIRONMENT_OPTIONS: &[&str] = &[
+    "pasture",
+    "inferno",
+    "ocean",
+    "arctic",
+    "city",
+    "forest",
+    "savanna",
+    "swamp",
+    "space",
+    "cyber",
+    "graveyard",
+    "jurassic",
+    "hive",
+    "throne",
+    "none",
+];
+
+/// Dropdown option choices for Road terrain.
+pub const ROAD_STYLE_OPTIONS: &[&str] = &[
+    "dirt",
+    "cobblestone",
+    "magma",
+    "ice",
+    "seabed",
+    "sidewalk",
+    "roof",
+    "grid",
+    "crypt",
+    "savanna",
+    "mud",
+    "tracks",
+    "checkerboard",
+    "none",
+];
+
+/// Dropdown option choices for Mountain skyline.
+pub const MOUNTAIN_OPTIONS: &[&str] = &[
+    "hills",
+    "peaks",
+    "volcano",
+    "iceberg",
+    "skyline",
+    "seamount",
+    "plateau",
+    "crater",
+    "gothic",
+    "castle",
+    "garden",
+    "none",
+];
+
+/// Dropdown option choices for AnimationType.
+pub const ANIMATION_TYPE_OPTIONS: &[&str] = &[
+    "animal_natural",
+    "walk",
+    "breathe",
+    "float",
+    "fly",
+    "talk",
+    "sway",
+    "pulse",
+    "glitch",
+    "particles",
+    "dissolve",
+];
+
 /// Available Scenery Archetypes.
 pub const SCENERY_OPTIONS: &[(&str, &str)] = &[
     (
@@ -100,44 +177,60 @@ pub const SCENERY_OPTIONS: &[(&str, &str)] = &[
         "Classic rolling green meadows, wildflowers, and grazing hills",
     ),
     (
-        "desert",
-        "Sun-baked golden sand dunes, cacti ruts, and shimmering heat waves",
-    ),
-    (
-        "forest",
-        "Dense ancient pine woods, mossy logs, and whispering evergreen canopies",
-    ),
-    (
-        "city",
-        "Futuristic neon-lit urban skyscrapers, rooftops, and antenna towers",
-    ),
-    (
-        "mountain",
-        "Rugged alpine snowpeaks, jagged granite ridges, and crisp winds",
-    ),
-    (
-        "arctic",
-        "Vast polar icecaps, floating icebergs, pack ice, and glacial frost",
-    ),
-    (
-        "graveyard",
-        "Haunted misty cemetery, crooked weathered headstones, and spooky fog",
+        "inferno",
+        "Rising volcanic embers, sparks, smoke, and magma caverns",
     ),
     (
         "ocean",
         "Submarine hydrothermal vents, undulating kelp beds, and deep sea trenches",
     ),
     (
-        "space",
-        "Cosmic interstellar vacuum, stellar dust clouds, and distant nebulae",
+        "arctic",
+        "Vast polar icecaps, floating icebergs, pack ice, and glacial frost",
+    ),
+    (
+        "city",
+        "Futuristic neon-lit urban skyscrapers, rooftops, and antenna towers",
+    ),
+    (
+        "forest",
+        "Dense ancient pine woods, mossy logs, and whispering evergreen canopies",
     ),
     (
         "savanna",
         "Golden African plains, silhouette umbrella acacia trees, and sun haze",
     ),
     (
+        "swamp",
+        "Will-o'-the-wisps, murky bayou waters, and floating marsh vapors",
+    ),
+    (
+        "space",
+        "Cosmic interstellar vacuum, stellar dust clouds, and distant nebulae",
+    ),
+    (
+        "cyber",
+        "Descending matrix code glyphs, data streams, and virtual grid",
+    ),
+    (
+        "graveyard",
+        "Haunted misty cemetery, crooked weathered headstones, and spooky fog",
+    ),
+    (
         "jurassic",
         "Primeval volcanic caldera, towering palm ferns, and cycad groves",
+    ),
+    (
+        "hive",
+        "Bioluminescent organic pheromone motes and alien bio-mechanical nest",
+    ),
+    (
+        "throne",
+        "Golden ceremonial incensed dust particles and imperial cathedral",
+    ),
+    (
+        "none",
+        "Disable atmospheric particle and scenery layer",
     ),
 ];
 
@@ -148,28 +241,56 @@ pub const ROAD_OPTIONS: &[(&str, &str)] = &[
         "Dry country earth path with fine dust, pebbles, and ruts",
     ),
     (
-        "gravel",
-        "Crushed river stones with loose aggregate and crunchy texture",
+        "cobblestone",
+        "Interlocking medieval stone pavement blocks with recessed mortar joints",
     ),
     (
-        "paved",
-        "Smooth highway asphalt with painted dashed dividing lane lines",
+        "magma",
+        "Cracked obsidian basalt crust over glowing flowing lava",
     ),
     (
-        "brick",
-        "Classic red clay pavers laid in a sturdy interlocking herringbone pattern",
+        "ice",
+        "Compact crystalline ice and packed polar snow",
     ),
     (
-        "cobble",
-        "Old-world hand-chiseled granite cobblestones with recessed mortar joints",
+        "seabed",
+        "Sand ripples, deep-sea coral rubble, and aquatic seafloor",
     ),
     (
-        "railway",
-        "Twin steel rails bolted across timber cross-ties over stone ballast",
+        "sidewalk",
+        "Paved urban concrete with asphalt curb and dividing lane lines",
     ),
     (
-        "starpath",
-        "Cosmic celestial light bridge paved with sparkling stardust ribbons",
+        "roof",
+        "Layered ceramic roof shingles and rooftop tiles",
+    ),
+    (
+        "grid",
+        "Glowing retro-futuristic vector grid and cybernetic matrix",
+    ),
+    (
+        "crypt",
+        "Ancient weathered catacomb stone flagstones and haunted pathway",
+    ),
+    (
+        "savanna",
+        "Sun-baked arid cracked clay and African safari trail",
+    ),
+    (
+        "mud",
+        "Soft squishy mud, bayou ruts, and rain-soaked wetland soil",
+    ),
+    (
+        "tracks",
+        "Parallel steel train tracks bolted across timber railroad ties",
+    ),
+    (
+        "checkerboard",
+        "Alternating high-contrast dual tiles and retro arcade board",
+    ),
+    (
+        "none",
+        "Empty clear baseline without road glyphs",
     ),
 ];
 
@@ -226,6 +347,10 @@ pub const COLOR_OPTIONS: &[(&str, &str)] = &[
     (
         "natural",
         "Authentic God-given biological color palette unique to each creature in nature",
+    ),
+    (
+        "animal",
+        "Adaptive creature coloration matched to individual animal species",
     ),
     (
         "rainbow",
@@ -385,18 +510,30 @@ pub enum ConfigField {
     Fps = 1,
     Eyes = 2,
     Tongue = 3,
-    Background = 4,
-    AutoRenderOnPrompt = 5,
-    ShellAttachMode = 6,
-    ConfigFormat = 7,
+    ColorMode = 4,
+    Palette = 5,
+    Environment = 6,
+    Road = 7,
+    Mountain = 8,
+    AnimationType = 9,
+    Background = 10,
+    AutoRenderOnPrompt = 11,
+    ShellAttachMode = 12,
+    ConfigFormat = 13,
 }
 
 impl ConfigField {
-    pub const ALL: [ConfigField; 8] = [
+    pub const ALL: [ConfigField; 14] = [
         ConfigField::Duration,
         ConfigField::Fps,
         ConfigField::Eyes,
         ConfigField::Tongue,
+        ConfigField::ColorMode,
+        ConfigField::Palette,
+        ConfigField::Environment,
+        ConfigField::Road,
+        ConfigField::Mountain,
+        ConfigField::AnimationType,
         ConfigField::Background,
         ConfigField::AutoRenderOnPrompt,
         ConfigField::ShellAttachMode,
@@ -409,6 +546,12 @@ impl ConfigField {
             ConfigField::Fps => "fps",
             ConfigField::Eyes => "eyes",
             ConfigField::Tongue => "tongue",
+            ConfigField::ColorMode => "color_mode",
+            ConfigField::Palette => "palette",
+            ConfigField::Environment => "environment",
+            ConfigField::Road => "road",
+            ConfigField::Mountain => "mountain",
+            ConfigField::AnimationType => "animation_type",
             ConfigField::Background => "background",
             ConfigField::AutoRenderOnPrompt => "auto_render_on_prompt",
             ConfigField::ShellAttachMode => "shell_attach_mode",
@@ -422,6 +565,12 @@ impl ConfigField {
             ConfigField::Fps => "Target frame rate (30 = cinematic, 60 = ultra-smooth)",
             ConfigField::Eyes => "ASCII characters for eyes (e.g. 'oo', '$$', 'XX', '@@')",
             ConfigField::Tongue => "ASCII characters for tongue (e.g. 'U ', '  ', '||')",
+            ConfigField::ColorMode => "Color rendering palette mode: natural, animal, rainbow, solid, none",
+            ConfigField::Palette => "Custom TrueColor hex palette gradient (comma-separated, e.g. '#ffffff,#1a1a1a')",
+            ConfigField::Environment => "Atmospheric particle system: pasture, inferno, ocean, arctic, city, forest, savanna, swamp, space, cyber, graveyard, jurassic, hive, throne, none",
+            ConfigField::Road => "Ground terrain surface style: dirt, cobblestone, magma, ice, seabed, sidewalk, roof, grid, crypt, savanna, mud, tracks, checkerboard, none",
+            ConfigField::Mountain => "Horizon background silhouette: hills, peaks, volcano, iceberg, skyline, seamount, plateau, crater, gothic, castle, garden, none",
+            ConfigField::AnimationType => "Kinematic animation driver: animal_natural, walk, breathe, float, fly, talk, sway, pulse, glitch, particles, dissolve",
             ConfigField::Background => "Daemon non-blocking prompt overlay mode (true/false)",
             ConfigField::AutoRenderOnPrompt => "Trigger mascot automatically on shell prompt enter",
             ConfigField::ShellAttachMode => {
@@ -429,6 +578,10 @@ impl ConfigField {
             }
             ConfigField::ConfigFormat => "File serialization syntax: JSON, YAML, or TOML",
         }
+    }
+
+    pub fn value(self, app: &ConfigApp, is_sel: bool) -> String {
+        app.field_value(self, is_sel)
     }
 }
 
@@ -467,6 +620,11 @@ pub struct ConfigApp {
     pub editing_config: bool,
     pub edit_initial: bool,
     pub config_edit_buffer: String,
+    pub color_mode_dropdown: Dropdown,
+    pub environment_dropdown: Dropdown,
+    pub road_dropdown: Dropdown,
+    pub mountain_dropdown: Dropdown,
+    pub animation_type_dropdown: Dropdown,
     pub attach_mode_dropdown: Dropdown,
     pub format_dropdown: Dropdown,
 
@@ -520,6 +678,34 @@ impl ConfigApp {
             .and_then(|e| e.to_str())
             .and_then(ConfigFormat::from_extension)
             .unwrap_or(ConfigFormat::Json);
+
+        let color_mode_dropdown = Dropdown::new(
+            COLOR_MODE_OPTIONS.to_vec(),
+            &config.color_mode,
+        );
+        let environment_dropdown = Dropdown::new(
+            ENVIRONMENT_OPTIONS.to_vec(),
+            config.environment.as_deref().unwrap_or("pasture"),
+        );
+        let road_dropdown = Dropdown::new(
+            ROAD_STYLE_OPTIONS.to_vec(),
+            config.road.as_deref().unwrap_or("dirt"),
+        );
+        let mountain_dropdown = Dropdown::new(
+            MOUNTAIN_OPTIONS.to_vec(),
+            config.mountain.as_deref().unwrap_or("hills"),
+        );
+        let animation_type_dropdown = Dropdown::new(
+            ANIMATION_TYPE_OPTIONS.to_vec(),
+            config
+                .animation_type
+                .as_deref()
+                .unwrap_or(if config.effect.is_empty() {
+                    "animal_natural"
+                } else {
+                    &config.effect
+                }),
+        );
 
         let attach_mode_dropdown = Dropdown::new(
             vec!["banner", "split", "reactive", "manual"],
@@ -617,6 +803,11 @@ impl ConfigApp {
             editing_config: false,
             edit_initial: false,
             config_edit_buffer: String::new(),
+            color_mode_dropdown,
+            environment_dropdown,
+            road_dropdown,
+            mountain_dropdown,
+            animation_type_dropdown,
             attach_mode_dropdown,
             format_dropdown,
             saved: false,
@@ -857,6 +1048,7 @@ impl ConfigApp {
         let name = CATEGORIES[self.mascot_category_idx].1[self.mascot_item_idx].to_string();
         self.config.cow = name.clone();
         self.ensure_cow_cached(&name);
+        self.saved = false;
     }
 
     fn randomize_mascot(&mut self) {
@@ -884,30 +1076,43 @@ impl ConfigApp {
                     } else {
                         self.scenery_idx = SCENERY_OPTIONS.len() - 1;
                     }
-                    self.config.environment = Some(SCENERY_OPTIONS[self.scenery_idx].0.to_string());
+                    let env = SCENERY_OPTIONS[self.scenery_idx].0.to_string();
+                    self.config.environment = Some(env.clone());
+                    self.environment_dropdown = Dropdown::new(ENVIRONMENT_OPTIONS.to_vec(), &env);
+                    self.saved = false;
                 } else {
                     if self.road_idx > 0 {
                         self.road_idx -= 1;
                     } else {
                         self.road_idx = ROAD_OPTIONS.len() - 1;
                     }
-                    self.config.road = Some(ROAD_OPTIONS[self.road_idx].0.to_string());
+                    let rd = ROAD_OPTIONS[self.road_idx].0.to_string();
+                    self.config.road = Some(rd.clone());
+                    self.road_dropdown = Dropdown::new(ROAD_STYLE_OPTIONS.to_vec(), &rd);
+                    self.saved = false;
                 }
             }
             KeyCode::Down | KeyCode::Char('j') => {
                 if self.scenery_sub_focus == 0 {
                     self.scenery_idx = (self.scenery_idx + 1) % SCENERY_OPTIONS.len();
-                    self.config.environment = Some(SCENERY_OPTIONS[self.scenery_idx].0.to_string());
+                    let env = SCENERY_OPTIONS[self.scenery_idx].0.to_string();
+                    self.config.environment = Some(env.clone());
+                    self.environment_dropdown = Dropdown::new(ENVIRONMENT_OPTIONS.to_vec(), &env);
+                    self.saved = false;
                 } else {
                     self.road_idx = (self.road_idx + 1) % ROAD_OPTIONS.len();
-                    self.config.road = Some(ROAD_OPTIONS[self.road_idx].0.to_string());
+                    let rd = ROAD_OPTIONS[self.road_idx].0.to_string();
+                    self.config.road = Some(rd.clone());
+                    self.road_dropdown = Dropdown::new(ROAD_STYLE_OPTIONS.to_vec(), &rd);
+                    self.saved = false;
                 }
             }
             KeyCode::Enter | KeyCode::Char(' ') => {
+                self.saved = false;
                 self.status_message = format!(
                     "Scenery set to '{}' with road '{}'",
                     self.config.environment.as_deref().unwrap_or("pasture"),
-                    self.config.road.as_deref().unwrap_or("paved")
+                    self.config.road.as_deref().unwrap_or("dirt")
                 );
             }
             _ => {}
@@ -931,26 +1136,43 @@ impl ConfigApp {
                     } else {
                         self.effect_idx = EFFECT_OPTIONS.len() - 1;
                     }
-                    self.config.effect = EFFECT_OPTIONS[self.effect_idx].0.to_string();
+                    let eff = EFFECT_OPTIONS[self.effect_idx].0.to_string();
+                    self.config.effect = eff.clone();
+                    self.config.animation_type = Some(eff.clone());
+                    self.animation_type_dropdown =
+                        Dropdown::new(ANIMATION_TYPE_OPTIONS.to_vec(), &eff);
+                    self.saved = false;
                 } else {
                     if self.color_idx > 0 {
                         self.color_idx -= 1;
                     } else {
                         self.color_idx = COLOR_OPTIONS.len() - 1;
                     }
-                    self.config.color_mode = COLOR_OPTIONS[self.color_idx].0.to_string();
+                    let col = COLOR_OPTIONS[self.color_idx].0.to_string();
+                    self.config.color_mode = col.clone();
+                    self.color_mode_dropdown = Dropdown::new(COLOR_MODE_OPTIONS.to_vec(), &col);
+                    self.saved = false;
                 }
             }
             KeyCode::Down | KeyCode::Char('j') => {
                 if self.fx_sub_focus == 0 {
                     self.effect_idx = (self.effect_idx + 1) % EFFECT_OPTIONS.len();
-                    self.config.effect = EFFECT_OPTIONS[self.effect_idx].0.to_string();
+                    let eff = EFFECT_OPTIONS[self.effect_idx].0.to_string();
+                    self.config.effect = eff.clone();
+                    self.config.animation_type = Some(eff.clone());
+                    self.animation_type_dropdown =
+                        Dropdown::new(ANIMATION_TYPE_OPTIONS.to_vec(), &eff);
+                    self.saved = false;
                 } else {
                     self.color_idx = (self.color_idx + 1) % COLOR_OPTIONS.len();
-                    self.config.color_mode = COLOR_OPTIONS[self.color_idx].0.to_string();
+                    let col = COLOR_OPTIONS[self.color_idx].0.to_string();
+                    self.config.color_mode = col.clone();
+                    self.color_mode_dropdown = Dropdown::new(COLOR_MODE_OPTIONS.to_vec(), &col);
+                    self.saved = false;
                 }
             }
             KeyCode::Enter | KeyCode::Char(' ') => {
+                self.saved = false;
                 self.status_message = format!(
                     "Effect: '{}' | Color Palette: '{}'",
                     self.config.effect, self.config.color_mode
@@ -1281,6 +1503,13 @@ export extern "forgum" [
                 self.status_message =
                     "Editing Tongue: type characters and press Enter (Esc to cancel)".into();
             }
+            ConfigField::Palette => {
+                self.config_edit_buffer = self.config.palette.clone().unwrap_or_default();
+                self.editing_config = true;
+                self.status_message =
+                    "Editing Palette: type comma-separated hex codes (e.g. '#ffffff,#1a1a1a') and press Enter (Esc to cancel)"
+                        .into();
+            }
             _ => {
                 self.edit_initial = false;
                 self.cycle_config_field(true);
@@ -1342,6 +1571,67 @@ export extern "forgum" [
                 self.status_message =
                     format!("FPS adjusted to {} fps [Enter to type exact FPS]", next);
             }
+            ConfigField::Eyes => {
+                self.enter_config_edit();
+            }
+            ConfigField::Tongue => {
+                self.enter_config_edit();
+            }
+            ConfigField::ColorMode => {
+                self.color_mode_dropdown.cycle(forward);
+                let current = self.color_mode_dropdown.current();
+                self.config.color_mode = current.clone();
+                self.color_idx = COLOR_OPTIONS
+                    .iter()
+                    .position(|(c, _)| c.eq_ignore_ascii_case(&current))
+                    .unwrap_or(0);
+                self.saved = false;
+                self.status_message = format!("Color mode switched to {}", current);
+            }
+            ConfigField::Palette => {
+                self.enter_config_edit();
+            }
+            ConfigField::Environment => {
+                self.environment_dropdown.cycle(forward);
+                let current = self.environment_dropdown.current();
+                self.config.environment = Some(current.clone());
+                self.scenery_idx = SCENERY_OPTIONS
+                    .iter()
+                    .position(|(s, _)| s.eq_ignore_ascii_case(&current))
+                    .unwrap_or(0);
+                self.saved = false;
+                self.status_message = format!("Environment switched to {}", current);
+            }
+            ConfigField::Road => {
+                self.road_dropdown.cycle(forward);
+                let current = self.road_dropdown.current();
+                self.config.road = Some(current.clone());
+                self.road_idx = ROAD_OPTIONS
+                    .iter()
+                    .position(|(r, _)| r.eq_ignore_ascii_case(&current))
+                    .unwrap_or(0);
+                self.saved = false;
+                self.status_message = format!("Road style switched to {}", current);
+            }
+            ConfigField::Mountain => {
+                self.mountain_dropdown.cycle(forward);
+                let current = self.mountain_dropdown.current();
+                self.config.mountain = Some(current.clone());
+                self.saved = false;
+                self.status_message = format!("Mountain silhouette switched to {}", current);
+            }
+            ConfigField::AnimationType => {
+                self.animation_type_dropdown.cycle(forward);
+                let current = self.animation_type_dropdown.current();
+                self.config.animation_type = Some(current.clone());
+                self.config.effect = current.clone();
+                self.effect_idx = EFFECT_OPTIONS
+                    .iter()
+                    .position(|(e, _)| e.eq_ignore_ascii_case(&current))
+                    .unwrap_or(0);
+                self.saved = false;
+                self.status_message = format!("Animation type switched to {}", current);
+            }
             ConfigField::Background => {
                 self.config.background = !self.config.background;
                 self.saved = false;
@@ -1381,12 +1671,6 @@ export extern "forgum" [
                     "Config format switched to {} (will be used on Save)",
                     self.format_dropdown.current().to_uppercase()
                 );
-            }
-            ConfigField::Eyes => {
-                self.enter_config_edit();
-            }
-            ConfigField::Tongue => {
-                self.enter_config_edit();
             }
         }
     }
@@ -1558,6 +1842,18 @@ export extern "forgum" [
                 self.ensure_cow_cached(&self.config.cow.clone());
                 self.saved = false;
                 self.status_message = format!("✓ Tongue updated to '{}'", self.config.tongue);
+            }
+            ConfigField::Palette => {
+                let trimmed = self.config_edit_buffer.trim().to_string();
+                if trimmed.is_empty() || trimmed.eq_ignore_ascii_case("none") {
+                    self.config.palette = None;
+                    self.saved = false;
+                    self.status_message = "✓ Palette cleared (using default color mode)".to_string();
+                } else {
+                    self.config.palette = Some(trimmed.clone());
+                    self.saved = false;
+                    self.status_message = format!("✓ Palette set to '{}'", trimmed);
+                }
             }
             _ => {}
         }
@@ -2345,11 +2641,12 @@ export extern "forgum" [
             })
             .collect();
 
+        let scenery_title = format!(" Biomes / Scenery ({}) ", SCENERY_OPTIONS.len());
         let scenery_list = List::new(scenery_items).block(
             Block::default()
                 .borders(Borders::ALL)
                 .border_type(BorderType::Rounded)
-                .title(" Biomes / Scenery (11) "),
+                .title(scenery_title),
         );
         f.render_widget(scenery_list, chunks[0]);
 
@@ -2377,11 +2674,12 @@ export extern "forgum" [
             })
             .collect();
 
+        let road_title = format!(" Road Surfaces ({}) ", ROAD_OPTIONS.len());
         let road_list = List::new(road_items).block(
             Block::default()
                 .borders(Borders::ALL)
                 .border_type(BorderType::Rounded)
-                .title(" Road Surfaces (7) "),
+                .title(road_title),
         );
         f.render_widget(road_list, chunks[1]);
     }
@@ -2416,11 +2714,12 @@ export extern "forgum" [
             })
             .collect();
 
+        let effects_title = format!(" Kinematics Effects ({}) ", EFFECT_OPTIONS.len());
         let effect_list = List::new(effect_items).block(
             Block::default()
                 .borders(Borders::ALL)
                 .border_type(BorderType::Rounded)
-                .title(" Kinematics Effects (10) "),
+                .title(effects_title),
         );
         f.render_widget(effect_list, chunks[0]);
 
@@ -2448,11 +2747,12 @@ export extern "forgum" [
             })
             .collect();
 
+        let colors_title = format!(" Color Themes ({}) ", COLOR_OPTIONS.len());
         let color_list = List::new(color_items).block(
             Block::default()
                 .borders(Borders::ALL)
                 .border_type(BorderType::Rounded)
-                .title(" Color Themes (4) "),
+                .title(colors_title),
         );
         f.render_widget(color_list, chunks[1]);
     }
@@ -2501,6 +2801,105 @@ export extern "forgum" [
         f.render_widget(list, area);
     }
 
+    /// Render formatted value string for a ConfigField.
+    pub fn field_value(&self, field: ConfigField, is_sel: bool) -> String {
+        match field {
+            ConfigField::Duration => {
+                if is_sel && self.editing_config {
+                    format!("✎ [ {}_ ]", self.config_edit_buffer)
+                } else if self.config.duration == 0 {
+                    "0 (infinite) [←/→/Enter]".into()
+                } else {
+                    format!("{}s [←/→/Enter]", self.config.duration)
+                }
+            }
+            ConfigField::Fps => {
+                if is_sel && self.editing_config {
+                    format!("✎ [ {}_ ]", self.config_edit_buffer)
+                } else {
+                    format!("{} fps [←/→/Enter]", self.config.fps)
+                }
+            }
+            ConfigField::Eyes => {
+                if is_sel && self.editing_config {
+                    format!("✎ [ {}_ ]", self.config_edit_buffer)
+                } else {
+                    format!("'{}' [Enter to edit]", self.config.eyes)
+                }
+            }
+            ConfigField::Tongue => {
+                if is_sel && self.editing_config {
+                    format!("✎ [ {}_ ]", self.config_edit_buffer)
+                } else {
+                    format!("'{}' [Enter to edit]", self.config.tongue)
+                }
+            }
+            ConfigField::ColorMode => {
+                format!("{} (←/→ cycle)", self.config.color_mode)
+            }
+            ConfigField::Palette => {
+                if is_sel && self.editing_config {
+                    format!("✎ [ {}_ ]", self.config_edit_buffer)
+                } else if let Some(pal) = &self.config.palette {
+                    if pal.is_empty() {
+                        "none (default) [Enter to edit]".into()
+                    } else {
+                        format!("'{}' [Enter to edit]", pal)
+                    }
+                } else {
+                    "none (default) [Enter to edit]".into()
+                }
+            }
+            ConfigField::Environment => {
+                format!(
+                    "{} (←/→ cycle)",
+                    self.config.environment.as_deref().unwrap_or("none")
+                )
+            }
+            ConfigField::Road => {
+                format!(
+                    "{} (←/→ cycle)",
+                    self.config.road.as_deref().unwrap_or("none")
+                )
+            }
+            ConfigField::Mountain => {
+                format!(
+                    "{} (←/→ cycle)",
+                    self.config.mountain.as_deref().unwrap_or("none")
+                )
+            }
+            ConfigField::AnimationType => {
+                format!(
+                    "{} (←/→ cycle)",
+                    self.config.animation_type.as_deref().unwrap_or("animal_natural")
+                )
+            }
+            ConfigField::Background => {
+                if self.config.background {
+                    "✔ ON (Space/Enter to toggle)".into()
+                } else {
+                    "✖ OFF (Space/Enter to toggle)".into()
+                }
+            }
+            ConfigField::AutoRenderOnPrompt => {
+                if self.config.auto_render_on_prompt {
+                    "✔ ON (Space/Enter to toggle)".into()
+                } else {
+                    "✖ OFF (Space/Enter to toggle)".into()
+                }
+            }
+            ConfigField::ShellAttachMode => {
+                format!("{} (←/→ cycle)", self.config.shell_attach_mode)
+            }
+            ConfigField::ConfigFormat => {
+                format!(
+                    "{} (←/→ cycle)",
+                    self.format_dropdown.current().to_uppercase()
+                )
+            }
+        }
+    }
+
     fn render_config_list(&self, f: &mut Frame, area: Rect) {
         let items: Vec<ListItem> = ConfigField::ALL
             .iter()
@@ -2508,61 +2907,7 @@ export extern "forgum" [
             .map(|(i, field)| {
                 let is_sel = i == self.config_field_idx;
                 let prefix = if is_sel { "▶ " } else { "  " };
-                let val_str = match field {
-                    ConfigField::Duration => {
-                        if is_sel && self.editing_config {
-                            format!("✎ [ {}_ ]", self.config_edit_buffer)
-                        } else if self.config.duration == 0 {
-                            "0 (infinite) [←/→/Enter]".into()
-                        } else {
-                            format!("{}s [←/→/Enter]", self.config.duration)
-                        }
-                    }
-                    ConfigField::Fps => {
-                        if is_sel && self.editing_config {
-                            format!("✎ [ {}_ ]", self.config_edit_buffer)
-                        } else {
-                            format!("{} fps [←/→/Enter]", self.config.fps)
-                        }
-                    }
-                    ConfigField::Eyes => {
-                        if is_sel && self.editing_config {
-                            format!("✎ [ {}_ ]", self.config_edit_buffer)
-                        } else {
-                            format!("'{}' [Enter to edit]", self.config.eyes)
-                        }
-                    }
-                    ConfigField::Tongue => {
-                        if is_sel && self.editing_config {
-                            format!("✎ [ {}_ ]", self.config_edit_buffer)
-                        } else {
-                            format!("'{}' [Enter to edit]", self.config.tongue)
-                        }
-                    }
-                    ConfigField::Background => {
-                        if self.config.background {
-                            "✔ ON (Space/Enter to toggle)".into()
-                        } else {
-                            "✖ OFF (Space/Enter to toggle)".into()
-                        }
-                    }
-                    ConfigField::AutoRenderOnPrompt => {
-                        if self.config.auto_render_on_prompt {
-                            "✔ ON (Space/Enter to toggle)".into()
-                        } else {
-                            "✖ OFF (Space/Enter to toggle)".into()
-                        }
-                    }
-                    ConfigField::ShellAttachMode => {
-                        format!("{} (←/→ cycle)", self.config.shell_attach_mode)
-                    }
-                    ConfigField::ConfigFormat => {
-                        format!(
-                            "{} (←/→ cycle)",
-                            self.format_dropdown.current().to_uppercase()
-                        )
-                    }
-                };
+                let val_str = self.field_value(*field, is_sel);
 
                 let label_style = if is_sel {
                     Style::default()
@@ -2574,7 +2919,7 @@ export extern "forgum" [
 
                 ListItem::new(Line::from(vec![
                     Span::styled(prefix, Style::default().fg(Color::Cyan)),
-                    Span::styled(format!("{:<20}", field.label()), label_style),
+                    Span::styled(format!("{:<24}", field.label()), label_style),
                     Span::styled(val_str, Style::default().fg(Color::Cyan)),
                 ]))
             })
@@ -2614,14 +2959,30 @@ export extern "forgum" [
 
         // 1. Procedural background mountains (slow parallax scroll, when background enabled)
         if self.config.background {
-            let mountain_layer = "      /\\_ /\\    /\\__      /\\_    /\\/\\    /\\_ /\\    /\\__      /\\_    /\\/\\    ";
-            let m_chars: Vec<char> = mountain_layer.chars().collect();
-            let m_start = (t * 1.5) as usize % m_chars.len();
-            let m_slice: String = m_chars.iter().cycle().skip(m_start).take(30).collect();
-            lines.push(Line::from(Span::styled(
-                format!("  {m_slice}"),
-                Style::default().fg(Color::DarkGray),
-            )));
+            let mountain_style = self.config.mountain.as_deref().unwrap_or("hills");
+            let mountain_layer = match mountain_style {
+                "peaks" => "   /\\    /\\/\\      /\\    /\\/\\      /\\    /\\/\\      /\\    /\\/\\   ",
+                "volcano" => "     /\\_ /\\    /🌋\\      /\\_ /\\    /🌋\\      /\\_ /\\    /🌋\\   ",
+                "iceberg" => "    /▲\\  /▲▲\\     /▲\\  /▲▲\\     /▲\\  /▲▲\\     /▲\\  /▲▲\\    ",
+                "skyline" => "   _Π_[_]__Π_   _Π_[_]__Π_   _Π_[_]__Π_   _Π_[_]__Π_   _Π_[_]__Π_   ",
+                "seamount" => "    ~~/\\~~/\\~~    ~~/\\~~/\\~~    ~~/\\~~/\\~~    ~~/\\~~/\\~~   ",
+                "plateau" => "   [=====]       [=====]       [=====]       [=====]      ",
+                "crater" => "   (___)  (___)   (___)  (___)   (___)  (___)   (___)  ",
+                "gothic" => "   /|\\   /|\\    /|\\   /|\\    /|\\   /|\\    /|\\   /|\\    ",
+                "castle" => "   |п|п| |п|п|   |п|п| |п|п|   |п|п| |п|п|   |п|п| |п|п|  ",
+                "garden" => "   (:::) (:::)   (:::) (:::)   (:::) (:::)   (:::) (:::)  ",
+                "none" => "",
+                _ => "      /\\_ /\\    /\\__      /\\_    /\\/\\    /\\_ /\\    /\\__      /\\_    /\\/\\    ",
+            };
+            if !mountain_layer.is_empty() {
+                let m_chars: Vec<char> = mountain_layer.chars().collect();
+                let m_start = (t * 1.5) as usize % m_chars.len();
+                let m_slice: String = m_chars.iter().cycle().skip(m_start).take(30).collect();
+                lines.push(Line::from(Span::styled(
+                    format!("  {m_slice}"),
+                    Style::default().fg(Color::DarkGray),
+                )));
+            }
         }
 
         // 2. Procedural Animation Engine Execution
@@ -2778,84 +3139,114 @@ export extern "forgum" [
                 _ => {}
             }
 
-            let color = match self.config.color_mode.as_str() {
-                "rainbow" => {
-                    let c_idx = (i + (t * 5.0) as usize) % rainbow_colors.len();
-                    rainbow_colors[c_idx]
-                }
-                "lolcat" => rainbow_colors[(i * 2) % rainbow_colors.len()],
-                "solid" => Color::Green,
-                "natural" | "animal_natural" | "animal" | "default" => {
-                    match self.config.cow.as_str() {
-                        "cat" | "cat2" | "catfence" | "kitty" | "kitten" | "meow" => match i % 5 {
-                            0 => Color::Rgb(255, 255, 255), // white
-                            1 => Color::Rgb(211, 84, 0),    // ginger
-                            2 => Color::Rgb(121, 85, 72),   // brown
-                            3 => Color::Rgb(255, 152, 0),   // orange
-                            _ => Color::Rgb(33, 33, 33),    // black
-                        },
-                        "bunny" => Color::Rgb(255, 255, 255), // white only in nature
-                        "doge" => match i % 3 {
-                            0 => Color::Rgb(229, 152, 102), // golden orange
-                            1 => Color::Rgb(211, 84, 0),
-                            _ => Color::Rgb(253, 254, 254), // white urajiro
-                        },
-                        "hippie" => match i % 5 {
-                            0 => Color::Rgb(255, 0, 127),
-                            1 => Color::Rgb(0, 229, 255),
-                            2 => Color::Rgb(255, 255, 0),
-                            3 => Color::Rgb(118, 255, 3),
-                            _ => Color::Rgb(213, 0, 249),
-                        },
-                        "hamster" => match i % 3 {
-                            0 => Color::Rgb(212, 163, 115), // golden brown
-                            1 => Color::Rgb(250, 237, 205), // cream belly
-                            _ => Color::Rgb(255, 182, 193), // pink paws
-                        },
-                        "mule" => match i % 3 {
-                            0 => Color::Rgb(92, 64, 51),  // brown
-                            1 => Color::Rgb(121, 85, 72),
-                            _ => Color::Rgb(62, 39, 35),
-                        },
-                        "pig" => match i % 3 {
-                            0 => Color::Rgb(255, 182, 193), // pink
-                            1 => Color::Rgb(255, 128, 171),
-                            _ => Color::Rgb(248, 187, 208),
-                        },
-                        "ram" => match i % 3 {
-                            0 => Color::Rgb(245, 245, 245), // fleece white
-                            1 => Color::Rgb(158, 158, 158), // horn grey
-                            _ => Color::Rgb(117, 117, 117),
-                        },
-                        "cow" | "default" | "fat-cow" => match i % 3 {
-                            0 => Color::White,
-                            1 => Color::Rgb(26, 26, 26), // black
-                            _ => Color::Rgb(255, 182, 193), // pink snout
-                        },
-                        "duck" => match i % 3 {
-                            0 => Color::Rgb(5, 150, 105),  // mallard green head
-                            1 => Color::Rgb(251, 191, 36), // yellow bill
-                            _ => Color::Rgb(120, 53, 15),  // brown body
-                        },
-                        "wolf" => match i % 3 {
-                            0 => Color::Rgb(156, 163, 175),
-                            1 => Color::Rgb(75, 85, 99),
-                            _ => Color::Rgb(31, 41, 55),
-                        },
-                        "tiger" => match i % 3 {
-                            0 => Color::Rgb(234, 88, 12),
-                            1 => Color::Rgb(24, 24, 27),
-                            _ => Color::White,
-                        },
-                        "tux" | "tux-big" => match i % 3 {
-                            0 => Color::White,
-                            1 => Color::Rgb(33, 33, 33),
-                            _ => Color::Rgb(255, 152, 0),
-                        },
+            let color = if let Some(palette_str) = &self.config.palette {
+                let parsed_colors: Vec<Color> = palette_str
+                    .split(',')
+                    .filter_map(|s| {
+                        let hex = s.trim().trim_start_matches('#');
+                        if hex.len() == 6 {
+                            let r = u8::from_str_radix(&hex[0..2], 16).ok()?;
+                            let g = u8::from_str_radix(&hex[2..4], 16).ok()?;
+                            let b = u8::from_str_radix(&hex[4..6], 16).ok()?;
+                            Some(Color::Rgb(r, g, b))
+                        } else {
+                            None
+                        }
+                    })
+                    .collect();
+                if !parsed_colors.is_empty() {
+                    parsed_colors[i % parsed_colors.len()]
+                } else {
+                    match self.config.color_mode.as_str() {
+                        "rainbow" => {
+                            let c_idx = (i + (t * 5.0) as usize) % rainbow_colors.len();
+                            rainbow_colors[c_idx]
+                        }
+                        "lolcat" => rainbow_colors[(i * 2) % rainbow_colors.len()],
+                        "solid" => Color::Green,
                         _ => Color::White,
                     }
                 }
-                _ => Color::White,
+            } else {
+                match self.config.color_mode.as_str() {
+                    "rainbow" => {
+                        let c_idx = (i + (t * 5.0) as usize) % rainbow_colors.len();
+                        rainbow_colors[c_idx]
+                    }
+                    "lolcat" => rainbow_colors[(i * 2) % rainbow_colors.len()],
+                    "solid" => Color::Green,
+                    "natural" | "animal_natural" | "animal" | "default" => {
+                        match self.config.cow.as_str() {
+                            "cat" | "cat2" | "catfence" | "kitty" | "kitten" | "meow" => match i % 5 {
+                                0 => Color::Rgb(255, 255, 255), // white
+                                1 => Color::Rgb(211, 84, 0),    // ginger
+                                2 => Color::Rgb(121, 85, 72),   // brown
+                                3 => Color::Rgb(255, 152, 0),   // orange
+                                _ => Color::Rgb(33, 33, 33),    // black
+                            },
+                            "bunny" => Color::Rgb(255, 255, 255), // white only in nature
+                            "doge" => match i % 3 {
+                                0 => Color::Rgb(229, 152, 102), // golden orange
+                                1 => Color::Rgb(211, 84, 0),
+                                _ => Color::Rgb(253, 254, 254), // white urajiro
+                            },
+                            "hippie" => match i % 5 {
+                                0 => Color::Rgb(255, 0, 127),
+                                1 => Color::Rgb(0, 229, 255),
+                                2 => Color::Rgb(255, 255, 0),
+                                3 => Color::Rgb(118, 255, 3),
+                                _ => Color::Rgb(213, 0, 249),
+                            },
+                            "hamster" => match i % 3 {
+                                0 => Color::Rgb(212, 163, 115), // golden brown
+                                1 => Color::Rgb(250, 237, 205), // cream belly
+                                _ => Color::Rgb(255, 182, 193), // pink paws
+                            },
+                            "mule" => match i % 3 {
+                                0 => Color::Rgb(92, 64, 51),  // brown
+                                1 => Color::Rgb(121, 85, 72),
+                                _ => Color::Rgb(62, 39, 35),
+                            },
+                            "pig" => match i % 3 {
+                                0 => Color::Rgb(255, 182, 193), // pink
+                                1 => Color::Rgb(255, 128, 171),
+                                _ => Color::Rgb(248, 187, 208),
+                            },
+                            "ram" => match i % 3 {
+                                0 => Color::Rgb(245, 245, 245), // fleece white
+                                1 => Color::Rgb(158, 158, 158), // horn grey
+                                _ => Color::Rgb(117, 117, 117),
+                            },
+                            "cow" | "default" | "fat-cow" => match i % 3 {
+                                0 => Color::White,
+                                1 => Color::Rgb(26, 26, 26), // black
+                                _ => Color::Rgb(255, 182, 193), // pink snout
+                            },
+                            "duck" => match i % 3 {
+                                0 => Color::Rgb(5, 150, 105),  // mallard green head
+                                1 => Color::Rgb(251, 191, 36), // yellow bill
+                                _ => Color::Rgb(120, 53, 15),  // brown body
+                            },
+                            "wolf" => match i % 3 {
+                                0 => Color::Rgb(156, 163, 175),
+                                1 => Color::Rgb(75, 85, 99),
+                                _ => Color::Rgb(31, 41, 55),
+                            },
+                            "tiger" => match i % 3 {
+                                0 => Color::Rgb(234, 88, 12),
+                                1 => Color::Rgb(24, 24, 27),
+                                _ => Color::White,
+                            },
+                            "tux" | "tux-big" => match i % 3 {
+                                0 => Color::White,
+                                1 => Color::Rgb(33, 33, 33),
+                                _ => Color::Rgb(255, 152, 0),
+                            },
+                            _ => Color::White,
+                        }
+                    }
+                    _ => Color::White,
+                }
             };
 
             // Dynamic sparkles
@@ -2879,21 +3270,33 @@ export extern "forgum" [
 
         // 3. Ground / Road surface (fast scroll, when background enabled)
         if self.config.background {
-            let road_style = self.config.road.as_deref().unwrap_or("paved");
+            let road_style = self.config.road.as_deref().unwrap_or("dirt");
             let ground_pattern = match road_style {
-                "paved" => "═══ ═══ ═══ ═══ ═══ ═══ ═══ ═══ ═══ ═══ ═══ ═══ ═══ ═══ ",
-                "gravel" => ".. . . .. ... . .. .. . ... .. . .. ... . .. .. . ... .. ",
-                "railway" => "─┼──┼──┼──┼──┼──┼──┼──┼──┼──┼──┼──┼──┼──┼──┼──┼──┼──┼── ",
-                "starpath" => "✦ · ✧ · ✦ · ✧ · ✦ · ✧ · ✦ · ✧ · ✦ · ✧ · ✦ · ✧ · ✦ · ✧ · ",
+                "dirt" => ".. . . .. ... . .. .. . ... .. . .. ... . .. .. . ... .. ",
+                "cobblestone" | "cobble" => "[_][_][_][_][_][_][_][_][_][_][_][_][_][_][_][_][_][_] ",
+                "magma" => "~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ",
+                "ice" => "=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--= ",
+                "seabed" => "~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ",
+                "sidewalk" | "paved" => "═══ ═══ ═══ ═══ ═══ ═══ ═══ ═══ ═══ ═══ ═══ ═══ ═══ ═══ ",
+                "roof" => "^^^ ^^^ ^^^ ^^^ ^^^ ^^^ ^^^ ^^^ ^^^ ^^^ ^^^ ^^^ ^^^ ^^^ ",
+                "grid" => "#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-",
+                "crypt" => "[+][+][+][+][+][+][+][+][+][+][+][+][+][+][+][+][+][+] ",
+                "savanna" => ".. -- .. -- .. -- .. -- .. -- .. -- .. -- .. -- .. -- .. ",
+                "mud" => "~~~...~~~...~~~...~~~...~~~...~~~...~~~...~~~...~~~... ",
+                "tracks" | "railway" => "─┼──┼──┼──┼──┼──┼──┼──┼──┼──┼──┼──┼──┼──┼──┼──┼──┼──┼── ",
+                "checkerboard" => "■□■□■□■□■□■□■□■□■□■□■□■□■□■□■□■□■□■□■□■□■□■□■□■□■□■□■□ ",
+                "none" => "",
                 _ => "─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ",
             };
-            let g_chars: Vec<char> = ground_pattern.chars().collect();
-            let g_start = (t * 8.0) as usize % g_chars.len();
-            let g_slice: String = g_chars.iter().cycle().skip(g_start).take(32).collect();
-            lines.push(Line::from(Span::styled(
-                format!("  {g_slice}"),
-                Style::default().fg(Color::DarkGray),
-            )));
+            if !ground_pattern.is_empty() {
+                let g_chars: Vec<char> = ground_pattern.chars().collect();
+                let g_start = (t * 8.0) as usize % g_chars.len();
+                let g_slice: String = g_chars.iter().cycle().skip(g_start).take(32).collect();
+                lines.push(Line::from(Span::styled(
+                    format!("  {g_slice}"),
+                    Style::default().fg(Color::DarkGray),
+                )));
+            }
         }
 
         let env_name = self.config.environment.as_deref().unwrap_or("pasture");
@@ -3467,8 +3870,58 @@ mod tests {
     fn config_dropdown_field_cycling() {
         let mut app = ConfigApp::new(None, None, Some(Tab::Config));
 
-        // 1. Toggle Background (idx 4)
-        app.config_field_idx = 4; // Background
+        // 1. Cycle ColorMode
+        app.config_field_idx = ConfigField::ColorMode as usize;
+        let initial_color = app.config.color_mode.clone();
+        app.handle_event(Event::Key(KeyEvent::new(
+            KeyCode::Right,
+            KeyModifiers::NONE,
+        )))
+        .unwrap();
+        assert_ne!(app.config.color_mode, initial_color);
+
+        // 2. Cycle Environment
+        app.config_field_idx = ConfigField::Environment as usize;
+        let initial_env = app.config.environment.clone();
+        app.handle_event(Event::Key(KeyEvent::new(
+            KeyCode::Right,
+            KeyModifiers::NONE,
+        )))
+        .unwrap();
+        assert_ne!(app.config.environment, initial_env);
+
+        // 3. Cycle Road
+        app.config_field_idx = ConfigField::Road as usize;
+        let initial_road = app.config.road.clone();
+        app.handle_event(Event::Key(KeyEvent::new(
+            KeyCode::Right,
+            KeyModifiers::NONE,
+        )))
+        .unwrap();
+        assert_ne!(app.config.road, initial_road);
+
+        // 4. Cycle Mountain
+        app.config_field_idx = ConfigField::Mountain as usize;
+        let initial_mountain = app.config.mountain.clone();
+        app.handle_event(Event::Key(KeyEvent::new(
+            KeyCode::Right,
+            KeyModifiers::NONE,
+        )))
+        .unwrap();
+        assert_ne!(app.config.mountain, initial_mountain);
+
+        // 5. Cycle AnimationType
+        app.config_field_idx = ConfigField::AnimationType as usize;
+        let initial_anim = app.config.animation_type.clone();
+        app.handle_event(Event::Key(KeyEvent::new(
+            KeyCode::Right,
+            KeyModifiers::NONE,
+        )))
+        .unwrap();
+        assert_ne!(app.config.animation_type, initial_anim);
+
+        // 6. Toggle Background
+        app.config_field_idx = ConfigField::Background as usize;
         let initial_bg = app.config.background;
         app.handle_event(Event::Key(KeyEvent::new(
             KeyCode::Char(' '),
@@ -3477,8 +3930,8 @@ mod tests {
         .unwrap();
         assert_eq!(app.config.background, !initial_bg);
 
-        // 2. Toggle AutoRenderOnPrompt (idx 5)
-        app.config_field_idx = 5; // AutoRenderOnPrompt
+        // 7. Toggle AutoRenderOnPrompt
+        app.config_field_idx = ConfigField::AutoRenderOnPrompt as usize;
         let initial_auto = app.config.auto_render_on_prompt;
         app.handle_event(Event::Key(KeyEvent::new(
             KeyCode::Right,
@@ -3487,8 +3940,8 @@ mod tests {
         .unwrap();
         assert_eq!(app.config.auto_render_on_prompt, !initial_auto);
 
-        // 3. Cycle ShellAttachMode (idx 6)
-        app.config_field_idx = 6; // ShellAttachMode
+        // 8. Cycle ShellAttachMode
+        app.config_field_idx = ConfigField::ShellAttachMode as usize;
         let initial_mode = app.config.shell_attach_mode.clone();
         app.handle_event(Event::Key(KeyEvent::new(
             KeyCode::Right,
@@ -3497,8 +3950,8 @@ mod tests {
         .unwrap();
         assert_ne!(app.config.shell_attach_mode, initial_mode);
 
-        // 4. Cycle ConfigFormat (idx 7)
-        app.config_field_idx = 7; // ConfigFormat
+        // 9. Cycle ConfigFormat
+        app.config_field_idx = ConfigField::ConfigFormat as usize;
         let initial_fmt = app.format;
         app.handle_event(Event::Key(KeyEvent::new(
             KeyCode::Right,
@@ -3506,6 +3959,105 @@ mod tests {
         )))
         .unwrap();
         assert_ne!(app.format, initial_fmt);
+    }
+
+    #[test]
+    fn config_palette_text_editing() {
+        let mut app = ConfigApp::new(None, None, Some(Tab::Config));
+        app.config_field_idx = ConfigField::Palette as usize;
+
+        // Enter edit mode
+        app.handle_event(Event::Key(KeyEvent::new(
+            KeyCode::Enter,
+            KeyModifiers::NONE,
+        )))
+        .unwrap();
+        assert!(app.editing_config);
+
+        // Type palette hex string
+        for ch in "#112233,#445566".chars() {
+            app.handle_event(Event::Key(KeyEvent::new(
+                KeyCode::Char(ch),
+                KeyModifiers::NONE,
+            )))
+            .unwrap();
+        }
+        app.handle_event(Event::Key(KeyEvent::new(
+            KeyCode::Enter,
+            KeyModifiers::NONE,
+        )))
+        .unwrap();
+        assert!(!app.editing_config);
+        assert_eq!(app.config.palette.as_deref(), Some("#112233,#445566"));
+
+        // Clear palette
+        app.handle_event(Event::Key(KeyEvent::new(
+            KeyCode::Enter,
+            KeyModifiers::NONE,
+        )))
+        .unwrap();
+        app.handle_event(Event::Key(KeyEvent::new(
+            KeyCode::Delete,
+            KeyModifiers::NONE,
+        )))
+        .unwrap();
+        app.handle_event(Event::Key(KeyEvent::new(
+            KeyCode::Enter,
+            KeyModifiers::NONE,
+        )))
+        .unwrap();
+        assert_eq!(app.config.palette, None);
+    }
+
+    #[test]
+    fn tabs_sync_with_config_and_persistence() {
+        let mut app = ConfigApp::new(None, None, None);
+
+        // Tab 0: Mascots -> pick next mascot
+        app.current_tab = Tab::Mascots;
+        app.handle_event(Event::Key(KeyEvent::new(KeyCode::Down, KeyModifiers::NONE)))
+            .unwrap();
+        let selected_cow = app.config.cow.clone();
+        assert_ne!(selected_cow, "");
+
+        // Tab 1: Scenery -> pick scenery & road
+        app.current_tab = Tab::Scenery;
+        app.scenery_sub_focus = 0;
+        app.handle_event(Event::Key(KeyEvent::new(KeyCode::Down, KeyModifiers::NONE)))
+            .unwrap();
+        assert!(app.config.environment.is_some());
+
+        app.scenery_sub_focus = 1;
+        app.handle_event(Event::Key(KeyEvent::new(KeyCode::Down, KeyModifiers::NONE)))
+            .unwrap();
+        assert!(app.config.road.is_some());
+
+        // Tab 2: FX -> pick effect & color
+        app.current_tab = Tab::Effects;
+        app.fx_sub_focus = 0;
+        app.handle_event(Event::Key(KeyEvent::new(KeyCode::Down, KeyModifiers::NONE)))
+            .unwrap();
+        assert_ne!(app.config.effect, "");
+        assert_eq!(
+            app.config.animation_type.as_deref(),
+            Some(app.config.effect.as_str())
+        );
+
+        app.fx_sub_focus = 1;
+        app.handle_event(Event::Key(KeyEvent::new(KeyCode::Down, KeyModifiers::NONE)))
+            .unwrap();
+        assert_ne!(app.config.color_mode, "");
+
+        // Verify serialization for JSON, YAML, TOML
+        for fmt in [ConfigFormat::Json, ConfigFormat::Yaml, ConfigFormat::Toml] {
+            let serialized = app.config.serialize_with_format(fmt).unwrap();
+            let restored = SceneConfig::parse_with_format(&serialized, fmt).unwrap();
+            assert_eq!(restored.cow, app.config.cow);
+            assert_eq!(restored.effect, app.config.effect);
+            assert_eq!(restored.environment, app.config.environment);
+            assert_eq!(restored.road, app.config.road);
+            assert_eq!(restored.color_mode, app.config.color_mode);
+        }
     }
 
     #[test]

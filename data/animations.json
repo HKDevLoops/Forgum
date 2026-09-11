@@ -2816,9 +2816,7 @@
       "#ff7f00",
       "#ffff00",
       "#33ff00",
-      "#0099ff",
-      "#9933ff",
-      "#ffccbc"
+      "#0099ff"
     ],
     "easing": {
       "base": "sine_inout"

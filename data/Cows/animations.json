@@ -1,5 +1,5 @@
 {
-  "default.cow": {
+  "default": {
     "base": "Walk",
     "particles": null,
     "speed": 1.0,
@@ -11,7 +11,7 @@
       "#dcdde1"
     ]
   },
-  "cower.cow": {
+  "cower": {
     "base": "Breathe",
     "particles": null,
     "speed": 0.8,
@@ -23,7 +23,7 @@
       "#ffb6c1"
     ]
   },
-  "fat-cow.cow": {
+  "fat-cow": {
     "base": "Walk",
     "particles": null,
     "speed": 1.0,
@@ -35,7 +35,7 @@
       "#795548"
     ]
   },
-  "supermilker.cow": {
+  "supermilker": {
     "base": "Pulse",
     "particles": "Pulse",
     "speed": 1.0,
@@ -47,7 +47,7 @@
       "#ffb6c1"
     ]
   },
-  "moose.cow": {
+  "moose": {
     "base": "Walk",
     "particles": null,
     "speed": 1.0,
@@ -59,7 +59,7 @@
       "#3e2723"
     ]
   },
-  "mule.cow": {
+  "mule": {
     "base": "Walk",
     "particles": null,
     "speed": 1.0,
@@ -71,7 +71,7 @@
       "#d7ccc8"
     ]
   },
-  "sheep.cow": {
+  "sheep": {
     "base": "Walk",
     "particles": null,
     "speed": 1.0,
@@ -83,7 +83,7 @@
       "#ffb6c1"
     ]
   },
-  "flaming-sheep.cow": {
+  "flaming-sheep": {
     "base": "Breathe",
     "particles": "Fire",
     "speed": 0.8,
@@ -95,7 +95,7 @@
       "#ffd600"
     ]
   },
-  "lamb.cow": {
+  "lamb": {
     "base": "Walk",
     "particles": null,
     "speed": 1.0,
@@ -107,7 +107,7 @@
       "#ffb6c1"
     ]
   },
-  "lamb2.cow": {
+  "lamb2": {
     "base": "Walk",
     "particles": null,
     "speed": 1.0,
@@ -119,7 +119,7 @@
       "#ffb6c1"
     ]
   },
-  "goat.cow": {
+  "goat": {
     "base": "Walk",
     "particles": null,
     "speed": 1.0,
@@ -131,7 +131,7 @@
       "#fff8e1"
     ]
   },
-  "goat2.cow": {
+  "goat2": {
     "base": "Walk",
     "particles": null,
     "speed": 1.0,
@@ -143,7 +143,7 @@
       "#ffffff"
     ]
   },
-  "dolphin.cow": {
+  "dolphin": {
     "base": "Float",
     "particles": "Bubbles",
     "speed": 1.0,
@@ -155,7 +155,7 @@
       "#01579b"
     ]
   },
-  "whale.cow": {
+  "whale": {
     "base": "Float",
     "particles": "Bubbles",
     "speed": 1.0,
@@ -167,7 +167,7 @@
       "#ffffff"
     ]
   },
-  "happy-whale.cow": {
+  "happy-whale": {
     "base": "Float",
     "particles": "Bubbles",
     "speed": 1.0,
@@ -179,7 +179,7 @@
       "#b3e5fc"
     ]
   },
-  "docker-whale.cow": {
+  "docker-whale": {
     "base": "Float",
     "particles": "Bubbles",
     "speed": 1.0,
@@ -191,7 +191,7 @@
       "#4fc3f7"
     ]
   },
-  "octopus.cow": {
+  "octopus": {
     "base": "Float",
     "particles": null,
     "speed": 1.0,
@@ -203,7 +203,7 @@
       "#ffd54f"
     ]
   },
-  "smiling-octopus.cow": {
+  "smiling-octopus": {
     "base": "Float",
     "particles": null,
     "speed": 1.0,
@@ -215,7 +215,7 @@
       "#ffd54f"
     ]
   },
-  "jellyfish.cow": {
+  "jellyfish": {
     "base": "Float",
     "particles": "Pulse",
     "speed": 1.0,
@@ -227,7 +227,7 @@
       "#b388ff"
     ]
   },
-  "seahorse.cow": {
+  "seahorse": {
     "base": "Float",
     "particles": "Bubbles",
     "speed": 1.0,
@@ -239,7 +239,7 @@
       "#e65100"
     ]
   },
-  "seahorse-big.cow": {
+  "seahorse-big": {
     "base": "Float",
     "particles": "Bubbles",
     "speed": 1.0,
@@ -251,7 +251,7 @@
       "#e65100"
     ]
   },
-  "lobster.cow": {
+  "lobster": {
     "base": "Walk",
     "particles": null,
     "speed": 1.0,
@@ -263,7 +263,7 @@
       "#ffcdd2"
     ]
   },
-  "turkey.cow": {
+  "turkey": {
     "base": "Walk",
     "particles": null,
     "speed": 1.0,
@@ -275,7 +275,7 @@
       "#212121"
     ]
   },
-  "owl.cow": {
+  "owl": {
     "base": "Breathe",
     "particles": null,
     "speed": 0.8,
@@ -287,7 +287,7 @@
       "#3e2723"
     ]
   },
-  "golden-eagle.cow": {
+  "golden-eagle": {
     "base": "Fly",
     "particles": null,
     "speed": 1.2,
@@ -299,7 +299,7 @@
       "#212121"
     ]
   },
-  "tweety-bird.cow": {
+  "tweety-bird": {
     "base": "Fly",
     "particles": null,
     "speed": 1.2,
@@ -311,7 +311,7 @@
       "#00b0ff"
     ]
   },
-  "pterodactyl.cow": {
+  "pterodactyl": {
     "base": "Fly",
     "particles": null,
     "speed": 1.2,
@@ -323,7 +323,7 @@
       "#e65100"
     ]
   },
-  "cat.cow": {
+  "cat": {
     "base": "Walk",
     "particles": null,
     "speed": 1.0,
@@ -335,7 +335,7 @@
       "#212121"
     ]
   },
-  "cat2.cow": {
+  "cat2": {
     "base": "Walk",
     "particles": null,
     "speed": 1.0,
@@ -347,7 +347,7 @@
       "#2ecc71"
     ]
   },
-  "kitty.cow": {
+  "kitty": {
     "base": "Walk",
     "particles": null,
     "speed": 1.0,
@@ -359,7 +359,7 @@
       "#212121"
     ]
   },
-  "kitten.cow": {
+  "kitten": {
     "base": "Walk",
     "particles": null,
     "speed": 1.0,
@@ -371,7 +371,7 @@
       "#212121"
     ]
   },
-  "meow.cow": {
+  "meow": {
     "base": "Talk",
     "particles": null,
     "speed": 1.0,
@@ -383,7 +383,7 @@
       "#212121"
     ]
   },
-  "catfence.cow": {
+  "catfence": {
     "base": "Sway",
     "particles": null,
     "speed": 1.0,
@@ -395,7 +395,7 @@
       "#1a1a1a"
     ]
   },
-  "doge.cow": {
+  "doge": {
     "base": "Walk",
     "particles": null,
     "speed": 1.0,
@@ -407,7 +407,7 @@
       "#1a1a1a"
     ]
   },
-  "fox.cow": {
+  "fox": {
     "base": "Walk",
     "particles": null,
     "speed": 1.0,
@@ -419,7 +419,7 @@
       "#fbc02d"
     ]
   },
-  "bunny.cow": {
+  "bunny": {
     "base": "Walk",
     "particles": null,
     "speed": 1.25,
@@ -431,7 +431,7 @@
       "#cbd5e1"
     ]
   },
-  "squirrel.cow": {
+  "squirrel": {
     "base": "Walk",
     "particles": null,
     "speed": 1.0,
@@ -443,7 +443,7 @@
       "#f5f5f5"
     ]
   },
-  "hedgehog.cow": {
+  "hedgehog": {
     "base": "Walk",
     "particles": null,
     "speed": 1.0,
@@ -455,7 +455,7 @@
       "#212121"
     ]
   },
-  "koala.cow": {
+  "koala": {
     "base": "Breathe",
     "particles": "Zzz",
     "speed": 0.8,
@@ -467,7 +467,7 @@
       "#795548"
     ]
   },
-  "luke-koala.cow": {
+  "luke-koala": {
     "base": "Breathe",
     "particles": "Zzz",
     "speed": 0.8,
@@ -479,7 +479,7 @@
       "#212121"
     ]
   },
-  "dragon.cow": {
+  "dragon": {
     "base": "Breathe",
     "particles": "Fire",
     "speed": 0.8,
@@ -491,7 +491,7 @@
       "#3e2723"
     ]
   },
-  "dragon-and-cow.cow": {
+  "dragon-and-cow": {
     "base": "Breathe",
     "particles": "Fire",
     "speed": 0.8,
@@ -503,7 +503,7 @@
       "#1a1a1a"
     ]
   },
-  "charizardvice.cow": {
+  "charizardvice": {
     "base": "Breathe",
     "particles": "Fire",
     "speed": 0.8,
@@ -515,7 +515,7 @@
       "#78909c"
     ]
   },
-  "ghost.cow": {
+  "ghost": {
     "base": "Float",
     "particles": "Glitch",
     "speed": 1.0,
@@ -527,7 +527,7 @@
       "#212121"
     ]
   },
-  "ghostbusters.cow": {
+  "ghostbusters": {
     "base": "Pulse",
     "particles": null,
     "speed": 1.0,
@@ -539,7 +539,7 @@
       "#00e5ff"
     ]
   },
-  "weeping-angel.cow": {
+  "weeping-angel": {
     "base": "Pulse",
     "particles": null,
     "speed": 1.0,
@@ -551,12 +551,7 @@
       "#e0e0e0"
     ]
   },
-  "alien.cow": {
-    "base": "Pulse",
-    "particles": null,
-    "speed": 1.0
-  },
-  "cthulhu-mini.cow": {
+  "cthulhu-mini": {
     "base": "Float",
     "particles": null,
     "speed": 1.0,
@@ -568,7 +563,7 @@
       "#33691e"
     ]
   },
-  "daemon.cow": {
+  "daemon": {
     "base": "Fly",
     "particles": "Fire",
     "speed": 1.2,
@@ -580,7 +575,7 @@
       "#ffffff"
     ]
   },
-  "satanic.cow": {
+  "satanic": {
     "base": "Pulse",
     "particles": null,
     "speed": 1.0,
@@ -592,7 +587,7 @@
       "#000000"
     ]
   },
-  "minotaur.cow": {
+  "minotaur": {
     "base": "Walk",
     "particles": null,
     "speed": 1.0,
@@ -604,7 +599,7 @@
       "#d7ccc8"
     ]
   },
-  "glados.cow": {
+  "glados": {
     "base": "Glitch",
     "particles": "Glitch",
     "speed": 1.0,
@@ -616,7 +611,7 @@
       "#ff1744"
     ]
   },
-  "personality-sphere.cow": {
+  "personality-sphere": {
     "base": "Float",
     "particles": null,
     "speed": 1.0,
@@ -628,7 +623,7 @@
       "#ffffff"
     ]
   },
-  "kosh.cow": {
+  "kosh": {
     "base": "Float",
     "particles": null,
     "speed": 1.0,
@@ -640,12 +635,7 @@
       "#37474f"
     ]
   },
-  "batman.cow": {
-    "base": "Fly",
-    "particles": null,
-    "speed": 1.5
-  },
-  "snoopy.cow": {
+  "snoopy": {
     "base": "Breathe",
     "particles": null,
     "speed": 0.8,
@@ -657,7 +647,7 @@
       "#ffcdd2"
     ]
   },
-  "snoopyhouse.cow": {
+  "snoopyhouse": {
     "base": "Breathe",
     "particles": null,
     "speed": 0.8,
@@ -669,7 +659,7 @@
       "#424242"
     ]
   },
-  "snoopysleep.cow": {
+  "snoopysleep": {
     "base": "Breathe",
     "particles": null,
     "speed": 0.8,
@@ -681,7 +671,7 @@
       "#90caf9"
     ]
   },
-  "ren.cow": {
+  "ren": {
     "base": "Talk",
     "particles": null,
     "speed": 1.0,
@@ -693,7 +683,7 @@
       "#ffd600"
     ]
   },
-  "stimpy.cow": {
+  "stimpy": {
     "base": "Talk",
     "particles": null,
     "speed": 1.0,
@@ -705,7 +695,7 @@
       "#ffeb3b"
     ]
   },
-  "beavis.zen.cow": {
+  "beavis.zen": {
     "base": "Walk",
     "particles": null,
     "speed": 1.0,
@@ -717,7 +707,7 @@
       "#7e57c2"
     ]
   },
-  "nyan.cow": {
+  "nyan": {
     "base": "Fly",
     "particles": "Stars",
     "speed": 1.2,
@@ -726,12 +716,10 @@
       "#ff7f00",
       "#ffff00",
       "#33ff00",
-      "#0099ff",
-      "#9933ff",
-      "#ffccbc"
+      "#0099ff"
     ]
   },
-  "hellokitty.cow": {
+  "hellokitty": {
     "base": "Walk",
     "particles": null,
     "speed": 1.0,
@@ -743,7 +731,7 @@
       "#42a5f5"
     ]
   },
-  "bees.cow": {
+  "bees": {
     "base": "Fly",
     "particles": null,
     "speed": 1.2,
@@ -755,7 +743,7 @@
       "#80d8ff"
     ]
   },
-  "spidercow.cow": {
+  "spidercow": {
     "base": "Walk",
     "particles": null,
     "speed": 1.0,
@@ -767,7 +755,7 @@
       "#e0e0e0"
     ]
   },
-  "stegosaurus.cow": {
+  "stegosaurus": {
     "base": "Walk",
     "particles": null,
     "speed": 1.0,
@@ -779,7 +767,7 @@
       "#ff9800"
     ]
   },
-  "tortoise.cow": {
+  "tortoise": {
     "base": "Walk",
     "particles": null,
     "speed": 1.0,
@@ -791,7 +779,7 @@
       "#d7ccc8"
     ]
   },
-  "turtle.cow": {
+  "turtle": {
     "base": "Float",
     "particles": null,
     "speed": 1.0,
@@ -803,7 +791,7 @@
       "#1b5e20"
     ]
   },
-  "mona-lisa.cow": {
+  "mona-lisa": {
     "base": "Breathe",
     "particles": null,
     "speed": 0.8,
@@ -815,7 +803,7 @@
       "#2e7d32"
     ]
   },
-  "periodic-table.cow": {
+  "periodic-table": {
     "base": "Pulse",
     "particles": null,
     "speed": 1.0,
@@ -827,7 +815,7 @@
       "#7c4dff"
     ]
   },
-  "world.cow": {
+  "world": {
     "base": "Float",
     "particles": null,
     "speed": 1.0,
@@ -839,7 +827,7 @@
       "#43a047"
     ]
   },
-  "king.cow": {
+  "king": {
     "base": "Breathe",
     "particles": null,
     "speed": 0.8,
@@ -851,7 +839,7 @@
       "#cfd8dc"
     ]
   },
-  "queen.cow": {
+  "queen": {
     "base": "Breathe",
     "particles": null,
     "speed": 0.8,
@@ -863,7 +851,7 @@
       "#cfd8dc"
     ]
   },
-  "knight.cow": {
+  "knight": {
     "base": "Walk",
     "particles": null,
     "speed": 1.0,
@@ -875,7 +863,7 @@
       "#ffffff"
     ]
   },
-  "rook.cow": {
+  "rook": {
     "base": "Walk",
     "particles": null,
     "speed": 1.0,
@@ -887,7 +875,7 @@
       "#ffffff"
     ]
   },
-  "pawn.cow": {
+  "pawn": {
     "base": "Walk",
     "particles": null,
     "speed": 1.0,
@@ -899,7 +887,7 @@
       "#ffffff"
     ]
   },
-  "surgery.cow": {
+  "surgery": {
     "base": "Glitch",
     "particles": "Glitch",
     "speed": 1.0,
@@ -911,7 +899,7 @@
       "#ef4444"
     ]
   },
-  "mutilated.cow": {
+  "mutilated": {
     "base": "Dissolve",
     "particles": null,
     "speed": 1.0,
@@ -923,7 +911,7 @@
       "#ffffff"
     ]
   },
-  "tux.cow": {
+  "tux": {
     "base": "Walk",
     "particles": null,
     "speed": 1.0,
@@ -935,7 +923,7 @@
       "#f57c00"
     ]
   },
-  "tux-big.cow": {
+  "tux-big": {
     "base": "Walk",
     "particles": null,
     "speed": 1.0,
@@ -947,7 +935,7 @@
       "#f57c00"
     ]
   },
-  "armadillo.cow": {
+  "armadillo": {
     "base": "Walk",
     "particles": null,
     "speed": 1.0,
@@ -959,7 +947,7 @@
       "#3e2723"
     ]
   },
-  "atat.cow": {
+  "atat": {
     "base": "Walk",
     "particles": null,
     "speed": 1.0,
@@ -971,7 +959,7 @@
       "#d32f2f"
     ]
   },
-  "bearface.cow": {
+  "bearface": {
     "base": "Breathe",
     "particles": null,
     "speed": 0.8,
@@ -983,7 +971,7 @@
       "#ffffff"
     ]
   },
-  "bill-the-cat.cow": {
+  "bill-the-cat": {
     "base": "Talk",
     "particles": null,
     "speed": 1.0,
@@ -995,7 +983,7 @@
       "#ffffff"
     ]
   },
-  "bud-frogs.cow": {
+  "bud-frogs": {
     "base": "Float",
     "particles": null,
     "speed": 1.0,
@@ -1007,7 +995,7 @@
       "#ffb300"
     ]
   },
-  "charlie.cow": {
+  "charlie": {
     "base": "Talk",
     "particles": null,
     "speed": 1.0,
@@ -1019,7 +1007,7 @@
       "#ffccbc"
     ]
   },
-  "claw-arm.cow": {
+  "claw-arm": {
     "base": "Pulse",
     "particles": "Pulse",
     "speed": 1.0,
@@ -1031,7 +1019,7 @@
       "#37474f"
     ]
   },
-  "cowfee.cow": {
+  "cowfee": {
     "base": "Breathe",
     "particles": null,
     "speed": 0.8,
@@ -1043,7 +1031,7 @@
       "#ffab91"
     ]
   },
-  "ebi_furai.cow": {
+  "ebi_furai": {
     "base": "Float",
     "particles": null,
     "speed": 1.0,
@@ -1055,7 +1043,7 @@
       "#ff8a80"
     ]
   },
-  "elephant-in-snake.cow": {
+  "elephant-in-snake": {
     "base": "Breathe",
     "particles": null,
     "speed": 0.8,
@@ -1067,7 +1055,7 @@
       "#fff9c4"
     ]
   },
-  "elephant.cow": {
+  "elephant": {
     "base": "Walk",
     "particles": null,
     "speed": 1.0,
@@ -1079,7 +1067,7 @@
       "#ffccbc"
     ]
   },
-  "elephant2.cow": {
+  "elephant2": {
     "base": "Walk",
     "particles": null,
     "speed": 1.0,
@@ -1091,7 +1079,7 @@
       "#37474f"
     ]
   },
-  "eyes.cow": {
+  "eyes": {
     "base": "Pulse",
     "particles": "Pulse",
     "speed": 1.0,
@@ -1103,7 +1091,7 @@
       "#76ff03"
     ]
   },
-  "fat-banana.cow": {
+  "fat-banana": {
     "base": "Sway",
     "particles": null,
     "speed": 1.0,
@@ -1115,7 +1103,7 @@
       "#4caf50"
     ]
   },
-  "fence.cow": {
+  "fence": {
     "base": "Sway",
     "particles": null,
     "speed": 1.0,
@@ -1127,7 +1115,7 @@
       "#7cb342"
     ]
   },
-  "hippie.cow": {
+  "hippie": {
     "base": "Sway",
     "particles": null,
     "speed": 1.0,
@@ -1139,7 +1127,7 @@
       "#d500f9"
     ]
   },
-  "hiya.cow": {
+  "hiya": {
     "base": "Talk",
     "particles": null,
     "speed": 1.0,
@@ -1151,7 +1139,7 @@
       "#fbc02d"
     ]
   },
-  "hypno.cow": {
+  "hypno": {
     "base": "Pulse",
     "particles": "Pulse",
     "speed": 1.0,
@@ -1163,7 +1151,7 @@
       "#fff59d"
     ]
   },
-  "kiss.cow": {
+  "kiss": {
     "base": "Talk",
     "particles": null,
     "speed": 1.0,
@@ -1175,7 +1163,7 @@
       "#757575"
     ]
   },
-  "lollerskates.cow": {
+  "lollerskates": {
     "base": "Walk",
     "particles": null,
     "speed": 1.0,
@@ -1187,7 +1175,7 @@
       "#7c4dff"
     ]
   },
-  "moofasa.cow": {
+  "moofasa": {
     "base": "Breathe",
     "particles": null,
     "speed": 0.8,
@@ -1199,7 +1187,7 @@
       "#ffd54f"
     ]
   },
-  "mooghidjirah.cow": {
+  "mooghidjirah": {
     "base": "Breathe",
     "particles": null,
     "speed": 0.8,
@@ -1211,7 +1199,7 @@
       "#212121"
     ]
   },
-  "moojira.cow": {
+  "moojira": {
     "base": "Breathe",
     "particles": null,
     "speed": 0.8,
@@ -1223,7 +1211,7 @@
       "#ffffff"
     ]
   },
-  "shikato.cow": {
+  "shikato": {
     "base": "Breathe",
     "particles": null,
     "speed": 0.8,
@@ -1235,7 +1223,7 @@
       "#757575"
     ]
   },
-  "shrug.cow": {
+  "shrug": {
     "base": "Sway",
     "particles": null,
     "speed": 1.0,
@@ -1247,7 +1235,7 @@
       "#212121"
     ]
   },
-  "skeleton.cow": {
+  "skeleton": {
     "base": "Walk",
     "particles": null,
     "speed": 1.0,
@@ -1259,7 +1247,7 @@
       "#757575"
     ]
   },
-  "small.cow": {
+  "small": {
     "base": "Walk",
     "particles": null,
     "speed": 1.0,
@@ -1271,7 +1259,7 @@
       "#8d6e63"
     ]
   },
-  "wizard.cow": {
+  "wizard": {
     "base": "Float",
     "particles": "Stars",
     "speed": 1.0,
@@ -1283,7 +1271,7 @@
       "#00e5ff"
     ]
   },
-  "hamster.cow": {
+  "hamster": {
     "base": "Walk",
     "particles": null,
     "speed": 1.25,
@@ -1295,7 +1283,7 @@
       "#212121"
     ]
   },
-  "corgi.cow": {
+  "corgi": {
     "base": "Walk",
     "particles": null,
     "speed": 1.25,
@@ -1307,7 +1295,7 @@
       "#ffb6c1"
     ]
   },
-  "pig.cow": {
+  "pig": {
     "base": "Walk",
     "particles": null,
     "speed": 1.0,
@@ -1319,7 +1307,7 @@
       "#8d6e63"
     ]
   },
-  "ram.cow": {
+  "ram": {
     "base": "Walk",
     "particles": null,
     "speed": 1.0,
@@ -1331,7 +1319,7 @@
       "#616161"
     ]
   },
-  "rooster.cow": {
+  "rooster": {
     "base": "Walk",
     "particles": null,
     "speed": 1.0,
@@ -1343,7 +1331,7 @@
       "#fbc02d"
     ]
   },
-  "panther.cow": {
+  "panther": {
     "base": "Walk",
     "particles": null,
     "speed": 1.0,
@@ -1355,7 +1343,7 @@
       "#f43f5e"
     ]
   },
-  "rhino.cow": {
+  "rhino": {
     "base": "Walk",
     "particles": null,
     "speed": 1.0,
@@ -1367,7 +1355,7 @@
       "#1e293b"
     ]
   },
-  "sloth.cow": {
+  "sloth": {
     "base": "Breathe",
     "particles": null,
     "speed": 0.8,
@@ -1379,7 +1367,7 @@
       "#1c1917"
     ]
   },
-  "telebears.cow": {
+  "telebears": {
     "base": "Walk",
     "particles": null,
     "speed": 1.0,
@@ -1391,7 +1379,7 @@
       "#facc15"
     ]
   },
-  "tiger.cow": {
+  "tiger": {
     "base": "Walk",
     "particles": null,
     "speed": 1.0,
@@ -1403,7 +1391,7 @@
       "#84cc16"
     ]
   },
-  "wolf.cow": {
+  "wolf": {
     "base": "Walk",
     "particles": null,
     "speed": 1.0,
@@ -1415,7 +1403,7 @@
       "#f59e0b"
     ]
   },
-  "duck.cow": {
+  "duck": {
     "base": "Fly",
     "particles": null,
     "speed": 1.2,
@@ -1427,7 +1415,7 @@
       "#f3f4f6"
     ]
   },
-  "pufferfish.cow": {
+  "pufferfish": {
     "base": "Pulse",
     "particles": "Pulse",
     "speed": 1.0,
@@ -1439,7 +1427,7 @@
       "#15803d"
     ]
   },
-  "squid.cow": {
+  "squid": {
     "base": "Float",
     "particles": null,
     "speed": 1.0,
@@ -1451,7 +1439,7 @@
       "#f59e0b"
     ]
   },
-  "walrus.cow": {
+  "walrus": {
     "base": "Breathe",
     "particles": null,
     "speed": 0.8,
@@ -1463,7 +1451,7 @@
       "#f43f5e"
     ]
   },
-  "mech-and-cow.cow": {
+  "mech-and-cow": {
     "base": "Walk",
     "particles": null,
     "speed": 1.0,
@@ -1475,7 +1463,7 @@
       "#ffffff"
     ]
   },
-  "sauron.cow": {
+  "sauron": {
     "base": "Pulse",
     "particles": "Pulse",
     "speed": 1.0,
@@ -1487,7 +1475,7 @@
       "#ffeb3b"
     ]
   },
-  "unipony.cow": {
+  "unipony": {
     "base": "Walk",
     "particles": "Stars",
     "speed": 1.0,
@@ -1499,7 +1487,7 @@
       "#ffffff"
     ]
   },
-  "vader.cow": {
+  "vader": {
     "base": "Breathe",
     "particles": null,
     "speed": 0.8,
@@ -1511,7 +1499,7 @@
       "#38bdf8"
     ]
   },
-  "yoda.cow": {
+  "yoda": {
     "base": "Float",
     "particles": "Stars",
     "speed": 1.0,
@@ -1523,7 +1511,7 @@
       "#854d0e"
     ]
   },
-  "radioactive-kitty.cow": {
+  "radioactive-kitty": {
     "base": "Glitch",
     "particles": "Glitch",
     "speed": 1.0,
@@ -1535,7 +1523,7 @@
       "#ffffff"
     ]
   },
-  "vulpix.cow": {
+  "vulpix": {
     "base": "Walk",
     "particles": null,
     "speed": 1.0,
@@ -1547,7 +1535,7 @@
       "#ffedd5"
     ]
   },
-  "apt.cow": {
+  "apt": {
     "base": "Walk",
     "particles": null,
     "speed": 1.0,
@@ -1559,7 +1547,7 @@
       "#212121"
     ]
   },
-  "jesus.cow": {
+  "jesus": {
     "base": "Float",
     "particles": null,
     "speed": 1.0,
@@ -1571,7 +1559,7 @@
       "#d97706"
     ]
   },
-  "three-eyes.cow": {
+  "three-eyes": {
     "base": "Breathe",
     "particles": null,
     "speed": 0.8,
@@ -1583,7 +1571,7 @@
       "#ffb6c1"
     ]
   },
-  "viper.cow": {
+  "viper": {
     "base": "Sway",
     "particles": null,
     "speed": 1.0,

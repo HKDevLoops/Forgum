@@ -494,11 +494,105 @@ pub fn run() -> ExitCode {
                         cfg.shell_attach_mode = v;
                         None
                     }
+                    "environment" | "env" => {
+                        cfg.environment = if v.is_empty() || v == "none" {
+                            None
+                        } else {
+                            Some(v)
+                        };
+                        None
+                    }
+                    "road" => {
+                        cfg.road = if v.is_empty() || v == "none" {
+                            None
+                        } else {
+                            Some(v)
+                        };
+                        None
+                    }
+                    "mountain" | "mtn" => {
+                        cfg.mountain = if v.is_empty() || v == "none" {
+                            None
+                        } else {
+                            Some(v)
+                        };
+                        None
+                    }
+                    "palette" => {
+                        cfg.palette = if v.is_empty() || v == "none" {
+                            None
+                        } else {
+                            Some(v)
+                        };
+                        None
+                    }
+                    "thought_interval" => match v.parse::<u32>() {
+                        Ok(n) => {
+                            cfg.thought_interval = n;
+                            None
+                        }
+                        Err(e) => Some(format!("{e}")),
+                    },
+                    "split_scroll" => match v.parse::<bool>() {
+                        Ok(b) => {
+                            cfg.split_scroll = b;
+                            None
+                        }
+                        Err(e) => Some(format!("{e}")),
+                    },
+                    "reserve_rows" => match v.parse::<u16>() {
+                        Ok(n) => {
+                            cfg.reserve_rows = Some(n);
+                            None
+                        }
+                        Err(e) => Some(format!("{e}")),
+                    },
+                    "reserve_cols" => match v.parse::<u16>() {
+                        Ok(n) => {
+                            cfg.reserve_cols = Some(n);
+                            None
+                        }
+                        Err(e) => Some(format!("{e}")),
+                    },
+                    "split_ratio" => match v.parse::<f32>() {
+                        Ok(r) => {
+                            cfg.split_ratio = Some(r);
+                            None
+                        }
+                        Err(e) => Some(format!("{e}")),
+                    },
+                    "animation" => {
+                        cfg.animation = if v.is_empty() || v == "none" {
+                            None
+                        } else {
+                            Some(v)
+                        };
+                        None
+                    }
+                    "animation_type" | "anim_type" => {
+                        cfg.animation_type = if v.is_empty() || v == "none" {
+                            None
+                        } else {
+                            Some(v)
+                        };
+                        None
+                    }
+                    "image" => {
+                        cfg.image = if v.is_empty() || v == "none" {
+                            None
+                        } else {
+                            Some(v)
+                        };
+                        None
+                    }
                     other => {
                         eprintln!("unknown config key: {other}");
                         eprintln!(
                             "supported keys: cow, text, effect, background, duration, \
-                             fps, eyes, tongue, default_shell, auto_render_on_prompt, color_mode, shell_attach_mode"
+                             fps, eyes, tongue, default_shell, auto_render_on_prompt, think, \
+                             color_mode, shell_attach_mode, environment, road, mountain, \
+                             palette, thought_interval, split_scroll, reserve_rows, reserve_cols, \
+                             split_ratio, animation, animation_type, image"
                         );
                         return ExitCode::from(1);
                     }
@@ -1559,7 +1653,17 @@ fn render_subcommand_with_scene(
     let composed = cow::compose_scene_with_mode(&cow_text, &scene.text, is_thought);
 
     let animations = dna::load_animations(&data);
-    let cow_dna = dna::get_dna(&animations, &scene.cow);
+    let mut cow_dna = dna::get_dna(&animations, &scene.cow);
+    if let Some(ref pal_str) = scene.palette {
+        let hexes: Vec<String> = pal_str
+            .split(',')
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty())
+            .collect();
+        if !hexes.is_empty() {
+            cow_dna.palette = hexes;
+        }
+    }
     let instance_id = std::process::id();
 
     let result = if scene.background || scene.split_scroll || args.split_scroll {

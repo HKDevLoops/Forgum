@@ -346,6 +346,43 @@ mod tests {
     }
 
     #[test]
+    fn full_environmental_and_visual_properties_round_trip() {
+        let full = SceneConfig {
+            cow: "corgi".into(),
+            text: "Hello Forgum!".into(),
+            think: false,
+            effect: "walk".into(),
+            background: true,
+            duration: 15,
+            fps: 60,
+            eyes: "$$".into(),
+            tongue: "U ".into(),
+            default_shell: "pwsh".into(),
+            auto_render_on_prompt: true,
+            color_mode: "rainbow".into(),
+            shell_attach_mode: "split".into(),
+            environment: Some("inferno".into()),
+            road: Some("cobblestone".into()),
+            mountain: Some("volcano".into()),
+            palette: Some("#ffffff,#ff00ff,#00ffff".into()),
+            thought_interval: 30,
+            split_scroll: true,
+            reserve_rows: Some(12),
+            reserve_cols: Some(80),
+            split_ratio: Some(0.35),
+            animation: Some("dynamic".into()),
+            animation_type: Some("walk".into()),
+            image: None,
+        };
+
+        for format in [ConfigFormat::Json, ConfigFormat::Yaml, ConfigFormat::Toml] {
+            let serialized = full.serialize_with_format(format).expect("serialization succeeds");
+            let deserialized = SceneConfig::parse_with_format(&serialized, format).expect("deserialization succeeds");
+            assert_eq!(full, deserialized, "Mismatch for format {:?}", format);
+        }
+    }
+
+    #[test]
     fn duration_zero_is_accepted() {
         let json = r#"{"duration":0}"#;
         let s: SceneConfig = serde_json::from_str(json).unwrap();

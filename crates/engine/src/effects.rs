@@ -233,10 +233,19 @@ pub struct StaticEffect {
     cow_text: String,
     blink_text: String,
     color_mode: String,
+    palette: Vec<(u8, u8, u8)>,
 }
 
 impl StaticEffect {
     pub fn new(cow_text: String, color_mode: String) -> Self {
+        Self::with_palette(cow_text, color_mode, Vec::new())
+    }
+
+    pub fn with_palette(
+        cow_text: String,
+        color_mode: String,
+        palette: Vec<(u8, u8, u8)>,
+    ) -> Self {
         let cow_start = find_cow_start_line(&cow_text);
         let landmarks = crate::cow::detect_cow_eyes(&cow_text, cow_start);
         let mut blink_lines: Vec<String> = cow_text.lines().map(|s| s.to_string()).collect();
@@ -278,6 +287,7 @@ impl StaticEffect {
             cow_text,
             blink_text,
             color_mode,
+            palette,
         }
     }
 }
@@ -297,7 +307,16 @@ impl Effect for StaticEffect {
         };
 
         // Strictly anchored at stagnant position (0, 0)
-        render_text_offset(fb, display_text, Color::WHITE, 0, 0, &self.color_mode, time);
+        render_text_offset_palette(
+            fb,
+            display_text,
+            Color::WHITE,
+            0,
+            0,
+            &self.color_mode,
+            &self.palette,
+            time,
+        );
     }
 }
 
@@ -1364,7 +1383,8 @@ impl Effect for ParticlesEffect {
     }
 
     fn render(&self, fb: &mut FrameBuffer, time: f32) {
-        render_text(fb, &self.cow_text, Color::WHITE, &self.color_mode, time);
+        let palette = color::parse_palette(&self.dna.palette);
+        render_text_palette(fb, &self.cow_text, Color::WHITE, &self.color_mode, &palette, time);
         self.pool.render(fb, time, easing::expo_out);
     }
 }
@@ -2428,6 +2448,7 @@ pub(crate) fn resolve_fg_palette(
             if let Some(mascot) = color_mode
                 .strip_prefix("natural:")
                 .or_else(|| color_mode.strip_prefix("animal:"))
+                .or_else(|| color_mode.strip_prefix("animal_natural:"))
             {
                 let p = crate::color::get_natural_palette(mascot);
                 let (r, g, b) = crate::color::palette_gradient(p, x as f32, y as f32, time);
@@ -2715,8 +2736,13 @@ pub fn create_scene_effect(
     color_mode: &str,
 ) -> Box<dyn Effect> {
     let eff = effect_name.trim().to_ascii_lowercase();
+    let palette = crate::color::parse_palette(&dna.palette);
     if eff == "static" {
-        return Box::new(StaticEffect::new(cow_text, color_mode.to_string()));
+        return Box::new(StaticEffect::with_palette(
+            cow_text,
+            color_mode.to_string(),
+            palette,
+        ));
     }
 
     let base: Box<dyn Effect> = match eff.as_str() {

@@ -354,6 +354,7 @@ pub fn render_options(category: &str) -> String {
         out.push_str("\n\x1b[1;35m━━━ Forgum Animation Effects (--effect) ━━━\x1b[0m\n");
         let headers = ["Effect", "Type", "Motion & Anatomical Cadence Description"];
         let rows = vec![
+            vec!["animal_natural", "Signature DNA", "Authentic biological motion and particle effects dynamically derived from the mascot's DNA (alias: natural, default)"],
             vec!["walk", "Dynamic Movement", "Natural forward leg oscillation with realistic ~2.8s bovine cud chew pacing and peaceful rests"],
             vec!["breathe", "Idle Respiration", "Gentle rhythmic chest and torso expansion and contraction idle breathing cycle"],
             vec!["float", "Levitation", "Zero-gravity sinusoidal hovering and gentle vertical drift across the viewport"],
@@ -609,6 +610,7 @@ pub fn render_options(category: &str) -> String {
         out.push_str("\n\x1b[1;35m━━━ Color Modes (--color-mode) ━━━\x1b[0m\n");
         let headers = ["Color Mode", "Color Mapping Algorithm", "Visual Output"];
         let rows = vec![
+            vec!["natural", "Authentic God-given biological color palette unique to each creature (alias: animal_natural, animal, default)", "Dynamically derives and maps the animal's exact natural fur, feather, scale, or skin palette with OKLCH gradient transitions"],
             vec!["default", "Animal-specific natural wildlife color palette (alias: animal)", "Each creature receives its authentic natural wildlife hue (dragon=fire/gold, whale=ocean azure, cat=amber)"],
             vec!["rainbow", "Refined OKLCH perceptual lightness-uniform chromatic spectrum (alias: lolcat)", "Smooth non-banding perceptual rainbow flowing diagonally across characters in real time"],
             vec!["solid", "Pure single-color monochromatic highlight", "High-contrast focused primary color accentuating ASCII contours cleanly"],
@@ -833,6 +835,48 @@ pub fn render_options(category: &str) -> String {
                 "true, false",
                 "Lock terminal scroll margins below banner (DECSTBM)",
             ],
+            vec![
+                "palette",
+                "string",
+                "#ff007f,#00f0ff (comma-separated hex codes)",
+                "Custom 24-bit TrueColor hex palette gradient",
+            ],
+            vec![
+                "reserve_rows",
+                "integer",
+                "8, 12, 16 (terminal rows)",
+                "Explicit rows reserved at terminal top for animation canvas",
+            ],
+            vec![
+                "reserve_cols",
+                "integer",
+                "80, 100, 120 (terminal columns)",
+                "Explicit columns reserved for animation canvas",
+            ],
+            vec![
+                "split_ratio",
+                "float",
+                "0.25, 0.35, 0.50 (0.1..0.8)",
+                "Dynamic fractional ratio of terminal height reserved for canvas",
+            ],
+            vec![
+                "animation",
+                "string",
+                "static, dynamic",
+                "Animation motion mode (stationary vs dynamic motion)",
+            ],
+            vec![
+                "animation_type",
+                "string",
+                "animal_natural, walk, breathe, float, fly, talk, sway...",
+                "Specific kinematic motion to drive the mascot",
+            ],
+            vec![
+                "image",
+                "string",
+                "path/to/mascot.png (PNG, JPG, BMP, etc.)",
+                "Convert image to ASCII art and use as custom mascot",
+            ],
         ];
         out.push_str(&format_table(&c_headers, &c_rows));
     }
@@ -1054,4 +1098,22 @@ mod tests {
         assert!(text.contains("eyes"));
         assert!(text.contains("tongue"));
     }
+
+    #[test]
+    fn render_options_colors_includes_natural() {
+        let text = render_options("colors");
+        assert!(text.contains("Color Modes"));
+        assert!(text.contains("natural"));
+        assert!(text.contains("Authentic God-given"));
+    }
+
+    #[test]
+    fn render_options_effects_includes_animal_natural() {
+        let text = render_options("effects");
+        assert!(text.contains("Animation Effects"));
+        assert!(text.contains("animal_natural"));
+        assert!(text.contains("Signature DNA"));
+        assert!(text.contains("Authentic biological motion and particle effects"));
+    }
 }
+
