@@ -336,6 +336,47 @@ pub fn is_canonical(path: &Path) -> bool {
         .unwrap_or(false)
 }
 
+/// Open a directory (or parent directory of a file) in the host operating system's graphical file explorer.
+///
+/// Ensures the target directory exists before opening so Explorer/Finder/xdg-open
+/// opens cleanly without "Path not found" errors.
+pub fn open_folder_in_desktop(path: &Path) -> Result<(), PlatformError> {
+    let target = if path.is_file() || path.extension().is_some() {
+        path.parent().unwrap_or(path)
+    } else {
+        path
+    };
+
+    if !target.exists() {
+        let _ = std::fs::create_dir_all(target);
+    }
+
+    #[cfg(windows)]
+    {
+        std::process::Command::new("explorer")
+            .arg(target)
+            .spawn()
+            .map_err(PlatformError::Io)?;
+        Ok(())
+    }
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("open")
+            .arg(target)
+            .spawn()
+            .map_err(PlatformError::Io)?;
+        Ok(())
+    }
+    #[cfg(all(unix, not(target_os = "macos")))]
+    {
+        std::process::Command::new("xdg-open")
+            .arg(target)
+            .spawn()
+            .map_err(PlatformError::Io)?;
+        Ok(())
+    }
+}
+
 /// Validate a session ID for use in a filesystem path.
 /// Rejects session IDs that could escape the runtime directory via ".." or absolute paths.
 fn is_safe_session_id(sid: &str) -> bool {

@@ -1237,9 +1237,23 @@ pub fn run() -> ExitCode {
         }
 
         // ── battle ──────────────────────────────────────────────────
-        Some(cli::Commands::Battle { name1, name2 }) => {
-            let output = forgum_engine::battle::run_battle(&name1, &name2);
-            print!("{output}");
+        Some(cli::Commands::Battle {
+            fighter1,
+            fighter2,
+            name1,
+            name2,
+            headless,
+            winner,
+            fps,
+        }) => {
+            let n1 = fighter1.unwrap_or(name1);
+            let n2 = fighter2.unwrap_or(name2);
+            if !headless && forgum_platform::is_stdout_tty() {
+                forgum_engine::battle::run_battle_live(&n1, &n2, winner, fps);
+            } else {
+                let output = forgum_engine::battle::run_battle(&n1, &n2);
+                print!("{output}");
+            }
             ExitCode::SUCCESS
         }
 

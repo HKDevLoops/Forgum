@@ -1,0 +1,10 @@
+﻿##
+## Hamster Mascot
+##
+$the_cow = <<EOC;
+   $thoughts
+    $thoughts    (\__/)
+     $thoughts  ( $eyes )
+       ( >$tongue< )
+       (")___(")~
+EOC

@@ -158,12 +158,12 @@ fn generate_bash_completions(cmd: &mut clap::Command) -> String {
     // Enrich with discrete value completion lists for bash
     let enrichment = r#"
 # Forgum dynamic value completion helpers for bash
-_forgum_effects="walk breathe float fly talk sway pulse glitch particles dissolve"
+_forgum_effects="walk breathe float fly talk sway pulse glitch particles dissolve animal_natural natural"
 _forgum_mountains="hills peaks volcano iceberg skyline seamount plateau crater gothic castle garden none"
 _forgum_roads="dirt cobblestone magma ice seabed sidewalk roof grid crypt savanna mud tracks checkerboard none"
 _forgum_environments="pasture inferno ocean arctic city forest savanna swamp space cyber graveyard jurassic hive throne none"
-_forgum_colors="default animal rainbow lolcat solid none"
-_forgum_animals="apt armadillo atat bearface beavis.zen bees bill-the-cat bud-frogs bunny cat cat2 catfence charizardvice charlie claw-arm corgi cower cowfee cthulhu-mini daemon default docker-whale doge dolphin dragon dragon-and-cow duck ebi_furai elephant elephant-in-snake elephant2 eyes fat-banana fat-cow fence flaming-sheep fox ghost ghostbusters glados goat goat2 golden-eagle happy-whale hedgehog hellokitty hippie hiya hypno jellyfish jesus king kiss kitten kitty knight koala kosh lamb lamb2 lobster lollerskates luke-koala mech-and-cow meow milk minotaur mona-lisa moofasa mooghidjirah moojira moose mule mutilated nyan octopus owl panther pawn periodic-table personality-sphere pig pterodactyl pufferfish queen radioactive-kitty ram ren rhino rook rooster satanic sauron seahorse seahorse-big sheep shikato shrug skeleton sloth small smiling-octopus snoopy snoopyhouse snoopysleep spidercow squid squirrel stegosaurus stimpy supermilker surgery telebears three-eyes tiger tortoise turkey turtle tux tux-big tweety-bird unipony vader viper vulpix walrus weeping-angel whale wizard wolf world yoda random"
+_forgum_colors="natural animal_natural default animal rainbow lolcat solid none"
+_forgum_animals="apt armadillo atat bearface beavis.zen bees bill-the-cat bud-frogs bunny cat cat2 catfence charizardvice charlie claw-arm corgi cower cowfee cthulhu-mini daemon default docker-whale doge dolphin dragon dragon-and-cow duck ebi_furai elephant elephant-in-snake elephant2 eyes fat-banana fat-cow fence flaming-sheep fox ghost ghostbusters glados goat goat2 golden-eagle hamster happy-whale hedgehog hellokitty hippie hiya hypno jellyfish jesus king kiss kitten kitty knight koala kosh lamb lamb2 lobster lollerskates luke-koala mech-and-cow meow minotaur mona-lisa moofasa mooghidjirah moojira moose mule mutilated nyan octopus owl panther pawn periodic-table personality-sphere pig pterodactyl pufferfish queen radioactive-kitty ram ren rhino rook rooster satanic sauron seahorse seahorse-big sheep shikato shrug skeleton sloth small smiling-octopus snoopy snoopyhouse snoopysleep spidercow squid squirrel stegosaurus stimpy supermilker surgery telebears three-eyes tiger tortoise turkey turtle tux tux-big tweety-bird unipony vader viper vulpix walrus weeping-angel whale wizard wolf world yoda random"
 
 _forgum_custom_complete() {
     local prev="${COMP_WORDS[COMP_CWORD-1]}"
@@ -220,6 +220,18 @@ _forgum_effects=(
     'glitch:Digital cyberpunk glitch animation'
     'particles:Ambient particle emitter animation'
     'dissolve:Dissolve and materialize animation'
+    'animal_natural:Authentic God-given natural kinetic action'
+    'natural:Alias for animal_natural'
+)
+_forgum_colors=(
+    'natural:Authentic God-given biological color palette unique to each creature'
+    'animal_natural:Alias for natural'
+    'default:Creature natural wildlife colors'
+    'animal:Alias for default'
+    'rainbow:Refined saturated TrueColor OKLCH rainbow wave'
+    'lolcat:Classic 256-color stepped rainbow color prism'
+    'solid:Clean crisp monochrome terminal output'
+    'none:Unstyled terminal default text color'
 )
 _forgum_mountains=(
     'hills:Rolling verdant hills'
@@ -334,7 +346,7 @@ _forgum_animals=(
     'luke-koala:Mascot luke-koala'
     'mech-and-cow:Mascot mech-and-cow'
     'meow:Mascot meow'
-    'milk:Mascot milk'
+    'hamster:Mascot hamster'
     'minotaur:Mascot minotaur'
     'mona-lisa:Mascot mona-lisa'
     'moofasa:Mascot moofasa'
@@ -437,12 +449,12 @@ complete -c forgum -n '__fish_forgum_no_subcommand' -a 'showcase' -d 'Run 60-sec
 complete -c forgum -n '__fish_forgum_no_subcommand' -a 'say' -d 'Run command and display output in speech bubble'
 
 # Rich option value completions with descriptions
-complete -c forgum -l effect -s e -d 'Animation effect' -x -a 'walk	"Natural bovine walking animation" breathe	"Gentle idle breathing animation" float	"Drifting levitation animation" fly	"Flying creature animation" talk	"Conversational jaw animation" sway	"Swaying pendulum animation" pulse	"Pulsing scale animation" glitch	"Digital cyberpunk glitch animation" particles	"Ambient particle emitter animation" dissolve	"Dissolve and materialize animation"'
-complete -c forgum -l cow -l animal -s c -s a -d 'Animal mascot name' -x -a 'apt	"Mascot apt" armadillo	"Mascot armadillo" atat	"Mascot atat" bearface	"Mascot bearface" beavis.zen	"Mascot beavis.zen" bees	"Mascot bees" bill-the-cat	"Mascot bill-the-cat" bud-frogs	"Mascot bud-frogs" bunny	"Mascot bunny" cat	"Mascot cat" cat2	"Mascot cat2" catfence	"Mascot catfence" charizardvice	"Mascot charizardvice" charlie	"Mascot charlie" claw-arm	"Mascot claw-arm" corgi	"Mascot corgi" cower	"Mascot cower" cowfee	"Mascot cowfee" cthulhu-mini	"Mascot cthulhu-mini" daemon	"Mascot daemon" default	"Mascot default" docker-whale	"Mascot docker-whale" doge	"Mascot doge" dolphin	"Mascot dolphin" dragon	"Mascot dragon" dragon-and-cow	"Mascot dragon-and-cow" duck	"Mascot duck" ebi_furai	"Mascot ebi_furai" elephant	"Mascot elephant" elephant-in-snake	"Mascot elephant-in-snake" elephant2	"Mascot elephant2" eyes	"Mascot eyes" fat-banana	"Mascot fat-banana" fat-cow	"Mascot fat-cow" fence	"Mascot fence" flaming-sheep	"Mascot flaming-sheep" fox	"Mascot fox" ghost	"Mascot ghost" ghostbusters	"Mascot ghostbusters" glados	"Mascot glados" goat	"Mascot goat" goat2	"Mascot goat2" golden-eagle	"Mascot golden-eagle" happy-whale	"Mascot happy-whale" hedgehog	"Mascot hedgehog" hellokitty	"Mascot hellokitty" hippie	"Mascot hippie" hiya	"Mascot hiya" hypno	"Mascot hypno" jellyfish	"Mascot jellyfish" jesus	"Mascot jesus" king	"Mascot king" kiss	"Mascot kiss" kitten	"Mascot kitten" kitty	"Mascot kitty" knight	"Mascot knight" koala	"Mascot koala" kosh	"Mascot kosh" lamb	"Mascot lamb" lamb2	"Mascot lamb2" lobster	"Mascot lobster" lollerskates	"Mascot lollerskates" luke-koala	"Mascot luke-koala" mech-and-cow	"Mascot mech-and-cow" meow	"Mascot meow" milk	"Mascot milk" minotaur	"Mascot minotaur" mona-lisa	"Mascot mona-lisa" moofasa	"Mascot moofasa" mooghidjirah	"Mascot mooghidjirah" moojira	"Mascot moojira" moose	"Mascot moose" mule	"Mascot mule" mutilated	"Mascot mutilated" nyan	"Mascot nyan" octopus	"Mascot octopus" owl	"Mascot owl" panther	"Mascot panther" pawn	"Mascot pawn" periodic-table	"Mascot periodic-table" personality-sphere	"Mascot personality-sphere" pig	"Mascot pig" pterodactyl	"Mascot pterodactyl" pufferfish	"Mascot pufferfish" queen	"Mascot queen" radioactive-kitty	"Mascot radioactive-kitty" ram	"Mascot ram" ren	"Mascot ren" rhino	"Mascot rhino" rook	"Mascot rook" rooster	"Mascot rooster" satanic	"Mascot satanic" sauron	"Mascot sauron" seahorse	"Mascot seahorse" seahorse-big	"Mascot seahorse-big" sheep	"Mascot sheep" shikato	"Mascot shikato" shrug	"Mascot shrug" skeleton	"Mascot skeleton" sloth	"Mascot sloth" small	"Mascot small" smiling-octopus	"Mascot smiling-octopus" snoopy	"Mascot snoopy" snoopyhouse	"Mascot snoopyhouse" snoopysleep	"Mascot snoopysleep" spidercow	"Mascot spidercow" squid	"Mascot squid" squirrel	"Mascot squirrel" stegosaurus	"Mascot stegosaurus" stimpy	"Mascot stimpy" supermilker	"Mascot supermilker" surgery	"Mascot surgery" telebears	"Mascot telebears" three-eyes	"Mascot three-eyes" tiger	"Mascot tiger" tortoise	"Mascot tortoise" turkey	"Mascot turkey" turtle	"Mascot turtle" tux	"Mascot tux" tux-big	"Mascot tux-big" tweety-bird	"Mascot tweety-bird" unipony	"Mascot unipony" vader	"Mascot vader" viper	"Mascot viper" vulpix	"Mascot vulpix" walrus	"Mascot walrus" weeping-angel	"Mascot weeping-angel" whale	"Mascot whale" wizard	"Mascot wizard" wolf	"Mascot wolf" world	"Mascot world" yoda	"Mascot yoda" random	"Mascot random"'
+complete -c forgum -l effect -s e -d 'Animation effect' -x -a 'walk	"Natural bovine walking animation" breathe	"Gentle idle breathing animation" float	"Drifting levitation animation" fly	"Flying creature animation" talk	"Conversational jaw animation" sway	"Swaying pendulum animation" pulse	"Pulsing scale animation" glitch	"Digital cyberpunk glitch animation" particles	"Ambient particle emitter animation" dissolve	"Dissolve and materialize animation" animal_natural	"Unique per-creature natural kinetic animation"'
+complete -c forgum -l cow -l animal -s c -s a -d 'Animal mascot name' -x -a 'apt	"Mascot apt" armadillo	"Mascot armadillo" atat	"Mascot atat" bearface	"Mascot bearface" beavis.zen	"Mascot beavis.zen" bees	"Mascot bees" bill-the-cat	"Mascot bill-the-cat" bud-frogs	"Mascot bud-frogs" bunny	"Mascot bunny" cat	"Mascot cat" cat2	"Mascot cat2" catfence	"Mascot catfence" charizardvice	"Mascot charizardvice" charlie	"Mascot charlie" claw-arm	"Mascot claw-arm" corgi	"Mascot corgi" cower	"Mascot cower" cowfee	"Mascot cowfee" cthulhu-mini	"Mascot cthulhu-mini" daemon	"Mascot daemon" default	"Mascot default" docker-whale	"Mascot docker-whale" doge	"Mascot doge" dolphin	"Mascot dolphin" dragon	"Mascot dragon" dragon-and-cow	"Mascot dragon-and-cow" duck	"Mascot duck" ebi_furai	"Mascot ebi_furai" elephant	"Mascot elephant" elephant-in-snake	"Mascot elephant-in-snake" elephant2	"Mascot elephant2" eyes	"Mascot eyes" fat-banana	"Mascot fat-banana" fat-cow	"Mascot fat-cow" fence	"Mascot fence" flaming-sheep	"Mascot flaming-sheep" fox	"Mascot fox" ghost	"Mascot ghost" ghostbusters	"Mascot ghostbusters" glados	"Mascot glados" goat	"Mascot goat" goat2	"Mascot goat2" golden-eagle	"Mascot golden-eagle" hamster	"Mascot hamster" happy-whale	"Mascot happy-whale" hedgehog	"Mascot hedgehog" hellokitty	"Mascot hellokitty" hippie	"Mascot hippie" hiya	"Mascot hiya" hypno	"Mascot hypno" jellyfish	"Mascot jellyfish" jesus	"Mascot jesus" king	"Mascot king" kiss	"Mascot kiss" kitten	"Mascot kitten" kitty	"Mascot kitty" knight	"Mascot knight" koala	"Mascot koala" kosh	"Mascot kosh" lamb	"Mascot lamb" lamb2	"Mascot lamb2" lobster	"Mascot lobster" lollerskates	"Mascot lollerskates" luke-koala	"Mascot luke-koala" mech-and-cow	"Mascot mech-and-cow" meow	"Mascot meow" minotaur	"Mascot minotaur" mona-lisa	"Mascot mona-lisa" moofasa	"Mascot moofasa" mooghidjirah	"Mascot mooghidjirah" moojira	"Mascot moojira" moose	"Mascot moose" mule	"Mascot mule" mutilated	"Mascot mutilated" nyan	"Mascot nyan" octopus	"Mascot octopus" owl	"Mascot owl" panther	"Mascot panther" pawn	"Mascot pawn" periodic-table	"Mascot periodic-table" personality-sphere	"Mascot personality-sphere" pig	"Mascot pig" pterodactyl	"Mascot pterodactyl" pufferfish	"Mascot pufferfish" queen	"Mascot queen" radioactive-kitty	"Mascot radioactive-kitty" ram	"Mascot ram" ren	"Mascot ren" rhino	"Mascot rhino" rook	"Mascot rook" rooster	"Mascot rooster" satanic	"Mascot satanic" sauron	"Mascot sauron" seahorse	"Mascot seahorse" seahorse-big	"Mascot seahorse-big" sheep	"Mascot sheep" shikato	"Mascot shikato" shrug	"Mascot shrug" skeleton	"Mascot skeleton" sloth	"Mascot sloth" small	"Mascot small" smiling-octopus	"Mascot smiling-octopus" snoopy	"Mascot snoopy" snoopyhouse	"Mascot snoopyhouse" snoopysleep	"Mascot snoopysleep" spidercow	"Mascot spidercow" squid	"Mascot squid" squirrel	"Mascot squirrel" stegosaurus	"Mascot stegosaurus" stimpy	"Mascot stimpy" supermilker	"Mascot supermilker" surgery	"Mascot surgery" telebears	"Mascot telebears" three-eyes	"Mascot three-eyes" tiger	"Mascot tiger" tortoise	"Mascot tortoise" turkey	"Mascot turkey" turtle	"Mascot turtle" tux	"Mascot tux" tux-big	"Mascot tux-big" tweety-bird	"Mascot tweety-bird" unipony	"Mascot unipony" vader	"Mascot vader" viper	"Mascot viper" vulpix	"Mascot vulpix" walrus	"Mascot walrus" weeping-angel	"Mascot weeping-angel" whale	"Mascot whale" wizard	"Mascot wizard" wolf	"Mascot wolf" world	"Mascot world" yoda	"Mascot yoda" random	"Mascot random"'
 complete -c forgum -l mountain -d 'Mountain/horizon style' -x -a 'hills	"Rolling verdant hills" peaks	"Jagged alpine peaks" volcano	"Active smoldering volcano" iceberg	"Frozen glacier ridges" skyline	"Urban skyscraper silhouette" seamount	"Underwater tectonic ridges" plateau	"Desert mesa and canyon ridges" crater	"Impact rim and astral ridge" gothic	"Spire and cathedral silhouette" castle	"Fortress ramparts" garden	"Terraced hedge and floral ridge" none	"Disable mountain horizon"'
 complete -c forgum -l road -d 'Road/ground style' -x -a 'dirt	"Countryside dirt trail" cobblestone	"Medieval stone pavement" magma	"Cracked volcanic basalt" ice	"Packed crystalline ice" seabed	"Ripple sands and deep coral" sidewalk	"Paved urban asphalt" roof	"Ceramic roof shingles" grid	"Neon vector cyber grid" crypt	"Dark catacomb flagstones" savanna	"Sun-baked arid trail" mud	"Squishy wet soil" tracks	"Railroad ties" checkerboard	"High-contrast dual tiles" none	"Disable ground layer"'
 complete -c forgum -l environment -d 'Environment particle effect' -x -a 'pasture	"Open meadows" inferno	"Blazing magma" ocean	"Aquatic realm" arctic	"Frozen tundra" city	"Metropolitan skyline" forest	"Ancient woodlands" savanna	"Golden plains" swamp	"Murky bayou" space	"Cosmos void" cyber	"Digital matrix" graveyard	"Gothic cemetery" jurassic	"Primeval wilds" hive	"Bio hive" throne	"Gothic sanctuary" none	"Disable particles"'
-complete -c forgum -l color-mode -d 'Color rendering mode' -x -a 'default	"Creature natural wildlife colors" animal	"Alias for default" rainbow	"Refined OKLCH lolcat spectrum" lolcat	"Alias for rainbow" solid	"Single pure hue" none	"Monochrome terminal default"'
+complete -c forgum -l color-mode -d 'Color rendering mode' -x -a 'default	"Creature natural wildlife colors" animal	"Alias for default" natural	"Divine natural colors given by God in nature" animal_natural	"Alias for natural" rainbow	"Refined OKLCH lolcat spectrum" lolcat	"Alias for rainbow" solid	"Single pure hue" none	"Monochrome terminal default"'
 complete -c forgum -l text -s t -d 'Text inside the speech bubble'
 complete -c forgum -l think -s T -d 'Render as thought bubble instead of speech bubble'
 complete -c forgum -l background -s b -d 'Render above prompt as non-blocking overlay'
@@ -478,6 +490,8 @@ Register-ArgumentCompleter -Native -CommandName 'forgum' -ScriptBlock {
         'glitch' = 'Digital cyberpunk glitch animation'
         'particles' = 'Ambient particle emitter animation'
         'dissolve' = 'Dissolve and materialize animation'
+        'animal_natural' = 'Unique per-creature natural kinetic animation'
+        'natural' = 'Alias for animal_natural'
     }
 
     $mountains = @{
@@ -533,6 +547,8 @@ Register-ArgumentCompleter -Native -CommandName 'forgum' -ScriptBlock {
     $colors = @{
         'default' = 'Creature natural wildlife colors'
         'animal' = 'Alias for default'
+        'natural' = 'Authentic God-given natural colors unique to each creature'
+        'animal_natural' = 'Alias for natural'
         'rainbow' = 'Refined OKLCH lolcat spectrum'
         'lolcat' = 'Alias for rainbow'
         'solid' = 'Single pure hue'
@@ -605,7 +621,7 @@ Register-ArgumentCompleter -Native -CommandName 'forgum' -ScriptBlock {
         'luke-koala' = 'Mascot luke-koala'
         'mech-and-cow' = 'Mascot mech-and-cow'
         'meow' = 'Mascot meow'
-        'milk' = 'Mascot milk'
+        'hamster' = 'Mascot hamster'
         'minotaur' = 'Mascot minotaur'
         'mona-lisa' = 'Mascot mona-lisa'
         'moofasa' = 'Mascot moofasa'
@@ -758,7 +774,9 @@ def "nu_forgum_effects" [] {
         { value: "pulse", description: "Pulsing scale animation" },
         { value: "glitch", description: "Digital cyberpunk glitch animation" },
         { value: "particles", description: "Ambient particle emitter animation" },
-        { value: "dissolve", description: "Dissolve and materialize animation" }
+        { value: "dissolve", description: "Dissolve and materialize animation" },
+        { value: "animal_natural", description: "Unique per-creature natural kinetic animation" },
+        { value: "natural", description: "Alias for animal_natural" }
     ]
 }
 
@@ -822,6 +840,8 @@ def "nu_forgum_colors" [] {
     [
         { value: "default", description: "Creature natural wildlife colors" },
         { value: "animal", description: "Alias for default" },
+        { value: "natural", description: "Authentic God-given natural colors unique to each creature" },
+        { value: "animal_natural", description: "Alias for natural" },
         { value: "rainbow", description: "Refined OKLCH lolcat spectrum" },
         { value: "lolcat", description: "Alias for rainbow" },
         { value: "solid", description: "Single pure hue" },
@@ -896,7 +916,7 @@ def "nu_forgum_animals" [] {
         { value: "luke-koala", description: "Mascot luke-koala" },
         { value: "mech-and-cow", description: "Mascot mech-and-cow" },
         { value: "meow", description: "Mascot meow" },
-        { value: "milk", description: "Mascot milk" },
+        { value: "hamster", description: "Mascot hamster" },
         { value: "minotaur", description: "Mascot minotaur" },
         { value: "mona-lisa", description: "Mascot mona-lisa" },
         { value: "moofasa", description: "Mascot moofasa" },
@@ -1000,11 +1020,11 @@ completion:
   flag:
     cow: ["default\tStandard bovine mascot", "dragon\tFire-breathing dragon", "tux\tLinux penguin", "cat\tPlayful feline", "ghost\tSpooky phantom", "elephant\tGentle giant", "bunny\tCute rabbit", "corgi\tPlayful corgi", "fox\tWoodland fox", "random\tPick random mascot"]
     animal: ["default\tStandard bovine mascot", "dragon\tFire-breathing dragon", "tux\tLinux penguin", "cat\tPlayful feline", "ghost\tSpooky phantom", "elephant\tGentle giant", "bunny\tCute rabbit", "corgi\tPlayful corgi", "fox\tWoodland fox", "random\tPick random mascot"]
-    effect: ["walk\tNatural bovine walking animation", "breathe\tGentle breathing idle animation", "float\tDrifting levitation animation", "fly\tFlying creature animation", "talk\tConversational speech animation", "sway\tSwaying pendulum animation", "pulse\tPulsing scale animation", "glitch\tDigital cyberpunk glitch animation", "particles\tAmbient particle emitter animation", "dissolve\tDissolve and materialize animation"]
+    effect: ["walk\tNatural bovine walking animation", "breathe\tGentle breathing idle animation", "float\tDrifting levitation animation", "fly\tFlying creature animation", "talk\tConversational speech animation", "sway\tSwaying pendulum animation", "pulse\tPulsing scale animation", "glitch\tDigital cyberpunk glitch animation", "particles\tAmbient particle emitter animation", "dissolve\tDissolve and materialize animation", "animal_natural\tPer-creature natural kinetic animation", "natural\tAlias for animal_natural"]
     mountain: ["hills\tRolling verdant hills", "peaks\tAlpine peaks", "volcano\tActive volcano", "iceberg\tGlacier ridges", "skyline\tUrban skyline", "seamount\tUnderwater ridges", "plateau\tDesert mesa", "crater\tImpact rim", "gothic\tSpire silhouette", "castle\tFortress ramparts", "garden\tTerraced hedge", "none\tDisable mountains"]
     road: ["dirt\tCountryside dirt trail", "cobblestone\tStone pavement", "magma\tVolcanic basalt", "ice\tPacked crystalline ice", "seabed\tRipple sands", "sidewalk\tPaved asphalt", "roof\tRoof shingles", "grid\tNeon cyber grid", "crypt\tCatacomb flagstones", "savanna\tArid trail", "mud\tSquishy soil", "tracks\tRailroad ties", "checkerboard\tDual tiles", "none\tDisable road"]
     environment: ["pasture\tOpen meadows", "inferno\tBlazing magma", "ocean\tAquatic realm", "arctic\tFrozen tundra", "city\tMetropolitan skyline", "forest\tAncient woodlands", "savanna\tGolden plains", "swamp\tMurky bayou", "space\tCosmos void", "cyber\tDigital matrix", "graveyard\tGothic cemetery", "jurassic\tPrimeval wilds", "hive\tBio hive", "throne\tGothic sanctuary", "none\tDisable particles"]
-    color-mode: ["default\tCreature natural wildlife colors", "animal\tAlias for default", "rainbow\tRefined OKLCH lolcat spectrum", "lolcat\tAlias for rainbow", "solid\tSingle pure hue", "none\tMonochrome terminal default"]
+    color-mode: ["default\tCreature natural wildlife colors", "animal\tAlias for default", "natural\tAuthentic God-given natural colors", "animal_natural\tAlias for natural", "rainbow\tRefined OKLCH lolcat spectrum", "lolcat\tAlias for rainbow", "solid\tSingle pure hue", "none\tMonochrome terminal default"]
 commands:
   - name: render
     description: Render mascot animation (default)
@@ -1070,12 +1090,12 @@ complete forgum \
   'c/--cow/(default dragon tux cat ghost elephant bunny corgi fox octopus random)/' \
   'c/--animal/(default dragon tux cat ghost elephant bunny corgi fox octopus random)/' \
   'c/-a/(default dragon tux cat ghost elephant bunny corgi fox octopus random)/' \
-  'c/--effect/(walk breathe float fly talk sway pulse glitch particles dissolve)/' \
-  'c/-e/(walk breathe float fly talk sway pulse glitch particles dissolve)/' \
+  'c/--effect/(walk breathe float fly talk sway pulse glitch particles dissolve animal_natural natural)/' \
+  'c/-e/(walk breathe float fly talk sway pulse glitch particles dissolve animal_natural natural)/' \
   'c/--mountain/(hills peaks volcano iceberg skyline seamount plateau crater gothic castle garden none)/' \
   'c/--road/(dirt cobblestone magma ice seabed sidewalk roof grid crypt savanna mud tracks checkerboard none)/' \
   'c/--environment/(pasture inferno ocean arctic city forest savanna swamp space cyber graveyard jurassic hive throne none)/' \
-  'c/--color-mode/(default animal rainbow lolcat solid none)/' \
+  'c/--color-mode/(default animal natural animal_natural rainbow lolcat solid none)/' \
   'n/completions/(bash zsh fish pwsh powershell elvish nushell carapace xonsh tcsh ksh ion oil yash list)/' \
   'n/init/(bash zsh fish pwsh powershell elvish nushell carapace xonsh tcsh ksh ion oil yash cmd list)/' \
   'p/1/(render think fortune options list completions init tui status doctor checkhealth config logs herd theme demo showcase say install uninstall update help)/'
@@ -1089,13 +1109,13 @@ fn generate_ksh_completions(cmd: &mut clap::Command) -> String {
 fn generate_ion_completions() -> String {
     r#"# Ion completion for Forgum
 complete -c forgum -a "render think fortune list completions init tui status doctor checkhealth config logs herd theme demo showcase say install uninstall update help"
-complete -c forgum -l animal -a "apt armadillo atat bearface beavis.zen bees bill-the-cat bud-frogs bunny cat cat2 catfence charizardvice charlie claw-arm corgi cower cowfee cthulhu-mini daemon default docker-whale doge dolphin dragon dragon-and-cow duck ebi_furai elephant elephant-in-snake elephant2 eyes fat-banana fat-cow fence flaming-sheep fox ghost ghostbusters glados goat goat2 golden-eagle happy-whale hedgehog hellokitty hippie hiya hypno jellyfish jesus king kiss kitten kitty knight koala kosh lamb lamb2 lobster lollerskates luke-koala mech-and-cow meow milk minotaur mona-lisa moofasa mooghidjirah moojira moose mule mutilated nyan octopus owl panther pawn periodic-table personality-sphere pig pterodactyl pufferfish queen radioactive-kitty ram ren rhino rook rooster satanic sauron seahorse seahorse-big sheep shikato shrug skeleton sloth small smiling-octopus snoopy snoopyhouse snoopysleep spidercow squid squirrel stegosaurus stimpy supermilker surgery telebears three-eyes tiger tortoise turkey turtle tux tux-big tweety-bird unipony vader viper vulpix walrus weeping-angel whale wizard wolf world yoda random"
-complete -c forgum -l cow -a "apt armadillo atat bearface beavis.zen bees bill-the-cat bud-frogs bunny cat cat2 catfence charizardvice charlie claw-arm corgi cower cowfee cthulhu-mini daemon default docker-whale doge dolphin dragon dragon-and-cow duck ebi_furai elephant elephant-in-snake elephant2 eyes fat-banana fat-cow fence flaming-sheep fox ghost ghostbusters glados goat goat2 golden-eagle happy-whale hedgehog hellokitty hippie hiya hypno jellyfish jesus king kiss kitten kitty knight koala kosh lamb lamb2 lobster lollerskates luke-koala mech-and-cow meow milk minotaur mona-lisa moofasa mooghidjirah moojira moose mule mutilated nyan octopus owl panther pawn periodic-table personality-sphere pig pterodactyl pufferfish queen radioactive-kitty ram ren rhino rook rooster satanic sauron seahorse seahorse-big sheep shikato shrug skeleton sloth small smiling-octopus snoopy snoopyhouse snoopysleep spidercow squid squirrel stegosaurus stimpy supermilker surgery telebears three-eyes tiger tortoise turkey turtle tux tux-big tweety-bird unipony vader viper vulpix walrus weeping-angel whale wizard wolf world yoda random"
-complete -c forgum -l effect -a "walk breathe float fly talk sway pulse glitch particles dissolve"
+complete -c forgum -l animal -a "apt armadillo atat bearface beavis.zen bees bill-the-cat bud-frogs bunny cat cat2 catfence charizardvice charlie claw-arm corgi cower cowfee cthulhu-mini daemon default docker-whale doge dolphin dragon dragon-and-cow duck ebi_furai elephant elephant-in-snake elephant2 eyes fat-banana fat-cow fence flaming-sheep fox ghost ghostbusters glados goat goat2 golden-eagle hamster happy-whale hedgehog hellokitty hippie hiya hypno jellyfish jesus king kiss kitten kitty knight koala kosh lamb lamb2 lobster lollerskates luke-koala mech-and-cow meow minotaur mona-lisa moofasa mooghidjirah moojira moose mule mutilated nyan octopus owl panther pawn periodic-table personality-sphere pig pterodactyl pufferfish queen radioactive-kitty ram ren rhino rook rooster satanic sauron seahorse seahorse-big sheep shikato shrug skeleton sloth small smiling-octopus snoopy snoopyhouse snoopysleep spidercow squid squirrel stegosaurus stimpy supermilker surgery telebears three-eyes tiger tortoise turkey turtle tux tux-big tweety-bird unipony vader viper vulpix walrus weeping-angel whale wizard wolf world yoda random"
+complete -c forgum -l cow -a "apt armadillo atat bearface beavis.zen bees bill-the-cat bud-frogs bunny cat cat2 catfence charizardvice charlie claw-arm corgi cower cowfee cthulhu-mini daemon default docker-whale doge dolphin dragon dragon-and-cow duck ebi_furai elephant elephant-in-snake elephant2 eyes fat-banana fat-cow fence flaming-sheep fox ghost ghostbusters glados goat goat2 golden-eagle hamster happy-whale hedgehog hellokitty hippie hiya hypno jellyfish jesus king kiss kitten kitty knight koala kosh lamb lamb2 lobster lollerskates luke-koala mech-and-cow meow minotaur mona-lisa moofasa mooghidjirah moojira moose mule mutilated nyan octopus owl panther pawn periodic-table personality-sphere pig pterodactyl pufferfish queen radioactive-kitty ram ren rhino rook rooster satanic sauron seahorse seahorse-big sheep shikato shrug skeleton sloth small smiling-octopus snoopy snoopyhouse snoopysleep spidercow squid squirrel stegosaurus stimpy supermilker surgery telebears three-eyes tiger tortoise turkey turtle tux tux-big tweety-bird unipony vader viper vulpix walrus weeping-angel whale wizard wolf world yoda random"
+complete -c forgum -l effect -a "walk breathe float fly talk sway pulse glitch particles dissolve animal_natural"
 complete -c forgum -l mountain -a "hills peaks volcano iceberg skyline seamount plateau crater gothic castle garden none"
 complete -c forgum -l road -a "dirt cobblestone magma ice seabed sidewalk roof grid crypt savanna mud tracks checkerboard none"
 complete -c forgum -l environment -a "pasture inferno ocean arctic city forest savanna swamp space cyber graveyard jurassic hive throne none"
-complete -c forgum -l color-mode -a "default animal rainbow lolcat solid none"
+complete -c forgum -l color-mode -a "default animal natural animal_natural rainbow lolcat solid none"
 complete -c forgum -l background
 complete -c forgum -l banner
 "#.to_string()

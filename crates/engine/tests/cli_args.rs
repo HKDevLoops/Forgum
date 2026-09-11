@@ -209,7 +209,7 @@ fn battle_subcommand_defaults() {
     let (a, cmd) = parse_args(argv(&["forgum-engine", "battle"])).unwrap();
     assert_eq!(a.command, Command::Battle);
     assert!(
-        matches!(cmd, Some(Commands::Battle { name1, name2 }) if name1 == "Alice" && name2 == "Bob")
+        matches!(cmd, Some(Commands::Battle { name1, name2, .. }) if name1 == "Alice" && name2 == "Bob")
     );
 }
 
@@ -225,7 +225,7 @@ fn battle_subcommand_custom_names() {
     ]))
     .unwrap();
     assert!(
-        matches!(cmd, Some(Commands::Battle { name1, name2 }) if name1 == "Zoe" && name2 == "Yan")
+        matches!(cmd, Some(Commands::Battle { name1, name2, .. }) if name1 == "Zoe" && name2 == "Yan")
     );
 }
 

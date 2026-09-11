@@ -70,7 +70,8 @@ pub use package_manager::{
 };
 pub use paths::{
     config_dir, config_path, control_socket_path, daemon_state_path, data_dir, detect_config_file,
-    detect_session_id, is_canonical, log_dir, runtime_dir, ConfigPaths, ShellKind,
+    detect_session_id, is_canonical, log_dir, open_folder_in_desktop, runtime_dir, ConfigPaths,
+    ShellKind,
 };
 #[cfg(unix)]
 pub use platform_unix::parent_pid;
@@ -131,8 +132,8 @@ pub fn stdin_has_data() -> bool {
     }
 }
 pub use terminal::{
-    detect_capabilities, terminal_size, terminal_supports_sync, ColorLevel, GraphicsCaps,
-    TerminalCapabilities,
+    detect_capabilities, is_stdout_tty, terminal_size, terminal_supports_sync, ColorLevel,
+    GraphicsCaps, TerminalCapabilities,
 };
 /// Expand to the contained code only when compiling on a Unix-like target.
 ///

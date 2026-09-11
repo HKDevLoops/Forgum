@@ -333,7 +333,13 @@ pub fn load_animations(data_dir: &Path) -> HashMap<String, CowDna> {
     let mut result = HashMap::with_capacity(raw_map.len());
     for (name, val) in raw_map {
         match serde_json::from_value::<CowDna>(val) {
-            Ok(dna) => {
+            Ok(mut dna) => {
+                if dna.palette.is_empty() {
+                    dna.palette = crate::color::get_natural_hex_palette(&name)
+                        .iter()
+                        .map(|&s| s.to_string())
+                        .collect();
+                }
                 result.insert(name, dna);
             }
             Err(e) => {
@@ -357,16 +363,18 @@ pub fn load_animations(data_dir: &Path) -> HashMap<String, CowDna> {
 
 /// Get DNA for a specific cow, falling back to defaults.
 pub fn get_dna(animations: &HashMap<String, CowDna>, cow_name: &str) -> CowDna {
-    // Try exact match first, then strip extension
+    let clean = cow_name.strip_suffix(".cow").unwrap_or(cow_name);
+    let with_cow = format!("{clean}.cow");
+
     if let Some(dna) = animations.get(cow_name) {
-        return dna.clone();
+        dna.clone()
+    } else if let Some(dna) = animations.get(clean) {
+        dna.clone()
+    } else if let Some(dna) = animations.get(&with_cow) {
+        dna.clone()
+    } else {
+        CowDna::default()
     }
-    if let Some(stem) = cow_name.strip_suffix(".cow") {
-        if let Some(dna) = animations.get(stem) {
-            return dna.clone();
-        }
-    }
-    CowDna::default()
 }
 
 /// Compute per-instance phase offset using golden ratio.

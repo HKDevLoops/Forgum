@@ -215,10 +215,18 @@ pub const EFFECT_OPTIONS: &[(&str, &str)] = &[
         "dissolve",
         "Ephemeral quantum dispersion fading into terminal cyberspace",
     ),
+    (
+        "animal_natural",
+        "Authentic God-given natural kinetic action tailored to each creature's biology and lore",
+    ),
 ];
 
 /// Available Color Palettes.
 pub const COLOR_OPTIONS: &[(&str, &str)] = &[
+    (
+        "natural",
+        "Authentic God-given biological color palette unique to each creature in nature",
+    ),
     (
         "rainbow",
         "Dynamic TrueColor 360-degree spectral hue-shift animation",
@@ -237,7 +245,7 @@ pub const CATEGORIES: &[(&str, &[&str])] = &[
         "Farm & Domestic",
         &[
             "default", "cat", "cat2", "catfence", "charlie", "corgi", "bunny", "doge", "fat-cow",
-            "goat", "goat2", "hippie", "kitty", "kitten", "meow", "milk", "mule", "pig", "ram",
+            "goat", "goat2", "hippie", "kitty", "kitten", "meow", "hamster", "mule", "pig", "ram",
             "rooster", "sheep", "turkey",
         ],
     ),
@@ -323,6 +331,7 @@ pub const CATEGORIES: &[(&str, &[&str])] = &[
             "ren",
             "snoopy",
             "stimpy",
+            "tux",
             "vulpix",
         ],
     ),
@@ -456,6 +465,7 @@ pub struct ConfigApp {
     // Config Tab state
     pub config_field_idx: usize,
     pub editing_config: bool,
+    pub edit_initial: bool,
     pub config_edit_buffer: String,
     pub attach_mode_dropdown: Dropdown,
     pub format_dropdown: Dropdown,
@@ -605,6 +615,7 @@ impl ConfigApp {
             installer_view_mode: 0,
             config_field_idx: 0,
             editing_config: false,
+            edit_initial: false,
             config_edit_buffer: String::new(),
             attach_mode_dropdown,
             format_dropdown,
@@ -759,28 +770,32 @@ impl ConfigApp {
                 self.status_message = format!("Switched to {}", self.current_tab.mode_label());
                 return Ok(None);
             }
-            KeyCode::Char('1') => {
+            KeyCode::Char('r') => {
+                self.randomize_mascot();
+                return Ok(None);
+            }
+            KeyCode::Char('o') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                self.open_config_directory();
+                return Ok(None);
+            }
+            KeyCode::Char('1') if self.current_tab != Tab::Config => {
                 self.current_tab = Tab::Mascots;
                 return Ok(None);
             }
-            KeyCode::Char('2') => {
+            KeyCode::Char('2') if self.current_tab != Tab::Config => {
                 self.current_tab = Tab::Scenery;
                 return Ok(None);
             }
-            KeyCode::Char('3') => {
+            KeyCode::Char('3') if self.current_tab != Tab::Config => {
                 self.current_tab = Tab::Effects;
                 return Ok(None);
             }
-            KeyCode::Char('4') => {
+            KeyCode::Char('4') if self.current_tab != Tab::Config => {
                 self.current_tab = Tab::Installer;
                 return Ok(None);
             }
-            KeyCode::Char('5') => {
+            KeyCode::Char('5') if self.current_tab != Tab::Config => {
                 self.current_tab = Tab::Config;
-                return Ok(None);
-            }
-            KeyCode::Char('r') => {
-                self.randomize_mascot();
                 return Ok(None);
             }
             _ => {}
@@ -1199,18 +1214,39 @@ export extern "forgum" [
             KeyCode::Down | KeyCode::Char('j') => {
                 self.config_field_idx = (self.config_field_idx + 1) % ConfigField::ALL.len();
             }
-            KeyCode::Enter => {
+            KeyCode::Enter | KeyCode::Char('e') | KeyCode::Char('i') => {
                 self.enter_config_edit();
+            }
+            KeyCode::Char(c @ '0'..='9') => {
+                let field = ConfigField::ALL[self.config_field_idx];
+                if field == ConfigField::Duration || field == ConfigField::Fps {
+                    self.config_edit_buffer = c.to_string();
+                    self.editing_config = true;
+                    self.edit_initial = false;
+                    self.status_message = format!(
+                        "Editing {}: typing '{}' (Enter to confirm, Esc to cancel)",
+                        field.label(),
+                        c
+                    );
+                }
             }
             KeyCode::Char('+')
             | KeyCode::Char('=')
             | KeyCode::Char(' ')
             | KeyCode::Right
-            | KeyCode::Char('l') => {
+            | KeyCode::Char('l')
+            | KeyCode::Char(']') => {
                 self.cycle_config_field(true);
             }
-            KeyCode::Char('-') | KeyCode::Char('_') | KeyCode::Left | KeyCode::Char('h') => {
+            KeyCode::Char('-')
+            | KeyCode::Char('_')
+            | KeyCode::Left
+            | KeyCode::Char('h')
+            | KeyCode::Char('[') => {
                 self.cycle_config_field(false);
+            }
+            KeyCode::Char('o') | KeyCode::Char('O') => {
+                self.open_config_directory();
             }
             _ => {}
         }
@@ -1219,6 +1255,7 @@ export extern "forgum" [
 
     fn enter_config_edit(&mut self) {
         let field = ConfigField::ALL[self.config_field_idx];
+        self.edit_initial = true;
         match field {
             ConfigField::Duration => {
                 self.config_edit_buffer = self.config.duration.to_string();
@@ -1245,6 +1282,7 @@ export extern "forgum" [
                     "Editing Tongue: type characters and press Enter (Esc to cancel)".into();
             }
             _ => {
+                self.edit_initial = false;
                 self.cycle_config_field(true);
             }
         }
@@ -1364,6 +1402,7 @@ export extern "forgum" [
                 self.status_message = "Edit cancelled.".to_string();
             }
             KeyCode::Up => {
+                self.edit_initial = false;
                 let field = ConfigField::ALL[self.config_field_idx];
                 if field == ConfigField::Duration || field == ConfigField::Fps {
                     let clean = self
@@ -1377,6 +1416,7 @@ export extern "forgum" [
                 }
             }
             KeyCode::Down => {
+                self.edit_initial = false;
                 let field = ConfigField::ALL[self.config_field_idx];
                 if field == ConfigField::Duration || field == ConfigField::Fps {
                     let clean = self
@@ -1392,6 +1432,7 @@ export extern "forgum" [
                 }
             }
             KeyCode::Right => {
+                self.edit_initial = false;
                 let field = ConfigField::ALL[self.config_field_idx];
                 if field == ConfigField::Duration || field == ConfigField::Fps {
                     let clean = self
@@ -1405,6 +1446,7 @@ export extern "forgum" [
                 }
             }
             KeyCode::Left => {
+                self.edit_initial = false;
                 let field = ConfigField::ALL[self.config_field_idx];
                 if field == ConfigField::Duration || field == ConfigField::Fps {
                     let clean = self
@@ -1420,11 +1462,13 @@ export extern "forgum" [
                 }
             }
             KeyCode::Tab => {
+                self.edit_initial = false;
                 self.commit_config_edit();
                 self.editing_config = false;
                 self.config_field_idx = (self.config_field_idx + 1) % ConfigField::ALL.len();
             }
             KeyCode::BackTab => {
+                self.edit_initial = false;
                 self.commit_config_edit();
                 self.editing_config = false;
                 if self.config_field_idx > 0 {
@@ -1434,19 +1478,28 @@ export extern "forgum" [
                 }
             }
             KeyCode::Backspace => {
+                self.edit_initial = false;
                 self.config_edit_buffer.pop();
             }
             KeyCode::Delete => {
+                self.edit_initial = false;
                 self.config_edit_buffer.clear();
             }
             KeyCode::Char('u') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                self.edit_initial = false;
                 self.config_edit_buffer.clear();
             }
             KeyCode::Char('w') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                self.edit_initial = false;
                 self.config_edit_buffer.clear();
             }
             KeyCode::Char(c) if !key.modifiers.contains(KeyModifiers::CONTROL) => {
-                self.config_edit_buffer.push(c);
+                if self.edit_initial {
+                    self.config_edit_buffer = c.to_string();
+                    self.edit_initial = false;
+                } else {
+                    self.config_edit_buffer.push(c);
+                }
             }
             _ => {}
         }
@@ -1495,16 +1548,37 @@ export extern "forgum" [
             ConfigField::Eyes => {
                 self.config.eyes = self.config_edit_buffer.clone();
                 self.cow_cache.clear();
+                self.ensure_cow_cached(&self.config.cow.clone());
                 self.saved = false;
                 self.status_message = format!("✓ Eyes updated to '{}'", self.config.eyes);
             }
             ConfigField::Tongue => {
                 self.config.tongue = self.config_edit_buffer.clone();
                 self.cow_cache.clear();
+                self.ensure_cow_cached(&self.config.cow.clone());
                 self.saved = false;
                 self.status_message = format!("✓ Tongue updated to '{}'", self.config.tongue);
             }
             _ => {}
+        }
+    }
+
+    /// Launch the host system's graphical desktop file manager targeting the config folder.
+    pub fn open_config_directory(&mut self) {
+        let dir = self
+            .config_path
+            .as_ref()
+            .and_then(|p| p.parent().map(|d| d.to_path_buf()))
+            .or_else(|| forgum_platform::config_dir().ok())
+            .unwrap_or_else(|| std::path::PathBuf::from("."));
+
+        match forgum_platform::open_folder_in_desktop(&dir) {
+            Ok(()) => {
+                self.status_message = format!("📁 Opened config directory: {}", dir.display());
+            }
+            Err(e) => {
+                self.status_message = format!("⚠ Failed to open config directory: {e}");
+            }
         }
     }
 
@@ -1579,32 +1653,78 @@ export extern "forgum" [
         let mut out = String::with_capacity(body.len());
         for line in body.lines() {
             if line.contains('$') {
-                let mut l = line
-                    .replace("${eyes}", eyes)
-                    .replace("$eyes", eyes)
-                    .replace("${tongue}", tongue)
-                    .replace("$tongue", tongue)
-                    .replace("${thoughts}", "\\")
-                    .replace("$thoughts", "\\");
+                let mut l = line.to_string();
 
-                while let Some(pos) = l.find("${eye}") {
+                // 1. Expand thoughts placeholders (longest first)
+                for pat in [
+                    r"\\$thoughts",
+                    r"\$thoughts",
+                    r"\\${thoughts}",
+                    r"\${thoughts}",
+                    "${thoughts}",
+                    "$thoughts",
+                ] {
+                    l = l.replace(pat, "\\");
+                }
+
+                // 2. Expand tongue placeholders (longest first)
+                for pat in [
+                    r"\\$tongue",
+                    r"\$tongue",
+                    r"\\${tongue}",
+                    r"\${tongue}",
+                    "${tongue}",
+                    "$tongue",
+                ] {
+                    l = l.replace(pat, tongue);
+                }
+
+                // 3. Expand plural $eyes placeholders (longest first)
+                for pat in [
+                    r"\\$eyes",
+                    r"\$eyes",
+                    r"\\${eyes}",
+                    r"\${eyes}",
+                    "${eyes}",
+                    "$eyes",
+                ] {
+                    l = l.replace(pat, eyes);
+                }
+
+                // 4. Expand singular $eye placeholders (alternating left/right eye)
+                loop {
+                    let eye_patterns = [
+                        r"\\$eye",
+                        r"\$eye",
+                        r"\\${eye}",
+                        r"\${eye}",
+                        "${eye}",
+                        "$eye",
+                    ];
+                    let mut earliest: Option<(usize, &'static str)> = None;
+                    for pat in eye_patterns {
+                        if let Some(pos) = l.find(pat) {
+                            match earliest {
+                                None => earliest = Some((pos, pat)),
+                                Some((best_pos, _)) if pos < best_pos => earliest = Some((pos, pat)),
+                                _ => {}
+                            }
+                        }
+                    }
+
+                    let Some((pos, pat)) = earliest else {
+                        break;
+                    };
+
                     let glyph = if eye_idx % 2 == 0 {
                         &left_eye
                     } else {
                         &right_eye
                     };
                     eye_idx += 1;
-                    l.replace_range(pos..pos + 6, glyph);
+                    l.replace_range(pos..pos + pat.len(), glyph);
                 }
-                while let Some(pos) = l.find("$eye") {
-                    let glyph = if eye_idx % 2 == 0 {
-                        &left_eye
-                    } else {
-                        &right_eye
-                    };
-                    eye_idx += 1;
-                    l.replace_range(pos..pos + 4, glyph);
-                }
+
                 out.push_str(&l);
             } else {
                 out.push_str(line);
@@ -2565,8 +2685,23 @@ export extern "forgum" [
                 l = l.replace("(__)", if chew_cycle > 0.52 { "(=-)" } else { "(-=)" });
             }
 
+            let eff = if self.config.effect == "animal_natural" || self.config.effect == "default" {
+                match self.config.cow.as_str() {
+                    "duck" | "pterodactyl" | "golden-eagle" | "tweety-bird" => "fly",
+                    "bunny" | "hamster" | "corgi" | "cat" | "cat2" | "catfence" | "kitty" | "kitten"
+                    | "doge" | "mule" | "pig" | "ram" | "sheep" | "goat" | "goat2" | "wolf" | "tiger"
+                    | "panther" | "fox" | "hedgehog" | "armadillo" | "rhino" => "walk",
+                    "dolphin" | "whale" | "docker-whale" | "happy-whale" | "octopus" | "smiling-octopus"
+                    | "squid" | "jellyfish" | "seahorse" | "seahorse-big" => "sway",
+                    "ghost" | "unipony" | "wizard" | "atat" => "float",
+                    _ => "breathe",
+                }
+            } else {
+                self.config.effect.as_str()
+            };
+
             // Effect kinematics
-            match self.config.effect.as_str() {
+            match eff {
                 "walk" => {
                     if i == leg_line_idx {
                         if l.contains("||     ||") {
@@ -2650,6 +2785,76 @@ export extern "forgum" [
                 }
                 "lolcat" => rainbow_colors[(i * 2) % rainbow_colors.len()],
                 "solid" => Color::Green,
+                "natural" | "animal_natural" | "animal" | "default" => {
+                    match self.config.cow.as_str() {
+                        "cat" | "cat2" | "catfence" | "kitty" | "kitten" | "meow" => match i % 5 {
+                            0 => Color::Rgb(255, 255, 255), // white
+                            1 => Color::Rgb(211, 84, 0),    // ginger
+                            2 => Color::Rgb(121, 85, 72),   // brown
+                            3 => Color::Rgb(255, 152, 0),   // orange
+                            _ => Color::Rgb(33, 33, 33),    // black
+                        },
+                        "bunny" => Color::Rgb(255, 255, 255), // white only in nature
+                        "doge" => match i % 3 {
+                            0 => Color::Rgb(229, 152, 102), // golden orange
+                            1 => Color::Rgb(211, 84, 0),
+                            _ => Color::Rgb(253, 254, 254), // white urajiro
+                        },
+                        "hippie" => match i % 5 {
+                            0 => Color::Rgb(255, 0, 127),
+                            1 => Color::Rgb(0, 229, 255),
+                            2 => Color::Rgb(255, 255, 0),
+                            3 => Color::Rgb(118, 255, 3),
+                            _ => Color::Rgb(213, 0, 249),
+                        },
+                        "hamster" => match i % 3 {
+                            0 => Color::Rgb(212, 163, 115), // golden brown
+                            1 => Color::Rgb(250, 237, 205), // cream belly
+                            _ => Color::Rgb(255, 182, 193), // pink paws
+                        },
+                        "mule" => match i % 3 {
+                            0 => Color::Rgb(92, 64, 51),  // brown
+                            1 => Color::Rgb(121, 85, 72),
+                            _ => Color::Rgb(62, 39, 35),
+                        },
+                        "pig" => match i % 3 {
+                            0 => Color::Rgb(255, 182, 193), // pink
+                            1 => Color::Rgb(255, 128, 171),
+                            _ => Color::Rgb(248, 187, 208),
+                        },
+                        "ram" => match i % 3 {
+                            0 => Color::Rgb(245, 245, 245), // fleece white
+                            1 => Color::Rgb(158, 158, 158), // horn grey
+                            _ => Color::Rgb(117, 117, 117),
+                        },
+                        "cow" | "default" | "fat-cow" => match i % 3 {
+                            0 => Color::White,
+                            1 => Color::Rgb(26, 26, 26), // black
+                            _ => Color::Rgb(255, 182, 193), // pink snout
+                        },
+                        "duck" => match i % 3 {
+                            0 => Color::Rgb(5, 150, 105),  // mallard green head
+                            1 => Color::Rgb(251, 191, 36), // yellow bill
+                            _ => Color::Rgb(120, 53, 15),  // brown body
+                        },
+                        "wolf" => match i % 3 {
+                            0 => Color::Rgb(156, 163, 175),
+                            1 => Color::Rgb(75, 85, 99),
+                            _ => Color::Rgb(31, 41, 55),
+                        },
+                        "tiger" => match i % 3 {
+                            0 => Color::Rgb(234, 88, 12),
+                            1 => Color::Rgb(24, 24, 27),
+                            _ => Color::White,
+                        },
+                        "tux" | "tux-big" => match i % 3 {
+                            0 => Color::White,
+                            1 => Color::Rgb(33, 33, 33),
+                            _ => Color::Rgb(255, 152, 0),
+                        },
+                        _ => Color::White,
+                    }
+                }
                 _ => Color::White,
             };
 
@@ -2816,6 +3021,77 @@ export extern "forgum" [
                     Style::default().bg(Color::DarkGray).fg(Color::Magenta),
                 ),
                 Span::raw(" Updates  "),
+                Span::styled(" <q> ", Style::default().bg(Color::DarkGray).fg(Color::Red)),
+                Span::raw(" Quit  "),
+                Span::styled(
+                    format!(" │ {}", self.status_message),
+                    Style::default().fg(Color::Cyan),
+                ),
+            ]
+        } else if self.current_tab == Tab::Config && self.editing_config {
+            vec![
+                Span::styled(
+                    " <Enter> ",
+                    Style::default().bg(Color::DarkGray).fg(Color::Green),
+                ),
+                Span::raw(" Confirm  "),
+                Span::styled(
+                    " <Esc> ",
+                    Style::default().bg(Color::DarkGray).fg(Color::Red),
+                ),
+                Span::raw(" Cancel  "),
+                Span::styled(
+                    " <Up/Down> ",
+                    Style::default().bg(Color::DarkGray).fg(Color::Cyan),
+                ),
+                Span::raw(" Step ±1  "),
+                Span::styled(
+                    " <Left/Right> ",
+                    Style::default().bg(Color::DarkGray).fg(Color::Cyan),
+                ),
+                Span::raw(" Step ±5  "),
+                Span::styled(
+                    " <Ctrl+U> ",
+                    Style::default().bg(Color::DarkGray).fg(Color::Yellow),
+                ),
+                Span::raw(" Clear  "),
+                Span::styled(
+                    format!(" │ {}", self.status_message),
+                    Style::default().fg(Color::Cyan),
+                ),
+            ]
+        } else if self.current_tab == Tab::Config {
+            vec![
+                Span::styled(
+                    " <Tab> ",
+                    Style::default().bg(Color::DarkGray).fg(Color::White),
+                ),
+                Span::raw(" Tabs  "),
+                Span::styled(
+                    " <j/k> ",
+                    Style::default().bg(Color::DarkGray).fg(Color::White),
+                ),
+                Span::raw(" Select  "),
+                Span::styled(
+                    " <e/Enter> ",
+                    Style::default().bg(Color::DarkGray).fg(Color::Green),
+                ),
+                Span::raw(" Edit  "),
+                Span::styled(
+                    " <+/-> ",
+                    Style::default().bg(Color::DarkGray).fg(Color::Yellow),
+                ),
+                Span::raw(" Step  "),
+                Span::styled(
+                    " <o> ",
+                    Style::default().bg(Color::DarkGray).fg(Color::Magenta),
+                ),
+                Span::raw(" Open Dir  "),
+                Span::styled(
+                    " <s> ",
+                    Style::default().bg(Color::DarkGray).fg(Color::Cyan),
+                ),
+                Span::raw(" Save  "),
                 Span::styled(" <q> ", Style::default().bg(Color::DarkGray).fg(Color::Red)),
                 Span::raw(" Quit  "),
                 Span::styled(
@@ -3230,5 +3506,137 @@ mod tests {
         )))
         .unwrap();
         assert_ne!(app.format, initial_fmt);
+    }
+
+    #[test]
+    fn config_duration_and_fps_direct_digit_typing() {
+        let mut app = ConfigApp::new(None, None, Some(Tab::Config));
+        assert_eq!(app.current_tab, Tab::Config);
+        assert_eq!(app.config_field_idx, 0); // Duration
+
+        // Type '5' directly on Duration field
+        app.handle_event(Event::Key(KeyEvent::new(
+            KeyCode::Char('5'),
+            KeyModifiers::NONE,
+        )))
+        .unwrap();
+        assert!(app.editing_config);
+        assert_eq!(app.config_edit_buffer, "5");
+
+        // Press Enter to confirm
+        app.handle_event(Event::Key(KeyEvent::new(
+            KeyCode::Enter,
+            KeyModifiers::NONE,
+        )))
+        .unwrap();
+        assert!(!app.editing_config);
+        assert_eq!(app.config.duration, 5);
+
+        // Navigate to FPS (field 1)
+        app.handle_event(Event::Key(KeyEvent::new(
+            KeyCode::Down,
+            KeyModifiers::NONE,
+        )))
+        .unwrap();
+        assert_eq!(app.config_field_idx, 1);
+
+        // Type '6' then '0' directly
+        app.handle_event(Event::Key(KeyEvent::new(
+            KeyCode::Char('6'),
+            KeyModifiers::NONE,
+        )))
+        .unwrap();
+        assert!(app.editing_config);
+        assert_eq!(app.config_edit_buffer, "6");
+
+        app.handle_event(Event::Key(KeyEvent::new(
+            KeyCode::Char('0'),
+            KeyModifiers::NONE,
+        )))
+        .unwrap();
+        assert_eq!(app.config_edit_buffer, "60");
+
+        app.handle_event(Event::Key(KeyEvent::new(
+            KeyCode::Enter,
+            KeyModifiers::NONE,
+        )))
+        .unwrap();
+        assert!(!app.editing_config);
+        assert_eq!(app.config.fps, 60);
+    }
+
+    #[test]
+    fn config_edit_initial_overwrites_on_enter() {
+        let mut app = ConfigApp::new(None, None, Some(Tab::Config));
+        app.config_field_idx = 1; // FPS
+        app.config.fps = 30;
+
+        // Enter edit mode via Enter (edit_initial = true, buffer = "30")
+        app.handle_event(Event::Key(KeyEvent::new(
+            KeyCode::Enter,
+            KeyModifiers::NONE,
+        )))
+        .unwrap();
+        assert!(app.editing_config);
+        assert!(app.edit_initial);
+        assert_eq!(app.config_edit_buffer, "30");
+
+        // Type '1' - should overwrite "30" rather than appending to make "301"
+        app.handle_event(Event::Key(KeyEvent::new(
+            KeyCode::Char('1'),
+            KeyModifiers::NONE,
+        )))
+        .unwrap();
+        assert_eq!(app.config_edit_buffer, "1");
+        assert!(!app.edit_initial);
+
+        // Type '4' then '4' -> "144"
+        app.handle_event(Event::Key(KeyEvent::new(
+            KeyCode::Char('4'),
+            KeyModifiers::NONE,
+        )))
+        .unwrap();
+        app.handle_event(Event::Key(KeyEvent::new(
+            KeyCode::Char('4'),
+            KeyModifiers::NONE,
+        )))
+        .unwrap();
+        assert_eq!(app.config_edit_buffer, "144");
+
+        app.handle_event(Event::Key(KeyEvent::new(
+            KeyCode::Enter,
+            KeyModifiers::NONE,
+        )))
+        .unwrap();
+        assert!(!app.editing_config);
+        assert_eq!(app.config.fps, 144);
+    }
+
+    #[test]
+    fn expand_cow_template_supports_perl_escapes() {
+        // Singular $eye and escaped \$eye / \\$eye
+        let template_single = "$the_cow = <<EOC;\n  \\$eye $eye \\${eye}\nEOC;";
+        let expanded_single = ConfigApp::expand_cow_template(template_single, "oO", "  ");
+        assert!(expanded_single.contains("o O o") || expanded_single.contains("o"));
+        assert!(!expanded_single.contains("$eye"));
+        assert!(!expanded_single.contains('\\'));
+
+        // Plural $eyes and escaped \$eyes / \\$eyes
+        let template_plural = "$the_cow = <<EOC;\n  \\$eyes $eyes\nEOC;";
+        let expanded_plural = ConfigApp::expand_cow_template(template_plural, "**", "  ");
+        assert!(expanded_plural.contains("** **"));
+        assert!(!expanded_plural.contains("$eyes"));
+        assert!(!expanded_plural.contains('\\'));
+    }
+
+    #[test]
+    fn open_config_directory_sets_status() {
+        let mut app = ConfigApp::new(None, None, Some(Tab::Config));
+        app.open_config_directory();
+        assert!(
+            app.status_message.starts_with("📁 Opened") || app.status_message.starts_with("⚠ Failed"),
+            "Status message must report directory open status: {}",
+            app.status_message
+        );
     }
 }

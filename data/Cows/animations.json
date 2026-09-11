@@ -1,111 +1,1598 @@
 {
-  "default.cow": { "base": "Talk", "particles": null, "speed": 1.0 },
-  "cower.cow": { "base": "Talk", "particles": null, "speed": 1.0 },
-  "fat-cow.cow": { "base": "Talk", "particles": null, "speed": 1.0 },
-  "supermilker.cow": { "base": "Talk", "particles": null, "speed": 2.0 },
-  "moose.cow": { "base": "Liquid", "particles": null, "speed": 1.0 },
-  "mule.cow": { "base": "Liquid", "particles": null, "speed": 1.0 },
-  "sheep.cow": { "base": "Breathe", "particles": null, "speed": 1.0 },
-  "flaming-sheep.cow": { "base": "Breathe", "particles": "Fire", "speed": 1.0 },
-  "lamb.cow": { "base": "Liquid", "particles": null, "speed": 1.5 },
-  "lamb2.cow": { "base": "Liquid", "particles": null, "speed": 1.5 },
-  "goat.cow": { "base": "Sway", "particles": null, "speed": 1.0 },
-  "goat2.cow": { "base": "Sway", "particles": null, "speed": 1.0 },
-  "dolphin.cow": { "base": "Squish", "particles": "Bubbles", "speed": 0.5 },
-  "whale.cow": { "base": "Squish", "particles": "Bubbles", "speed": 0.5 },
-  "happy-whale.cow": { "base": "Squish", "particles": "Bubbles", "speed": 0.5 },
-  "docker-whale.cow": { "base": "Squish", "particles": "Bubbles", "speed": 0.5 },
-  "octopus.cow": { "base": "Sway", "particles": null, "speed": 1.0 },
-  "smiling-octopus.cow": { "base": "Sway", "particles": null, "speed": 1.0 },
-  "jellyfish.cow": { "base": "Squish", "particles": "Pulse", "speed": 1.0 },
-  "seahorse.cow": { "base": "Squish", "particles": "Bubbles", "speed": 1.5 },
-  "seahorse-big.cow": { "base": "Squish", "particles": "Bubbles", "speed": 1.5 },
-  "lobster.cow": { "base": "Liquid", "particles": null, "speed": 1.0 },
-  "turkey.cow": { "base": "Sway", "particles": null, "speed": 1.0 },
-  "owl.cow": { "base": "Matrix", "particles": null, "speed": 1.0 },
-  "golden-eagle.cow": { "base": "Fly", "particles": null, "speed": 0.8 },
-  "tweety-bird.cow": { "base": "Fly", "particles": null, "speed": 2.0 },
-  "pterodactyl.cow": { "base": "Fly", "particles": null, "speed": 1.5 },
-  "cat.cow": { "base": "Liquid", "particles": null, "speed": 1.0 },
-  "cat2.cow": { "base": "Liquid", "particles": null, "speed": 1.0 },
-  "kitty.cow": { "base": "Liquid", "particles": null, "speed": 1.0 },
-  "kitten.cow": { "base": "Liquid", "particles": null, "speed": 1.0 },
-  "meow.cow": { "base": "Liquid", "particles": null, "speed": 1.0 },
-  "catfence.cow": { "base": "Sway", "particles": null, "speed": 1.0 },
-  "doge.cow": { "base": "Matrix", "particles": "Pulse", "speed": 1.0 },
-  "fox.cow": { "base": "Liquid", "particles": null, "speed": 0.5 },
-  "bunny.cow": { "base": "Squish", "particles": null, "speed": 2.0 },
-  "squirrel.cow": { "base": "Matrix", "particles": null, "speed": 1.5 },
-  "hedgehog.cow": { "base": "Dissolve", "particles": null, "speed": 1.0 },
-  "koala.cow": { "base": "Breathe", "particles": "Zzz", "speed": 1.0 },
-  "luke-koala.cow": { "base": "Breathe", "particles": "Zzz", "speed": 1.0 },
-  "dragon.cow": { "base": "Breathe", "particles": "Fire", "speed": 1.0 },
-  "dragon-and-cow.cow": { "base": "Breathe", "particles": "Fire", "speed": 1.0 },
-  "charizardvice.cow": { "base": "Breathe", "particles": "Fire", "speed": 1.0 },
-  "ghost.cow": { "base": "Dissolve", "particles": "Glitch", "speed": 1.0 },
-  "ghostbusters.cow": { "base": "Squish", "particles": "Glitch", "speed": 1.0 },
-  "weeping-angel.cow": { "base": "Abduction", "particles": null, "speed": 1.0 },
-  "alien.cow": { "base": "Pulse", "particles": null, "speed": 1.0 },
-  "cthulhu-mini.cow": { "base": "Pulse", "particles": null, "speed": 1.0 },
-  "daemon.cow": { "base": "Squish", "particles": "Fire", "speed": 1.0 },
-  "satanic.cow": { "base": "Squish", "particles": "Fire", "speed": 1.0 },
-  "minotaur.cow": { "base": "Liquid", "particles": null, "speed": 1.5 },
-  "glados.cow": { "base": "Matrix", "particles": "Pulse", "speed": 1.0 },
-  "personality-sphere.cow": { "base": "Matrix", "particles": "Pulse", "speed": 1.0 },
-  "kosh.cow": { "base": "Squish", "particles": "Pulse", "speed": 0.5 },
-  "batman.cow": { "base": "Fly", "particles": null, "speed": 1.5 },
-  "snoopy.cow": { "base": "Breathe", "particles": null, "speed": 1.0 },
-  "snoopyhouse.cow": { "base": "Breathe", "particles": null, "speed": 1.0 },
-  "snoopysleep.cow": { "base": "Breathe", "particles": "Zzz", "speed": 1.0 },
-  "ren.cow": { "base": "Matrix", "particles": null, "speed": 1.5 },
-  "stimpy.cow": { "base": "Matrix", "particles": null, "speed": 1.5 },
-  "beavis.zen.cow": { "base": "Matrix", "particles": null, "speed": 1.5 },
-  "nyan.cow": { "base": "Fly", "particles": "Stars", "speed": 2.0 },
-  "hellokitty.cow": { "base": "Sway", "particles": null, "speed": 1.0 },
-  "bees.cow": { "base": "Fly", "particles": null, "speed": 2.0 },
-  "spidercow.cow": { "base": "Liquid", "particles": null, "speed": 1.0 },
-  "stegosaurus.cow": { "base": "Liquid", "particles": null, "speed": 0.3 },
-  "tortoise.cow": { "base": "Liquid", "particles": null, "speed": 0.3 },
-  "turtle.cow": { "base": "Liquid", "particles": null, "speed": 0.3 },
-  "mona-lisa.cow": { "base": "Talk", "particles": null, "speed": 1.0 },
-  "periodic-table.cow": { "base": "Pulse", "particles": null, "speed": 1.0 },
-  "world.cow": { "base": "Pulse", "particles": null, "speed": 1.0 },
-  "king.cow": { "base": "Liquid", "particles": null, "speed": 0.5 },
-  "queen.cow": { "base": "Liquid", "particles": null, "speed": 0.5 },
-  "knight.cow": { "base": "Liquid", "particles": null, "speed": 0.5 },
-  "rook.cow": { "base": "Liquid", "particles": null, "speed": 0.5 },
-  "pawn.cow": { "base": "Liquid", "particles": null, "speed": 0.5 },
-  "surgery.cow": { "base": "Matrix", "particles": null, "speed": 1.0 },
-  "mutilated.cow": { "base": "Matrix", "particles": null, "speed": 1.0 },
-  "tux.cow": { "base": "Sway", "particles": null, "speed": 1.0 },
-  "tux-big.cow": { "base": "Sway", "particles": null, "speed": 1.0 },
-  "armadillo.cow": { "base": "Liquid", "particles": null, "speed": 1.0 },
-  "atat.cow": { "base": "Liquid", "particles": null, "speed": 0.5 },
-  "bearface.cow": { "base": "Breathe", "particles": null, "speed": 1.0 },
-  "bill-the-cat.cow": { "base": "Matrix", "particles": null, "speed": 1.5 },
-  "bud-frogs.cow": { "base": "Talk", "particles": null, "speed": 1.0 },
-  "charlie.cow": { "base": "Liquid", "particles": null, "speed": 1.0 },
-  "claw-arm.cow": { "base": "Sway", "particles": null, "speed": 1.0 },
-  "cowfee.cow": { "base": "Breathe", "particles": "Fire", "speed": 1.0 },
-  "ebi_furai.cow": { "base": "Squish", "particles": "Bubbles", "speed": 1.0 },
-  "elephant-in-snake.cow": { "base": "Breathe", "particles": null, "speed": 0.5 },
-  "elephant.cow": { "base": "Liquid", "particles": null, "speed": 0.5 },
-  "elephant2.cow": { "base": "Liquid", "particles": null, "speed": 0.5 },
-  "eyes.cow": { "base": "Talk", "particles": null, "speed": 1.0 },
-  "fat-banana.cow": { "base": "Sway", "particles": null, "speed": 1.0 },
-  "fence.cow": { "base": "Sway", "particles": null, "speed": 1.0 },
-  "hippie.cow": { "base": "Breathe", "particles": null, "speed": 1.0 },
-  "hiya.cow": { "base": "Sway", "particles": null, "speed": 1.0 },
-  "hypno.cow": { "base": "Pulse", "particles": null, "speed": 1.0 },
-  "kiss.cow": { "base": "Breathe", "particles": null, "speed": 1.0 },
-  "lollerskates.cow": { "base": "Liquid", "particles": null, "speed": 2.0 },
-  "moofasa.cow": { "base": "Breathe", "particles": null, "speed": 1.0 },
-  "mooghidjirah.cow": { "base": "Breathe", "particles": null, "speed": 1.0 },
-  "moojira.cow": { "base": "Breathe", "particles": null, "speed": 1.0 },
-  "shikato.cow": { "base": "Liquid", "particles": null, "speed": 1.0 },
-  "shrug.cow": { "base": "Breathe", "particles": null, "speed": 1.0 },
-  "skeleton.cow": { "base": "Matrix", "particles": null, "speed": 1.0 },
-  "small.cow": { "base": "Liquid", "particles": null, "speed": 1.0 },
-  "wizard.cow": { "base": "Pulse", "particles": "Stars", "speed": 1.0 }
+  "default.cow": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#ffffff",
+      "#1a1a1a",
+      "#2c2c2c",
+      "#ffb6c1",
+      "#dcdde1"
+    ]
+  },
+  "cower.cow": {
+    "base": "Breathe",
+    "particles": null,
+    "speed": 0.8,
+    "palette": [
+      "#ffffff",
+      "#212121",
+      "#e0e0e0",
+      "#90caf9",
+      "#ffb6c1"
+    ]
+  },
+  "fat-cow.cow": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#ffffff",
+      "#212121",
+      "#e0e0e0",
+      "#ffb6c1",
+      "#795548"
+    ]
+  },
+  "supermilker.cow": {
+    "base": "Pulse",
+    "particles": "Pulse",
+    "speed": 1.0,
+    "palette": [
+      "#ffffff",
+      "#212121",
+      "#0284c7",
+      "#38bdf8",
+      "#ffb6c1"
+    ]
+  },
+  "moose.cow": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#4e342e",
+      "#5d4037",
+      "#795548",
+      "#8d6e63",
+      "#3e2723"
+    ]
+  },
+  "mule.cow": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#5c4033",
+      "#795548",
+      "#8d6e63",
+      "#3e2723",
+      "#d7ccc8"
+    ]
+  },
+  "sheep.cow": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#ffffff",
+      "#f5f5f5",
+      "#424242",
+      "#212121",
+      "#ffb6c1"
+    ]
+  },
+  "flaming-sheep.cow": {
+    "base": "Breathe",
+    "particles": "Fire",
+    "speed": 0.8,
+    "palette": [
+      "#ff5722",
+      "#ff8a65",
+      "#ffab00",
+      "#212121",
+      "#ffd600"
+    ]
+  },
+  "lamb.cow": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#fafafa",
+      "#f5f5f5",
+      "#e0e0e0",
+      "#bdbdbd",
+      "#ffb6c1"
+    ]
+  },
+  "lamb2.cow": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#f5f5f5",
+      "#eeeeee",
+      "#bdbdbd",
+      "#9e9e9e",
+      "#ffb6c1"
+    ]
+  },
+  "goat.cow": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#d7ccc8",
+      "#a1887f",
+      "#8d6e63",
+      "#5d4037",
+      "#fff8e1"
+    ]
+  },
+  "goat2.cow": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#bcaaa4",
+      "#8d6e63",
+      "#5d4037",
+      "#3e2723",
+      "#ffffff"
+    ]
+  },
+  "dolphin.cow": {
+    "base": "Float",
+    "particles": "Bubbles",
+    "speed": 1.0,
+    "palette": [
+      "#4fc3f7",
+      "#81d4fa",
+      "#e1f5fe",
+      "#0288d1",
+      "#01579b"
+    ]
+  },
+  "whale.cow": {
+    "base": "Float",
+    "particles": "Bubbles",
+    "speed": 1.0,
+    "palette": [
+      "#0288d1",
+      "#29b6f6",
+      "#e1f5fe",
+      "#01579b",
+      "#ffffff"
+    ]
+  },
+  "happy-whale.cow": {
+    "base": "Float",
+    "particles": "Bubbles",
+    "speed": 1.0,
+    "palette": [
+      "#039be5",
+      "#4fc3f7",
+      "#e1f5fe",
+      "#ffffff",
+      "#b3e5fc"
+    ]
+  },
+  "docker-whale.cow": {
+    "base": "Float",
+    "particles": "Bubbles",
+    "speed": 1.0,
+    "palette": [
+      "#0288d1",
+      "#29b6f6",
+      "#ffffff",
+      "#01579b",
+      "#4fc3f7"
+    ]
+  },
+  "octopus.cow": {
+    "base": "Float",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#8e24aa",
+      "#ab47bc",
+      "#ce93d8",
+      "#e1bee7",
+      "#ffd54f"
+    ]
+  },
+  "smiling-octopus.cow": {
+    "base": "Float",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#ab47bc",
+      "#ce93d8",
+      "#f3e5f5",
+      "#e1bee7",
+      "#ffd54f"
+    ]
+  },
+  "jellyfish.cow": {
+    "base": "Float",
+    "particles": "Pulse",
+    "speed": 1.0,
+    "palette": [
+      "#e040fb",
+      "#ea80fc",
+      "#80d8ff",
+      "#f3e5f5",
+      "#b388ff"
+    ]
+  },
+  "seahorse.cow": {
+    "base": "Float",
+    "particles": "Bubbles",
+    "speed": 1.0,
+    "palette": [
+      "#ffa000",
+      "#ffb300",
+      "#ffd54f",
+      "#ffe082",
+      "#e65100"
+    ]
+  },
+  "seahorse-big.cow": {
+    "base": "Float",
+    "particles": "Bubbles",
+    "speed": 1.0,
+    "palette": [
+      "#ffa000",
+      "#ffb300",
+      "#ffd54f",
+      "#ffe082",
+      "#e65100"
+    ]
+  },
+  "lobster.cow": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#d32f2f",
+      "#f44336",
+      "#ff8a80",
+      "#b71c1c",
+      "#ffcdd2"
+    ]
+  },
+  "turkey.cow": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#6d4c41",
+      "#c62828",
+      "#1565c0",
+      "#f57f17",
+      "#212121"
+    ]
+  },
+  "owl.cow": {
+    "base": "Breathe",
+    "particles": null,
+    "speed": 0.8,
+    "palette": [
+      "#795548",
+      "#8d6e63",
+      "#ffb300",
+      "#ffd54f",
+      "#3e2723"
+    ]
+  },
+  "golden-eagle.cow": {
+    "base": "Fly",
+    "particles": null,
+    "speed": 1.2,
+    "palette": [
+      "#ffb300",
+      "#ffa000",
+      "#5d4037",
+      "#ffd54f",
+      "#212121"
+    ]
+  },
+  "tweety-bird.cow": {
+    "base": "Fly",
+    "particles": null,
+    "speed": 1.2,
+    "palette": [
+      "#ffeb3b",
+      "#fff59d",
+      "#ff9800",
+      "#ffb74d",
+      "#00b0ff"
+    ]
+  },
+  "pterodactyl.cow": {
+    "base": "Fly",
+    "particles": null,
+    "speed": 1.2,
+    "palette": [
+      "#689f38",
+      "#8bc34a",
+      "#cddc39",
+      "#ff9800",
+      "#e65100"
+    ]
+  },
+  "cat.cow": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#ffffff",
+      "#d35400",
+      "#795548",
+      "#ff9800",
+      "#212121"
+    ]
+  },
+  "cat2.cow": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#7f8c8d",
+      "#95a5a6",
+      "#bdc3c7",
+      "#2c3e50",
+      "#2ecc71"
+    ]
+  },
+  "kitty.cow": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#ffffff",
+      "#d35400",
+      "#795548",
+      "#ff9800",
+      "#212121"
+    ]
+  },
+  "kitten.cow": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#ffffff",
+      "#d35400",
+      "#795548",
+      "#ff9800",
+      "#212121"
+    ]
+  },
+  "meow.cow": {
+    "base": "Talk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#ffffff",
+      "#d35400",
+      "#795548",
+      "#ff9800",
+      "#212121"
+    ]
+  },
+  "catfence.cow": {
+    "base": "Sway",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#5d4037",
+      "#3e2723",
+      "#e67e22",
+      "#ffffff",
+      "#1a1a1a"
+    ]
+  },
+  "doge.cow": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#e59866",
+      "#d35400",
+      "#fdfefe",
+      "#edbb99",
+      "#1a1a1a"
+    ]
+  },
+  "fox.cow": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#e65100",
+      "#ff9800",
+      "#ffffff",
+      "#212121",
+      "#fbc02d"
+    ]
+  },
+  "bunny.cow": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.25,
+    "palette": [
+      "#ffffff",
+      "#f8fafc",
+      "#f1f5f9",
+      "#e2e8f0",
+      "#cbd5e1"
+    ]
+  },
+  "squirrel.cow": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#8d6e63",
+      "#a1887f",
+      "#d7ccc8",
+      "#5d4037",
+      "#f5f5f5"
+    ]
+  },
+  "hedgehog.cow": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#6d4c41",
+      "#8d6e63",
+      "#d7ccc8",
+      "#3e2723",
+      "#212121"
+    ]
+  },
+  "koala.cow": {
+    "base": "Breathe",
+    "particles": "Zzz",
+    "speed": 0.8,
+    "palette": [
+      "#9e9e9e",
+      "#bdbdbd",
+      "#e0e0e0",
+      "#212121",
+      "#795548"
+    ]
+  },
+  "luke-koala.cow": {
+    "base": "Breathe",
+    "particles": "Zzz",
+    "speed": 0.8,
+    "palette": [
+      "#90a4ae",
+      "#b0bec5",
+      "#cfd8dc",
+      "#00e5ff",
+      "#212121"
+    ]
+  },
+  "dragon.cow": {
+    "base": "Breathe",
+    "particles": "Fire",
+    "speed": 0.8,
+    "palette": [
+      "#d84315",
+      "#f4511e",
+      "#ffb300",
+      "#ffd600",
+      "#3e2723"
+    ]
+  },
+  "dragon-and-cow.cow": {
+    "base": "Breathe",
+    "particles": "Fire",
+    "speed": 0.8,
+    "palette": [
+      "#c62828",
+      "#e53935",
+      "#ff8f00",
+      "#ffffff",
+      "#1a1a1a"
+    ]
+  },
+  "charizardvice.cow": {
+    "base": "Breathe",
+    "particles": "Fire",
+    "speed": 0.8,
+    "palette": [
+      "#ff6f00",
+      "#ffab00",
+      "#00b0ff",
+      "#ff1744",
+      "#78909c"
+    ]
+  },
+  "ghost.cow": {
+    "base": "Float",
+    "particles": "Glitch",
+    "speed": 1.0,
+    "palette": [
+      "#eceff1",
+      "#cfd8dc",
+      "#b0bec5",
+      "#80d8ff",
+      "#212121"
+    ]
+  },
+  "ghostbusters.cow": {
+    "base": "Pulse",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#e53935",
+      "#ffffff",
+      "#212121",
+      "#ffd600",
+      "#00e5ff"
+    ]
+  },
+  "weeping-angel.cow": {
+    "base": "Pulse",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#9e9e9e",
+      "#757575",
+      "#bdbdbd",
+      "#616161",
+      "#e0e0e0"
+    ]
+  },
+  "alien.cow": {
+    "base": "Pulse",
+    "particles": null,
+    "speed": 1.0
+  },
+  "cthulhu-mini.cow": {
+    "base": "Float",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#2e7d32",
+      "#1b5e20",
+      "#81c784",
+      "#7c4dff",
+      "#33691e"
+    ]
+  },
+  "daemon.cow": {
+    "base": "Fly",
+    "particles": "Fire",
+    "speed": 1.2,
+    "palette": [
+      "#d32f2f",
+      "#f44336",
+      "#212121",
+      "#ffd700",
+      "#ffffff"
+    ]
+  },
+  "satanic.cow": {
+    "base": "Pulse",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#d32f2f",
+      "#b71c1c",
+      "#212121",
+      "#ff5722",
+      "#000000"
+    ]
+  },
+  "minotaur.cow": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#4e342e",
+      "#6d4c41",
+      "#d32f2f",
+      "#3e2723",
+      "#d7ccc8"
+    ]
+  },
+  "glados.cow": {
+    "base": "Glitch",
+    "particles": "Glitch",
+    "speed": 1.0,
+    "palette": [
+      "#eceff1",
+      "#212121",
+      "#ffab00",
+      "#78909c",
+      "#ff1744"
+    ]
+  },
+  "personality-sphere.cow": {
+    "base": "Float",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#03a9f4",
+      "#e0e0e0",
+      "#212121",
+      "#ffab00",
+      "#ffffff"
+    ]
+  },
+  "kosh.cow": {
+    "base": "Float",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#80cbc4",
+      "#4db6ac",
+      "#00897b",
+      "#ffd54f",
+      "#37474f"
+    ]
+  },
+  "batman.cow": {
+    "base": "Fly",
+    "particles": null,
+    "speed": 1.5
+  },
+  "snoopy.cow": {
+    "base": "Breathe",
+    "particles": null,
+    "speed": 0.8,
+    "palette": [
+      "#ffffff",
+      "#212121",
+      "#d32f2f",
+      "#424242",
+      "#ffcdd2"
+    ]
+  },
+  "snoopyhouse.cow": {
+    "base": "Breathe",
+    "particles": null,
+    "speed": 0.8,
+    "palette": [
+      "#d32f2f",
+      "#ffffff",
+      "#212121",
+      "#b71c1c",
+      "#424242"
+    ]
+  },
+  "snoopysleep.cow": {
+    "base": "Breathe",
+    "particles": null,
+    "speed": 0.8,
+    "palette": [
+      "#ffffff",
+      "#212121",
+      "#d32f2f",
+      "#424242",
+      "#90caf9"
+    ]
+  },
+  "ren.cow": {
+    "base": "Talk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#d7ccc8",
+      "#a1887f",
+      "#ff80ab",
+      "#e53935",
+      "#ffd600"
+    ]
+  },
+  "stimpy.cow": {
+    "base": "Talk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#e53935",
+      "#ef5350",
+      "#3949ab",
+      "#ffffff",
+      "#ffeb3b"
+    ]
+  },
+  "beavis.zen.cow": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#ffca28",
+      "#42a5f5",
+      "#ef5350",
+      "#ffe082",
+      "#7e57c2"
+    ]
+  },
+  "nyan.cow": {
+    "base": "Fly",
+    "particles": "Stars",
+    "speed": 1.2,
+    "palette": [
+      "#ff0033",
+      "#ff7f00",
+      "#ffff00",
+      "#33ff00",
+      "#0099ff",
+      "#9933ff",
+      "#ffccbc"
+    ]
+  },
+  "hellokitty.cow": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#ffffff",
+      "#ff4081",
+      "#ffeb3b",
+      "#212121",
+      "#42a5f5"
+    ]
+  },
+  "bees.cow": {
+    "base": "Fly",
+    "particles": null,
+    "speed": 1.2,
+    "palette": [
+      "#ffeb3b",
+      "#212121",
+      "#fff59d",
+      "#ff9800",
+      "#80d8ff"
+    ]
+  },
+  "spidercow.cow": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#212121",
+      "#d32f2f",
+      "#3b82f6",
+      "#ffffff",
+      "#e0e0e0"
+    ]
+  },
+  "stegosaurus.cow": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#388e3c",
+      "#4caf50",
+      "#81c784",
+      "#e65100",
+      "#ff9800"
+    ]
+  },
+  "tortoise.cow": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#558b2f",
+      "#689f38",
+      "#9e9d24",
+      "#33691e",
+      "#d7ccc8"
+    ]
+  },
+  "turtle.cow": {
+    "base": "Float",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#2e7d32",
+      "#4caf50",
+      "#81c784",
+      "#fff59d",
+      "#1b5e20"
+    ]
+  },
+  "mona-lisa.cow": {
+    "base": "Breathe",
+    "particles": null,
+    "speed": 0.8,
+    "palette": [
+      "#8d6e63",
+      "#a1887f",
+      "#d7ccc8",
+      "#4e342e",
+      "#2e7d32"
+    ]
+  },
+  "periodic-table.cow": {
+    "base": "Pulse",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#00e5ff",
+      "#76ff03",
+      "#ffd600",
+      "#ff4081",
+      "#7c4dff"
+    ]
+  },
+  "world.cow": {
+    "base": "Float",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#29b6f6",
+      "#66bb6a",
+      "#ffffff",
+      "#0288d1",
+      "#43a047"
+    ]
+  },
+  "king.cow": {
+    "base": "Breathe",
+    "particles": null,
+    "speed": 0.8,
+    "palette": [
+      "#ffd700",
+      "#e91e63",
+      "#ffffff",
+      "#212121",
+      "#cfd8dc"
+    ]
+  },
+  "queen.cow": {
+    "base": "Breathe",
+    "particles": null,
+    "speed": 0.8,
+    "palette": [
+      "#ffd700",
+      "#e91e63",
+      "#ffffff",
+      "#212121",
+      "#cfd8dc"
+    ]
+  },
+  "knight.cow": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#b0bec5",
+      "#cfd8dc",
+      "#78909c",
+      "#37474f",
+      "#ffffff"
+    ]
+  },
+  "rook.cow": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#78909c",
+      "#90a4ae",
+      "#b0bec5",
+      "#546e7a",
+      "#ffffff"
+    ]
+  },
+  "pawn.cow": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#cfd8dc",
+      "#eceff1",
+      "#90a4ae",
+      "#78909c",
+      "#ffffff"
+    ]
+  },
+  "surgery.cow": {
+    "base": "Glitch",
+    "particles": "Glitch",
+    "speed": 1.0,
+    "palette": [
+      "#0284c7",
+      "#38bdf8",
+      "#e0f2fe",
+      "#ffffff",
+      "#ef4444"
+    ]
+  },
+  "mutilated.cow": {
+    "base": "Dissolve",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#d32f2f",
+      "#b71c1c",
+      "#212121",
+      "#90a4ae",
+      "#ffffff"
+    ]
+  },
+  "tux.cow": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#ffffff",
+      "#212121",
+      "#ff9800",
+      "#ffa726",
+      "#f57c00"
+    ]
+  },
+  "tux-big.cow": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#ffffff",
+      "#212121",
+      "#ff9800",
+      "#ffa726",
+      "#f57c00"
+    ]
+  },
+  "armadillo.cow": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#8d6e63",
+      "#d7ccc8",
+      "#5d4037",
+      "#bcaaa4",
+      "#3e2723"
+    ]
+  },
+  "atat.cow": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#9e9e9e",
+      "#cfd8dc",
+      "#37474f",
+      "#b0bec5",
+      "#d32f2f"
+    ]
+  },
+  "bearface.cow": {
+    "base": "Breathe",
+    "particles": null,
+    "speed": 0.8,
+    "palette": [
+      "#5d4037",
+      "#8d6e63",
+      "#d7ccc8",
+      "#212121",
+      "#ffffff"
+    ]
+  },
+  "bill-the-cat.cow": {
+    "base": "Talk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#ffb74d",
+      "#e57373",
+      "#fff176",
+      "#424242",
+      "#ffffff"
+    ]
+  },
+  "bud-frogs.cow": {
+    "base": "Float",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#4caf50",
+      "#81c784",
+      "#1b5e20",
+      "#fff9c4",
+      "#ffb300"
+    ]
+  },
+  "charlie.cow": {
+    "base": "Talk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#8d6e63",
+      "#5d4037",
+      "#f5f5f5",
+      "#3e2723",
+      "#ffccbc"
+    ]
+  },
+  "claw-arm.cow": {
+    "base": "Pulse",
+    "particles": "Pulse",
+    "speed": 1.0,
+    "palette": [
+      "#00e5ff",
+      "#76ff03",
+      "#2979ff",
+      "#ffd600",
+      "#37474f"
+    ]
+  },
+  "cowfee.cow": {
+    "base": "Breathe",
+    "particles": null,
+    "speed": 0.8,
+    "palette": [
+      "#6d4c41",
+      "#8d6e63",
+      "#d7ccc8",
+      "#ffffff",
+      "#ffab91"
+    ]
+  },
+  "ebi_furai.cow": {
+    "base": "Float",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#ff8f00",
+      "#ffb300",
+      "#fff8e1",
+      "#e53935",
+      "#ff8a80"
+    ]
+  },
+  "elephant-in-snake.cow": {
+    "base": "Breathe",
+    "particles": null,
+    "speed": 0.8,
+    "palette": [
+      "#558b2f",
+      "#78909c",
+      "#33691e",
+      "#8bc34a",
+      "#fff9c4"
+    ]
+  },
+  "elephant.cow": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#78909c",
+      "#90a4ae",
+      "#cfd8dc",
+      "#546e7a",
+      "#ffccbc"
+    ]
+  },
+  "elephant2.cow": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#607d8b",
+      "#78909c",
+      "#b0bec5",
+      "#eceff1",
+      "#37474f"
+    ]
+  },
+  "eyes.cow": {
+    "base": "Pulse",
+    "particles": "Pulse",
+    "speed": 1.0,
+    "palette": [
+      "#00e676",
+      "#b9f6ca",
+      "#ffffff",
+      "#000000",
+      "#76ff03"
+    ]
+  },
+  "fat-banana.cow": {
+    "base": "Sway",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#ffeb3b",
+      "#fff59d",
+      "#fbc02d",
+      "#795548",
+      "#4caf50"
+    ]
+  },
+  "fence.cow": {
+    "base": "Sway",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#8d6e63",
+      "#a1887f",
+      "#d7ccc8",
+      "#5d4037",
+      "#7cb342"
+    ]
+  },
+  "hippie.cow": {
+    "base": "Sway",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#ff007f",
+      "#00e5ff",
+      "#ffff00",
+      "#76ff03",
+      "#d500f9"
+    ]
+  },
+  "hiya.cow": {
+    "base": "Talk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#ffffff",
+      "#212121",
+      "#ff80ab",
+      "#ffb6c1",
+      "#fbc02d"
+    ]
+  },
+  "hypno.cow": {
+    "base": "Pulse",
+    "particles": "Pulse",
+    "speed": 1.0,
+    "palette": [
+      "#7c4dff",
+      "#00e5ff",
+      "#e040fb",
+      "#ffd600",
+      "#fff59d"
+    ]
+  },
+  "kiss.cow": {
+    "base": "Talk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#ffffff",
+      "#212121",
+      "#ff4081",
+      "#d32f2f",
+      "#757575"
+    ]
+  },
+  "lollerskates.cow": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#00e676",
+      "#00b0ff",
+      "#ffea00",
+      "#ff4081",
+      "#7c4dff"
+    ]
+  },
+  "moofasa.cow": {
+    "base": "Breathe",
+    "particles": null,
+    "speed": 0.8,
+    "palette": [
+      "#ff8f00",
+      "#ffa000",
+      "#ffc107",
+      "#b71c1c",
+      "#ffd54f"
+    ]
+  },
+  "mooghidjirah.cow": {
+    "base": "Breathe",
+    "particles": null,
+    "speed": 0.8,
+    "palette": [
+      "#ffd700",
+      "#c62828",
+      "#ad1457",
+      "#ff6f00",
+      "#212121"
+    ]
+  },
+  "moojira.cow": {
+    "base": "Breathe",
+    "particles": null,
+    "speed": 0.8,
+    "palette": [
+      "#2e7d32",
+      "#1b5e20",
+      "#00e5ff",
+      "#ff1744",
+      "#ffffff"
+    ]
+  },
+  "shikato.cow": {
+    "base": "Breathe",
+    "particles": null,
+    "speed": 0.8,
+    "palette": [
+      "#9e9e9e",
+      "#e0e0e0",
+      "#212121",
+      "#bdbdbd",
+      "#757575"
+    ]
+  },
+  "shrug.cow": {
+    "base": "Sway",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#ffffff",
+      "#e0e0e0",
+      "#bdbdbd",
+      "#9e9e9e",
+      "#212121"
+    ]
+  },
+  "skeleton.cow": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#f5f5f5",
+      "#e0e0e0",
+      "#9e9e9e",
+      "#616161",
+      "#757575"
+    ]
+  },
+  "small.cow": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#ffffff",
+      "#e0e0e0",
+      "#212121",
+      "#ffb6c1",
+      "#8d6e63"
+    ]
+  },
+  "wizard.cow": {
+    "base": "Float",
+    "particles": "Stars",
+    "speed": 1.0,
+    "palette": [
+      "#7c4dff",
+      "#b388ff",
+      "#ffd700",
+      "#ffffff",
+      "#00e5ff"
+    ]
+  },
+  "hamster.cow": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.25,
+    "palette": [
+      "#d4a373",
+      "#faedcd",
+      "#e76f51",
+      "#ffb6c1",
+      "#212121"
+    ]
+  },
+  "corgi.cow": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.25,
+    "palette": [
+      "#d35400",
+      "#e59866",
+      "#ffffff",
+      "#2c2c2c",
+      "#ffb6c1"
+    ]
+  },
+  "pig.cow": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#ffb6c1",
+      "#ff80ab",
+      "#f8bbd0",
+      "#ff4081",
+      "#8d6e63"
+    ]
+  },
+  "ram.cow": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#f5f5f5",
+      "#ffffff",
+      "#9e9e9e",
+      "#757575",
+      "#616161"
+    ]
+  },
+  "rooster.cow": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#d32f2f",
+      "#f57f17",
+      "#1b5e20",
+      "#ffb300",
+      "#fbc02d"
+    ]
+  },
+  "panther.cow": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#18181b",
+      "#27272a",
+      "#3f3f46",
+      "#eab308",
+      "#f43f5e"
+    ]
+  },
+  "rhino.cow": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#64748b",
+      "#94a3b8",
+      "#475569",
+      "#334155",
+      "#1e293b"
+    ]
+  },
+  "sloth.cow": {
+    "base": "Breathe",
+    "particles": null,
+    "speed": 0.8,
+    "palette": [
+      "#a16207",
+      "#ca8a04",
+      "#713f12",
+      "#fef08a",
+      "#1c1917"
+    ]
+  },
+  "telebears.cow": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#3b82f6",
+      "#60a5fa",
+      "#2563eb",
+      "#ffffff",
+      "#facc15"
+    ]
+  },
+  "tiger.cow": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#ea580c",
+      "#18181b",
+      "#ffffff",
+      "#fb923c",
+      "#84cc16"
+    ]
+  },
+  "wolf.cow": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#9ca3af",
+      "#4b5563",
+      "#1f2937",
+      "#f3f4f6",
+      "#f59e0b"
+    ]
+  },
+  "duck.cow": {
+    "base": "Fly",
+    "particles": null,
+    "speed": 1.2,
+    "palette": [
+      "#059669",
+      "#fbbf24",
+      "#d97706",
+      "#78350f",
+      "#f3f4f6"
+    ]
+  },
+  "pufferfish.cow": {
+    "base": "Pulse",
+    "particles": "Pulse",
+    "speed": 1.0,
+    "palette": [
+      "#facc15",
+      "#fde047",
+      "#eab308",
+      "#ffffff",
+      "#15803d"
+    ]
+  },
+  "squid.cow": {
+    "base": "Float",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#06b6d4",
+      "#3b82f6",
+      "#0284c7",
+      "#cffafe",
+      "#f59e0b"
+    ]
+  },
+  "walrus.cow": {
+    "base": "Breathe",
+    "particles": null,
+    "speed": 0.8,
+    "palette": [
+      "#78716c",
+      "#d6d3d1",
+      "#57534e",
+      "#a8a29e",
+      "#f43f5e"
+    ]
+  },
+  "mech-and-cow.cow": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#0284c7",
+      "#e0f2fe",
+      "#0369a1",
+      "#f59e0b",
+      "#ffffff"
+    ]
+  },
+  "sauron.cow": {
+    "base": "Pulse",
+    "particles": "Pulse",
+    "speed": 1.0,
+    "palette": [
+      "#f97316",
+      "#dc2626",
+      "#b91c1c",
+      "#000000",
+      "#ffeb3b"
+    ]
+  },
+  "unipony.cow": {
+    "base": "Walk",
+    "particles": "Stars",
+    "speed": 1.0,
+    "palette": [
+      "#e879f9",
+      "#38bdf8",
+      "#c084fc",
+      "#fef08a",
+      "#ffffff"
+    ]
+  },
+  "vader.cow": {
+    "base": "Breathe",
+    "particles": null,
+    "speed": 0.8,
+    "palette": [
+      "#18181b",
+      "#27272a",
+      "#dc2626",
+      "#7f1d1d",
+      "#38bdf8"
+    ]
+  },
+  "yoda.cow": {
+    "base": "Float",
+    "particles": "Stars",
+    "speed": 1.0,
+    "palette": [
+      "#84cc16",
+      "#65a30d",
+      "#a3e635",
+      "#d7ccc8",
+      "#854d0e"
+    ]
+  },
+  "radioactive-kitty.cow": {
+    "base": "Glitch",
+    "particles": "Glitch",
+    "speed": 1.0,
+    "palette": [
+      "#22c55e",
+      "#86efac",
+      "#16a34a",
+      "#facc15",
+      "#ffffff"
+    ]
+  },
+  "vulpix.cow": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#f97316",
+      "#ea580c",
+      "#fb923c",
+      "#fff7ed",
+      "#ffedd5"
+    ]
+  },
+  "apt.cow": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#e11d48",
+      "#f43f5e",
+      "#be123c",
+      "#ffffff",
+      "#212121"
+    ]
+  },
+  "jesus.cow": {
+    "base": "Float",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#fbbf24",
+      "#fef08a",
+      "#f59e0b",
+      "#ffffff",
+      "#d97706"
+    ]
+  },
+  "three-eyes.cow": {
+    "base": "Breathe",
+    "particles": null,
+    "speed": 0.8,
+    "palette": [
+      "#ffffff",
+      "#212121",
+      "#00e676",
+      "#76ff03",
+      "#ffb6c1"
+    ]
+  },
+  "viper.cow": {
+    "base": "Sway",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#16a34a",
+      "#22c55e",
+      "#15803d",
+      "#eab308",
+      "#dc2626"
+    ]
+  }
 }
-

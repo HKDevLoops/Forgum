@@ -238,29 +238,39 @@ pub struct StaticEffect {
 impl StaticEffect {
     pub fn new(cow_text: String, color_mode: String) -> Self {
         let cow_start = find_cow_start_line(&cow_text);
-        let lines: Vec<&str> = cow_text.lines().collect();
-        let mut blink_lines = Vec::with_capacity(lines.len());
-        for (i, line) in lines.iter().enumerate() {
-            if i < cow_start {
-                blink_lines.push(line.to_string());
-            } else {
-                let replaced = line
-                    .replace("oo", "--")
-                    .replace("OO", "--")
-                    .replace("xx", "--")
-                    .replace("XX", "--")
-                    .replace("@@", "--")
-                    .replace("$$", "--")
-                    .replace("00", "--")
-                    .replace("^^", "--")
-                    .replace("**", "--")
-                    .replace("==", "--")
-                    .replace("..", "--")
-                    .replace("o o", "- -")
-                    .replace("O O", "- -")
-                    .replace("^ ^", "- -")
-                    .replace("* *", "- -");
-                blink_lines.push(replaced);
+        let landmarks = crate::cow::detect_cow_eyes(&cow_text, cow_start);
+        let mut blink_lines: Vec<String> = cow_text.lines().map(|s| s.to_string()).collect();
+        if landmarks.is_empty() {
+            // Fallback: replace common consecutive/spaced pairs
+            for (i, line) in blink_lines.iter_mut().enumerate() {
+                if i >= cow_start {
+                    *line = line
+                        .replace("oo", "--")
+                        .replace("OO", "--")
+                        .replace("xx", "--")
+                        .replace("XX", "--")
+                        .replace("@@", "--")
+                        .replace("$$", "--")
+                        .replace("00", "--")
+                        .replace("^^", "--")
+                        .replace("**", "--")
+                        .replace("==", "--")
+                        .replace("..", "--")
+                        .replace("o o", "- -")
+                        .replace("O O", "- -")
+                        .replace("^ ^", "- -")
+                        .replace("* *", "- -");
+                }
+            }
+        } else {
+            for &(r, c) in &landmarks {
+                if let Some(line) = blink_lines.get_mut(r) {
+                    let mut chars: Vec<char> = line.chars().collect();
+                    if c < chars.len() {
+                        chars[c] = '-';
+                        *line = chars.into_iter().collect();
+                    }
+                }
             }
         }
         let blink_text = blink_lines.join("\n");
@@ -309,6 +319,7 @@ pub struct BreatheEffect {
     palette: Vec<(u8, u8, u8)>,
     instinct: AnimalInstinct,
     mouth_pos: Option<(usize, usize)>,
+    eye_landmarks: Vec<(usize, usize)>,
 }
 
 impl BreatheEffect {
@@ -323,6 +334,7 @@ impl BreatheEffect {
         }
 
         let instinct = detect_animal_instinct(&cow_text, dna);
+        let eye_landmarks = crate::cow::detect_cow_eyes(&cow_text, cow_start_line);
 
         // Find mouth/snout position for breathing fire/bubbles/particles
         let mut mouth_pos = None;
@@ -333,14 +345,13 @@ impl BreatheEffect {
             }
             if let Some(open) = line.find("(__)") {
                 mouth_pos = Some((i, open + 1));
-            } else if let Some(idx) = line.find("/$eye") {
-                mouth_pos = Some((i + 1, idx));
             } else if let Some(idx) = line.find("\\@") {
                 mouth_pos = Some((i, idx));
-            } else if let Some(idx) = line.find("$eyes") {
-                mouth_pos = Some((i + 1, idx));
-            } else if let Some(idx) = line.find("$eye") {
-                mouth_pos = Some((i + 1, idx));
+            }
+        }
+        if mouth_pos.is_none() {
+            if let Some(&(er, ec)) = eye_landmarks.first() {
+                mouth_pos = Some((er + 1, ec));
             }
         }
         if mouth_pos.is_none() && lines.len() > cow_start_line {
@@ -365,6 +376,7 @@ impl BreatheEffect {
             palette,
             instinct,
             mouth_pos,
+            eye_landmarks,
         }
     }
 }
@@ -411,9 +423,9 @@ impl Effect for BreatheEffect {
                     break;
                 }
 
-                // Blink eyes: oo, OO, @@, ^^, **, $$, .., etc. -> --
-                if is_blinking && is_eye_glyph(ch) && chars_iter.peek().copied() == Some(ch) {
-                    let _ = chars_iter.next(); // consume second eye glyph
+                // Blink eyes: works across all detected eye landmarks (single, separated, or pairs)
+                let is_landmark = self.eye_landmarks.contains(&(y, x));
+                if is_blinking && (is_landmark || (is_eye_glyph(ch) && chars_iter.peek().copied() == Some(ch))) {
                     let cell_fg = resolve_fg_palette(
                         &self.color_mode,
                         &self.palette,
@@ -423,10 +435,15 @@ impl Effect for BreatheEffect {
                         Color::WHITE,
                     );
                     draw_char_with_hull(fb, x, y, x, hull, '-', cell_fg);
-                    if x + 1 < fb.width {
-                        draw_char_with_hull(fb, x + 1, y, x + 1, hull, '-', cell_fg);
+                    if !is_landmark && chars_iter.peek().copied() == Some(ch) {
+                        let _ = chars_iter.next();
+                        if x + 1 < fb.width {
+                            draw_char_with_hull(fb, x + 1, y, x + 1, hull, '-', cell_fg);
+                        }
+                        x += 2;
+                        continue;
                     }
-                    x += 2;
+                    x += 1;
                     continue;
                 }
 
@@ -670,6 +687,7 @@ pub struct FloatEffect {
     instinct: AnimalInstinct,
     pub body: crate::kinematics::KinematicBody,
     elapsed: f32,
+    eye_landmarks: Vec<(usize, usize)>,
 }
 
 impl FloatEffect {
@@ -677,6 +695,7 @@ impl FloatEffect {
         let phase = instance_phase(dna.phase_seed, instance_id);
         let line_offsets = compute_line_offsets(&cow_text);
         let cow_start_line = find_cow_start_line(&cow_text);
+        let eye_landmarks = crate::cow::detect_cow_eyes(&cow_text, cow_start_line);
         let (w, h) = crate::kinematics::ascii_dimensions(&cow_text);
         let mut body = crate::kinematics::KinematicBody::new(
             w,
@@ -711,6 +730,7 @@ impl FloatEffect {
             instinct,
             body,
             elapsed: 0.0,
+            eye_landmarks,
         }
     }
 }
@@ -761,9 +781,9 @@ impl Effect for FloatEffect {
                 if xi >= 0 && (xi as usize) < fb.width {
                     let uxi = xi as usize;
 
-                    // Periodic eye-blink:
-                    if is_blinking && is_eye_glyph(ch) && chars_iter.peek().copied() == Some(ch) {
-                        let _ = chars_iter.next();
+                    // Periodic eye-blink across all eye landmarks:
+                    let is_landmark = self.eye_landmarks.contains(&(draw_y, uxi));
+                    if is_blinking && (is_landmark || (is_eye_glyph(ch) && chars_iter.peek().copied() == Some(ch))) {
                         let cell_fg = resolve_fg_palette(
                             &self.color_mode,
                             &self.palette,
@@ -773,10 +793,15 @@ impl Effect for FloatEffect {
                             Color::WHITE,
                         );
                         draw_char_with_hull(fb, uxi, draw_y, x, hull, '-', cell_fg);
-                        if uxi + 1 < fb.width {
-                            draw_char_with_hull(fb, uxi + 1, draw_y, x + 1, hull, '-', cell_fg);
+                        if !is_landmark && chars_iter.peek().copied() == Some(ch) {
+                            let _ = chars_iter.next();
+                            if uxi + 1 < fb.width {
+                                draw_char_with_hull(fb, uxi + 1, draw_y, x + 1, hull, '-', cell_fg);
+                            }
+                            x += 2;
+                            continue;
                         }
-                        x += 2;
+                        x += 1;
                         continue;
                     }
 
@@ -928,6 +953,7 @@ pub struct WalkEffect {
     instinct: AnimalInstinct,
     pub body: crate::kinematics::KinematicBody,
     elapsed: f32,
+    eye_landmarks: Vec<(usize, usize)>,
 }
 
 impl WalkEffect {
@@ -960,17 +986,17 @@ impl WalkEffect {
         }
 
         // Anatomical cow landmarks detection:
-        let mut eye_pos: Option<(usize, usize)> = None;
+        let cow_start = find_cow_start_line(&cow_text);
+        let eye_landmarks = crate::cow::detect_cow_eyes(&cow_text, cow_start);
+        let mut eye_pos: Option<(usize, usize)> = eye_landmarks.first().copied();
         let mut mouth_pos: Option<(usize, usize)> = None;
         let mut tail_pos: Option<(usize, usize)> = None;
 
-        let cow_start = find_cow_start_line(&cow_text);
         for (i, line) in lines.iter().enumerate().skip(cow_start) {
             let chars: Vec<char> = line.chars().collect();
 
-            // 1. Detect eyes: (oo), [oo], (@@), (XX), (..), or standalone pairs oo, @@, ^^, **, $$
+            // 1. Detect eyes fallback if not found by detect_cow_eyes
             if eye_pos.is_none() && i < leg_line_idx {
-                // Check parenthesized/bracketed eye patterns first
                 for (c_idx, &c) in chars.iter().enumerate() {
                     if (c == '(' || c == '[') && c_idx + 3 < chars.len() {
                         let c1 = chars[c_idx + 1];
@@ -982,7 +1008,6 @@ impl WalkEffect {
                         }
                     }
                 }
-                // Fallback: search for adjacent eye pair in the line
                 if eye_pos.is_none() {
                     for col in 0..chars.len().saturating_sub(1) {
                         if is_eye_glyph(chars[col]) && chars[col] == chars[col + 1] {
@@ -1050,6 +1075,7 @@ impl WalkEffect {
             instinct,
             body,
             elapsed: 0.0,
+            eye_landmarks,
         }
     }
 }
@@ -1118,10 +1144,10 @@ impl Effect for WalkEffect {
                 }
 
                 // 2. Eye blinking animation
-                if let Some((eye_row, eye_col)) = self.eye_pos {
-                    if y == eye_row && is_blinking && (x == eye_col || x == eye_col + 1) {
-                        display_ch = '-';
-                    }
+                let is_eye = self.eye_landmarks.contains(&(y, x))
+                    || self.eye_pos.is_some_and(|(eye_row, eye_col)| y == eye_row && (x == eye_col || x == eye_col + 1));
+                if is_eye && is_blinking {
+                    display_ch = '-';
                 }
 
                 // 3. Mouth / cud chewing animation
@@ -1579,6 +1605,7 @@ pub struct FlyEffect {
     instinct: AnimalInstinct,
     pub body: crate::kinematics::KinematicBody,
     elapsed: f32,
+    eye_landmarks: Vec<(usize, usize)>,
 }
 
 impl FlyEffect {
@@ -1586,6 +1613,7 @@ impl FlyEffect {
         let phase = instance_phase(dna.phase_seed, instance_id);
         let line_offsets = compute_line_offsets(&cow_text);
         let cow_start_line = find_cow_start_line(&cow_text);
+        let eye_landmarks = crate::cow::detect_cow_eyes(&cow_text, cow_start_line);
         let (w, h) = crate::kinematics::ascii_dimensions(&cow_text);
         let mut body =
             crate::kinematics::KinematicBody::new(w, h, crate::kinematics::BoundsMode::Wrap);
@@ -1609,6 +1637,7 @@ impl FlyEffect {
             instinct,
             body,
             elapsed: 0.0,
+            eye_landmarks,
         }
     }
 
@@ -1781,9 +1810,9 @@ impl Effect for FlyEffect {
                     break;
                 }
 
-                // Eye blinking:
-                if is_blinking && is_eye_glyph(ch) && chars_iter.peek().copied() == Some(ch) {
-                    let _ = chars_iter.next(); // consume second eye glyph
+                // Eye blinking across all eye landmarks:
+                let is_landmark = self.eye_landmarks.contains(&(y, x));
+                if is_blinking && (is_landmark || (is_eye_glyph(ch) && chars_iter.peek().copied() == Some(ch))) {
                     let cell_fg = resolve_fg_palette(
                         &self.color_mode,
                         &self.palette,
@@ -1793,10 +1822,15 @@ impl Effect for FlyEffect {
                         Color::WHITE,
                     );
                     draw_char_with_hull(fb, x, y, x, hull, '-', cell_fg);
-                    if x + 1 < fb.width {
-                        draw_char_with_hull(fb, x + 1, y, x + 1, hull, '-', cell_fg);
+                    if !is_landmark && chars_iter.peek().copied() == Some(ch) {
+                        let _ = chars_iter.next();
+                        if x + 1 < fb.width {
+                            draw_char_with_hull(fb, x + 1, y, x + 1, hull, '-', cell_fg);
+                        }
+                        x += 2;
+                        continue;
                     }
-                    x += 2;
+                    x += 1;
                     continue;
                 }
 
@@ -1899,6 +1933,7 @@ pub struct TalkEffect {
     color_mode: String,
     palette: Vec<(u8, u8, u8)>,
     instinct: AnimalInstinct,
+    eye_landmarks: Vec<(usize, usize)>,
 }
 
 impl TalkEffect {
@@ -1908,11 +1943,12 @@ impl TalkEffect {
         let cow_start_line = find_cow_start_line(&cow_text);
         let lines: Vec<&str> = cow_text.lines().collect();
 
-        let mut eye_pos: Option<(usize, usize)> = None;
+        let eye_landmarks = crate::cow::detect_cow_eyes(&cow_text, cow_start_line);
+        let mut eye_pos: Option<(usize, usize)> = eye_landmarks.first().copied();
         let mut mouth_pos: Option<(usize, usize)> = None;
 
         for (i, line) in lines.iter().enumerate().skip(cow_start_line) {
-            // 1. Detect eyes: (oo), (@@), (XX), (..), etc.
+            // 1. Detect eyes fallback if not detected
             if eye_pos.is_none() {
                 if let Some(open) = line.find('(') {
                     if open + 3 <= line.len() && line.as_bytes().get(open + 3) == Some(&b')') {
@@ -1947,6 +1983,7 @@ impl TalkEffect {
             color_mode,
             palette,
             instinct,
+            eye_landmarks,
         }
     }
 }
@@ -1993,23 +2030,23 @@ impl Effect for TalkEffect {
                     break;
                 }
 
-                // 1. Natural eye preservation and blinking
-                if let Some((eye_row, eye_col)) = self.eye_pos {
-                    if y == eye_row {
-                        if is_blinking && (x == eye_col || x == eye_col + 1) {
-                            display_ch = '-';
-                        }
-                        let cell_fg = resolve_fg_palette(
-                            &self.color_mode,
-                            &self.palette,
-                            x,
-                            y,
-                            time,
-                            Color::WHITE,
-                        );
-                        draw_char_with_hull(fb, x, y, x, hull, display_ch, cell_fg);
-                        continue;
+                // 1. Natural eye preservation and blinking across all landmarks
+                let is_eye = self.eye_landmarks.contains(&(y, x))
+                    || self.eye_pos.is_some_and(|(eye_row, eye_col)| y == eye_row && (x == eye_col || x == eye_col + 1));
+                if is_eye {
+                    if is_blinking {
+                        display_ch = '-';
                     }
+                    let cell_fg = resolve_fg_palette(
+                        &self.color_mode,
+                        &self.palette,
+                        x,
+                        y,
+                        time,
+                        Color::WHITE,
+                    );
+                    draw_char_with_hull(fb, x, y, x, hull, display_ch, cell_fg);
+                    continue;
                 }
 
                 // 2. Mouth / jaw animation below eyes:
@@ -2375,18 +2412,27 @@ pub(crate) fn resolve_fg_palette(
             let (r, g, b) = crate::color::lolcat_color(x as f32, y as f32, time, 0.0);
             Color { r, g, b, a: 255 }
         }
-        "default" | "animal" => {
+        "default" | "animal" | "natural" | "animal_natural" => {
             if !palette.is_empty() {
                 let (r, g, b) = crate::color::palette_gradient(palette, x as f32, y as f32, time);
                 Color { r, g, b, a: 255 }
             } else {
-                base
+                let default_p = crate::color::get_natural_palette("cow");
+                let (r, g, b) = crate::color::palette_gradient(default_p, x as f32, y as f32, time);
+                Color { r, g, b, a: 255 }
             }
         }
         "solid" | "static" | "white" => Color::WHITE,
         "none" => base,
         _ => {
-            if color_mode.starts_with('#') {
+            if let Some(mascot) = color_mode
+                .strip_prefix("natural:")
+                .or_else(|| color_mode.strip_prefix("animal:"))
+            {
+                let p = crate::color::get_natural_palette(mascot);
+                let (r, g, b) = crate::color::palette_gradient(p, x as f32, y as f32, time);
+                Color { r, g, b, a: 255 }
+            } else if color_mode.starts_with('#') {
                 let hexes: Vec<String> = color_mode
                     .split(',')
                     .map(|s| s.trim().to_string())
@@ -2752,6 +2798,13 @@ pub fn create_scene_effect(
             instance_id,
             color_mode.to_string(),
         )),
+        "animal_natural" | "natural" | "default" | "dna" => create_effect(
+            dna.base,
+            cow_text.clone(),
+            dna.clone(),
+            instance_id,
+            color_mode,
+        ),
         _ => create_effect(
             dna.base,
             cow_text.clone(),

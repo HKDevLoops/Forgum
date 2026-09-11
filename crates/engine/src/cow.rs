@@ -30,8 +30,21 @@ pub fn load_cow(
     tongue: &str,
     thoughts: &str,
 ) -> String {
+    load_cow_with_landmarks(cow_name, data_dir, eyes, tongue, thoughts).0
+}
+
+/// Load a `.cow` file and expand placeholders, returning both expanded art and eye landmarks.
+pub fn load_cow_with_landmarks(
+    cow_name: &str,
+    data_dir: &Path,
+    eyes: &str,
+    tongue: &str,
+    thoughts: &str,
+) -> (String, Vec<(usize, usize)>) {
     let clean = cow_name.trim().to_ascii_lowercase();
     let resolved = match clean.as_str() {
+        "cow" | "cowsay" | "the-cow" => "default",
+        "kittens" => "kitten",
         "nyan-cat" | "nyancat" | "nyan_cat" => "nyan",
         other => other,
     };
@@ -43,7 +56,13 @@ pub fn load_cow(
             "Loaded mascot '{resolved}' from {}",
             cow_path.display()
         );
-        return expand_cow(&raw, eyes, tongue, thoughts);
+        let (expanded, landmarks) = expand_cow_with_landmarks(&raw, eyes, tongue, thoughts);
+        let final_landmarks = if landmarks.is_empty() {
+            detect_cow_eyes(&expanded, 0)
+        } else {
+            landmarks
+        };
+        return (expanded, final_landmarks);
     }
     // 2. Try user's custom cows directory (Phase 8.12: community cow packs).
     if let Some(custom_path) = custom_cows_dir() {
@@ -54,7 +73,13 @@ pub fn load_cow(
                 "Loaded custom mascot '{resolved}' from {}",
                 custom_cow.display()
             );
-            return expand_cow(&raw, eyes, tongue, thoughts);
+            let (expanded, landmarks) = expand_cow_with_landmarks(&raw, eyes, tongue, thoughts);
+            let final_landmarks = if landmarks.is_empty() {
+                detect_cow_eyes(&expanded, 0)
+            } else {
+                landmarks
+            };
+            return (expanded, final_landmarks);
         }
     }
     if resolved != "default" {
@@ -66,7 +91,13 @@ pub fn load_cow(
             &format!("Check if data/Cows/{resolved}.cow exists or if resolve_cow_name needs an alias.")
         );
     }
-    default_cow_expanded(eyes, tongue, thoughts)
+    let (expanded, landmarks) = expand_cow_with_landmarks(DEFAULT_COW, eyes, tongue, thoughts);
+    let final_landmarks = if landmarks.is_empty() {
+        detect_cow_eyes(&expanded, 0)
+    } else {
+        landmarks
+    };
+    (expanded, final_landmarks)
 }
 
 /// If `cow_name` is `"random"`, pick a random `.cow` file from the data
@@ -76,6 +107,8 @@ pub fn resolve_cow_name(cow_name: &str, data_dir: &Path) -> String {
     if cow_name != "random" {
         let clean = cow_name.trim().to_ascii_lowercase();
         let cow_name = match clean.as_str() {
+            "cow" | "cowsay" | "the-cow" => "default",
+            "kittens" => "kitten",
             "nyan-cat" | "nyancat" | "nyan_cat" => "nyan",
             other => other,
         };
@@ -174,12 +207,9 @@ pub fn load_cow_from_path(
     Ok(expand_cow(&raw, eyes, tongue, thoughts))
 }
 
-/// Expand `$eyes`, `$tongue`, `$thoughts` placeholders in a `.cow` template.
-pub fn expand_cow(cow_template: &str, eyes: &str, tongue: &str, thoughts: &str) -> String {
-    let mut result = String::with_capacity(cow_template.len());
-
-    // Extract heredoc body if present (e.g. $the_cow = <<"EOC"; ... EOC).
-    let cow_body = if let Some(start) = cow_template.find("<<") {
+/// Extract heredoc body if present (e.g. `$the_cow = <<"EOC"; ... EOC`).
+pub fn extract_heredoc_body(cow_template: &str) -> &str {
+    if let Some(start) = cow_template.find("<<") {
         let after_marker = &cow_template[start + 2..];
         let first_newline = after_marker.find('\n').unwrap_or(after_marker.len());
         let marker_line = &after_marker[..first_newline];
@@ -214,7 +244,32 @@ pub fn expand_cow(cow_template: &str, eyes: &str, tongue: &str, thoughts: &str) 
         }
     } else {
         cow_template
-    };
+    }
+}
+
+/// Expand `$eyes`, `$tongue`, `$thoughts`, and singular `$eye` placeholders in a `.cow` template.
+///
+/// Supports all standard and escaped forms from Perl cowsay:
+/// - Plural: `\$eyes`, `\\$eyes`, `${eyes}`, `\${eyes}`, `$eyes`
+/// - Singular: `\$eye`, `\\$eye`, `${eye}`, `\${eye}`, `$eye` (alternates between left/right eye)
+/// - Tongue: `\$tongue`, `\\$tongue`, `${tongue}`, `\${tongue}`, `$tongue`
+/// - Thoughts: `\$thoughts`, `\\$thoughts`, `${thoughts}`, `\${thoughts}`, `$thoughts`
+pub fn expand_cow(cow_template: &str, eyes: &str, tongue: &str, thoughts: &str) -> String {
+    expand_cow_with_landmarks(cow_template, eyes, tongue, thoughts).0
+}
+
+/// Expand cow placeholders and return both the expanded mascot art and the exact
+/// coordinates `(row, col)` of all placed eye glyphs for the animation engine.
+pub fn expand_cow_with_landmarks(
+    cow_template: &str,
+    eyes: &str,
+    tongue: &str,
+    thoughts: &str,
+) -> (String, Vec<(usize, usize)>) {
+    let mut result = String::with_capacity(cow_template.len());
+    let mut landmarks = Vec::new();
+
+    let cow_body = extract_heredoc_body(cow_template);
 
     let eye_chars: Vec<char> = eyes.chars().collect();
     let left_eye = eye_chars.first().copied().unwrap_or('o').to_string();
@@ -225,34 +280,87 @@ pub fn expand_cow(cow_template: &str, eyes: &str, tongue: &str, thoughts: &str) 
         .to_string();
     let mut eye_idx = 0usize;
 
-    for line in cow_body.lines() {
+    for (row, line) in cow_body.lines().enumerate() {
         if line.contains('$') {
-            let mut line = line
-                .replace("${eyes}", eyes)
-                .replace("$eyes", eyes)
-                .replace("${tongue}", tongue)
-                .replace("$tongue", tongue)
-                .replace("${thoughts}", thoughts)
-                .replace("$thoughts", thoughts);
+            let mut line = line.to_string();
 
-            // Handle singular $eye and ${eye} placeholders
-            while let Some(pos) = line.find("${eye}") {
-                let glyph = if eye_idx % 2 == 0 {
-                    &left_eye
-                } else {
-                    &right_eye
-                };
-                eye_idx += 1;
-                line.replace_range(pos..pos + 6, glyph);
+            // 1. Expand thoughts placeholders (longest first)
+            for pat in [
+                r"\\$thoughts",
+                r"\$thoughts",
+                r"\\${thoughts}",
+                r"\${thoughts}",
+                "${thoughts}",
+                "$thoughts",
+            ] {
+                line = line.replace(pat, thoughts);
             }
-            while let Some(pos) = line.find("$eye") {
+
+            // 2. Expand tongue placeholders (longest first)
+            for pat in [
+                r"\\$tongue",
+                r"\$tongue",
+                r"\\${tongue}",
+                r"\${tongue}",
+                "${tongue}",
+                "$tongue",
+            ] {
+                line = line.replace(pat, tongue);
+            }
+
+            // 3. Expand plural $eyes placeholders (longest first)
+            for pat in [
+                r"\\$eyes",
+                r"\$eyes",
+                r"\\${eyes}",
+                r"\${eyes}",
+                "${eyes}",
+                "$eyes",
+            ] {
+                while let Some(pos) = line.find(pat) {
+                    let col = pos;
+                    line.replace_range(pos..pos + pat.len(), eyes);
+                    for (c_offset, _) in eyes.chars().enumerate() {
+                        landmarks.push((row, col + c_offset));
+                    }
+                }
+            }
+
+            // 4. Expand singular $eye placeholders (alternating left/right eye)
+            loop {
+                let eye_patterns = [
+                    r"\\$eye",
+                    r"\$eye",
+                    r"\\${eye}",
+                    r"\${eye}",
+                    "${eye}",
+                    "$eye",
+                ];
+                let mut earliest: Option<(usize, &'static str)> = None;
+                for pat in eye_patterns {
+                    if let Some(pos) = line.find(pat) {
+                        match earliest {
+                            None => earliest = Some((pos, pat)),
+                            Some((best_pos, _)) if pos < best_pos => earliest = Some((pos, pat)),
+                            _ => {}
+                        }
+                    }
+                }
+
+                let Some((pos, pat)) = earliest else {
+                    break;
+                };
+
                 let glyph = if eye_idx % 2 == 0 {
                     &left_eye
                 } else {
                     &right_eye
                 };
                 eye_idx += 1;
-                line.replace_range(pos..pos + 4, glyph);
+                line.replace_range(pos..pos + pat.len(), glyph);
+                for (c_offset, _) in glyph.chars().enumerate() {
+                    landmarks.push((row, pos + c_offset));
+                }
             }
 
             result.push_str(&line);
@@ -267,7 +375,134 @@ pub fn expand_cow(cow_template: &str, eyes: &str, tongue: &str, thoughts: &str) 
         result.pop();
     }
 
-    result
+    (result, landmarks)
+}
+
+#[inline]
+pub fn is_eye_glyph(ch: char) -> bool {
+    matches!(
+        ch,
+        'o' | 'O' | '@' | '^' | '*' | '$' | 'x' | 'X' | '.' | '=' | '0' | 'e' | '+' | 'v' | '-' | 'u' | 'w'
+    )
+}
+
+/// Detect eye coordinates `(row, col)` in any expanded cow art.
+pub fn detect_cow_eyes(cow_text: &str, cow_start_line: usize) -> Vec<(usize, usize)> {
+    let mut eyes = Vec::new();
+    let lines: Vec<&str> = cow_text.lines().collect();
+
+    // Pass 1: Bracketed/parenthesized patterns across ALL lines (highest confidence):
+    // (oo), [oo], (o o), (o.o), (o_o), (o-o), (o;o), {~o_o~}, ^(o;o)^
+    for (row, line) in lines.iter().enumerate().skip(cow_start_line) {
+        let chars: Vec<char> = line.chars().collect();
+        let len = chars.len();
+        if len == 0 {
+            continue;
+        }
+
+        for i in 0..len {
+            let open = chars[i];
+            if open == '(' || open == '[' || open == '{' {
+                let close = match open {
+                    '(' => ')',
+                    '[' => ']',
+                    '{' => '}',
+                    _ => ')',
+                };
+                for j in (i + 2)..=(i + 7).min(len - 1) {
+                    if chars[j] == close {
+                        let span = &chars[i + 1..j];
+                        let eye_indices: Vec<usize> = span
+                            .iter()
+                            .enumerate()
+                            .filter_map(|(idx, &c)| if is_eye_glyph(c) { Some(i + 1 + idx) } else { None })
+                            .collect();
+                        if !eye_indices.is_empty() && eye_indices.len() <= 3 {
+                            for col in eye_indices {
+                                eyes.push((row, col));
+                            }
+                            return eyes;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Pass 2: Facial bridge patterns across ALL lines:
+    // oYo, o.o, o_o, o o, o  o, o|/o, o-o, o;o, o\o, o/o
+    for (row, line) in lines.iter().enumerate().skip(cow_start_line) {
+        let chars: Vec<char> = line.chars().collect();
+        let len = chars.len();
+        if len == 0 {
+            continue;
+        }
+
+        for i in 0..len {
+            if is_eye_glyph(chars[i]) {
+                for dist in 1..=4 {
+                    if i + dist < len && is_eye_glyph(chars[i + dist]) {
+                        // Skip horns (^__^)
+                        if chars[i] == '^' && chars[i + dist] == '^' {
+                            continue;
+                        }
+                        let sep = &chars[i + 1..i + dist];
+                        let valid_sep = sep.iter().all(|&c| {
+                            c == ' '
+                                || c == '.'
+                                || c == '_'
+                                || c == '-'
+                                || c == 'Y'
+                                || c == '|'
+                                || c == '/'
+                                || c == ';'
+                                || c == '\\'
+                                || c == '´'
+                                || c == '｀'
+                        });
+                        if valid_sep {
+                            eyes.push((row, i));
+                            eyes.push((row, i + dist));
+                            return eyes;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Pass 3: Single-eye animals: /(  o \, \______ o, > o\, |  |o-
+    for (row, line) in lines.iter().enumerate().skip(cow_start_line) {
+        let chars: Vec<char> = line.chars().collect();
+        let len = chars.len();
+        if len == 0 {
+            continue;
+        }
+
+        for i in 0..len {
+            let c = chars[i];
+            if c != '^' && is_eye_glyph(c) {
+                let has_left_head = i >= 2
+                    && (chars[i - 1] == ' '
+                        || chars[i - 1] == '('
+                        || chars[i - 1] == '/'
+                        || chars[i - 1] == '|');
+                let has_right_head = i + 1 < len
+                    && (chars[i + 1] == ' '
+                        || chars[i + 1] == '\\'
+                        || chars[i + 1] == ')'
+                        || chars[i + 1] == '-'
+                        || chars[i + 1] == '|'
+                        || chars[i + 1] == '`');
+                if has_left_head && has_right_head {
+                    eyes.push((row, i));
+                    return eyes;
+                }
+            }
+        }
+    }
+
+    eyes
 }
 
 /// The default cow with placeholders expanded.
@@ -1262,5 +1497,27 @@ mod tests {
         let _ = std::fs::create_dir_all(&cows);
         assert_eq!(resolve_cow_name("random", &tmp), "default");
         let _ = std::fs::remove_dir_all(&tmp);
+    }
+
+    #[test]
+    fn detect_cow_eyes_ignores_horns_and_finds_eyes() {
+        let cow = "  ^__^  \n (oo)   \n(__)    ";
+        let landmarks = detect_cow_eyes(cow, 0);
+        assert_eq!(landmarks, vec![(1, 2), (1, 3)]);
+    }
+
+    #[test]
+    fn expand_cow_with_landmarks_singular_and_plural() {
+        // Singular $eye alternating
+        let template = "$the_cow = <<EOC;\n \\$eye   $eye \nEOC;";
+        let (expanded, marks) = expand_cow_with_landmarks(template, "oO", " ", "\\");
+        assert!(expanded.contains("o   O"));
+        assert_eq!(marks.len(), 2);
+
+        // Plural $eyes
+        let template_pl = "$the_cow = <<EOC;\n \\$eyes \nEOC;";
+        let (expanded_pl, marks_pl) = expand_cow_with_landmarks(template_pl, "@@", " ", "\\");
+        assert!(expanded_pl.contains("@@"));
+        assert_eq!(marks_pl.len(), 2);
     }
 }

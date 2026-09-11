@@ -340,7 +340,7 @@ pub fn render_options(category: &str) -> String {
         out.push_str("\n\x1b[1;35m━━━ Complete Cow Mascot Catalog (132 Available Built-In Animals) ━━━\x1b[0m\n");
         let cat_headers = ["Category", "Mascot Names"];
         let cat_rows = vec![
-            vec!["Farm & Domestic", "default, bunny, cat, cat2, catfence, charlie, corgi, doge, duck, fat-cow, goat, goat2, hippie, kitty, kitten, lamb, lamb2, meow, milk, moose, mule, owl, pig, ram, rooster, sheep, shrug, squirrel, turkey"],
+            vec!["Farm & Domestic", "default, bunny, cat, cat2, catfence, charlie, corgi, doge, duck, fat-cow, goat, goat2, hamster, hippie, kitty, kitten, lamb, lamb2, meow, moose, mule, owl, pig, ram, rooster, sheep, shrug, squirrel, turkey"],
             vec!["Wild & Safari", "armadillo, bearface, elephant, elephant2, elephant-in-snake, fox, hedgehog, koala, lobster, luke-koala, moofasa, panther, rhino, sloth, telebears, tiger, tortoise, tweety-bird, wolf"],
             vec!["Oceanic & Amphibian", "bud-frogs, docker-whale, dolphin, ebi_furai, happy-whale, jellyfish, octopus, pufferfish, seahorse, seahorse-big, smiling-octopus, squid, turtle, walrus, whale"],
             vec!["Fantasy & Sci-Fi", "atat, cthulhu-mini, daemon, dragon, dragon-and-cow, ghost, ghostbusters, glados, mech-and-cow, minotaur, mooghidjirah, moojira, pterodactyl, sauron, stegosaurus, tux, tux-big, unipony, vader, wizard, yoda"],

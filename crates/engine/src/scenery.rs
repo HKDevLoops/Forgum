@@ -248,7 +248,7 @@ pub fn get_animal_profile(animal: &str) -> AnimalProfile {
         .unwrap_or(animal)
         .to_ascii_lowercase();
 
-    match clean.as_str() {
+    let mut profile = match clean.as_str() {
         // ── Volcanic, Mythic & Dragons ──────────────────────────────────────
         "dragon" => AnimalProfile {
             name: "dragon",
@@ -1516,13 +1516,13 @@ pub fn get_animal_profile(animal: &str) -> AnimalProfile {
             eyes: "oo",
             tongue: "  ",
         },
-        "milk" => AnimalProfile {
-            name: "milk",
-            base_anim: BaseAnim::Breathe,
+        "hamster" => AnimalProfile {
+            name: "hamster",
+            base_anim: BaseAnim::Walk,
             environment: EnvironmentStyle::Pasture,
-            road: RoadStyle::Dirt,
+            road: RoadStyle::Cobblestone,
             mountain: MountainStyle::Hills,
-            wildlife_palette: &["#f8fafc", "#e2e8f0", "#94a3b8"],
+            wildlife_palette: &["#d4a373", "#faedcd", "#e76f51", "#ffb6c1"],
             eyes: "oo",
             tongue: "  ",
         },
@@ -1598,7 +1598,10 @@ pub fn get_animal_profile(animal: &str) -> AnimalProfile {
             eyes: "oo",
             tongue: "  ",
         },
-    }
+    };
+
+    profile.wildlife_palette = crate::color::get_natural_hex_palette(clean.as_str());
+    profile
 }
 
 /// Map any animal name to its signature Mountain, Road, and Environment archetype.

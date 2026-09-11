@@ -531,14 +531,30 @@ pub enum Commands {
         #[arg(required = true, num_args = 1..)]
         cmd: Vec<String>,
     },
-    /// ASCII cow jousting battle.
+    /// ASCII cow jousting battle between two mascots.
+    #[command(alias = "arena")]
     Battle {
-        /// Name of the first cow.
+        /// Name of the first fighter (positional or --name1).
+        #[arg(value_name = "FIGHTER1")]
+        fighter1: Option<String>,
+        /// Name of the second fighter (positional or --name2).
+        #[arg(value_name = "FIGHTER2")]
+        fighter2: Option<String>,
+        /// Name of the first cow (named flag).
         #[arg(long, default_value = "Alice")]
         name1: String,
-        /// Name of the second cow.
+        /// Name of the second cow (named flag).
         #[arg(long, default_value = "Bob")]
         name2: String,
+        /// Headless / non-interactive mode (dumps battle log without animation).
+        #[arg(long)]
+        headless: bool,
+        /// Force battle victor: 1 for fighter1, 2 for fighter2, 0 for random.
+        #[arg(long, default_value = "0")]
+        winner: u8,
+        /// Frame rate for live animation (default 15).
+        #[arg(long, default_value = "15")]
+        fps: u16,
     },
     /// Emergency recovery command to restore terminal cursor, disable raw mode, clear temporary pipes, and exit cleanly.
     #[command(alias = "clean")]
