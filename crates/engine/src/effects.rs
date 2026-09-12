@@ -83,7 +83,7 @@ pub fn find_cow_start_line(text: &str) -> usize {
 pub(crate) fn is_eye_glyph(ch: char) -> bool {
     matches!(
         ch,
-        'o' | 'O' | '@' | '^' | '*' | '$' | 'x' | 'X' | '.' | '=' | '0' | 'e' | '+' | 'v'
+        'o' | 'O' | '@' | '^' | '*' | '$' | 'x' | 'X' | '=' | '0' | 'e' | '+' | 'v' | 'u' | 'w' | '8' | 'Q' | '•' | '●'
     )
 }
 
@@ -264,9 +264,16 @@ impl StaticEffect {
                         .replace("^^", "--")
                         .replace("**", "--")
                         .replace("==", "--")
-                        .replace("..", "--")
                         .replace("o o", "- -")
                         .replace("O O", "- -")
+                        .replace("o  o", "-  -")
+                        .replace("O  O", "-  -")
+                        .replace("o_o", "-_-")
+                        .replace("O_O", "-_-")
+                        .replace("o.o", "-.-")
+                        .replace("O.O", "-.-")
+                        .replace("@_@", "-_-")
+                        .replace("@  @", "-  -")
                         .replace("^ ^", "- -")
                         .replace("* *", "- -");
                 }
@@ -424,7 +431,7 @@ impl Effect for BreatheEffect {
             if y < self.cow_start_line {
                 for (x, ch) in line.chars().enumerate() {
                     if x < fb.width {
-                        let cell_fg = resolve_fg(&self.color_mode, x, y, time, Color::WHITE);
+                        let cell_fg = resolve_bubble_cell_fg(ch);
                         draw_char_with_hull(fb, x, y, x, hull, ch, cell_fg);
                     }
                 }
@@ -445,13 +452,15 @@ impl Effect for BreatheEffect {
                 // Blink eyes: works across all detected eye landmarks (single, separated, or pairs)
                 let is_landmark = self.eye_landmarks.contains(&(y, x));
                 if is_blinking && (is_landmark || (is_eye_glyph(ch) && chars_iter.peek().copied() == Some(ch))) {
-                    let cell_fg = resolve_fg_palette(
+                    let rel_y = y.saturating_sub(self.cow_start_line);
+                    let cell_fg = resolve_fg_palette_char(
                         &self.color_mode,
                         &self.palette,
                         x,
-                        y,
+                        rel_y,
                         time,
                         Color::WHITE,
+                        '-',
                     );
                     draw_char_with_hull(fb, x, y, x, hull, '-', cell_fg);
                     if !is_landmark && chars_iter.peek().copied() == Some(ch) {
@@ -475,8 +484,16 @@ impl Effect for BreatheEffect {
                     }
                 }
 
-                let mut cell_fg =
-                    resolve_fg_palette(&self.color_mode, &self.palette, x, y, time, Color::WHITE);
+                let rel_y = y.saturating_sub(self.cow_start_line);
+                let mut cell_fg = resolve_fg_palette_char(
+                    &self.color_mode,
+                    &self.palette,
+                    x,
+                    rel_y,
+                    time,
+                    Color::WHITE,
+                    ch,
+                );
 
                 // Natural Instinct signature highlights:
                 match self.instinct {
@@ -782,7 +799,7 @@ impl Effect for FloatEffect {
             if y < self.cow_start_line {
                 for (x, ch) in line.chars().enumerate() {
                     if x < fb.width {
-                        let cell_fg = resolve_fg(&self.color_mode, x, y, time, Color::WHITE);
+                        let cell_fg = resolve_bubble_cell_fg(ch);
                         draw_char_with_hull(fb, x, y, x, hull, ch, cell_fg);
                     }
                 }
@@ -802,14 +819,16 @@ impl Effect for FloatEffect {
 
                     // Periodic eye-blink across all eye landmarks:
                     let is_landmark = self.eye_landmarks.contains(&(draw_y, uxi));
+                    let rel_y = draw_y.saturating_sub(self.cow_start_line);
                     if is_blinking && (is_landmark || (is_eye_glyph(ch) && chars_iter.peek().copied() == Some(ch))) {
-                        let cell_fg = resolve_fg_palette(
+                        let cell_fg = resolve_fg_palette_char(
                             &self.color_mode,
                             &self.palette,
-                            uxi,
-                            draw_y,
+                            x,
+                            rel_y,
                             time,
                             Color::WHITE,
+                            '-',
                         );
                         draw_char_with_hull(fb, uxi, draw_y, x, hull, '-', cell_fg);
                         if !is_landmark && chars_iter.peek().copied() == Some(ch) {
@@ -833,13 +852,14 @@ impl Effect for FloatEffect {
                         }
                     }
 
-                    let cell_fg = resolve_fg_palette(
+                    let cell_fg = resolve_fg_palette_char(
                         &self.color_mode,
                         &self.palette,
-                        uxi,
-                        draw_y,
+                        x,
+                        rel_y,
                         time,
                         Color::WHITE,
+                        ch,
                     );
                     draw_char_with_hull(fb, uxi, draw_y, x, hull, ch, cell_fg);
                 }
@@ -1192,13 +1212,14 @@ impl Effect for WalkEffect {
                                 let uxi = xi as usize;
                                 let uyi = yi as usize;
                                 if uyi < fb.height && uxi < fb.width {
-                                    let cell_fg = resolve_fg_palette(
+                                    let cell_fg = resolve_fg_palette_char(
                                         &self.color_mode,
                                         &self.palette,
-                                        uxi,
-                                        uyi,
+                                        x + k,
+                                        y,
                                         time,
                                         Color::WHITE,
+                                        sc,
                                     );
                                     let _ = fb.set(uxi, uyi, Cell::new(sc, cell_fg));
                                 }
@@ -1216,13 +1237,14 @@ impl Effect for WalkEffect {
                     let uyi = yi as usize;
                     if uyi < fb.height && uxi < fb.width {
                         if display_ch != ' ' {
-                            let cell_fg = resolve_fg_palette(
+                            let cell_fg = resolve_fg_palette_char(
                                 &self.color_mode,
                                 &self.palette,
-                                uxi,
-                                uyi,
+                                x,
+                                y,
                                 time,
                                 Color::WHITE,
+                                display_ch,
                             );
                             let _ = fb.set(uxi, uyi, Cell::new(display_ch, cell_fg));
                         } else if let (Some(hs), Some(he)) = (hull_start, hull_end) {
@@ -1676,7 +1698,7 @@ impl FlyEffect {
             if y < self.cow_start_line {
                 for (x, ch) in line.chars().enumerate() {
                     if x < fb.width {
-                        let cell_fg = resolve_fg(&self.color_mode, x, y, time, Color::WHITE);
+                        let cell_fg = resolve_bubble_cell_fg(ch);
                         let _ = fb.set(x, y, Cell::new(ch, cell_fg));
                     }
                 }
@@ -1814,7 +1836,7 @@ impl Effect for FlyEffect {
             if y < self.cow_start_line {
                 for (x, ch) in line.chars().enumerate() {
                     if x < fb.width {
-                        let cell_fg = resolve_fg(&self.color_mode, x, y, time, Color::WHITE);
+                        let cell_fg = resolve_bubble_cell_fg(ch);
                         draw_char_with_hull(fb, x, y, x, hull, ch, cell_fg);
                     }
                 }
@@ -1833,13 +1855,14 @@ impl Effect for FlyEffect {
                 // Eye blinking across all eye landmarks:
                 let is_landmark = self.eye_landmarks.contains(&(y, x));
                 if is_blinking && (is_landmark || (is_eye_glyph(ch) && chars_iter.peek().copied() == Some(ch))) {
-                    let cell_fg = resolve_fg_palette(
+                    let cell_fg = resolve_fg_palette_char(
                         &self.color_mode,
                         &self.palette,
                         x,
                         y,
                         time,
                         Color::WHITE,
+                        '-',
                     );
                     draw_char_with_hull(fb, x, y, x, hull, '-', cell_fg);
                     if !is_landmark && chars_iter.peek().copied() == Some(ch) {
@@ -1863,8 +1886,15 @@ impl Effect for FlyEffect {
                     ch = 'v';
                 }
 
-                let cell_fg =
-                    resolve_fg_palette(&self.color_mode, &self.palette, x, y, time, Color::WHITE);
+                let cell_fg = resolve_fg_palette_char(
+                    &self.color_mode,
+                    &self.palette,
+                    x,
+                    y,
+                    time,
+                    Color::WHITE,
+                    ch,
+                );
                 draw_char_with_hull(fb, x, y, x, hull, ch, cell_fg);
                 x += 1;
             }
@@ -2036,7 +2066,7 @@ impl Effect for TalkEffect {
             if y < self.cow_start_line {
                 for (x, ch) in line.chars().enumerate() {
                     if x < fb.width {
-                        let cell_fg = resolve_fg(&self.color_mode, x, y, time, Color::WHITE);
+                        let cell_fg = resolve_bubble_cell_fg(ch);
                         draw_char_with_hull(fb, x, y, x, hull, ch, cell_fg);
                     }
                 }
@@ -2057,13 +2087,14 @@ impl Effect for TalkEffect {
                     if is_blinking {
                         display_ch = '-';
                     }
-                    let cell_fg = resolve_fg_palette(
+                    let cell_fg = resolve_fg_palette_char(
                         &self.color_mode,
                         &self.palette,
                         x,
                         y,
                         time,
                         Color::WHITE,
+                        display_ch,
                     );
                     draw_char_with_hull(fb, x, y, x, hull, display_ch, cell_fg);
                     continue;
@@ -2081,8 +2112,15 @@ impl Effect for TalkEffect {
                     }
                 }
 
-                let cell_fg =
-                    resolve_fg_palette(&self.color_mode, &self.palette, x, y, time, Color::WHITE);
+                let cell_fg = resolve_fg_palette_char(
+                    &self.color_mode,
+                    &self.palette,
+                    x,
+                    y,
+                    time,
+                    Color::WHITE,
+                    display_ch,
+                );
                 draw_char_with_hull(fb, x, y, x, hull, display_ch, cell_fg);
             }
             y = y.saturating_add(1);
@@ -2303,7 +2341,7 @@ impl Effect for DissolveEffect {
                 offset_idx += 1;
                 if dx_base == f32::MAX && dy_base == f32::MAX {
                     if y < self.cow_start_line && ch != ' ' && y < fb.height && x < fb.width {
-                        let cell_fg = resolve_fg(&self.color_mode, x, y, time, Color::WHITE);
+                        let cell_fg = resolve_bubble_cell_fg(ch);
                         let _ = fb.set(x, y, Cell::new(ch, cell_fg));
                     }
                     continue;
@@ -2317,13 +2355,14 @@ impl Effect for DissolveEffect {
                     let fy = final_y as usize;
                     if fy < fb.height && fx < fb.width {
                         let alpha = (t * 255.0) as u8;
-                        let cell_fg = resolve_fg_palette(
+                        let cell_fg = resolve_fg_palette_char(
                             &self.color_mode,
                             &self.palette,
-                            fx,
-                            fy,
+                            x,
+                            y,
                             time,
                             Color::WHITE,
+                            ch,
                         );
                         let _ = fb.set(
                             fx,
@@ -2418,14 +2457,15 @@ fn for_each_line<F: FnMut(&str)>(text: &str, offsets: &[usize], mut f: F) {
     }
 }
 
-/// Resolve foreground color based on color_mode and animal DNA palette.
-pub(crate) fn resolve_fg_palette(
+/// Resolve foreground color based on color_mode, animal DNA palette, and character glyph.
+pub(crate) fn resolve_fg_palette_char(
     color_mode: &str,
     palette: &[(u8, u8, u8)],
     x: usize,
     y: usize,
     time: f32,
     base: Color,
+    ch: char,
 ) -> Color {
     match color_mode {
         "rainbow" | "lolcat" => {
@@ -2433,14 +2473,13 @@ pub(crate) fn resolve_fg_palette(
             Color { r, g, b, a: 255 }
         }
         "default" | "animal" | "natural" | "animal_natural" => {
-            if !palette.is_empty() {
-                let (r, g, b) = crate::color::palette_gradient(palette, x as f32, y as f32, time);
-                Color { r, g, b, a: 255 }
+            let p = if !palette.is_empty() {
+                palette
             } else {
-                let default_p = crate::color::get_natural_palette("cow");
-                let (r, g, b) = crate::color::palette_gradient(default_p, x as f32, y as f32, time);
-                Color { r, g, b, a: 255 }
-            }
+                crate::color::get_natural_palette("cow")
+            };
+            let (r, g, b) = crate::color::natural_creature_color(p, x, y, ch);
+            Color { r, g, b, a: 255 }
         }
         "solid" | "static" | "white" => Color::WHITE,
         "none" => base,
@@ -2451,7 +2490,7 @@ pub(crate) fn resolve_fg_palette(
                 .or_else(|| color_mode.strip_prefix("animal_natural:"))
             {
                 let p = crate::color::get_natural_palette(mascot);
-                let (r, g, b) = crate::color::palette_gradient(p, x as f32, y as f32, time);
+                let (r, g, b) = crate::color::natural_creature_color(p, x, y, ch);
                 Color { r, g, b, a: 255 }
             } else if color_mode.starts_with('#') {
                 let hexes: Vec<String> = color_mode
@@ -2463,18 +2502,65 @@ pub(crate) fn resolve_fg_palette(
                     crate::color::palette_gradient(&custom_palette, x as f32, y as f32, time);
                 Color { r, g, b, a: 255 }
             } else if !palette.is_empty() {
-                let (r, g, b) = crate::color::palette_gradient(palette, x as f32, y as f32, time);
+                let (r, g, b) = crate::color::natural_creature_color(palette, x, y, ch);
                 Color { r, g, b, a: 255 }
             } else {
-                base
+                let p = crate::color::get_natural_palette(color_mode);
+                if p != crate::color::get_natural_palette("cow") || color_mode == "cow" {
+                    let (r, g, b) = crate::color::natural_creature_color(p, x, y, ch);
+                    Color { r, g, b, a: 255 }
+                } else {
+                    base
+                }
             }
         }
     }
 }
 
+/// Resolve foreground color based on color_mode and animal DNA palette.
+pub(crate) fn resolve_fg_palette(
+    color_mode: &str,
+    palette: &[(u8, u8, u8)],
+    x: usize,
+    y: usize,
+    time: f32,
+    base: Color,
+) -> Color {
+    resolve_fg_palette_char(color_mode, palette, x, y, time, base, ' ')
+}
+
 /// Resolve foreground color based on color_mode.
+#[allow(dead_code)]
 pub(crate) fn resolve_fg(color_mode: &str, x: usize, y: usize, time: f32, base: Color) -> Color {
-    resolve_fg_palette(color_mode, &[], x, y, time, base)
+    resolve_fg_palette_char(color_mode, &[], x, y, time, base, ' ')
+}
+
+/// Resolve foreground color based on color_mode and character.
+#[allow(dead_code)]
+pub(crate) fn resolve_fg_char(
+    color_mode: &str,
+    x: usize,
+    y: usize,
+    time: f32,
+    base: Color,
+    ch: char,
+) -> Color {
+    resolve_fg_palette_char(color_mode, &[], x, y, time, base, ch)
+}
+
+/// Resolve foreground color for speech/thought bubble borders, connector rings, and message text.
+/// Ensures 100% maximum contrast and crystal-clear readability against any terminal background.
+#[inline]
+pub(crate) fn resolve_bubble_cell_fg(ch: char) -> Color {
+    if ch == 'o' || ch == 'O' || ch == '\\' || ch == '/' {
+        Color::rgb(180, 230, 255)
+    } else if ch == '_' || ch == '-' || ch == '=' || ch == '(' || ch == ')' || ch == '|' || ch == '<' || ch == '>' || ch == '+' {
+        Color::rgb(215, 225, 240)
+    } else if ch == ' ' {
+        Color::WHITE
+    } else {
+        Color::rgb(255, 255, 255)
+    }
 }
 
 /// Render text into the framebuffer at row 0.
@@ -2522,6 +2608,8 @@ fn render_text_offset_palette(
     palette: &[(u8, u8, u8)],
     time: f32,
 ) {
+    let cow_start_line = find_cow_start_line(text);
+
     // Zero-allocation streaming scanline render with bounding-hull occlusion masking.
     for (y, line) in text.lines().enumerate() {
         let yi = y as i32 + y_off;
@@ -2538,6 +2626,9 @@ fn render_text_offset_palette(
             None => continue, // Entirely whitespace line — skip
         };
 
+        let is_bubble_line = y < cow_start_line;
+        let animal_rel_y = y.saturating_sub(cow_start_line);
+
         for (x, ch) in line.chars().enumerate() {
             let xi = x as i32 + x_off;
             if xi < 0 {
@@ -2548,7 +2639,21 @@ fn render_text_offset_palette(
                 break;
             }
 
-            let cell_fg = resolve_fg_palette(color_mode, palette, uxi, uyi, time, fg);
+            let cell_fg = if is_bubble_line {
+                // Speech / thought bubble styling: maximum visibility, crisp and legible
+                if ch == 'o' || ch == 'O' || ch == '\\' || ch == '/' {
+                    Color::rgb(180, 230, 255)
+                } else if ch == '_' || ch == '-' || ch == '=' || ch == '(' || ch == ')' || ch == '|' || ch == '<' || ch == '>' || ch == '+' {
+                    Color::rgb(215, 225, 240)
+                } else if ch == ' ' {
+                    Color::WHITE
+                } else {
+                    // Message text inside the bubble: pure bright readable white
+                    Color::rgb(255, 255, 255)
+                }
+            } else {
+                resolve_fg_palette_char(color_mode, palette, x, animal_rel_y, time, fg, ch)
+            };
             draw_char_with_hull(fb, uxi, uyi, x, Some((hull_start, hull_end)), ch, cell_fg);
         }
     }

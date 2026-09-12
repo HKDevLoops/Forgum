@@ -366,15 +366,26 @@ pub fn get_dna(animations: &HashMap<String, CowDna>, cow_name: &str) -> CowDna {
     let clean = cow_name.strip_suffix(".cow").unwrap_or(cow_name);
     let with_cow = format!("{clean}.cow");
 
-    if let Some(dna) = animations.get(cow_name) {
+    let mut dna = if let Some(dna) = animations.get(cow_name) {
         dna.clone()
     } else if let Some(dna) = animations.get(clean) {
         dna.clone()
     } else if let Some(dna) = animations.get(&with_cow) {
         dna.clone()
     } else {
-        CowDna::default()
+        let mut d = CowDna::default();
+        let profile = crate::scenery::get_animal_profile(clean);
+        d.base = profile.base_anim;
+        d
+    };
+
+    if dna.palette.is_empty() {
+        dna.palette = crate::color::get_natural_hex_palette(clean)
+            .iter()
+            .map(|&s| s.to_string())
+            .collect();
     }
+    dna
 }
 
 /// Compute per-instance phase offset using golden ratio.

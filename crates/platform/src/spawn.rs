@@ -320,7 +320,7 @@ pub fn daemon_bootstrap<F: FnOnce() -> std::process::ExitCode>(
 ) -> std::process::ExitCode {
     use std::io::Write;
     use std::os::windows::process::CommandExt;
-    use windows_sys::Win32::System::Threading::CREATE_NEW_PROCESS_GROUP;
+    use windows_sys::Win32::System::Threading::{CREATE_BREAKAWAY_FROM_JOB, CREATE_NEW_PROCESS_GROUP};
 
     if std::env::args().any(|a| a == "--internal-daemon-runner") {
         return fallback();
@@ -338,13 +338,19 @@ pub fn daemon_bootstrap<F: FnOnce() -> std::process::ExitCode>(
     cmd.stdin(Stdio::null());
     cmd.stdout(Stdio::null());
     cmd.stderr(Stdio::null());
-    // Create new process group so child does not receive parent Ctrl+C, but preserve
-    // console attachment so CONOUT$ remains valid for terminal overlay rendering.
-    cmd.creation_flags(CREATE_NEW_PROCESS_GROUP);
+    // Try spawning with CREATE_BREAKAWAY_FROM_JOB | CREATE_NEW_PROCESS_GROUP so the daemon
+    // survives job closure when invoked from shell runners, with fallback to CREATE_NEW_PROCESS_GROUP.
+    cmd.creation_flags(CREATE_NEW_PROCESS_GROUP | CREATE_BREAKAWAY_FROM_JOB);
 
     let child_pid = match cmd.spawn() {
         Ok(child) => child.id(),
-        Err(_) => return fallback(),
+        Err(_) => {
+            cmd.creation_flags(CREATE_NEW_PROCESS_GROUP);
+            match cmd.spawn() {
+                Ok(child) => child.id(),
+                Err(_) => return fallback(),
+            }
+        }
     };
 
     let stdout = std::io::stdout();

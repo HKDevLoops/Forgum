@@ -1166,11 +1166,13 @@ pub fn build_scene_config(args: &Args) -> Result<SceneConfig, String> {
         cfg.palette = Some(p.clone());
     }
 
-    // If color_mode is natural or animal_natural and no palette was provided, delegate to mascot's natural palette
-    if (cfg.color_mode == "natural" || cfg.color_mode == "animal_natural")
-        && args.palette.is_none()
-        && cfg.palette.is_none()
-    {
+    // Normalize color_mode aliases to "natural"
+    if cfg.color_mode == "default" || cfg.color_mode == "animal" || cfg.color_mode == "animal_natural" {
+        cfg.color_mode = "natural".to_string();
+    }
+
+    // If color_mode is natural and no explicit CLI palette was provided, delegate to mascot's natural palette
+    if cfg.color_mode == "natural" && args.palette.is_none() {
         let animal_name = args.cow.as_deref().unwrap_or(&cfg.cow);
         let natural_hexes = crate::color::get_natural_hex_palette(animal_name);
         if !natural_hexes.is_empty() {

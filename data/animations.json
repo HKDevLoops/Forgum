@@ -28,7 +28,7 @@
       "#1a1a1a",
       "#2c2c2c",
       "#ffb6c1",
-      "#dcdde1"
+      "#000000"
     ],
     "easing": {
       "base": "sine_inout"
@@ -67,8 +67,8 @@
     "palette": [
       "#8d6e63",
       "#d7ccc8",
-      "#5d4037",
       "#bcaaa4",
+      "#5d4037",
       "#3e2723"
     ],
     "easing": {
@@ -106,11 +106,11 @@
       "float": 0.0
     },
     "palette": [
-      "#9e9e9e",
+      "#90a4ae",
+      "#546e7a",
       "#cfd8dc",
-      "#37474f",
-      "#b0bec5",
-      "#d32f2f"
+      "#ff1744",
+      "#263238"
     ],
     "easing": {
       "base": "sine_inout"
@@ -147,11 +147,11 @@
       "float": 0.0
     },
     "palette": [
-      "#5d4037",
+      "#4e342e",
       "#8d6e63",
       "#d7ccc8",
       "#212121",
-      "#ffffff"
+      "#ffb300"
     ],
     "easing": {
       "base": "sine_inout"
@@ -188,11 +188,11 @@
       "float": 0.0
     },
     "palette": [
-      "#ffca28",
-      "#42a5f5",
-      "#ef5350",
-      "#ffe082",
-      "#7e57c2"
+      "#fbc02d",
+      "#1976d2",
+      "#ffcc80",
+      "#e53935",
+      "#37474f"
     ],
     "easing": {
       "base": "sine_inout"
@@ -229,11 +229,11 @@
       "float": 0.5
     },
     "palette": [
-      "#ffeb3b",
+      "#ffb300",
       "#212121",
-      "#fff59d",
-      "#ff9800",
-      "#80d8ff"
+      "#b0bec5",
+      "#ffe082",
+      "#ffd54f"
     ],
     "easing": {
       "base": "sine_inout"
@@ -270,11 +270,11 @@
       "float": 0.0
     },
     "palette": [
-      "#ffb74d",
-      "#e57373",
-      "#fff176",
-      "#424242",
-      "#ffffff"
+      "#e67e22",
+      "#f39c12",
+      "#ff80ab",
+      "#ffeb3b",
+      "#d32f2f"
     ],
     "easing": {
       "base": "sine_inout"
@@ -311,11 +311,11 @@
       "float": 0.5
     },
     "palette": [
+      "#2e7d32",
       "#4caf50",
-      "#81c784",
-      "#1b5e20",
-      "#fff9c4",
-      "#ffb300"
+      "#fbc02d",
+      "#5d4037",
+      "#ffd600"
     ],
     "easing": {
       "base": "sine_inout"
@@ -353,10 +353,10 @@
     },
     "palette": [
       "#ffffff",
-      "#f8fafc",
-      "#f1f5f9",
-      "#e2e8f0",
-      "#cbd5e1"
+      "#fdfefe",
+      "#f7f9f9",
+      "#ffb6c1",
+      "#ffc0cb"
     ],
     "easing": {
       "base": "sine_inout"
@@ -393,10 +393,10 @@
       "float": 0.0
     },
     "palette": [
-      "#ffffff",
       "#d35400",
       "#795548",
-      "#ff9800",
+      "#ffffff",
+      "#ffb6c1",
       "#212121"
     ],
     "easing": {
@@ -434,11 +434,11 @@
       "float": 0.0
     },
     "palette": [
-      "#7f8c8d",
-      "#95a5a6",
-      "#bdc3c7",
-      "#2c3e50",
-      "#2ecc71"
+      "#546e7a",
+      "#78909c",
+      "#cfd8dc",
+      "#ffb6c1",
+      "#4caf50"
     ],
     "easing": {
       "base": "sine_inout"
@@ -475,11 +475,11 @@
       "float": 0.0
     },
     "palette": [
-      "#5d4037",
-      "#3e2723",
-      "#e67e22",
+      "#795548",
+      "#d35400",
       "#ffffff",
-      "#1a1a1a"
+      "#ffb6c1",
+      "#212121"
     ],
     "easing": {
       "base": "sine_inout"
@@ -517,10 +517,10 @@
     },
     "palette": [
       "#ff6f00",
-      "#ffab00",
+      "#fff8e1",
       "#00b0ff",
-      "#ff1744",
-      "#78909c"
+      "#2e7d32",
+      "#ff1744"
     ],
     "easing": {
       "base": "sine_inout"
@@ -557,11 +557,11 @@
       "float": 0.0
     },
     "palette": [
-      "#8d6e63",
-      "#5d4037",
-      "#f5f5f5",
-      "#3e2723",
-      "#ffccbc"
+      "#6d4c41",
+      "#ffffff",
+      "#d7ccc8",
+      "#ffb6c1",
+      "#3e2723"
     ],
     "easing": {
       "base": "sine_inout"
@@ -598,11 +598,11 @@
       "float": 0.0
     },
     "palette": [
+      "#90a4ae",
+      "#37474f",
+      "#ff9800",
       "#00e5ff",
-      "#76ff03",
-      "#2979ff",
-      "#ffd600",
-      "#37474f"
+      "#212121"
     ],
     "easing": {
       "base": "sine_inout"
@@ -639,10 +639,10 @@
       "float": 0.0
     },
     "palette": [
+      "#8d6e63",
       "#ffffff",
-      "#212121",
-      "#e0e0e0",
-      "#90caf9",
+      "#bcaaa4",
+      "#3e2723",
       "#ffb6c1"
     ],
     "easing": {
@@ -680,11 +680,11 @@
       "float": 0.0
     },
     "palette": [
+      "#3e2723",
+      "#fff8e1",
+      "#d4a373",
       "#6d4c41",
-      "#8d6e63",
-      "#d7ccc8",
-      "#ffffff",
-      "#ffab91"
+      "#ffb6c1"
     ],
     "easing": {
       "base": "sine_inout"
@@ -721,11 +721,11 @@
       "float": 0.5
     },
     "palette": [
-      "#2e7d32",
       "#1b5e20",
-      "#81c784",
-      "#7c4dff",
-      "#33691e"
+      "#6a1b9a",
+      "#ffd600",
+      "#004d40",
+      "#311b92"
     ],
     "easing": {
       "base": "sine_inout"
@@ -763,10 +763,10 @@
     },
     "palette": [
       "#d32f2f",
-      "#f44336",
       "#212121",
-      "#ffd700",
-      "#ffffff"
+      "#ffffff",
+      "#ffd600",
+      "#b71c1c"
     ],
     "easing": {
       "base": "sine_inout"
@@ -848,7 +848,7 @@
       "#d35400",
       "#fdfefe",
       "#edbb99",
-      "#1a1a1a"
+      "#2c3e50"
     ],
     "easing": {
       "base": "sine_inout"
@@ -885,11 +885,11 @@
       "float": 0.5
     },
     "palette": [
-      "#4fc3f7",
-      "#81d4fa",
-      "#e1f5fe",
+      "#546e7a",
+      "#78909c",
+      "#eceff1",
       "#0288d1",
-      "#01579b"
+      "#263238"
     ],
     "easing": {
       "base": "sine_inout"
@@ -926,11 +926,11 @@
       "float": 0.0
     },
     "palette": [
-      "#d84315",
-      "#f4511e",
-      "#ffb300",
+      "#b71c1c",
+      "#ff6f00",
+      "#212121",
       "#ffd600",
-      "#3e2723"
+      "#7f0000"
     ],
     "easing": {
       "base": "sine_inout"
@@ -968,10 +968,10 @@
     },
     "palette": [
       "#c62828",
-      "#e53935",
       "#ff8f00",
       "#ffffff",
-      "#1a1a1a"
+      "#ff1744",
+      "#212121"
     ],
     "easing": {
       "base": "sine_inout"
@@ -1008,11 +1008,11 @@
       "float": 0.5
     },
     "palette": [
-      "#ff8f00",
-      "#ffb300",
-      "#fff8e1",
-      "#e53935",
-      "#ff8a80"
+      "#d97706",
+      "#b45309",
+      "#ffffff",
+      "#ef4444",
+      "#fef3c7"
     ],
     "easing": {
       "base": "sine_inout"
@@ -1050,10 +1050,10 @@
     },
     "palette": [
       "#78909c",
-      "#90a4ae",
+      "#455a64",
       "#cfd8dc",
-      "#546e7a",
-      "#ffccbc"
+      "#fffde7",
+      "#263238"
     ],
     "easing": {
       "base": "sine_inout"
@@ -1092,9 +1092,9 @@
     "palette": [
       "#558b2f",
       "#78909c",
-      "#33691e",
-      "#8bc34a",
-      "#fff9c4"
+      "#2e7d32",
+      "#cfd8dc",
+      "#ffd600"
     ],
     "easing": {
       "base": "sine_inout"
@@ -1132,10 +1132,10 @@
     },
     "palette": [
       "#607d8b",
-      "#78909c",
+      "#37474f",
       "#b0bec5",
-      "#eceff1",
-      "#37474f"
+      "#fffde7",
+      "#212121"
     ],
     "easing": {
       "base": "sine_inout"
@@ -1172,11 +1172,11 @@
       "float": 0.0
     },
     "palette": [
-      "#00e676",
-      "#b9f6ca",
       "#ffffff",
+      "#0288d1",
       "#000000",
-      "#76ff03"
+      "#76ff03",
+      "#9c27b0"
     ],
     "easing": {
       "base": "sine_inout"
@@ -1213,11 +1213,11 @@
       "float": 0.0
     },
     "palette": [
-      "#ffeb3b",
-      "#fff59d",
-      "#fbc02d",
-      "#795548",
-      "#4caf50"
+      "#ffd600",
+      "#ffea00",
+      "#5d4037",
+      "#64dd17",
+      "#fff9c4"
     ],
     "easing": {
       "base": "sine_inout"
@@ -1258,7 +1258,7 @@
       "#212121",
       "#e0e0e0",
       "#ffb6c1",
-      "#795548"
+      "#424242"
     ],
     "easing": {
       "base": "sine_inout"
@@ -1295,11 +1295,11 @@
       "float": 0.0
     },
     "palette": [
+      "#795548",
       "#8d6e63",
-      "#a1887f",
-      "#d7ccc8",
-      "#5d4037",
-      "#7cb342"
+      "#558b2f",
+      "#3e2723",
+      "#a1887f"
     ],
     "easing": {
       "base": "sine_inout"
@@ -1337,10 +1337,10 @@
     },
     "palette": [
       "#ff5722",
-      "#ff8a65",
-      "#ffab00",
-      "#212121",
-      "#ffd600"
+      "#ff9800",
+      "#ffeb3b",
+      "#3e2723",
+      "#b71c1c"
     ],
     "easing": {
       "base": "sine_inout"
@@ -1377,11 +1377,11 @@
       "float": 0.0
     },
     "palette": [
-      "#e65100",
-      "#ff9800",
+      "#d35400",
       "#ffffff",
       "#212121",
-      "#fbc02d"
+      "#e67e22",
+      "#f39c12"
     ],
     "easing": {
       "base": "sine_inout"
@@ -1418,11 +1418,11 @@
       "float": 0.5
     },
     "palette": [
-      "#eceff1",
-      "#cfd8dc",
-      "#b0bec5",
-      "#80d8ff",
-      "#212121"
+      "#e0f7fa",
+      "#80deea",
+      "#b2ebf2",
+      "#00e5ff",
+      "#004d40"
     ],
     "easing": {
       "base": "sine_inout"
@@ -1500,10 +1500,10 @@
       "float": 0.0
     },
     "palette": [
-      "#eceff1",
+      "#f5f5f5",
       "#212121",
       "#ffab00",
-      "#78909c",
+      "#00b0ff",
       "#ff1744"
     ],
     "easing": {
@@ -1542,10 +1542,10 @@
     },
     "palette": [
       "#d7ccc8",
-      "#a1887f",
       "#8d6e63",
-      "#5d4037",
-      "#fff8e1"
+      "#ffffff",
+      "#ffcdd2",
+      "#ffb300"
     ],
     "easing": {
       "base": "sine_inout"
@@ -1582,11 +1582,11 @@
       "float": 0.0
     },
     "palette": [
-      "#bcaaa4",
       "#8d6e63",
       "#5d4037",
-      "#3e2723",
-      "#ffffff"
+      "#d7ccc8",
+      "#ffcdd2",
+      "#212121"
     ],
     "easing": {
       "base": "sine_inout"
@@ -1623,10 +1623,10 @@
       "float": 0.5
     },
     "palette": [
+      "#3e2723",
       "#ffb300",
-      "#ffa000",
-      "#5d4037",
-      "#ffd54f",
+      "#4e342e",
+      "#fbc02d",
       "#212121"
     ],
     "easing": {
@@ -1668,7 +1668,7 @@
       "#4fc3f7",
       "#e1f5fe",
       "#ffffff",
-      "#b3e5fc"
+      "#0277bd"
     ],
     "easing": {
       "base": "sine_inout"
@@ -1705,11 +1705,11 @@
       "float": 0.0
     },
     "palette": [
-      "#6d4c41",
+      "#5c4033",
       "#8d6e63",
       "#d7ccc8",
-      "#3e2723",
-      "#212121"
+      "#212121",
+      "#a1887f"
     ],
     "easing": {
       "base": "sine_inout"
@@ -1747,10 +1747,10 @@
     },
     "palette": [
       "#ffffff",
-      "#ff4081",
-      "#ffeb3b",
-      "#212121",
-      "#42a5f5"
+      "#d50000",
+      "#ffd600",
+      "#1a1a1a",
+      "#f8bbd0"
     ],
     "easing": {
       "base": "sine_inout"
@@ -1828,11 +1828,11 @@
       "float": 0.0
     },
     "palette": [
+      "#ffeb3b",
       "#ffffff",
-      "#212121",
-      "#ff80ab",
-      "#ffb6c1",
-      "#fbc02d"
+      "#ff4081",
+      "#e91e63",
+      "#ff9800"
     ],
     "easing": {
       "base": "sine_inout"
@@ -1869,11 +1869,11 @@
       "float": 0.0
     },
     "palette": [
-      "#7c4dff",
-      "#00e5ff",
+      "#000000",
+      "#ffffff",
       "#e040fb",
-      "#ffd600",
-      "#fff59d"
+      "#00e5ff",
+      "#76ff03"
     ],
     "easing": {
       "base": "sine_inout"
@@ -1882,6 +1882,32 @@
     "glow": {
       "color": "#00e5ff",
       "radius": 2.5,
+      "falloff": "gaussian"
+    }
+  },
+  "ibm": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.0,
+    "amplitude": {
+      "breath": 0.2,
+      "sway": 0.2,
+      "float": 0.0
+    },
+    "palette": [
+      "#0066cc",
+      "#ffffff",
+      "#0099ff",
+      "#212121",
+      "#e0e0e0"
+    ],
+    "easing": {
+      "base": "sine_inout"
+    },
+    "phase_seed": 10582,
+    "glow": {
+      "color": "#0066cc",
+      "radius": 0.0,
       "falloff": "gaussian"
     }
   },
@@ -1910,11 +1936,11 @@
       "float": 0.5
     },
     "palette": [
-      "#e040fb",
-      "#ea80fc",
+      "#ba68c8",
+      "#ce93d8",
       "#80d8ff",
-      "#f3e5f5",
-      "#b388ff"
+      "#e1f5fe",
+      "#e040fb"
     ],
     "easing": {
       "base": "sine_inout"
@@ -1993,9 +2019,9 @@
     },
     "palette": [
       "#ffffff",
-      "#212121",
-      "#ff4081",
-      "#d32f2f",
+      "#000000",
+      "#d50000",
+      "#424242",
       "#757575"
     ],
     "easing": {
@@ -2033,10 +2059,10 @@
       "float": 0.0
     },
     "palette": [
-      "#ffffff",
       "#d35400",
       "#795548",
-      "#ff9800",
+      "#ffffff",
+      "#ffb6c1",
       "#212121"
     ],
     "easing": {
@@ -2074,11 +2100,11 @@
       "float": 0.0
     },
     "palette": [
+      "#e67e22",
+      "#fef3c7",
       "#ffffff",
-      "#d35400",
-      "#795548",
-      "#ff9800",
-      "#212121"
+      "#ff8a80",
+      "#f59e0b"
     ],
     "easing": {
       "base": "sine_inout"
@@ -2157,10 +2183,10 @@
     },
     "palette": [
       "#9e9e9e",
-      "#bdbdbd",
-      "#e0e0e0",
+      "#f5f5f5",
       "#212121",
-      "#795548"
+      "#558b2f",
+      "#424242"
     ],
     "easing": {
       "base": "sine_inout"
@@ -2197,11 +2223,11 @@
       "float": 0.5
     },
     "palette": [
-      "#80cbc4",
-      "#4db6ac",
       "#00897b",
+      "#26a69a",
       "#ffd54f",
-      "#37474f"
+      "#004d40",
+      "#80cbc4"
     ],
     "easing": {
       "base": "sine_inout"
@@ -2402,10 +2428,10 @@
       "float": 0.0
     },
     "palette": [
-      "#90a4ae",
-      "#b0bec5",
-      "#cfd8dc",
+      "#9e9e9e",
       "#00e5ff",
+      "#f5f5f5",
+      "#d7ccc8",
       "#212121"
     ],
     "easing": {
@@ -2443,11 +2469,11 @@
       "float": 0.0
     },
     "palette": [
+      "#1e1e1e",
+      "#5c4033",
       "#ffffff",
-      "#d35400",
-      "#795548",
-      "#ff9800",
-      "#212121"
+      "#f8bbd0",
+      "#0288d1"
     ],
     "easing": {
       "base": "sine_inout"
@@ -2485,10 +2511,10 @@
     },
     "palette": [
       "#4e342e",
-      "#6d4c41",
-      "#d32f2f",
-      "#3e2723",
-      "#d7ccc8"
+      "#e0e0e0",
+      "#b71c1c",
+      "#ffd700",
+      "#212121"
     ],
     "easing": {
       "base": "sine_inout"
@@ -2525,11 +2551,11 @@
       "float": 0.0
     },
     "palette": [
-      "#8d6e63",
-      "#a1887f",
-      "#d7ccc8",
-      "#4e342e",
-      "#2e7d32"
+      "#4a3b32",
+      "#e8d5c4",
+      "#6b5b45",
+      "#ffd700",
+      "#1f1b18"
     ],
     "easing": {
       "base": "sine_inout"
@@ -2566,11 +2592,11 @@
       "float": 0.0
     },
     "palette": [
-      "#ff8f00",
-      "#ffa000",
-      "#ffc107",
-      "#b71c1c",
-      "#ffd54f"
+      "#d4a373",
+      "#5c4033",
+      "#faedcd",
+      "#1a1a1a",
+      "#ffb300"
     ],
     "easing": {
       "base": "sine_inout"
@@ -2609,8 +2635,8 @@
     "palette": [
       "#ffd700",
       "#c62828",
-      "#ad1457",
       "#ff6f00",
+      "#ad1457",
       "#212121"
     ],
     "easing": {
@@ -2648,11 +2674,11 @@
       "float": 0.0
     },
     "palette": [
-      "#2e7d32",
       "#1b5e20",
       "#00e5ff",
+      "#2e7d32",
       "#ff1744",
-      "#ffffff"
+      "#212121"
     ],
     "easing": {
       "base": "sine_inout"
@@ -2733,8 +2759,8 @@
       "#5c4033",
       "#795548",
       "#8d6e63",
-      "#3e2723",
-      "#d7ccc8"
+      "#d7ccc8",
+      "#3e2723"
     ],
     "easing": {
       "base": "sine_inout"
@@ -2771,10 +2797,10 @@
       "float": 0.0
     },
     "palette": [
-      "#d32f2f",
-      "#b71c1c",
+      "#76ff03",
+      "#78909c",
+      "#ff1744",
       "#212121",
-      "#90a4ae",
       "#ffffff"
     ],
     "easing": {
@@ -2812,11 +2838,11 @@
       "float": 0.5
     },
     "palette": [
-      "#ff0033",
-      "#ff7f00",
-      "#ffff00",
-      "#33ff00",
-      "#0099ff"
+      "#e6aa68",
+      "#ff69b4",
+      "#90a4ae",
+      "#ff1493",
+      "#00e5ff"
     ],
     "easing": {
       "base": "sine_inout"
@@ -2853,11 +2879,11 @@
       "float": 0.5
     },
     "palette": [
-      "#8e24aa",
-      "#ab47bc",
-      "#ce93d8",
+      "#ad1457",
       "#e1bee7",
-      "#ffd54f"
+      "#c2185b",
+      "#ffd54f",
+      "#4a148c"
     ],
     "easing": {
       "base": "sine_inout"
@@ -3058,11 +3084,11 @@
       "float": 0.5
     },
     "palette": [
-      "#689f38",
-      "#8bc34a",
-      "#cddc39",
-      "#ff9800",
-      "#e65100"
+      "#b23b23",
+      "#8d6e63",
+      "#d7ccc8",
+      "#ffb300",
+      "#4e342e"
     ],
     "easing": {
       "base": "sine_inout"
@@ -3100,10 +3126,10 @@
     },
     "palette": [
       "#ffd700",
-      "#e91e63",
+      "#880e4f",
       "#ffffff",
-      "#212121",
-      "#cfd8dc"
+      "#1565c0",
+      "#c62828"
     ],
     "easing": {
       "base": "sine_inout"
@@ -3141,10 +3167,10 @@
     },
     "palette": [
       "#d7ccc8",
-      "#a1887f",
-      "#ff80ab",
-      "#e53935",
-      "#ffd600"
+      "#ffab91",
+      "#d50000",
+      "#ff8a80",
+      "#3e2723"
     ],
     "easing": {
       "base": "sine_inout"
@@ -3263,10 +3289,10 @@
       "float": 0.5
     },
     "palette": [
+      "#ff8f00",
+      "#f06292",
       "#ffa000",
-      "#ffb300",
       "#ffd54f",
-      "#ffe082",
       "#e65100"
     ],
     "easing": {
@@ -3347,9 +3373,9 @@
     "palette": [
       "#ffffff",
       "#f5f5f5",
-      "#424242",
-      "#212121",
-      "#ffb6c1"
+      "#3e2723",
+      "#ffb6c1",
+      "#9e9e9e"
     ],
     "easing": {
       "base": "sine_inout"
@@ -3470,9 +3496,9 @@
     "palette": [
       "#f5f5f5",
       "#e0e0e0",
-      "#9e9e9e",
-      "#616161",
-      "#757575"
+      "#212121",
+      "#d7ccc8",
+      "#9e9e9e"
     ],
     "easing": {
       "base": "sine_inout"
@@ -3510,10 +3536,10 @@
     },
     "palette": [
       "#ffffff",
-      "#e0e0e0",
-      "#212121",
+      "#262626",
       "#ffb6c1",
-      "#8d6e63"
+      "#424242",
+      "#e0e0e0"
     ],
     "easing": {
       "base": "sine_inout"
@@ -3592,10 +3618,10 @@
     },
     "palette": [
       "#ffffff",
-      "#212121",
+      "#1a1a1a",
       "#d32f2f",
       "#424242",
-      "#ffcdd2"
+      "#e0e0e0"
     ],
     "easing": {
       "base": "sine_inout"
@@ -3796,11 +3822,11 @@
       "float": 0.0
     },
     "palette": [
-      "#388e3c",
-      "#4caf50",
-      "#81c784",
-      "#e65100",
-      "#ff9800"
+      "#2e7d32",
+      "#d84315",
+      "#558b2f",
+      "#8d6e63",
+      "#ffb300"
     ],
     "easing": {
       "base": "sine_inout"
@@ -3837,11 +3863,11 @@
       "float": 0.0
     },
     "palette": [
-      "#e53935",
-      "#ef5350",
-      "#3949ab",
-      "#ffffff",
-      "#ffeb3b"
+      "#e64a19",
+      "#fff3e0",
+      "#1976d2",
+      "#fbe9e7",
+      "#ffb300"
     ],
     "easing": {
       "base": "sine_inout"
@@ -3878,11 +3904,11 @@
       "float": 0.0
     },
     "palette": [
-      "#ffffff",
-      "#212121",
+      "#90a4ae",
       "#0284c7",
       "#38bdf8",
-      "#ffb6c1"
+      "#ffb6c1",
+      "#ffffff"
     ],
     "easing": {
       "base": "sine_inout"
@@ -3919,11 +3945,11 @@
       "float": 0.0
     },
     "palette": [
+      "#cfd8dc",
       "#0284c7",
-      "#38bdf8",
-      "#e0f2fe",
       "#ffffff",
-      "#ef4444"
+      "#ef4444",
+      "#263238"
     ],
     "easing": {
       "base": "sine_inout"
@@ -4001,9 +4027,9 @@
       "float": 0.0
     },
     "palette": [
-      "#6d4c41",
+      "#5d4037",
       "#c62828",
-      "#1565c0",
+      "#0288d1",
       "#f57f17",
       "#212121"
     ],
@@ -4042,11 +4068,11 @@
       "float": 0.5
     },
     "palette": [
-      "#2e7d32",
-      "#4caf50",
-      "#81c784",
-      "#fff59d",
-      "#1b5e20"
+      "#33691e",
+      "#fbc02d",
+      "#558b2f",
+      "#fff9c4",
+      "#2e7d32"
     ],
     "easing": {
       "base": "sine_inout"
@@ -4083,11 +4109,11 @@
       "float": 0.0
     },
     "palette": [
+      "#1e1e1e",
       "#ffffff",
-      "#212121",
-      "#ff9800",
-      "#ffa726",
-      "#f57c00"
+      "#ffa000",
+      "#ffb300",
+      "#212121"
     ],
     "easing": {
       "base": "sine_inout"
@@ -4247,11 +4273,11 @@
       "float": 0.5
     },
     "palette": [
-      "#0288d1",
-      "#29b6f6",
-      "#e1f5fe",
-      "#01579b",
-      "#ffffff"
+      "#1565c0",
+      "#0d47a1",
+      "#b0bec5",
+      "#ffffff",
+      "#002171"
     ],
     "easing": {
       "base": "sine_inout"
@@ -4288,10 +4314,10 @@
       "float": 0.5
     },
     "palette": [
-      "#7c4dff",
-      "#b388ff",
+      "#1a237e",
+      "#aa00ff",
+      "#e0e0e0",
       "#ffd700",
-      "#ffffff",
       "#00e5ff"
     ],
     "easing": {
@@ -4371,10 +4397,10 @@
     },
     "palette": [
       "#d35400",
-      "#e59866",
       "#ffffff",
-      "#2c2c2c",
-      "#ffb6c1"
+      "#e59866",
+      "#ffb6c1",
+      "#212121"
     ],
     "easing": {
       "base": "sine_inout"
@@ -4411,11 +4437,11 @@
       "float": 0.5
     },
     "palette": [
-      "#059669",
-      "#fbbf24",
-      "#d97706",
-      "#78350f",
-      "#f3f4f6"
+      "#1b5e20",
+      "#795548",
+      "#b0bec5",
+      "#fbc02d",
+      "#ff6f00"
     ],
     "easing": {
       "base": "sine_inout"
@@ -4456,7 +4482,7 @@
       "#ff80ab",
       "#f8bbd0",
       "#ff4081",
-      "#8d6e63"
+      "#c2185b"
     ],
     "easing": {
       "base": "sine_inout"
@@ -4493,11 +4519,11 @@
       "float": 0.0
     },
     "palette": [
-      "#ea580c",
-      "#18181b",
-      "#ffffff",
-      "#fb923c",
-      "#84cc16"
+      "#e65100",
+      "#212121",
+      "#fff8e1",
+      "#ff8a80",
+      "#ff9800"
     ],
     "easing": {
       "base": "sine_inout"
@@ -4534,11 +4560,11 @@
       "float": 0.0
     },
     "palette": [
-      "#9ca3af",
-      "#4b5563",
-      "#1f2937",
-      "#f3f4f6",
-      "#f59e0b"
+      "#78909c",
+      "#37474f",
+      "#eceff1",
+      "#ffb300",
+      "#263238"
     ],
     "easing": {
       "base": "sine_inout"
@@ -4575,11 +4601,11 @@
       "float": 0.5
     },
     "palette": [
-      "#06b6d4",
-      "#3b82f6",
+      "#b71c1c",
+      "#ff80ab",
       "#0284c7",
-      "#cffafe",
-      "#f59e0b"
+      "#ffd54f",
+      "#311b92"
     ],
     "easing": {
       "base": "sine_inout"
@@ -4616,11 +4642,11 @@
       "float": 0.0
     },
     "palette": [
-      "#78716c",
-      "#d6d3d1",
-      "#57534e",
-      "#a8a29e",
-      "#f43f5e"
+      "#6d4c41",
+      "#fffde7",
+      "#8d6e63",
+      "#a1887f",
+      "#3e2723"
     ],
     "easing": {
       "base": "sine_inout"
@@ -4657,11 +4683,11 @@
       "float": 0.0
     },
     "palette": [
-      "#18181b",
-      "#27272a",
-      "#dc2626",
-      "#7f1d1d",
-      "#38bdf8"
+      "#121212",
+      "#212121",
+      "#d50000",
+      "#2979ff",
+      "#757575"
     ],
     "easing": {
       "base": "sine_inout"
@@ -4698,11 +4724,11 @@
       "float": 0.5
     },
     "palette": [
-      "#84cc16",
-      "#65a30d",
-      "#a3e635",
+      "#558b2f",
       "#d7ccc8",
-      "#854d0e"
+      "#bcaaa4",
+      "#8bc34a",
+      "#33691e"
     ],
     "easing": {
       "base": "sine_inout"
@@ -4741,9 +4767,9 @@
     "palette": [
       "#18181b",
       "#27272a",
+      "#76ff03",
       "#3f3f46",
-      "#eab308",
-      "#f43f5e"
+      "#ffffff"
     ],
     "easing": {
       "base": "sine_inout"
@@ -4780,11 +4806,11 @@
       "float": 0.0
     },
     "palette": [
-      "#64748b",
-      "#94a3b8",
-      "#475569",
-      "#334155",
-      "#1e293b"
+      "#78909c",
+      "#546e7a",
+      "#cfd8dc",
+      "#8d6e63",
+      "#263238"
     ],
     "easing": {
       "base": "sine_inout"
@@ -4821,11 +4847,11 @@
       "float": 0.0
     },
     "palette": [
-      "#a16207",
-      "#ca8a04",
-      "#713f12",
-      "#fef08a",
-      "#1c1917"
+      "#6d6854",
+      "#e0d7c6",
+      "#3e2723",
+      "#8d6e63",
+      "#2e7d32"
     ],
     "easing": {
       "base": "sine_inout"
@@ -4862,11 +4888,11 @@
       "float": 0.0
     },
     "palette": [
-      "#facc15",
-      "#fde047",
-      "#eab308",
-      "#ffffff",
-      "#15803d"
+      "#fbc02d",
+      "#5d4037",
+      "#fff9c4",
+      "#2e7d32",
+      "#ffeb3b"
     ],
     "easing": {
       "base": "sine_inout"
@@ -4903,11 +4929,11 @@
       "float": 0.0
     },
     "palette": [
-      "#f97316",
-      "#dc2626",
-      "#b91c1c",
-      "#000000",
-      "#ffeb3b"
+      "#1a1a1a",
+      "#ff1744",
+      "#ff6d00",
+      "#424242",
+      "#ffea00"
     ],
     "easing": {
       "base": "sine_inout"
@@ -4944,11 +4970,11 @@
       "float": 0.0
     },
     "palette": [
-      "#e879f9",
+      "#ffffff",
       "#38bdf8",
-      "#c084fc",
-      "#fef08a",
-      "#ffffff"
+      "#e879f9",
+      "#ffd700",
+      "#ff80ab"
     ],
     "easing": {
       "base": "sine_inout"
@@ -4985,11 +5011,11 @@
       "float": 0.0
     },
     "palette": [
-      "#22c55e",
-      "#86efac",
-      "#16a34a",
-      "#facc15",
-      "#ffffff"
+      "#76ff03",
+      "#212121",
+      "#c6ff00",
+      "#00e676",
+      "#ffff00"
     ],
     "easing": {
       "base": "sine_inout"
@@ -5026,11 +5052,11 @@
       "float": 0.0
     },
     "palette": [
-      "#f97316",
-      "#ea580c",
-      "#fb923c",
-      "#fff7ed",
-      "#ffedd5"
+      "#d35400",
+      "#ff9800",
+      "#ffffff",
+      "#e65100",
+      "#5d4037"
     ],
     "easing": {
       "base": "sine_inout"
@@ -5068,10 +5094,10 @@
     },
     "palette": [
       "#f5f5f5",
-      "#ffffff",
       "#9e9e9e",
+      "#e0e0e0",
       "#757575",
-      "#616161"
+      "#212121"
     ],
     "easing": {
       "base": "sine_inout"
@@ -5109,10 +5135,10 @@
     },
     "palette": [
       "#d32f2f",
-      "#f57f17",
-      "#1b5e20",
-      "#ffb300",
-      "#fbc02d"
+      "#1a237e",
+      "#e65100",
+      "#fbc02d",
+      "#ffb300"
     ],
     "easing": {
       "base": "sine_inout"
@@ -5153,7 +5179,7 @@
       "#faedcd",
       "#e76f51",
       "#ffb6c1",
-      "#212121"
+      "#3e2723"
     ],
     "easing": {
       "base": "sine_inout"
@@ -5191,10 +5217,10 @@
     },
     "palette": [
       "#e11d48",
-      "#f43f5e",
-      "#be123c",
       "#ffffff",
-      "#212121"
+      "#be123c",
+      "#212121",
+      "#60a5fa"
     ],
     "easing": {
       "base": "sine_inout"
@@ -5231,11 +5257,11 @@
       "float": 0.5
     },
     "palette": [
-      "#fbbf24",
-      "#fef08a",
-      "#f59e0b",
-      "#ffffff",
-      "#d97706"
+      "#fff8e1",
+      "#b71c1c",
+      "#ffd600",
+      "#8d6e63",
+      "#f5f5f5"
     ],
     "easing": {
       "base": "sine_inout"
@@ -5272,11 +5298,11 @@
       "float": 0.0
     },
     "palette": [
-      "#ffffff",
-      "#212121",
-      "#00e676",
+      "#2e7d32",
       "#76ff03",
-      "#ffb6c1"
+      "#00e676",
+      "#ffb6c1",
+      "#1b5e20"
     ],
     "easing": {
       "base": "sine_inout"
@@ -5313,11 +5339,11 @@
       "float": 0.0
     },
     "palette": [
-      "#16a34a",
-      "#22c55e",
-      "#15803d",
-      "#eab308",
-      "#dc2626"
+      "#2e7d32",
+      "#84cc16",
+      "#d84315",
+      "#ffd600",
+      "#1b5e20"
     ],
     "easing": {
       "base": "sine_inout"
@@ -5356,9 +5382,9 @@
     "palette": [
       "#3b82f6",
       "#60a5fa",
-      "#2563eb",
       "#ffffff",
-      "#facc15"
+      "#ffd54f",
+      "#1d4ed8"
     ],
     "easing": {
       "base": "sine_inout"
@@ -5397,9 +5423,9 @@
     "palette": [
       "#0284c7",
       "#e0f2fe",
-      "#0369a1",
+      "#ffffff",
       "#f59e0b",
-      "#ffffff"
+      "#0369a1"
     ],
     "easing": {
       "base": "sine_inout"

@@ -122,8 +122,8 @@ impl Renderer for AnsiRenderer {
         if self.mode == RenderMode::Banner {
             buf.extend_from_slice(b"\x1b8");
         } else if self.mode == RenderMode::Overlay {
-            // DECSC: save cursor position and attributes before writing damage cells
-            buf.extend_from_slice(b"\x1b7");
+            // Atomically hide cursor and save cursor position/attributes before writing damage cells
+            buf.extend_from_slice(b"\x1b[?25l\x1b7");
         }
 
         let mut cur_y = 0;
@@ -209,8 +209,8 @@ impl Renderer for AnsiRenderer {
             }
         }
         if self.mode == RenderMode::Overlay {
-            // DECRC: restore cursor position and attributes so user's cursor remains unmoved
-            buf.extend_from_slice(b"\x1b8");
+            // DECRC: restore cursor position/attributes and unhide atomically so shell prompt cursor remains crisp
+            buf.extend_from_slice(b"\x1b8\x1b[?25h");
         }
         out.write_all(buf)
     }

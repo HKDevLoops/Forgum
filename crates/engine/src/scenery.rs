@@ -248,1360 +248,155 @@ pub fn get_animal_profile(animal: &str) -> AnimalProfile {
         .unwrap_or(animal)
         .to_ascii_lowercase();
 
-    let mut profile = match clean.as_str() {
-        // ── Volcanic, Mythic & Dragons ──────────────────────────────────────
-        "dragon" => AnimalProfile {
-            name: "dragon",
-            base_anim: BaseAnim::Breathe,
-            environment: EnvironmentStyle::Inferno,
-            road: RoadStyle::Magma,
-            mountain: MountainStyle::Volcano,
-            wildlife_palette: &["#d84315", "#f4511e", "#ffb300"],
-            eyes: "oo",
-            tongue: "  ",
-        },
-        "dragon-and-cow" => AnimalProfile {
-            name: "dragon-and-cow",
-            base_anim: BaseAnim::Breathe,
-            environment: EnvironmentStyle::Inferno,
-            road: RoadStyle::Magma,
-            mountain: MountainStyle::Volcano,
-            wildlife_palette: &["#c62828", "#e53935", "#ff8f00"],
-            eyes: "oo",
-            tongue: "  ",
-        },
-        "charizardvice" => AnimalProfile {
-            name: "charizardvice",
-            base_anim: BaseAnim::Breathe,
-            environment: EnvironmentStyle::Inferno,
-            road: RoadStyle::Magma,
-            mountain: MountainStyle::Volcano,
-            wildlife_palette: &["#ff6f00", "#ffab00", "#00b0ff"],
-            eyes: "oo",
-            tongue: "  ",
-        },
-        "daemon" => AnimalProfile {
-            name: "daemon",
-            base_anim: BaseAnim::Fly,
-            environment: EnvironmentStyle::Inferno,
-            road: RoadStyle::Magma,
-            mountain: MountainStyle::Volcano,
-            wildlife_palette: &["#d32f2f", "#f44336", "#212121"],
-            eyes: "XX",
-            tongue: "  ",
-        },
-        "satanic" => AnimalProfile {
-            name: "satanic",
-            base_anim: BaseAnim::Pulse,
-            environment: EnvironmentStyle::Inferno,
-            road: RoadStyle::Magma,
-            mountain: MountainStyle::Volcano,
-            wildlife_palette: &["#b71c1c", "#d32f2f", "#212121"],
-            eyes: "XX",
-            tongue: "  ",
-        },
-        "minotaur" => AnimalProfile {
-            name: "minotaur",
-            base_anim: BaseAnim::Walk,
-            environment: EnvironmentStyle::Inferno,
-            road: RoadStyle::Magma,
-            mountain: MountainStyle::Volcano,
-            wildlife_palette: &["#4e342e", "#6d4c41", "#d32f2f"],
-            eyes: "XX",
-            tongue: "  ",
-        },
-        "mooghidjirah" => AnimalProfile {
-            name: "mooghidjirah",
-            base_anim: BaseAnim::Breathe,
-            environment: EnvironmentStyle::Inferno,
-            road: RoadStyle::Magma,
-            mountain: MountainStyle::Volcano,
-            wildlife_palette: &["#c62828", "#ad1457", "#ff6f00"],
-            eyes: "XX",
-            tongue: "  ",
-        },
-        "moojira" => AnimalProfile {
-            name: "moojira",
-            base_anim: BaseAnim::Breathe,
-            environment: EnvironmentStyle::Inferno,
-            road: RoadStyle::Magma,
-            mountain: MountainStyle::Volcano,
-            wildlife_palette: &["#2e7d32", "#1b5e20", "#ff1744"],
-            eyes: "XX",
-            tongue: "  ",
-        },
-        "flaming-sheep" => AnimalProfile {
-            name: "flaming-sheep",
-            base_anim: BaseAnim::Breathe,
-            environment: EnvironmentStyle::Inferno,
-            road: RoadStyle::Magma,
-            mountain: MountainStyle::Volcano,
-            wildlife_palette: &["#ff5722", "#ff8a65", "#ffab00"],
-            eyes: "oo",
-            tongue: "  ",
-        },
+    let biome = forgum_platform::biome::get_mascot_biome(clean.as_str());
 
-        // ── Ocean & Marine Depths ──────────────────────────────────────────
-        "whale" => AnimalProfile {
-            name: "whale",
-            base_anim: BaseAnim::Float,
-            environment: EnvironmentStyle::Ocean,
-            road: RoadStyle::Seabed,
-            mountain: MountainStyle::Seamount,
-            wildlife_palette: &["#0288d1", "#29b6f6", "#e1f5fe"],
-            eyes: "oo",
-            tongue: "  ",
-        },
-        "happy-whale" => AnimalProfile {
-            name: "happy-whale",
-            base_anim: BaseAnim::Float,
-            environment: EnvironmentStyle::Ocean,
-            road: RoadStyle::Seabed,
-            mountain: MountainStyle::Seamount,
-            wildlife_palette: &["#039be5", "#4fc3f7", "#e1f5fe"],
-            eyes: "^^",
-            tongue: "  ",
-        },
-        "docker-whale" => AnimalProfile {
-            name: "docker-whale",
-            base_anim: BaseAnim::Float,
-            environment: EnvironmentStyle::Ocean,
-            road: RoadStyle::Seabed,
-            mountain: MountainStyle::Seamount,
-            wildlife_palette: &["#0288d1", "#29b6f6", "#ffffff"],
-            eyes: "oo",
-            tongue: "  ",
-        },
-        "dolphin" => AnimalProfile {
-            name: "dolphin",
-            base_anim: BaseAnim::Float,
-            environment: EnvironmentStyle::Ocean,
-            road: RoadStyle::Seabed,
-            mountain: MountainStyle::Seamount,
-            wildlife_palette: &["#4fc3f7", "#81d4fa", "#e1f5fe"],
-            eyes: "oo",
-            tongue: "  ",
-        },
-        "jellyfish" => AnimalProfile {
-            name: "jellyfish",
-            base_anim: BaseAnim::Float,
-            environment: EnvironmentStyle::Ocean,
-            road: RoadStyle::Seabed,
-            mountain: MountainStyle::Seamount,
-            wildlife_palette: &["#e040fb", "#ea80fc", "#80d8ff"],
-            eyes: "oo",
-            tongue: "  ",
-        },
-        "octopus" => AnimalProfile {
-            name: "octopus",
-            base_anim: BaseAnim::Float,
-            environment: EnvironmentStyle::Ocean,
-            road: RoadStyle::Seabed,
-            mountain: MountainStyle::Seamount,
-            wildlife_palette: &["#8e24aa", "#ab47bc", "#ce93d8"],
-            eyes: "oo",
-            tongue: "  ",
-        },
-        "smiling-octopus" => AnimalProfile {
-            name: "smiling-octopus",
-            base_anim: BaseAnim::Float,
-            environment: EnvironmentStyle::Ocean,
-            road: RoadStyle::Seabed,
-            mountain: MountainStyle::Seamount,
-            wildlife_palette: &["#ab47bc", "#ce93d8", "#f3e5f5"],
-            eyes: "^^",
-            tongue: "  ",
-        },
-        "lobster" => AnimalProfile {
-            name: "lobster",
-            base_anim: BaseAnim::Walk,
-            environment: EnvironmentStyle::Ocean,
-            road: RoadStyle::Seabed,
-            mountain: MountainStyle::Seamount,
-            wildlife_palette: &["#d32f2f", "#f44336", "#ff8a80"],
-            eyes: "oo",
-            tongue: "  ",
-        },
-        "seahorse" => AnimalProfile {
-            name: "seahorse",
-            base_anim: BaseAnim::Float,
-            environment: EnvironmentStyle::Ocean,
-            road: RoadStyle::Seabed,
-            mountain: MountainStyle::Seamount,
-            wildlife_palette: &["#ffa000", "#ffb300", "#ffd54f"],
-            eyes: "oo",
-            tongue: "  ",
-        },
-        "seahorse-big" => AnimalProfile {
-            name: "seahorse-big",
-            base_anim: BaseAnim::Float,
-            environment: EnvironmentStyle::Ocean,
-            road: RoadStyle::Seabed,
-            mountain: MountainStyle::Seamount,
-            wildlife_palette: &["#ffb300", "#ffa000", "#ffe082"],
-            eyes: "oo",
-            tongue: "  ",
-        },
-        "turtle" => AnimalProfile {
-            name: "turtle",
-            base_anim: BaseAnim::Float,
-            environment: EnvironmentStyle::Ocean,
-            road: RoadStyle::Seabed,
-            mountain: MountainStyle::Seamount,
-            wildlife_palette: &["#2e7d32", "#4caf50", "#81c784"],
-            eyes: "..",
-            tongue: "  ",
-        },
-        "ebi_furai" => AnimalProfile {
-            name: "ebi_furai",
-            base_anim: BaseAnim::Float,
-            environment: EnvironmentStyle::Ocean,
-            road: RoadStyle::Seabed,
-            mountain: MountainStyle::Seamount,
-            wildlife_palette: &["#ff8f00", "#ffb300", "#fff8e1"],
-            eyes: "oo",
-            tongue: "  ",
-        },
-
-        // ── Arctic & Polar ─────────────────────────────────────────────────
-        "tux" => AnimalProfile {
-            name: "tux",
-            base_anim: BaseAnim::Walk,
-            environment: EnvironmentStyle::Arctic,
-            road: RoadStyle::Ice,
-            mountain: MountainStyle::Iceberg,
-            wildlife_palette: &["#ffffff", "#212121", "#ff9800"],
-            eyes: "oo",
-            tongue: "  ",
-        },
-        "tux-big" => AnimalProfile {
-            name: "tux-big",
-            base_anim: BaseAnim::Walk,
-            environment: EnvironmentStyle::Arctic,
-            road: RoadStyle::Ice,
-            mountain: MountainStyle::Iceberg,
-            wildlife_palette: &["#ffffff", "#212121", "#ff9800"],
-            eyes: "oo",
-            tongue: "  ",
-        },
-        "bearface" => AnimalProfile {
-            name: "bearface",
-            base_anim: BaseAnim::Breathe,
-            environment: EnvironmentStyle::Arctic,
-            road: RoadStyle::Ice,
-            mountain: MountainStyle::Iceberg,
-            wildlife_palette: &["#5d4037", "#8d6e63", "#d7ccc8"],
-            eyes: "oo",
-            tongue: "  ",
-        },
-
-        // ── Swamp & Wetlands ───────────────────────────────────────────────
-        "bud-frogs" => AnimalProfile {
-            name: "bud-frogs",
-            base_anim: BaseAnim::Float,
-            environment: EnvironmentStyle::Swamp,
-            road: RoadStyle::Mud,
-            mountain: MountainStyle::Hills,
-            wildlife_palette: &["#4caf50", "#81c784", "#1b5e20"],
-            eyes: "@@",
-            tongue: "  ",
-        },
-
-        // ── Urban, Pets & Domestic ─────────────────────────────────────────
-        "cat" => AnimalProfile {
-            name: "cat",
-            base_anim: BaseAnim::Walk,
-            environment: EnvironmentStyle::City,
-            road: RoadStyle::Roof,
-            mountain: MountainStyle::Skyline,
-            wildlife_palette: &["#ff9800", "#ffffff", "#e65100"],
-            eyes: "^^",
-            tongue: "  ",
-        },
-        "cat2" => AnimalProfile {
-            name: "cat2",
-            base_anim: BaseAnim::Walk,
-            environment: EnvironmentStyle::City,
-            road: RoadStyle::Roof,
-            mountain: MountainStyle::Skyline,
-            wildlife_palette: &["#9e9e9e", "#e0e0e0", "#424242"],
-            eyes: "^^",
-            tongue: "  ",
-        },
-        "catfence" => AnimalProfile {
-            name: "catfence",
-            base_anim: BaseAnim::Sway,
-            environment: EnvironmentStyle::City,
-            road: RoadStyle::Roof,
-            mountain: MountainStyle::Skyline,
-            wildlife_palette: &["#616161", "#9e9e9e", "#212121"],
-            eyes: "^^",
-            tongue: "  ",
-        },
-        "kitten" => AnimalProfile {
-            name: "kitten",
-            base_anim: BaseAnim::Walk,
-            environment: EnvironmentStyle::City,
-            road: RoadStyle::Roof,
-            mountain: MountainStyle::Skyline,
-            wildlife_palette: &["#ffcc80", "#ffe0b2", "#ffffff"],
-            eyes: "^^",
-            tongue: "  ",
-        },
-        "kitty" => AnimalProfile {
-            name: "kitty",
-            base_anim: BaseAnim::Walk,
-            environment: EnvironmentStyle::City,
-            road: RoadStyle::Roof,
-            mountain: MountainStyle::Skyline,
-            wildlife_palette: &["#ffb74d", "#ffe082", "#ffffff"],
-            eyes: "^^",
-            tongue: "  ",
-        },
-        "meow" => AnimalProfile {
-            name: "meow",
-            base_anim: BaseAnim::Talk,
-            environment: EnvironmentStyle::City,
-            road: RoadStyle::Roof,
-            mountain: MountainStyle::Skyline,
-            wildlife_palette: &["#ffa726", "#ffcc80", "#ffffff"],
-            eyes: "^^",
-            tongue: "U ",
-        },
-        "doge" => AnimalProfile {
-            name: "doge",
-            base_anim: BaseAnim::Walk,
-            environment: EnvironmentStyle::City,
-            road: RoadStyle::Sidewalk,
-            mountain: MountainStyle::Skyline,
-            wildlife_palette: &["#ffb74d", "#ffe082", "#ffffff"],
-            eyes: "oo",
-            tongue: "  ",
-        },
-        "bill-the-cat" => AnimalProfile {
-            name: "bill-the-cat",
-            base_anim: BaseAnim::Talk,
-            environment: EnvironmentStyle::City,
-            road: RoadStyle::Sidewalk,
-            mountain: MountainStyle::Skyline,
-            wildlife_palette: &["#ffb74d", "#e57373", "#fff176"],
-            eyes: "oO",
-            tongue: "U ",
-        },
-        "hellokitty" => AnimalProfile {
-            name: "hellokitty",
-            base_anim: BaseAnim::Walk,
-            environment: EnvironmentStyle::City,
-            road: RoadStyle::Sidewalk,
-            mountain: MountainStyle::Skyline,
-            wildlife_palette: &["#ffffff", "#ff4081", "#ffeb3b"],
-            eyes: "oo",
-            tongue: "  ",
-        },
-        "snoopy" => AnimalProfile {
-            name: "snoopy",
-            base_anim: BaseAnim::Breathe,
-            environment: EnvironmentStyle::City,
-            road: RoadStyle::Roof,
-            mountain: MountainStyle::Skyline,
-            wildlife_palette: &["#ffffff", "#212121", "#d32f2f"],
-            eyes: "oo",
-            tongue: "  ",
-        },
-        "snoopyhouse" => AnimalProfile {
-            name: "snoopyhouse",
-            base_anim: BaseAnim::Breathe,
-            environment: EnvironmentStyle::City,
-            road: RoadStyle::Roof,
-            mountain: MountainStyle::Skyline,
-            wildlife_palette: &["#e53935", "#ffffff", "#212121"],
-            eyes: "oo",
-            tongue: "  ",
-        },
-        "snoopysleep" => AnimalProfile {
-            name: "snoopysleep",
-            base_anim: BaseAnim::Breathe,
-            environment: EnvironmentStyle::City,
-            road: RoadStyle::Roof,
-            mountain: MountainStyle::Skyline,
-            wildlife_palette: &["#ffffff", "#e53935", "#212121"],
-            eyes: "--",
-            tongue: "  ",
-        },
-        "ren" => AnimalProfile {
-            name: "ren",
-            base_anim: BaseAnim::Talk,
-            environment: EnvironmentStyle::City,
-            road: RoadStyle::Sidewalk,
-            mountain: MountainStyle::Skyline,
-            wildlife_palette: &["#d7ccc8", "#a1887f", "#ff80ab"],
-            eyes: "oo",
-            tongue: "U ",
-        },
-        "stimpy" => AnimalProfile {
-            name: "stimpy",
-            base_anim: BaseAnim::Talk,
-            environment: EnvironmentStyle::City,
-            road: RoadStyle::Sidewalk,
-            mountain: MountainStyle::Skyline,
-            wildlife_palette: &["#e53935", "#ef5350", "#3949ab"],
-            eyes: "oO",
-            tongue: "U ",
-        },
-        "kiss" => AnimalProfile {
-            name: "kiss",
-            base_anim: BaseAnim::Talk,
-            environment: EnvironmentStyle::City,
-            road: RoadStyle::Sidewalk,
-            mountain: MountainStyle::Skyline,
-            wildlife_palette: &["#ff4081", "#ff80ab", "#ffffff"],
-            eyes: "oo",
-            tongue: "U ",
-        },
-        "cowfee" => AnimalProfile {
-            name: "cowfee",
-            base_anim: BaseAnim::Breathe,
-            environment: EnvironmentStyle::City,
-            road: RoadStyle::Sidewalk,
-            mountain: MountainStyle::Skyline,
-            wildlife_palette: &["#6d4c41", "#8d6e63", "#d7ccc8"],
-            eyes: "oo",
-            tongue: "  ",
-        },
-        "surgery" => AnimalProfile {
-            name: "surgery",
-            base_anim: BaseAnim::Glitch,
-            environment: EnvironmentStyle::City,
-            road: RoadStyle::Sidewalk,
-            mountain: MountainStyle::Skyline,
-            wildlife_palette: &["#00bcd4", "#80deea", "#ffffff"],
-            eyes: "XX",
-            tongue: "  ",
-        },
-
-        // ── Forest & Woodlands ─────────────────────────────────────────────
-        "fox" => AnimalProfile {
-            name: "fox",
-            base_anim: BaseAnim::Walk,
-            environment: EnvironmentStyle::Forest,
-            road: RoadStyle::Dirt,
-            mountain: MountainStyle::Peaks,
-            wildlife_palette: &["#e65100", "#ff9800", "#ffffff"],
-            eyes: "^^",
-            tongue: "  ",
-        },
-        "koala" => AnimalProfile {
-            name: "koala",
-            base_anim: BaseAnim::Breathe,
-            environment: EnvironmentStyle::Forest,
-            road: RoadStyle::Dirt,
-            mountain: MountainStyle::Peaks,
-            wildlife_palette: &["#9e9e9e", "#bdbdbd", "#e0e0e0"],
-            eyes: "oo",
-            tongue: "  ",
-        },
-        "luke-koala" => AnimalProfile {
-            name: "luke-koala",
-            base_anim: BaseAnim::Breathe,
-            environment: EnvironmentStyle::Forest,
-            road: RoadStyle::Dirt,
-            mountain: MountainStyle::Peaks,
-            wildlife_palette: &["#90a4ae", "#b0bec5", "#cfd8dc"],
-            eyes: "oo",
-            tongue: "  ",
-        },
-        "squirrel" => AnimalProfile {
-            name: "squirrel",
-            base_anim: BaseAnim::Walk,
-            environment: EnvironmentStyle::Forest,
-            road: RoadStyle::Dirt,
-            mountain: MountainStyle::Peaks,
-            wildlife_palette: &["#8d6e63", "#a1887f", "#d7ccc8"],
-            eyes: "..",
-            tongue: "  ",
-        },
-        "hedgehog" => AnimalProfile {
-            name: "hedgehog",
-            base_anim: BaseAnim::Walk,
-            environment: EnvironmentStyle::Forest,
-            road: RoadStyle::Dirt,
-            mountain: MountainStyle::Peaks,
-            wildlife_palette: &["#6d4c41", "#8d6e63", "#d7ccc8"],
-            eyes: "..",
-            tongue: "  ",
-        },
-        "owl" => AnimalProfile {
-            name: "owl",
-            base_anim: BaseAnim::Breathe,
-            environment: EnvironmentStyle::Forest,
-            road: RoadStyle::Dirt,
-            mountain: MountainStyle::Peaks,
-            wildlife_palette: &["#795548", "#8d6e63", "#ffb300"],
-            eyes: "OO",
-            tongue: "  ",
-        },
-        "moose" => AnimalProfile {
-            name: "moose",
-            base_anim: BaseAnim::Walk,
-            environment: EnvironmentStyle::Forest,
-            road: RoadStyle::Dirt,
-            mountain: MountainStyle::Peaks,
-            wildlife_palette: &["#4e342e", "#5d4037", "#795548"],
-            eyes: "oo",
-            tongue: "  ",
-        },
-        "goat" => AnimalProfile {
-            name: "goat",
-            base_anim: BaseAnim::Walk,
-            environment: EnvironmentStyle::Forest,
-            road: RoadStyle::Dirt,
-            mountain: MountainStyle::Peaks,
-            wildlife_palette: &["#d7ccc8", "#a1887f", "#8d6e63"],
-            eyes: "oo",
-            tongue: "  ",
-        },
-        "goat2" => AnimalProfile {
-            name: "goat2",
-            base_anim: BaseAnim::Walk,
-            environment: EnvironmentStyle::Forest,
-            road: RoadStyle::Dirt,
-            mountain: MountainStyle::Peaks,
-            wildlife_palette: &["#bcaaa4", "#8d6e63", "#5d4037"],
-            eyes: "oo",
-            tongue: "  ",
-        },
-        "golden-eagle" => AnimalProfile {
-            name: "golden-eagle",
-            base_anim: BaseAnim::Fly,
-            environment: EnvironmentStyle::Forest,
-            road: RoadStyle::Dirt,
-            mountain: MountainStyle::Peaks,
-            wildlife_palette: &["#ffb300", "#ffa000", "#5d4037"],
-            eyes: "oo",
-            tongue: "  ",
-        },
-        "tweety-bird" => AnimalProfile {
-            name: "tweety-bird",
-            base_anim: BaseAnim::Fly,
-            environment: EnvironmentStyle::Forest,
-            road: RoadStyle::Dirt,
-            mountain: MountainStyle::Peaks,
-            wildlife_palette: &["#ffeb3b", "#fff59d", "#ff9800"],
-            eyes: "oo",
-            tongue: "  ",
-        },
-        "fat-banana" => AnimalProfile {
-            name: "fat-banana",
-            base_anim: BaseAnim::Sway,
-            environment: EnvironmentStyle::Forest,
-            road: RoadStyle::Dirt,
-            mountain: MountainStyle::Hills,
-            wildlife_palette: &["#ffeb3b", "#fff59d", "#fbc02d"],
-            eyes: "oo",
-            tongue: "  ",
-        },
-
-        // ── Savanna & Safari ───────────────────────────────────────────────
-        "elephant" => AnimalProfile {
-            name: "elephant",
-            base_anim: BaseAnim::Walk,
-            environment: EnvironmentStyle::Savanna,
-            road: RoadStyle::Savanna,
-            mountain: MountainStyle::Plateau,
-            wildlife_palette: &["#78909c", "#90a4ae", "#cfd8dc"],
-            eyes: "oo",
-            tongue: "  ",
-        },
-        "elephant2" => AnimalProfile {
-            name: "elephant2",
-            base_anim: BaseAnim::Walk,
-            environment: EnvironmentStyle::Savanna,
-            road: RoadStyle::Savanna,
-            mountain: MountainStyle::Plateau,
-            wildlife_palette: &["#607d8b", "#78909c", "#b0bec5"],
-            eyes: "oo",
-            tongue: "  ",
-        },
-        "elephant-in-snake" => AnimalProfile {
-            name: "elephant-in-snake",
-            base_anim: BaseAnim::Breathe,
-            environment: EnvironmentStyle::Savanna,
-            road: RoadStyle::Savanna,
-            mountain: MountainStyle::Plateau,
-            wildlife_palette: &["#78909c", "#b0bec5", "#546e7a"],
-            eyes: "oo",
-            tongue: "  ",
-        },
-        "moofasa" => AnimalProfile {
-            name: "moofasa",
-            base_anim: BaseAnim::Breathe,
-            environment: EnvironmentStyle::Savanna,
-            road: RoadStyle::Savanna,
-            mountain: MountainStyle::Plateau,
-            wildlife_palette: &["#ff8f00", "#ffa000", "#ffc107"],
-            eyes: "oo",
-            tongue: "  ",
-        },
-        "armadillo" => AnimalProfile {
-            name: "armadillo",
-            base_anim: BaseAnim::Walk,
-            environment: EnvironmentStyle::Savanna,
-            road: RoadStyle::Savanna,
-            mountain: MountainStyle::Plateau,
-            wildlife_palette: &["#8d6e63", "#d7ccc8"],
-            eyes: "oo",
-            tongue: "  ",
-        },
-        "tortoise" => AnimalProfile {
-            name: "tortoise",
-            base_anim: BaseAnim::Walk,
-            environment: EnvironmentStyle::Savanna,
-            road: RoadStyle::Savanna,
-            mountain: MountainStyle::Plateau,
-            wildlife_palette: &["#558b2f", "#689f38", "#9e9d24"],
-            eyes: "..",
-            tongue: "  ",
-        },
-        "mule" => AnimalProfile {
-            name: "mule",
-            base_anim: BaseAnim::Walk,
-            environment: EnvironmentStyle::Savanna,
-            road: RoadStyle::Savanna,
-            mountain: MountainStyle::Plateau,
-            wildlife_palette: &["#6d4c41", "#8d6e63", "#a1887f"],
-            eyes: "oo",
-            tongue: "  ",
-        },
-
-        // ── Space & Cyber ──────────────────────────────────────────────────
-        "nyan" | "nyan-cat" | "nyancat" | "nyan_cat" => AnimalProfile {
-            name: "nyan",
-            base_anim: BaseAnim::Fly,
-            environment: EnvironmentStyle::Space,
-            road: RoadStyle::Grid,
-            mountain: MountainStyle::Crater,
-            wildlife_palette: &[
-                "#ff0033", "#ff7f00", "#ffff00", "#33ff00", "#0099ff", "#9933ff",
-            ],
-            eyes: "^^",
-            tongue: "  ",
-        },
-        "atat" => AnimalProfile {
-            name: "atat",
-            base_anim: BaseAnim::Walk,
-            environment: EnvironmentStyle::Space,
-            road: RoadStyle::Grid,
-            mountain: MountainStyle::Crater,
-            wildlife_palette: &["#9e9e9e", "#cfd8dc", "#37474f"],
-            eyes: "==",
-            tongue: "  ",
-        },
-        "glados" => AnimalProfile {
-            name: "glados",
-            base_anim: BaseAnim::Glitch,
-            environment: EnvironmentStyle::Space,
-            road: RoadStyle::Grid,
-            mountain: MountainStyle::Crater,
-            wildlife_palette: &["#eceff1", "#ffab00", "#212121"],
-            eyes: "[]",
-            tongue: "  ",
-        },
-        "personality-sphere" => AnimalProfile {
-            name: "personality-sphere",
-            base_anim: BaseAnim::Float,
-            environment: EnvironmentStyle::Space,
-            road: RoadStyle::Grid,
-            mountain: MountainStyle::Crater,
-            wildlife_palette: &["#03a9f4", "#e0e0e0", "#212121"],
-            eyes: "OO",
-            tongue: "  ",
-        },
-        "world" => AnimalProfile {
-            name: "world",
-            base_anim: BaseAnim::Float,
-            environment: EnvironmentStyle::Space,
-            road: RoadStyle::Grid,
-            mountain: MountainStyle::Crater,
-            wildlife_palette: &["#29b6f6", "#66bb6a", "#ffffff"],
-            eyes: "oo",
-            tongue: "  ",
-        },
-        "beavis.zen" | "beavis" => AnimalProfile {
-            name: "beavis.zen",
-            base_anim: BaseAnim::Breathe,
-            environment: EnvironmentStyle::Space,
-            road: RoadStyle::Grid,
-            mountain: MountainStyle::Crater,
-            wildlife_palette: &["#ffca28", "#42a5f5", "#ef5350"],
-            eyes: "oo",
-            tongue: "  ",
-        },
-        "shikato" => AnimalProfile {
-            name: "shikato",
-            base_anim: BaseAnim::Breathe,
-            environment: EnvironmentStyle::Space,
-            road: RoadStyle::Grid,
-            mountain: MountainStyle::Crater,
-            wildlife_palette: &["#9e9e9e", "#e0e0e0", "#212121"],
-            eyes: "==",
-            tongue: "  ",
-        },
-        "hypno" => AnimalProfile {
-            name: "hypno",
-            base_anim: BaseAnim::Pulse,
-            environment: EnvironmentStyle::Space,
-            road: RoadStyle::Grid,
-            mountain: MountainStyle::Crater,
-            wildlife_palette: &["#7c4dff", "#00e5ff", "#e040fb"],
-            eyes: "@@",
-            tongue: "  ",
-        },
-        "kosh" => AnimalProfile {
-            name: "kosh",
-            base_anim: BaseAnim::Float,
-            environment: EnvironmentStyle::Space,
-            road: RoadStyle::Grid,
-            mountain: MountainStyle::Crater,
-            wildlife_palette: &["#80cbc4", "#4db6ac", "#00897b"],
-            eyes: "oo",
-            tongue: "  ",
-        },
-        "lollerskates" => AnimalProfile {
-            name: "lollerskates",
-            base_anim: BaseAnim::Walk,
-            environment: EnvironmentStyle::Space,
-            road: RoadStyle::Grid,
-            mountain: MountainStyle::Crater,
-            wildlife_palette: &["#00e676", "#00b0ff", "#ffea00"],
-            eyes: "oo",
-            tongue: "  ",
-        },
-        "claw-arm" => AnimalProfile {
-            name: "claw-arm",
-            base_anim: BaseAnim::Pulse,
-            environment: EnvironmentStyle::Cyber,
-            road: RoadStyle::Grid,
-            mountain: MountainStyle::Skyline,
-            wildlife_palette: &["#00e5ff", "#76ff03", "#2979ff"],
-            eyes: "[]",
-            tongue: "  ",
-        },
-        "periodic-table" => AnimalProfile {
-            name: "periodic-table",
-            base_anim: BaseAnim::Pulse,
-            environment: EnvironmentStyle::Cyber,
-            road: RoadStyle::Grid,
-            mountain: MountainStyle::Skyline,
-            wildlife_palette: &["#00e5ff", "#76ff03", "#ffd600"],
-            eyes: "[]",
-            tongue: "  ",
-        },
-
-        // ── Crypt & Gothic ─────────────────────────────────────────────────
-        "ghost" => AnimalProfile {
-            name: "ghost",
-            base_anim: BaseAnim::Float,
-            environment: EnvironmentStyle::Graveyard,
-            road: RoadStyle::Crypt,
-            mountain: MountainStyle::Gothic,
-            wildlife_palette: &["#eceff1", "#cfd8dc", "#b0bec5"],
-            eyes: "oo",
-            tongue: "  ",
-        },
-        "ghostbusters" => AnimalProfile {
-            name: "ghostbusters",
-            base_anim: BaseAnim::Pulse,
-            environment: EnvironmentStyle::Graveyard,
-            road: RoadStyle::Crypt,
-            mountain: MountainStyle::Gothic,
-            wildlife_palette: &["#e53935", "#ffffff", "#212121"],
-            eyes: "oo",
-            tongue: "  ",
-        },
-        "skeleton" => AnimalProfile {
-            name: "skeleton",
-            base_anim: BaseAnim::Walk,
-            environment: EnvironmentStyle::Graveyard,
-            road: RoadStyle::Crypt,
-            mountain: MountainStyle::Gothic,
-            wildlife_palette: &["#f5f5f5", "#e0e0e0", "#9e9e9e"],
-            eyes: "OO",
-            tongue: "  ",
-        },
-        "weeping-angel" => AnimalProfile {
-            name: "weeping-angel",
-            base_anim: BaseAnim::Pulse,
-            environment: EnvironmentStyle::Graveyard,
-            road: RoadStyle::Crypt,
-            mountain: MountainStyle::Gothic,
-            wildlife_palette: &["#9e9e9e", "#757575", "#bdbdbd"],
-            eyes: "XX",
-            tongue: "  ",
-        },
-        "cthulhu-mini" => AnimalProfile {
-            name: "cthulhu-mini",
-            base_anim: BaseAnim::Float,
-            environment: EnvironmentStyle::Graveyard,
-            road: RoadStyle::Crypt,
-            mountain: MountainStyle::Gothic,
-            wildlife_palette: &["#2e7d32", "#1b5e20", "#81c784"],
-            eyes: "oo",
-            tongue: "  ",
-        },
-        "mutilated" => AnimalProfile {
-            name: "mutilated",
-            base_anim: BaseAnim::Dissolve,
-            environment: EnvironmentStyle::Graveyard,
-            road: RoadStyle::Crypt,
-            mountain: MountainStyle::Gothic,
-            wildlife_palette: &["#d32f2f", "#b71c1c", "#212121"],
-            eyes: "XX",
-            tongue: "  ",
-        },
-        "eyes" => AnimalProfile {
-            name: "eyes",
-            base_anim: BaseAnim::Pulse,
-            environment: EnvironmentStyle::Graveyard,
-            road: RoadStyle::Crypt,
-            mountain: MountainStyle::Gothic,
-            wildlife_palette: &["#00e676", "#b9f6ca", "#ffffff"],
-            eyes: "OO",
-            tongue: "  ",
-        },
-
-        // ── Prehistoric & Dinosaurs ────────────────────────────────────────
-        "stegosaurus" => AnimalProfile {
-            name: "stegosaurus",
-            base_anim: BaseAnim::Walk,
-            environment: EnvironmentStyle::Jurassic,
-            road: RoadStyle::Tracks,
-            mountain: MountainStyle::Volcano,
-            wildlife_palette: &["#388e3c", "#4caf50", "#81c784"],
-            eyes: "oo",
-            tongue: "  ",
-        },
-        "pterodactyl" => AnimalProfile {
-            name: "pterodactyl",
-            base_anim: BaseAnim::Fly,
-            environment: EnvironmentStyle::Jurassic,
-            road: RoadStyle::Tracks,
-            mountain: MountainStyle::Volcano,
-            wildlife_palette: &["#689f38", "#8bc34a", "#cddc39"],
-            eyes: "oo",
-            tongue: "  ",
-        },
-
-        // ── Royal & Chess ──────────────────────────────────────────────────
-        "king" => AnimalProfile {
-            name: "king",
-            base_anim: BaseAnim::Breathe,
-            environment: EnvironmentStyle::Throne,
-            road: RoadStyle::Checkerboard,
-            mountain: MountainStyle::Castle,
-            wildlife_palette: &["#ffd700", "#c0c0c0", "#e53935"],
-            eyes: "oo",
-            tongue: "  ",
-        },
-        "queen" => AnimalProfile {
-            name: "queen",
-            base_anim: BaseAnim::Breathe,
-            environment: EnvironmentStyle::Throne,
-            road: RoadStyle::Checkerboard,
-            mountain: MountainStyle::Castle,
-            wildlife_palette: &["#ffd700", "#e91e63", "#ffffff"],
-            eyes: "oo",
-            tongue: "  ",
-        },
-        "knight" => AnimalProfile {
-            name: "knight",
-            base_anim: BaseAnim::Walk,
-            environment: EnvironmentStyle::Throne,
-            road: RoadStyle::Checkerboard,
-            mountain: MountainStyle::Castle,
-            wildlife_palette: &["#b0bec5", "#cfd8dc", "#78909c"],
-            eyes: "oo",
-            tongue: "  ",
-        },
-        "pawn" => AnimalProfile {
-            name: "pawn",
-            base_anim: BaseAnim::Walk,
-            environment: EnvironmentStyle::Throne,
-            road: RoadStyle::Checkerboard,
-            mountain: MountainStyle::Castle,
-            wildlife_palette: &["#cfd8dc", "#eceff1", "#90a4ae"],
-            eyes: "oo",
-            tongue: "  ",
-        },
-        "rook" => AnimalProfile {
-            name: "rook",
-            base_anim: BaseAnim::Walk,
-            environment: EnvironmentStyle::Throne,
-            road: RoadStyle::Checkerboard,
-            mountain: MountainStyle::Castle,
-            wildlife_palette: &["#78909c", "#90a4ae", "#b0bec5"],
-            eyes: "[]",
-            tongue: "  ",
-        },
-        "wizard" => AnimalProfile {
-            name: "wizard",
-            base_anim: BaseAnim::Pulse,
-            environment: EnvironmentStyle::Throne,
-            road: RoadStyle::Checkerboard,
-            mountain: MountainStyle::Castle,
-            wildlife_palette: &["#7c4dff", "#b388ff", "#ffd700"],
-            eyes: "oo",
-            tongue: "  ",
-        },
-        "charlie" => AnimalProfile {
-            name: "charlie",
-            base_anim: BaseAnim::Talk,
-            environment: EnvironmentStyle::Throne,
-            road: RoadStyle::Checkerboard,
-            mountain: MountainStyle::Castle,
-            wildlife_palette: &["#ffd54f", "#ffe082", "#bcaaa4"],
-            eyes: "oo",
-            tongue: "U ",
-        },
-        "mona-lisa" => AnimalProfile {
-            name: "mona-lisa",
-            base_anim: BaseAnim::Breathe,
-            environment: EnvironmentStyle::Throne,
-            road: RoadStyle::Checkerboard,
-            mountain: MountainStyle::Castle,
-            wildlife_palette: &["#8d6e63", "#a1887f", "#d7ccc8"],
-            eyes: "oo",
-            tongue: "  ",
-        },
-
-        // ── Hive & Insects ─────────────────────────────────────────────────
-        "bees" => AnimalProfile {
-            name: "bees",
-            base_anim: BaseAnim::Fly,
-            environment: EnvironmentStyle::Hive,
-            road: RoadStyle::Dirt,
-            mountain: MountainStyle::Garden,
-            wildlife_palette: &["#ffeb3b", "#212121", "#fff59d"],
-            eyes: "oo",
-            tongue: "  ",
-        },
-        "spidercow" => AnimalProfile {
-            name: "spidercow",
-            base_anim: BaseAnim::Walk,
-            environment: EnvironmentStyle::Hive,
-            road: RoadStyle::Dirt,
-            mountain: MountainStyle::Garden,
-            wildlife_palette: &["#212121", "#d32f2f", "#616161"],
-            eyes: "88",
-            tongue: "  ",
-        },
-
-        // ── Pastoral, Bovines & Countryside ────────────────────────────────
-        "bunny" => AnimalProfile {
-            name: "bunny",
-            base_anim: BaseAnim::Walk,
-            environment: EnvironmentStyle::Pasture,
-            road: RoadStyle::Dirt,
-            mountain: MountainStyle::Hills,
-            wildlife_palette: &["#f5f5f5", "#ff80ab", "#e0e0e0"],
-            eyes: "oo",
-            tongue: "  ",
-        },
-        "cower" => AnimalProfile {
-            name: "cower",
-            base_anim: BaseAnim::Breathe,
-            environment: EnvironmentStyle::Pasture,
-            road: RoadStyle::Dirt,
-            mountain: MountainStyle::Hills,
-            wildlife_palette: &["#ffffff", "#212121", "#e0e0e0"],
-            eyes: "oo",
-            tongue: "  ",
-        },
-        "fat-cow" => AnimalProfile {
-            name: "fat-cow",
-            base_anim: BaseAnim::Walk,
-            environment: EnvironmentStyle::Pasture,
-            road: RoadStyle::Dirt,
-            mountain: MountainStyle::Hills,
-            wildlife_palette: &["#ffffff", "#424242", "#e0e0e0"],
-            eyes: "oo",
-            tongue: "  ",
-        },
-        "fence" => AnimalProfile {
-            name: "fence",
-            base_anim: BaseAnim::Sway,
-            environment: EnvironmentStyle::Pasture,
-            road: RoadStyle::Dirt,
-            mountain: MountainStyle::Hills,
-            wildlife_palette: &["#8d6e63", "#a1887f", "#d7ccc8"],
-            eyes: "||",
-            tongue: "  ",
-        },
-        "hippie" => AnimalProfile {
-            name: "hippie",
-            base_anim: BaseAnim::Sway,
-            environment: EnvironmentStyle::Pasture,
-            road: RoadStyle::Dirt,
-            mountain: MountainStyle::Hills,
-            wildlife_palette: &["#e040fb", "#7c4dff", "#00e676"],
-            eyes: "oo",
-            tongue: "  ",
-        },
-        "hiya" => AnimalProfile {
-            name: "hiya",
-            base_anim: BaseAnim::Talk,
-            environment: EnvironmentStyle::Pasture,
-            road: RoadStyle::Dirt,
-            mountain: MountainStyle::Hills,
-            wildlife_palette: &["#ffffff", "#212121", "#ff80ab"],
-            eyes: "^^",
-            tongue: "U ",
-        },
-        "lamb" => AnimalProfile {
-            name: "lamb",
-            base_anim: BaseAnim::Walk,
-            environment: EnvironmentStyle::Pasture,
-            road: RoadStyle::Dirt,
-            mountain: MountainStyle::Hills,
-            wildlife_palette: &["#fafafa", "#f5f5f5", "#e0e0e0"],
-            eyes: "oo",
-            tongue: "  ",
-        },
-        "lamb2" => AnimalProfile {
-            name: "lamb2",
-            base_anim: BaseAnim::Walk,
-            environment: EnvironmentStyle::Pasture,
-            road: RoadStyle::Dirt,
-            mountain: MountainStyle::Hills,
-            wildlife_palette: &["#f5f5f5", "#eeeeee", "#bdbdbd"],
-            eyes: "oo",
-            tongue: "  ",
-        },
-        "sheep" => AnimalProfile {
-            name: "sheep",
-            base_anim: BaseAnim::Walk,
-            environment: EnvironmentStyle::Pasture,
-            road: RoadStyle::Dirt,
-            mountain: MountainStyle::Hills,
-            wildlife_palette: &["#ffffff", "#f5f5f5", "#424242"],
-            eyes: "oo",
-            tongue: "  ",
-        },
-        "shrug" => AnimalProfile {
-            name: "shrug",
-            base_anim: BaseAnim::Sway,
-            environment: EnvironmentStyle::Pasture,
-            road: RoadStyle::Dirt,
-            mountain: MountainStyle::Hills,
-            wildlife_palette: &["#ffffff", "#e0e0e0", "#bdbdbd"],
-            eyes: "oo",
-            tongue: "  ",
-        },
-        "small" => AnimalProfile {
-            name: "small",
-            base_anim: BaseAnim::Walk,
-            environment: EnvironmentStyle::Pasture,
-            road: RoadStyle::Dirt,
-            mountain: MountainStyle::Hills,
-            wildlife_palette: &["#ffffff", "#e0e0e0", "#212121"],
-            eyes: "oo",
-            tongue: "  ",
-        },
-        "supermilker" => AnimalProfile {
-            name: "supermilker",
-            base_anim: BaseAnim::Pulse,
-            environment: EnvironmentStyle::Pasture,
-            road: RoadStyle::Dirt,
-            mountain: MountainStyle::Hills,
-            wildlife_palette: &["#00e676", "#00b0ff", "#ffffff"],
-            eyes: "oo",
-            tongue: "  ",
-        },
-        "turkey" => AnimalProfile {
-            name: "turkey",
-            base_anim: BaseAnim::Walk,
-            environment: EnvironmentStyle::Pasture,
-            road: RoadStyle::Dirt,
-            mountain: MountainStyle::Hills,
-            wildlife_palette: &["#6d4c41", "#c62828", "#f57f17"],
-            eyes: "oo",
-            tongue: "  ",
-        },
-        "corgi" => AnimalProfile {
-            name: "corgi",
-            base_anim: BaseAnim::Walk,
-            environment: EnvironmentStyle::Pasture,
-            road: RoadStyle::Cobblestone,
-            mountain: MountainStyle::Hills,
-            wildlife_palette: &["#d97706", "#fef3c7", "#b45309"],
-            eyes: "oo",
-            tongue: "U ",
-        },
-        "duck" => AnimalProfile {
-            name: "duck",
-            base_anim: BaseAnim::Walk,
-            environment: EnvironmentStyle::Swamp,
-            road: RoadStyle::Dirt,
-            mountain: MountainStyle::Hills,
-            wildlife_palette: &["#059669", "#fbbf24", "#d97706"],
-            eyes: "oo",
-            tongue: "  ",
-        },
-        "pig" => AnimalProfile {
-            name: "pig",
-            base_anim: BaseAnim::Walk,
-            environment: EnvironmentStyle::Pasture,
-            road: RoadStyle::Mud,
-            mountain: MountainStyle::Hills,
-            wildlife_palette: &["#f472b6", "#fbcfe8", "#db2777"],
-            eyes: "oo",
-            tongue: "  ",
-        },
-        "tiger" => AnimalProfile {
-            name: "tiger",
-            base_anim: BaseAnim::Walk,
-            environment: EnvironmentStyle::Savanna,
-            road: RoadStyle::Savanna,
-            mountain: MountainStyle::Peaks,
-            wildlife_palette: &["#ea580c", "#18181b", "#fb923c"],
-            eyes: "oo",
-            tongue: "  ",
-        },
-        "wolf" => AnimalProfile {
-            name: "wolf",
-            base_anim: BaseAnim::Walk,
-            environment: EnvironmentStyle::Forest,
-            road: RoadStyle::Dirt,
-            mountain: MountainStyle::Peaks,
-            wildlife_palette: &["#9ca3af", "#4b5563", "#1f2937"],
-            eyes: "oo",
-            tongue: "  ",
-        },
-        "squid" => AnimalProfile {
-            name: "squid",
-            base_anim: BaseAnim::Float,
-            environment: EnvironmentStyle::Ocean,
-            road: RoadStyle::Seabed,
-            mountain: MountainStyle::Seamount,
-            wildlife_palette: &["#06b6d4", "#3b82f6", "#0284c7"],
-            eyes: "oo",
-            tongue: "  ",
-        },
-        "walrus" => AnimalProfile {
-            name: "walrus",
-            base_anim: BaseAnim::Breathe,
-            environment: EnvironmentStyle::Arctic,
-            road: RoadStyle::Ice,
-            mountain: MountainStyle::Iceberg,
-            wildlife_palette: &["#78716c", "#d6d3d1", "#57534e"],
-            eyes: "oo",
-            tongue: "  ",
-        },
-        "vader" => AnimalProfile {
-            name: "vader",
-            base_anim: BaseAnim::Breathe,
-            environment: EnvironmentStyle::Space,
-            road: RoadStyle::Grid,
-            mountain: MountainStyle::Skyline,
-            wildlife_palette: &["#dc2626", "#18181b", "#7f1d1d"],
-            eyes: "oo",
-            tongue: "  ",
-        },
-        "yoda" => AnimalProfile {
-            name: "yoda",
-            base_anim: BaseAnim::Float,
-            environment: EnvironmentStyle::Swamp,
-            road: RoadStyle::Mud,
-            mountain: MountainStyle::Plateau,
-            wildlife_palette: &["#84cc16", "#65a30d", "#a3e635"],
-            eyes: "oo",
-            tongue: "  ",
-        },
-        "panther" => AnimalProfile {
-            name: "panther",
-            base_anim: BaseAnim::Walk,
-            environment: EnvironmentStyle::Savanna,
-            road: RoadStyle::Savanna,
-            mountain: MountainStyle::Peaks,
-            wildlife_palette: &["#27272a", "#3f3f46", "#18181b"],
-            eyes: "oo",
-            tongue: "  ",
-        },
-        "rhino" => AnimalProfile {
-            name: "rhino",
-            base_anim: BaseAnim::Walk,
-            environment: EnvironmentStyle::Savanna,
-            road: RoadStyle::Savanna,
-            mountain: MountainStyle::Plateau,
-            wildlife_palette: &["#64748b", "#94a3b8", "#475569"],
-            eyes: "oo",
-            tongue: "  ",
-        },
-        "sloth" => AnimalProfile {
-            name: "sloth",
-            base_anim: BaseAnim::Breathe,
-            environment: EnvironmentStyle::Forest,
-            road: RoadStyle::Dirt,
-            mountain: MountainStyle::Hills,
-            wildlife_palette: &["#a16207", "#ca8a04", "#713f12"],
-            eyes: "oo",
-            tongue: "  ",
-        },
-        "pufferfish" => AnimalProfile {
-            name: "pufferfish",
-            base_anim: BaseAnim::Pulse,
-            environment: EnvironmentStyle::Ocean,
-            road: RoadStyle::Seabed,
-            mountain: MountainStyle::Seamount,
-            wildlife_palette: &["#facc15", "#fde047", "#eab308"],
-            eyes: "oo",
-            tongue: "  ",
-        },
-        "sauron" => AnimalProfile {
-            name: "sauron",
-            base_anim: BaseAnim::Pulse,
-            environment: EnvironmentStyle::Inferno,
-            road: RoadStyle::Magma,
-            mountain: MountainStyle::Volcano,
-            wildlife_palette: &["#f97316", "#dc2626", "#b91c1c"],
-            eyes: "()",
-            tongue: "  ",
-        },
-        "unipony" => AnimalProfile {
-            name: "unipony",
-            base_anim: BaseAnim::Walk,
-            environment: EnvironmentStyle::Pasture,
-            road: RoadStyle::Cobblestone,
-            mountain: MountainStyle::Castle,
-            wildlife_palette: &["#e879f9", "#38bdf8", "#c084fc"],
-            eyes: "oo",
-            tongue: "  ",
-        },
-        "radioactive-kitty" => AnimalProfile {
-            name: "radioactive-kitty",
-            base_anim: BaseAnim::Glitch,
-            environment: EnvironmentStyle::Cyber,
-            road: RoadStyle::Grid,
-            mountain: MountainStyle::Crater,
-            wildlife_palette: &["#22c55e", "#86efac", "#16a34a"],
-            eyes: "^^",
-            tongue: "  ",
-        },
-        "vulpix" => AnimalProfile {
-            name: "vulpix",
-            base_anim: BaseAnim::Walk,
-            environment: EnvironmentStyle::Savanna,
-            road: RoadStyle::Dirt,
-            mountain: MountainStyle::Peaks,
-            wildlife_palette: &["#f97316", "#ea580c", "#fb923c"],
-            eyes: "oo",
-            tongue: "  ",
-        },
-        "ram" => AnimalProfile {
-            name: "ram",
-            base_anim: BaseAnim::Walk,
-            environment: EnvironmentStyle::Pasture,
-            road: RoadStyle::Cobblestone,
-            mountain: MountainStyle::Peaks,
-            wildlife_palette: &["#d97706", "#f59e0b", "#b45309"],
-            eyes: "oo",
-            tongue: "  ",
-        },
-        "rooster" => AnimalProfile {
-            name: "rooster",
-            base_anim: BaseAnim::Walk,
-            environment: EnvironmentStyle::Pasture,
-            road: RoadStyle::Dirt,
-            mountain: MountainStyle::Hills,
-            wildlife_palette: &["#ef4444", "#f59e0b", "#dc2626"],
-            eyes: "oo",
-            tongue: "  ",
-        },
-        "hamster" => AnimalProfile {
-            name: "hamster",
-            base_anim: BaseAnim::Walk,
-            environment: EnvironmentStyle::Pasture,
-            road: RoadStyle::Cobblestone,
-            mountain: MountainStyle::Hills,
-            wildlife_palette: &["#d4a373", "#faedcd", "#e76f51", "#ffb6c1"],
-            eyes: "oo",
-            tongue: "  ",
-        },
-        "apt" => AnimalProfile {
-            name: "apt",
-            base_anim: BaseAnim::Walk,
-            environment: EnvironmentStyle::Cyber,
-            road: RoadStyle::Grid,
-            mountain: MountainStyle::Skyline,
-            wildlife_palette: &["#e11d48", "#f43f5e", "#be123c"],
-            eyes: "oo",
-            tongue: "  ",
-        },
-        "jesus" => AnimalProfile {
-            name: "jesus",
-            base_anim: BaseAnim::Float,
-            environment: EnvironmentStyle::Throne,
-            road: RoadStyle::Cobblestone,
-            mountain: MountainStyle::Peaks,
-            wildlife_palette: &["#fbbf24", "#fef08a", "#f59e0b"],
-            eyes: "oo",
-            tongue: "  ",
-        },
-        "three-eyes" => AnimalProfile {
-            name: "three-eyes",
-            base_anim: BaseAnim::Breathe,
-            environment: EnvironmentStyle::Space,
-            road: RoadStyle::Grid,
-            mountain: MountainStyle::Crater,
-            wildlife_palette: &["#10b981", "#34d399", "#059669"],
-            eyes: "OOO",
-            tongue: "  ",
-        },
-        "viper" => AnimalProfile {
-            name: "viper",
-            base_anim: BaseAnim::Sway,
-            environment: EnvironmentStyle::Swamp,
-            road: RoadStyle::Mud,
-            mountain: MountainStyle::Plateau,
-            wildlife_palette: &["#84cc16", "#4d7c0f", "#65a30d"],
-            eyes: "oo",
-            tongue: "U ",
-        },
-        "telebears" => AnimalProfile {
-            name: "telebears",
-            base_anim: BaseAnim::Walk,
-            environment: EnvironmentStyle::Cyber,
-            road: RoadStyle::Grid,
-            mountain: MountainStyle::Skyline,
-            wildlife_palette: &["#3b82f6", "#60a5fa", "#2563eb"],
-            eyes: "oo",
-            tongue: "  ",
-        },
-        "mech-and-cow" => AnimalProfile {
-            name: "mech-and-cow",
-            base_anim: BaseAnim::Walk,
-            environment: EnvironmentStyle::Cyber,
-            road: RoadStyle::Grid,
-            mountain: MountainStyle::Skyline,
-            wildlife_palette: &["#0284c7", "#e0f2fe", "#0369a1"],
-            eyes: "oo",
-            tongue: "  ",
-        },
-
-        // Default / Canonical Bovine
-        _ => AnimalProfile {
-            name: "default",
-            base_anim: BaseAnim::Walk,
-            environment: EnvironmentStyle::Pasture,
-            road: RoadStyle::Dirt,
-            mountain: MountainStyle::Hills,
-            wildlife_palette: &["#ffffff", "#212121", "#e0e0e0"],
-            eyes: "oo",
-            tongue: "  ",
-        },
+    let (base_anim, eyes, tongue) = match clean.as_str() {
+        "apt" => (BaseAnim::Walk, "oo", "  "),
+        "armadillo" => (BaseAnim::Walk, "oo", "  "),
+        "atat" => (BaseAnim::Walk, "==", "  "),
+        "bearface" => (BaseAnim::Breathe, "oo", "  "),
+        "beavis.zen" | "beavis" => (BaseAnim::Sway, "oo", "  "),
+        "bees" => (BaseAnim::Fly, "oo", "  "),
+        "bill-the-cat" => (BaseAnim::Talk, "oO", "U "),
+        "bud-frogs" => (BaseAnim::Float, "@@", "  "),
+        "bunny" => (BaseAnim::Walk, "oo", "  "),
+        "cat" => (BaseAnim::Walk, "^^", "  "),
+        "cat2" => (BaseAnim::Walk, "^^", "  "),
+        "catfence" => (BaseAnim::Sway, "^^", "  "),
+        "charizardvice" => (BaseAnim::Breathe, "oo", "  "),
+        "charlie" => (BaseAnim::Talk, "oo", "U "),
+        "claw-arm" => (BaseAnim::Pulse, "[]", "  "),
+        "corgi" => (BaseAnim::Walk, "oo", "U "),
+        "cower" => (BaseAnim::Breathe, "oo", "  "),
+        "cowfee" => (BaseAnim::Breathe, "oo", "  "),
+        "cthulhu-mini" => (BaseAnim::Float, "oo", "  "),
+        "daemon" => (BaseAnim::Fly, "XX", "  "),
+        "docker-whale" => (BaseAnim::Float, "oo", "  "),
+        "doge" => (BaseAnim::Walk, "oo", "  "),
+        "dolphin" => (BaseAnim::Float, "oo", "  "),
+        "dragon" => (BaseAnim::Breathe, "oo", "  "),
+        "dragon-and-cow" => (BaseAnim::Breathe, "oo", "  "),
+        "duck" => (BaseAnim::Walk, "oo", "  "),
+        "ebi_furai" => (BaseAnim::Float, "oo", "  "),
+        "elephant" => (BaseAnim::Walk, "oo", "  "),
+        "elephant-in-snake" => (BaseAnim::Breathe, "oo", "  "),
+        "elephant2" => (BaseAnim::Walk, "oo", "  "),
+        "eyes" => (BaseAnim::Pulse, "OO", "  "),
+        "fat-banana" => (BaseAnim::Sway, "oo", "  "),
+        "fat-cow" => (BaseAnim::Walk, "oo", "  "),
+        "fence" => (BaseAnim::Sway, "||", "  "),
+        "flaming-sheep" => (BaseAnim::Breathe, "oo", "  "),
+        "fox" => (BaseAnim::Walk, "^^", "  "),
+        "ghost" => (BaseAnim::Float, "oo", "  "),
+        "ghostbusters" => (BaseAnim::Pulse, "oo", "  "),
+        "glados" => (BaseAnim::Glitch, "[]", "  "),
+        "goat" => (BaseAnim::Walk, "oo", "  "),
+        "goat2" => (BaseAnim::Walk, "oo", "  "),
+        "golden-eagle" => (BaseAnim::Fly, "oo", "  "),
+        "hamster" => (BaseAnim::Walk, "oo", "  "),
+        "happy-whale" => (BaseAnim::Float, "^^", "  "),
+        "hedgehog" => (BaseAnim::Walk, "..", "  "),
+        "hellokitty" => (BaseAnim::Walk, "oo", "  "),
+        "hippie" => (BaseAnim::Sway, "oo", "  "),
+        "hiya" => (BaseAnim::Talk, "^^", "U "),
+        "hypno" => (BaseAnim::Pulse, "@@", "  "),
+        "jellyfish" => (BaseAnim::Float, "oo", "  "),
+        "jesus" => (BaseAnim::Float, "oo", "  "),
+        "king" => (BaseAnim::Breathe, "oo", "  "),
+        "kiss" => (BaseAnim::Talk, "oo", "U "),
+        "kitten" => (BaseAnim::Walk, "^^", "  "),
+        "kitty" => (BaseAnim::Walk, "^^", "  "),
+        "knight" => (BaseAnim::Walk, "oo", "  "),
+        "koala" => (BaseAnim::Breathe, "oo", "  "),
+        "kosh" => (BaseAnim::Float, "oo", "  "),
+        "lamb" => (BaseAnim::Walk, "oo", "  "),
+        "lamb2" => (BaseAnim::Walk, "oo", "  "),
+        "lobster" => (BaseAnim::Walk, "oo", "  "),
+        "lollerskates" => (BaseAnim::Walk, "oo", "  "),
+        "luke-koala" => (BaseAnim::Breathe, "oo", "  "),
+        "mech-and-cow" => (BaseAnim::Walk, "oo", "  "),
+        "meow" => (BaseAnim::Talk, "^^", "U "),
+        "minotaur" => (BaseAnim::Walk, "XX", "  "),
+        "mona-lisa" => (BaseAnim::Breathe, "oo", "  "),
+        "moofasa" => (BaseAnim::Breathe, "oo", "  "),
+        "mooghidjirah" => (BaseAnim::Breathe, "XX", "  "),
+        "moojira" => (BaseAnim::Breathe, "XX", "  "),
+        "moose" => (BaseAnim::Walk, "oo", "  "),
+        "mule" => (BaseAnim::Walk, "oo", "  "),
+        "mutilated" => (BaseAnim::Dissolve, "XX", "  "),
+        "nyan_cat" => (BaseAnim::Fly, "^^", "  "),
+        "octopus" => (BaseAnim::Float, "oo", "  "),
+        "owl" => (BaseAnim::Breathe, "OO", "  "),
+        "panther" => (BaseAnim::Walk, "oo", "  "),
+        "pawn" => (BaseAnim::Walk, "oo", "  "),
+        "periodic-table" => (BaseAnim::Pulse, "[]", "  "),
+        "personality-sphere" => (BaseAnim::Float, "OO", "  "),
+        "pig" => (BaseAnim::Walk, "oo", "  "),
+        "pterodactyl" => (BaseAnim::Fly, "oo", "  "),
+        "pufferfish" => (BaseAnim::Pulse, "oo", "  "),
+        "queen" => (BaseAnim::Breathe, "oo", "  "),
+        "radioactive-kitty" => (BaseAnim::Glitch, "^^", "  "),
+        "ram" => (BaseAnim::Walk, "oo", "  "),
+        "ren" => (BaseAnim::Talk, "oo", "U "),
+        "rhino" => (BaseAnim::Walk, "oo", "  "),
+        "rook" => (BaseAnim::Walk, "[]", "  "),
+        "rooster" => (BaseAnim::Walk, "oo", "  "),
+        "satanic" => (BaseAnim::Pulse, "XX", "  "),
+        "sauron" => (BaseAnim::Pulse, "()", "  "),
+        "seahorse" => (BaseAnim::Float, "oo", "  "),
+        "seahorse-big" => (BaseAnim::Float, "oo", "  "),
+        "sheep" => (BaseAnim::Walk, "oo", "  "),
+        "shikato" => (BaseAnim::Breathe, "==", "  "),
+        "shrug" => (BaseAnim::Sway, "oo", "  "),
+        "skeleton" => (BaseAnim::Walk, "OO", "  "),
+        "sloth" => (BaseAnim::Breathe, "oo", "  "),
+        "small" => (BaseAnim::Walk, "oo", "  "),
+        "smiling-octopus" => (BaseAnim::Float, "^^", "  "),
+        "snoopy" => (BaseAnim::Breathe, "oo", "  "),
+        "snoopyhouse" => (BaseAnim::Breathe, "oo", "  "),
+        "snoopysleep" => (BaseAnim::Breathe, "--", "  "),
+        "spidercow" => (BaseAnim::Walk, "88", "  "),
+        "squid" => (BaseAnim::Float, "oo", "  "),
+        "squirrel" => (BaseAnim::Walk, "..", "  "),
+        "stegosaurus" => (BaseAnim::Walk, "oo", "  "),
+        "stimpy" => (BaseAnim::Talk, "oO", "U "),
+        "supermilker" => (BaseAnim::Pulse, "oo", "  "),
+        "surgery" => (BaseAnim::Glitch, "XX", "  "),
+        "telebears" => (BaseAnim::Walk, "oo", "  "),
+        "three-eyes" => (BaseAnim::Breathe, "OOO", "  "),
+        "tiger" => (BaseAnim::Walk, "oo", "  "),
+        "tortoise" => (BaseAnim::Walk, "..", "  "),
+        "turkey" => (BaseAnim::Walk, "oo", "  "),
+        "turtle" => (BaseAnim::Float, "..", "  "),
+        "tux" => (BaseAnim::Walk, "oo", "  "),
+        "tux-big" => (BaseAnim::Walk, "oo", "  "),
+        "tweety-bird" => (BaseAnim::Fly, "oo", "  "),
+        "unipony" => (BaseAnim::Walk, "oo", "  "),
+        "vader" => (BaseAnim::Breathe, "oo", "  "),
+        "viper" => (BaseAnim::Sway, "oo", "U "),
+        "vulpix" => (BaseAnim::Walk, "oo", "  "),
+        "walrus" => (BaseAnim::Breathe, "oo", "  "),
+        "weeping-angel" => (BaseAnim::Pulse, "XX", "  "),
+        "whale" => (BaseAnim::Float, "oo", "  "),
+        "wizard" => (BaseAnim::Pulse, "oo", "  "),
+        "wolf" => (BaseAnim::Walk, "oo", "  "),
+        "world" => (BaseAnim::Float, "oo", "  "),
+        "yoda" => (BaseAnim::Float, "oo", "  "),
+        "default" => (BaseAnim::Walk, "oo", "  "),
+        "nyan" | "nyan-cat" | "nyancat" => (BaseAnim::Fly, "^^", "  "),
+        _ => (BaseAnim::Walk, "oo", "  "),
     };
 
-    profile.wildlife_palette = crate::color::get_natural_hex_palette(clean.as_str());
-    profile
+    AnimalProfile {
+        name: biome.name,
+        base_anim,
+        environment: EnvironmentStyle::parse(biome.environment),
+        road: RoadStyle::parse(biome.road),
+        mountain: MountainStyle::parse(biome.mountain),
+        wildlife_palette: &biome.natural_palette,
+        eyes,
+        tongue,
+    }
 }
 
 /// Map any animal name to its signature Mountain, Road, and Environment archetype.
@@ -2087,7 +882,16 @@ pub fn render_trees_with_animal(
     animal_height: Option<usize>,
     base_anim: Option<BaseAnim>,
 ) {
-    if tree_base_y >= fb.height || width == 0 {
+    if tree_base_y >= fb.height
+        || width == 0
+        || matches!(
+            env,
+            EnvironmentStyle::None
+                | EnvironmentStyle::City
+                | EnvironmentStyle::Space
+                | EnvironmentStyle::Cyber
+        )
+    {
         return;
     }
 
@@ -2115,288 +919,289 @@ pub fn render_trees_with_animal(
 
     // Natural Fibonacci phyllotaxis tree range across the visible span
     let avg_stride = min_dist + var_dist * 0.5;
-    let start_tree = (scroll_x as f32 / (avg_stride + var_dist)).floor().max(0.0) as usize;
-    let end_tree = (((scroll_x + width + 40) as f32 / min_dist).ceil() as usize) + 2;
+    let start_tree = (((scroll_x as isize - 35).max(0) as f32) / (avg_stride + var_dist)).floor() as usize;
+    // Start 6 trees earlier so wide canopies exiting on the left screen boundary do not clip prematurely
+    let start_tree = start_tree.saturating_sub(6);
+    let end_tree = (((scroll_x + width + 40) as f32 / min_dist).ceil() as usize) + 4;
 
     for t_idx in start_tree..=end_tree {
         let world_x = calculate_tree_position(t_idx, min_dist, var_dist);
-        if world_x < scroll_x {
-            continue;
-        }
-        let screen_x = world_x - scroll_x;
-        if screen_x >= width {
-            continue;
-        }
-
-        // Preserve clear mascot silhouette corridor (columns 6..68)
-        if screen_x + 15 >= 6 && screen_x <= 68 {
+        let screen_x = (world_x as isize) - (scroll_x as isize);
+        if screen_x < -35 || screen_x >= (width as isize) + 20 {
             continue;
         }
 
         let target_tree_h = calculate_tree_height(t_idx, animal_h, anim, tree_base_y);
         let species = calculate_tree_species(t_idx, env, animal_seed);
 
+        let mut plot = |dx: isize, dy: isize, ch: char, col: Color| {
+            if ch == ' ' {
+                return;
+            }
+            let px = screen_x + dx;
+            if px >= 0 && (px as usize) < width {
+                let py = (tree_base_y as isize) + dy;
+                if py >= 0 && (py as usize) < fb.height {
+                    let _ = fb.set(px as usize, py as usize, Cell::new(ch, col));
+                }
+            }
+        };
+
         match species {
             TreeSpecies::SnowFir => {
-                if target_tree_h >= 8 && screen_x + 8 < width {
-                    let _ = fb.set(screen_x + 4, tree_base_y - 8, Cell::new('^', snow_white));
-                    let _ = fb.set(screen_x + 3, tree_base_y - 7, Cell::new('/', snow_white));
-                    let _ = fb.set(screen_x + 4, tree_base_y - 7, Cell::new('|', snow_white));
-                    let _ = fb.set(screen_x + 5, tree_base_y - 7, Cell::new('\\', snow_white));
-                    let _ = fb.set(screen_x + 2, tree_base_y - 6, Cell::new('/', snow_white));
-                    let _ = fb.set(screen_x + 3, tree_base_y - 6, Cell::new('*', snow_white));
-                    let _ = fb.set(screen_x + 4, tree_base_y - 6, Cell::new('|', snow_white));
-                    let _ = fb.set(screen_x + 5, tree_base_y - 6, Cell::new('*', snow_white));
-                    let _ = fb.set(screen_x + 6, tree_base_y - 6, Cell::new('\\', snow_white));
-                    let _ = fb.set(screen_x + 1, tree_base_y - 5, Cell::new('/', snow_white));
-                    let _ = fb.set(screen_x + 2, tree_base_y - 5, Cell::new('*', snow_white));
-                    let _ = fb.set(screen_x + 4, tree_base_y - 5, Cell::new('|', snow_white));
-                    let _ = fb.set(screen_x + 6, tree_base_y - 5, Cell::new('*', snow_white));
-                    let _ = fb.set(screen_x + 7, tree_base_y - 5, Cell::new('\\', snow_white));
-                    let _ = fb.set(screen_x, tree_base_y - 4, Cell::new('/', snow_white));
-                    let _ = fb.set(screen_x + 2, tree_base_y - 4, Cell::new('*', snow_white));
-                    let _ = fb.set(screen_x + 4, tree_base_y - 4, Cell::new('|', snow_white));
-                    let _ = fb.set(screen_x + 6, tree_base_y - 4, Cell::new('*', snow_white));
-                    let _ = fb.set(screen_x + 8, tree_base_y - 4, Cell::new('\\', snow_white));
-                    let _ = fb.set(screen_x + 1, tree_base_y - 3, Cell::new('/', snow_white));
-                    let _ = fb.set(screen_x + 3, tree_base_y - 3, Cell::new('_', snow_white));
-                    let _ = fb.set(screen_x + 4, tree_base_y - 3, Cell::new('|', snow_white));
-                    let _ = fb.set(screen_x + 5, tree_base_y - 3, Cell::new('_', snow_white));
-                    let _ = fb.set(screen_x + 7, tree_base_y - 3, Cell::new('\\', snow_white));
-                    let _ = fb.set(screen_x + 4, tree_base_y - 2, Cell::new('|', dark_wood));
-                    let _ = fb.set(screen_x + 4, tree_base_y - 1, Cell::new('|', dark_wood));
-                    let _ = fb.set(screen_x + 4, tree_base_y, Cell::new('|', dark_wood));
-                } else if target_tree_h >= 4 && screen_x + 4 < width {
-                    let _ = fb.set(screen_x + 2, tree_base_y - 4, Cell::new('^', snow_white));
-                    let _ = fb.set(screen_x + 1, tree_base_y - 3, Cell::new('/', snow_white));
-                    let _ = fb.set(screen_x + 2, tree_base_y - 3, Cell::new('*', snow_white));
-                    let _ = fb.set(screen_x + 3, tree_base_y - 3, Cell::new('\\', snow_white));
-                    let _ = fb.set(screen_x, tree_base_y - 2, Cell::new('/', snow_white));
-                    let _ = fb.set(screen_x + 1, tree_base_y - 2, Cell::new('*', snow_white));
-                    let _ = fb.set(screen_x + 2, tree_base_y - 2, Cell::new('|', snow_white));
-                    let _ = fb.set(screen_x + 3, tree_base_y - 2, Cell::new('*', snow_white));
-                    let _ = fb.set(screen_x + 4, tree_base_y - 2, Cell::new('\\', snow_white));
-                    let _ = fb.set(screen_x + 2, tree_base_y - 1, Cell::new('|', dark_wood));
-                    let _ = fb.set(screen_x + 2, tree_base_y, Cell::new('|', dark_wood));
-                } else if target_tree_h >= 2 && screen_x + 2 < width {
-                    let _ = fb.set(screen_x + 1, tree_base_y - 2, Cell::new('^', snow_white));
-                    let _ = fb.set(screen_x, tree_base_y - 1, Cell::new('/', snow_white));
-                    let _ = fb.set(screen_x + 1, tree_base_y - 1, Cell::new('*', snow_white));
-                    let _ = fb.set(screen_x + 2, tree_base_y - 1, Cell::new('\\', snow_white));
-                    let _ = fb.set(screen_x + 1, tree_base_y, Cell::new('|', dark_wood));
+                if target_tree_h >= 8 {
+                    plot(4, -8, '^', snow_white);
+                    plot(3, -7, '/', snow_white);
+                    plot(4, -7, '|', snow_white);
+                    plot(5, -7, '\\', snow_white);
+                    plot(2, -6, '/', snow_white);
+                    plot(3, -6, '*', snow_white);
+                    plot(4, -6, '|', snow_white);
+                    plot(5, -6, '*', snow_white);
+                    plot(6, -6, '\\', snow_white);
+                    plot(1, -5, '/', snow_white);
+                    plot(2, -5, '*', snow_white);
+                    plot(4, -5, '|', snow_white);
+                    plot(6, -5, '*', snow_white);
+                    plot(7, -5, '\\', snow_white);
+                    plot(0, -4, '/', snow_white);
+                    plot(2, -4, '*', snow_white);
+                    plot(4, -4, '|', snow_white);
+                    plot(6, -4, '*', snow_white);
+                    plot(8, -4, '\\', snow_white);
+                    plot(1, -3, '/', snow_white);
+                    plot(3, -3, '_', snow_white);
+                    plot(4, -3, '|', snow_white);
+                    plot(5, -3, '_', snow_white);
+                    plot(7, -3, '\\', snow_white);
+                    plot(4, -2, '|', dark_wood);
+                    plot(4, -1, '|', dark_wood);
+                    plot(4, 0, '|', dark_wood);
+                } else if target_tree_h >= 4 {
+                    plot(2, -4, '^', snow_white);
+                    plot(1, -3, '/', snow_white);
+                    plot(2, -3, '*', snow_white);
+                    plot(3, -3, '\\', snow_white);
+                    plot(0, -2, '/', snow_white);
+                    plot(1, -2, '*', snow_white);
+                    plot(2, -2, '|', snow_white);
+                    plot(3, -2, '*', snow_white);
+                    plot(4, -2, '\\', snow_white);
+                    plot(2, -1, '|', dark_wood);
+                    plot(2, 0, '|', dark_wood);
+                } else if target_tree_h >= 2 {
+                    plot(1, -2, '^', snow_white);
+                    plot(0, -1, '/', snow_white);
+                    plot(1, -1, '*', snow_white);
+                    plot(2, -1, '\\', snow_white);
+                    plot(1, 0, '|', dark_wood);
                 }
             }
             TreeSpecies::Acacia => {
-                if target_tree_h >= 7 && screen_x + 14 < width {
+                if target_tree_h >= 7 {
                     for (i, c) in "  .-----------.  ".chars().enumerate() {
-                        let _ = fb.set(screen_x + i, tree_base_y - 7, Cell::new(c, acacia_gold));
+                        plot(i as isize, -7, c, acacia_gold);
                     }
                     for (i, c) in " (_____________) ".chars().enumerate() {
-                        let _ = fb.set(screen_x + i, tree_base_y - 6, Cell::new(c, acacia_gold));
+                        plot(i as isize, -6, c, acacia_gold);
                     }
                     for (i, c) in "   \\   |   /   ".chars().enumerate() {
-                        let _ = fb.set(screen_x + i, tree_base_y - 5, Cell::new(c, acacia_gold));
+                        plot(i as isize, -5, c, acacia_gold);
                     }
-                    let _ = fb.set(screen_x + 4, tree_base_y - 4, Cell::new('\\', trunk_brown));
-                    let _ = fb.set(screen_x + 7, tree_base_y - 4, Cell::new('|', trunk_brown));
-                    let _ = fb.set(screen_x + 10, tree_base_y - 4, Cell::new('/', trunk_brown));
-                    let _ = fb.set(screen_x + 5, tree_base_y - 3, Cell::new('\\', trunk_brown));
-                    let _ = fb.set(screen_x + 7, tree_base_y - 3, Cell::new('|', trunk_brown));
-                    let _ = fb.set(screen_x + 9, tree_base_y - 3, Cell::new('/', trunk_brown));
-                    let _ = fb.set(screen_x + 7, tree_base_y - 2, Cell::new('|', trunk_brown));
-                    let _ = fb.set(screen_x + 7, tree_base_y - 1, Cell::new('|', trunk_brown));
-                    let _ = fb.set(screen_x + 7, tree_base_y, Cell::new('|', trunk_brown));
-                } else if target_tree_h >= 4 && screen_x + 6 < width {
+                    plot(4, -4, '\\', trunk_brown);
+                    plot(7, -4, '|', trunk_brown);
+                    plot(10, -4, '/', trunk_brown);
+                    plot(5, -3, '\\', trunk_brown);
+                    plot(7, -3, '|', trunk_brown);
+                    plot(9, -3, '/', trunk_brown);
+                    plot(7, -2, '|', trunk_brown);
+                    plot(7, -1, '|', trunk_brown);
+                    plot(7, 0, '|', trunk_brown);
+                } else if target_tree_h >= 4 {
                     for (i, c) in " _.~---~._ ".chars().take(9).enumerate() {
-                        if screen_x + i < width {
-                            let _ =
-                                fb.set(screen_x + i, tree_base_y - 3, Cell::new(c, acacia_gold));
-                        }
+                        plot(i as isize, -3, c, acacia_gold);
                     }
-                    let _ = fb.set(screen_x + 2, tree_base_y - 2, Cell::new('\\', trunk_brown));
-                    let _ = fb.set(screen_x + 4, tree_base_y - 2, Cell::new('/', trunk_brown));
-                    let _ = fb.set(screen_x + 3, tree_base_y - 1, Cell::new('|', trunk_brown));
-                    let _ = fb.set(screen_x + 3, tree_base_y, Cell::new('|', trunk_brown));
-                } else if target_tree_h >= 1 && screen_x + 4 < width {
+                    plot(2, -2, '\\', trunk_brown);
+                    plot(4, -2, '/', trunk_brown);
+                    plot(3, -1, '|', trunk_brown);
+                    plot(3, 0, '|', trunk_brown);
+                } else if target_tree_h >= 1 {
                     for (i, c) in "__~---~__".chars().take(5).enumerate() {
-                        if screen_x + i < width {
-                            let _ =
-                                fb.set(screen_x + i, tree_base_y - 1, Cell::new(c, acacia_gold));
-                        }
+                        plot(i as isize, -1, c, acacia_gold);
                     }
-                    let _ = fb.set(screen_x + 2, tree_base_y, Cell::new('|', trunk_brown));
+                    plot(2, 0, '|', trunk_brown);
                 }
             }
             TreeSpecies::DeadTree => {
-                if target_tree_h >= 8 && screen_x + 8 < width {
-                    let _ = fb.set(screen_x, tree_base_y - 8, Cell::new('\\', dark_wood));
-                    let _ = fb.set(screen_x + 4, tree_base_y - 8, Cell::new('/', dark_wood));
-                    let _ = fb.set(screen_x + 5, tree_base_y - 8, Cell::new('\\', dark_wood));
-                    let _ = fb.set(screen_x + 8, tree_base_y - 8, Cell::new('/', dark_wood));
-                    let _ = fb.set(screen_x + 1, tree_base_y - 7, Cell::new('\\', dark_wood));
-                    let _ = fb.set(screen_x + 3, tree_base_y - 7, Cell::new('/', dark_wood));
-                    let _ = fb.set(screen_x + 6, tree_base_y - 7, Cell::new('\\', dark_wood));
-                    let _ = fb.set(screen_x + 7, tree_base_y - 7, Cell::new('/', dark_wood));
-                    let _ = fb.set(screen_x + 2, tree_base_y - 6, Cell::new('\\', dark_wood));
-                    let _ = fb.set(screen_x + 4, tree_base_y - 6, Cell::new('|', dark_wood));
-                    let _ = fb.set(screen_x + 6, tree_base_y - 6, Cell::new('/', dark_wood));
-                    let _ = fb.set(screen_x + 3, tree_base_y - 5, Cell::new('\\', dark_wood));
-                    let _ = fb.set(screen_x + 4, tree_base_y - 5, Cell::new('|', dark_wood));
-                    let _ = fb.set(screen_x + 5, tree_base_y - 5, Cell::new('/', dark_wood));
-                    let _ = fb.set(screen_x + 4, tree_base_y - 4, Cell::new('|', dark_wood));
-                    let _ = fb.set(screen_x + 4, tree_base_y - 3, Cell::new('|', dark_wood));
-                    let _ = fb.set(screen_x + 4, tree_base_y - 2, Cell::new('|', dark_wood));
-                    let _ = fb.set(screen_x + 4, tree_base_y - 1, Cell::new('|', dark_wood));
-                    let _ = fb.set(screen_x + 4, tree_base_y, Cell::new('|', dark_wood));
-                } else if target_tree_h >= 4 && screen_x + 4 < width {
-                    let _ = fb.set(screen_x, tree_base_y - 4, Cell::new('\\', dark_wood));
-                    let _ = fb.set(screen_x + 4, tree_base_y - 4, Cell::new('/', dark_wood));
-                    let _ = fb.set(screen_x + 1, tree_base_y - 3, Cell::new('\\', dark_wood));
-                    let _ = fb.set(screen_x + 2, tree_base_y - 3, Cell::new('|', dark_wood));
-                    let _ = fb.set(screen_x + 3, tree_base_y - 3, Cell::new('/', dark_wood));
-                    let _ = fb.set(screen_x + 2, tree_base_y - 2, Cell::new('|', dark_wood));
-                    let _ = fb.set(screen_x + 2, tree_base_y - 1, Cell::new('|', dark_wood));
-                    let _ = fb.set(screen_x + 2, tree_base_y, Cell::new('|', dark_wood));
-                } else if target_tree_h >= 2 && screen_x + 2 < width {
-                    let _ = fb.set(screen_x, tree_base_y - 2, Cell::new('\\', dark_wood));
-                    let _ = fb.set(screen_x + 1, tree_base_y - 2, Cell::new('|', dark_wood));
-                    let _ = fb.set(screen_x + 2, tree_base_y - 2, Cell::new('/', dark_wood));
-                    let _ = fb.set(screen_x + 1, tree_base_y - 1, Cell::new('|', dark_wood));
-                    let _ = fb.set(screen_x + 1, tree_base_y, Cell::new('|', dark_wood));
+                if target_tree_h >= 8 {
+                    plot(0, -8, '\\', dark_wood);
+                    plot(4, -8, '/', dark_wood);
+                    plot(5, -8, '\\', dark_wood);
+                    plot(8, -8, '/', dark_wood);
+                    plot(1, -7, '\\', dark_wood);
+                    plot(3, -7, '/', dark_wood);
+                    plot(6, -7, '\\', dark_wood);
+                    plot(7, -7, '/', dark_wood);
+                    plot(2, -6, '\\', dark_wood);
+                    plot(4, -6, '|', dark_wood);
+                    plot(6, -6, '/', dark_wood);
+                    plot(3, -5, '\\', dark_wood);
+                    plot(4, -5, '|', dark_wood);
+                    plot(5, -5, '/', dark_wood);
+                    plot(4, -4, '|', dark_wood);
+                    plot(4, -3, '|', dark_wood);
+                    plot(4, -2, '|', dark_wood);
+                    plot(4, -1, '|', dark_wood);
+                    plot(4, 0, '|', dark_wood);
+                } else if target_tree_h >= 4 {
+                    plot(0, -4, '\\', dark_wood);
+                    plot(4, -4, '/', dark_wood);
+                    plot(1, -3, '\\', dark_wood);
+                    plot(2, -3, '|', dark_wood);
+                    plot(3, -3, '/', dark_wood);
+                    plot(2, -2, '|', dark_wood);
+                    plot(2, -1, '|', dark_wood);
+                    plot(2, 0, '|', dark_wood);
+                } else if target_tree_h >= 2 {
+                    plot(0, -2, '\\', dark_wood);
+                    plot(1, -2, '|', dark_wood);
+                    plot(2, -2, '/', dark_wood);
+                    plot(1, -1, '|', dark_wood);
+                    plot(1, 0, '|', dark_wood);
                 }
             }
             TreeSpecies::Pine => {
-                if target_tree_h >= 8 && screen_x + 8 < width {
-                    let _ = fb.set(screen_x + 4, tree_base_y - 8, Cell::new('^', tree_green));
-                    let _ = fb.set(screen_x + 3, tree_base_y - 7, Cell::new('/', tree_green));
-                    let _ = fb.set(screen_x + 4, tree_base_y - 7, Cell::new('|', tree_green));
-                    let _ = fb.set(screen_x + 5, tree_base_y - 7, Cell::new('\\', tree_green));
-                    let _ = fb.set(screen_x + 2, tree_base_y - 6, Cell::new('/', tree_green));
-                    let _ = fb.set(screen_x + 3, tree_base_y - 6, Cell::new('*', tree_green));
-                    let _ = fb.set(screen_x + 4, tree_base_y - 6, Cell::new('|', tree_green));
-                    let _ = fb.set(screen_x + 5, tree_base_y - 6, Cell::new('*', tree_green));
-                    let _ = fb.set(screen_x + 6, tree_base_y - 6, Cell::new('\\', tree_green));
-                    let _ = fb.set(screen_x + 1, tree_base_y - 5, Cell::new('/', tree_green));
-                    let _ = fb.set(screen_x + 2, tree_base_y - 5, Cell::new('*', tree_green));
-                    let _ = fb.set(screen_x + 4, tree_base_y - 5, Cell::new('|', tree_green));
-                    let _ = fb.set(screen_x + 6, tree_base_y - 5, Cell::new('*', tree_green));
-                    let _ = fb.set(screen_x + 7, tree_base_y - 5, Cell::new('\\', tree_green));
-                    let _ = fb.set(screen_x, tree_base_y - 4, Cell::new('/', tree_green));
-                    let _ = fb.set(screen_x + 2, tree_base_y - 4, Cell::new('*', tree_green));
-                    let _ = fb.set(screen_x + 4, tree_base_y - 4, Cell::new('|', tree_green));
-                    let _ = fb.set(screen_x + 6, tree_base_y - 4, Cell::new('*', tree_green));
-                    let _ = fb.set(screen_x + 8, tree_base_y - 4, Cell::new('\\', tree_green));
-                    let _ = fb.set(screen_x + 1, tree_base_y - 3, Cell::new('/', tree_green));
-                    let _ = fb.set(screen_x + 3, tree_base_y - 3, Cell::new('_', tree_green));
-                    let _ = fb.set(screen_x + 4, tree_base_y - 3, Cell::new('|', tree_green));
-                    let _ = fb.set(screen_x + 5, tree_base_y - 3, Cell::new('_', tree_green));
-                    let _ = fb.set(screen_x + 7, tree_base_y - 3, Cell::new('\\', tree_green));
-                    let _ = fb.set(screen_x + 4, tree_base_y - 2, Cell::new('|', trunk_brown));
-                    let _ = fb.set(screen_x + 4, tree_base_y - 1, Cell::new('|', trunk_brown));
-                    let _ = fb.set(screen_x + 4, tree_base_y, Cell::new('|', trunk_brown));
-                } else if target_tree_h >= 4 && screen_x + 4 < width {
-                    let _ = fb.set(screen_x + 2, tree_base_y - 4, Cell::new('^', tree_green));
-                    let _ = fb.set(screen_x + 1, tree_base_y - 3, Cell::new('/', tree_green));
-                    let _ = fb.set(screen_x + 2, tree_base_y - 3, Cell::new('|', tree_green));
-                    let _ = fb.set(screen_x + 3, tree_base_y - 3, Cell::new('\\', tree_green));
-                    let _ = fb.set(screen_x, tree_base_y - 2, Cell::new('/', tree_green));
-                    let _ = fb.set(screen_x + 1, tree_base_y - 2, Cell::new('/', tree_green));
-                    let _ = fb.set(screen_x + 2, tree_base_y - 2, Cell::new('|', tree_green));
-                    let _ = fb.set(screen_x + 3, tree_base_y - 2, Cell::new('\\', tree_green));
-                    let _ = fb.set(screen_x + 4, tree_base_y - 2, Cell::new('\\', tree_green));
-                    let _ = fb.set(screen_x + 2, tree_base_y - 1, Cell::new('|', trunk_brown));
-                    let _ = fb.set(screen_x + 2, tree_base_y, Cell::new('|', trunk_brown));
-                } else if target_tree_h >= 2 && screen_x + 2 < width {
-                    let _ = fb.set(screen_x + 1, tree_base_y - 2, Cell::new('^', tree_green));
-                    let _ = fb.set(screen_x, tree_base_y - 1, Cell::new('/', tree_green));
-                    let _ = fb.set(screen_x + 1, tree_base_y - 1, Cell::new('|', tree_green));
-                    let _ = fb.set(screen_x + 2, tree_base_y - 1, Cell::new('\\', tree_green));
-                    let _ = fb.set(screen_x + 1, tree_base_y, Cell::new('|', trunk_brown));
+                if target_tree_h >= 8 {
+                    plot(4, -8, '^', tree_green);
+                    plot(3, -7, '/', tree_green);
+                    plot(4, -7, '|', tree_green);
+                    plot(5, -7, '\\', tree_green);
+                    plot(2, -6, '/', tree_green);
+                    plot(3, -6, '*', tree_green);
+                    plot(4, -6, '|', tree_green);
+                    plot(5, -6, '*', tree_green);
+                    plot(6, -6, '\\', tree_green);
+                    plot(1, -5, '/', tree_green);
+                    plot(2, -5, '*', tree_green);
+                    plot(4, -5, '|', tree_green);
+                    plot(6, -5, '*', tree_green);
+                    plot(7, -5, '\\', tree_green);
+                    plot(0, -4, '/', tree_green);
+                    plot(2, -4, '*', tree_green);
+                    plot(4, -4, '|', tree_green);
+                    plot(6, -4, '*', tree_green);
+                    plot(8, -4, '\\', tree_green);
+                    plot(1, -3, '/', tree_green);
+                    plot(3, -3, '_', tree_green);
+                    plot(4, -3, '|', tree_green);
+                    plot(5, -3, '_', tree_green);
+                    plot(7, -3, '\\', tree_green);
+                    plot(4, -2, '|', trunk_brown);
+                    plot(4, -1, '|', trunk_brown);
+                    plot(4, 0, '|', trunk_brown);
+                } else if target_tree_h >= 4 {
+                    plot(2, -4, '^', tree_green);
+                    plot(1, -3, '/', tree_green);
+                    plot(2, -3, '|', tree_green);
+                    plot(3, -3, '\\', tree_green);
+                    plot(0, -2, '/', tree_green);
+                    plot(1, -2, '/', tree_green);
+                    plot(2, -2, '|', tree_green);
+                    plot(3, -2, '\\', tree_green);
+                    plot(4, -2, '\\', tree_green);
+                    plot(2, -1, '|', trunk_brown);
+                    plot(2, 0, '|', trunk_brown);
+                } else if target_tree_h >= 2 {
+                    plot(1, -2, '^', tree_green);
+                    plot(0, -1, '/', tree_green);
+                    plot(1, -1, '|', tree_green);
+                    plot(2, -1, '\\', tree_green);
+                    plot(1, 0, '|', trunk_brown);
                 }
             }
             TreeSpecies::Birch => {
-                if target_tree_h >= 6 && screen_x + 4 < width {
-                    let _ = fb.set(screen_x + 2, tree_base_y - 5, Cell::new('^', tree_green));
-                    let _ = fb.set(screen_x + 1, tree_base_y - 4, Cell::new('(', tree_green));
-                    let _ = fb.set(screen_x + 2, tree_base_y - 4, Cell::new('*', tree_green));
-                    let _ = fb.set(screen_x + 3, tree_base_y - 4, Cell::new(')', tree_green));
-                    let _ = fb.set(screen_x + 1, tree_base_y - 3, Cell::new('/', tree_green));
-                    let _ = fb.set(screen_x + 2, tree_base_y - 3, Cell::new('|', birch_cream));
-                    let _ = fb.set(screen_x + 3, tree_base_y - 3, Cell::new('\\', tree_green));
-                    let _ = fb.set(screen_x + 2, tree_base_y - 2, Cell::new('|', birch_cream));
-                    let _ = fb.set(screen_x + 2, tree_base_y - 1, Cell::new('|', birch_cream));
-                    let _ = fb.set(screen_x + 2, tree_base_y, Cell::new('|', birch_cream));
-                } else if target_tree_h >= 3 && screen_x + 2 < width {
-                    let _ = fb.set(screen_x + 1, tree_base_y - 2, Cell::new('*', tree_green));
-                    let _ = fb.set(screen_x + 1, tree_base_y - 1, Cell::new('|', birch_cream));
-                    let _ = fb.set(screen_x + 1, tree_base_y, Cell::new('|', birch_cream));
+                if target_tree_h >= 6 {
+                    plot(2, -5, '^', tree_green);
+                    plot(1, -4, '(', tree_green);
+                    plot(2, -4, '*', tree_green);
+                    plot(3, -4, ')', tree_green);
+                    plot(1, -3, '/', tree_green);
+                    plot(2, -3, '|', birch_cream);
+                    plot(3, -3, '\\', tree_green);
+                    plot(2, -2, '|', birch_cream);
+                    plot(2, -1, '|', birch_cream);
+                    plot(2, 0, '|', birch_cream);
+                } else if target_tree_h >= 3 {
+                    plot(1, -2, '*', tree_green);
+                    plot(1, -1, '|', birch_cream);
+                    plot(1, 0, '|', birch_cream);
                 }
             }
             TreeSpecies::Palm => {
-                if target_tree_h >= 6 && screen_x + 6 < width {
-                    let _ = fb.set(screen_x + 1, tree_base_y - 5, Cell::new('\\', tree_green));
-                    let _ = fb.set(screen_x + 3, tree_base_y - 5, Cell::new('^', tree_green));
-                    let _ = fb.set(screen_x + 5, tree_base_y - 5, Cell::new('/', tree_green));
-                    let _ = fb.set(screen_x + 2, tree_base_y - 4, Cell::new('\\', tree_green));
-                    let _ = fb.set(screen_x + 3, tree_base_y - 4, Cell::new('*', tree_green));
-                    let _ = fb.set(screen_x + 4, tree_base_y - 4, Cell::new('/', tree_green));
-                    let _ = fb.set(screen_x + 3, tree_base_y - 3, Cell::new('/', trunk_brown));
-                    let _ = fb.set(screen_x + 3, tree_base_y - 2, Cell::new('|', trunk_brown));
-                    let _ = fb.set(screen_x + 3, tree_base_y - 1, Cell::new('|', trunk_brown));
-                    let _ = fb.set(screen_x + 3, tree_base_y, Cell::new('|', trunk_brown));
-                } else if target_tree_h >= 3 && screen_x + 4 < width {
-                    let _ = fb.set(screen_x + 1, tree_base_y - 2, Cell::new('\\', tree_green));
-                    let _ = fb.set(screen_x + 2, tree_base_y - 2, Cell::new('^', tree_green));
-                    let _ = fb.set(screen_x + 3, tree_base_y - 2, Cell::new('/', tree_green));
-                    let _ = fb.set(screen_x + 2, tree_base_y - 1, Cell::new('|', trunk_brown));
-                    let _ = fb.set(screen_x + 2, tree_base_y, Cell::new('|', trunk_brown));
+                if target_tree_h >= 6 {
+                    plot(1, -5, '\\', tree_green);
+                    plot(3, -5, '^', tree_green);
+                    plot(5, -5, '/', tree_green);
+                    plot(2, -4, '\\', tree_green);
+                    plot(3, -4, '*', tree_green);
+                    plot(4, -4, '/', tree_green);
+                    plot(3, -3, '/', trunk_brown);
+                    plot(3, -2, '|', trunk_brown);
+                    plot(3, -1, '|', trunk_brown);
+                    plot(3, 0, '|', trunk_brown);
+                } else if target_tree_h >= 3 {
+                    plot(1, -2, '\\', tree_green);
+                    plot(2, -2, '^', tree_green);
+                    plot(3, -2, '/', tree_green);
+                    plot(2, -1, '|', trunk_brown);
+                    plot(2, 0, '|', trunk_brown);
                 }
             }
             TreeSpecies::Oak => {
-                if target_tree_h >= 8 && screen_x + 10 < width {
+                if target_tree_h >= 8 {
                     for (i, c) in "   .---.   ".chars().enumerate() {
-                        let _ = fb.set(screen_x + i, tree_base_y - 8, Cell::new(c, tree_green));
+                        plot(i as isize, -8, c, tree_green);
                     }
                     for (i, c) in " .'     '. ".chars().enumerate() {
-                        let _ = fb.set(screen_x + i, tree_base_y - 7, Cell::new(c, tree_green));
+                        plot(i as isize, -7, c, tree_green);
                     }
                     for (i, c) in "/  (@)    \\".chars().enumerate() {
-                        let _ = fb.set(screen_x + i, tree_base_y - 6, Cell::new(c, tree_green));
+                        plot(i as isize, -6, c, tree_green);
                     }
                     for (i, c) in "|  (@)  (@)|".chars().enumerate() {
-                        let _ = fb.set(screen_x + i, tree_base_y - 5, Cell::new(c, tree_green));
+                        plot(i as isize, -5, c, tree_green);
                     }
                     for (i, c) in "|    (@)   |".chars().enumerate() {
-                        let _ = fb.set(screen_x + i, tree_base_y - 4, Cell::new(c, tree_green));
+                        plot(i as isize, -4, c, tree_green);
                     }
                     for (i, c) in " \\  _____ / ".chars().enumerate() {
-                        let _ = fb.set(screen_x + i, tree_base_y - 3, Cell::new(c, tree_green));
+                        plot(i as isize, -3, c, tree_green);
                     }
-                    let _ = fb.set(screen_x + 5, tree_base_y - 2, Cell::new('|', trunk_brown));
-                    let _ = fb.set(screen_x + 5, tree_base_y - 1, Cell::new('|', trunk_brown));
-                    let _ = fb.set(screen_x + 5, tree_base_y, Cell::new('|', trunk_brown));
-                } else if target_tree_h >= 4 && screen_x + 4 < width {
-                    let _ = fb.set(screen_x + 1, tree_base_y - 4, Cell::new('(', tree_green));
-                    let _ = fb.set(screen_x + 2, tree_base_y - 4, Cell::new('_', tree_green));
-                    let _ = fb.set(screen_x + 3, tree_base_y - 4, Cell::new(')', tree_green));
-                    let _ = fb.set(screen_x, tree_base_y - 3, Cell::new('(', tree_green));
-                    let _ = fb.set(screen_x + 2, tree_base_y - 3, Cell::new('@', tree_green));
-                    let _ = fb.set(screen_x + 4, tree_base_y - 3, Cell::new(')', tree_green));
-                    let _ = fb.set(screen_x, tree_base_y - 2, Cell::new('(', tree_green));
-                    let _ = fb.set(screen_x + 1, tree_base_y - 2, Cell::new('_', tree_green));
-                    let _ = fb.set(screen_x + 2, tree_base_y - 2, Cell::new('_', tree_green));
-                    let _ = fb.set(screen_x + 3, tree_base_y - 2, Cell::new('_', tree_green));
-                    let _ = fb.set(screen_x + 4, tree_base_y - 2, Cell::new(')', tree_green));
-                    let _ = fb.set(screen_x + 2, tree_base_y - 1, Cell::new('|', trunk_brown));
-                    let _ = fb.set(screen_x + 2, tree_base_y, Cell::new('|', trunk_brown));
-                } else if target_tree_h >= 2 && screen_x + 2 < width {
-                    let _ = fb.set(screen_x, tree_base_y - 2, Cell::new('(', tree_green));
-                    let _ = fb.set(screen_x + 1, tree_base_y - 2, Cell::new('\'', tree_green));
-                    let _ = fb.set(screen_x + 2, tree_base_y - 2, Cell::new(')', tree_green));
-                    let _ = fb.set(screen_x, tree_base_y - 1, Cell::new('(', tree_green));
-                    let _ = fb.set(screen_x + 1, tree_base_y - 1, Cell::new('_', tree_green));
-                    let _ = fb.set(screen_x + 2, tree_base_y - 1, Cell::new(')', tree_green));
-                    let _ = fb.set(screen_x + 1, tree_base_y, Cell::new('|', trunk_brown));
+                    plot(5, -2, '|', trunk_brown);
+                    plot(5, -1, '|', trunk_brown);
+                    plot(5, 0, '|', trunk_brown);
+                } else if target_tree_h >= 4 {
+                    plot(1, -4, '(', tree_green);
+                    plot(2, -4, '_', tree_green);
+                    plot(3, -4, ')', tree_green);
+                    plot(0, -3, '(', tree_green);
+                    plot(2, -3, '@', tree_green);
+                    plot(4, -3, ')', tree_green);
+                    plot(0, -2, '(', tree_green);
+                    plot(1, -2, '_', tree_green);
+                    plot(2, -2, '_', tree_green);
+                    plot(3, -2, '_', tree_green);
+                    plot(4, -2, ')', tree_green);
+                    plot(2, -1, '|', trunk_brown);
+                    plot(2, 0, '|', trunk_brown);
+                } else if target_tree_h >= 2 {
+                    plot(0, -2, '(', tree_green);
+                    plot(1, -2, '\'', tree_green);
+                    plot(2, -2, ')', tree_green);
+                    plot(0, -1, '(', tree_green);
+                    plot(1, -1, '_', tree_green);
+                    plot(2, -1, ')', tree_green);
+                    plot(1, 0, '|', trunk_brown);
                 }
             }
         }
@@ -2550,7 +1355,154 @@ pub fn calculate_road_texture(x: usize, style: RoadStyle, time: f32) -> (char, C
     }
 }
 
+/// Generate subsurface foundation bed texture for realistic multi-row ground surfaces.
+pub fn calculate_road_subsurface(x: usize, style: RoadStyle, time: f32) -> (char, Color) {
+    let x_f = x as f32;
+    let r1 = (x_f * 0.37 + time * 1.5).sin();
+    let r2 = (x_f * 0.83 - time * 0.6).cos();
+    let roughness = (r1 * 0.6 + r2 * 0.4).abs();
+
+    match style {
+        RoadStyle::Dirt => {
+            let fg = Color::rgb(109, 76, 65);
+            let ch = if roughness > 0.70 {
+                ',' // root fiber / embedded pebble
+            } else if roughness > 0.35 {
+                ';' // packed subsoil loam
+            } else {
+                '~' // earth sub-layer
+            };
+            (ch, fg)
+        }
+        RoadStyle::Cobblestone => {
+            let fg = Color::rgb(97, 97, 97);
+            let stone_idx = (x + ((time * 2.8) as usize)) % 5;
+            let ch = if stone_idx == 0 {
+                '|' // mortar bed joint
+            } else if stone_idx == 1 {
+                '('
+            } else if stone_idx == 4 {
+                ')'
+            } else {
+                '-' // stone foundation paver
+            };
+            (ch, fg)
+        }
+        RoadStyle::Magma => {
+            let fg = if roughness > 0.55 {
+                Color::rgb(255, 214, 0) // subterranean incandescent rift
+            } else {
+                Color::rgb(213, 0, 0) // molten mantle
+            };
+            let ch = if roughness > 0.65 {
+                '≈' // convection current
+            } else if roughness > 0.30 {
+                '~' // molten wave
+            } else {
+                '=' // cooling magma shelf
+            };
+            (ch, fg)
+        }
+        RoadStyle::Ice => {
+            let fg = Color::rgb(128, 222, 234);
+            let ch = if (x + ((time * 1.5) as usize)) % 7 == 0 {
+                '|' // deep ice fracture
+            } else if roughness > 0.45 {
+                '≡' // compressed glacial shelf
+            } else {
+                '=' // blue ice bed
+            };
+            (ch, fg)
+        }
+        RoadStyle::Tracks => {
+            let tie = (x + ((time * 3.5) as usize)) % 5;
+            if tie == 0 || tie == 1 {
+                ('|', Color::rgb(93, 64, 55)) // heavy timber cross-tie
+            } else {
+                (
+                    if roughness > 0.5 { '.' } else { '*' },
+                    Color::rgb(120, 144, 156), // crushed stone track ballast
+                )
+            }
+        }
+        RoadStyle::Sidewalk => {
+            let fg = Color::rgb(158, 158, 158);
+            let slab = (x + ((time * 2.5) as usize)) % 10;
+            let ch = if slab == 0 {
+                '|' // curb expansion seam
+            } else {
+                '▔' // street curb stone ledge
+            };
+            (ch, fg)
+        }
+        RoadStyle::Seabed => {
+            let fg = Color::rgb(212, 163, 115);
+            let ch = if roughness > 0.60 {
+                's' // burrowing marine sediment
+            } else if roughness > 0.30 {
+                '.' // dense sub-sand
+            } else {
+                '~' // undulating sediment bed
+            };
+            (ch, fg)
+        }
+        RoadStyle::Roof => {
+            let fg = Color::rgb(121, 85, 72);
+            let tile = (x + ((time * 2.0) as usize)) % 4;
+            let ch = if tile == 0 { '|' } else { '/' };
+            (ch, fg)
+        }
+        RoadStyle::Grid => {
+            let fg = Color::rgb(0, 230, 118);
+            let node = (x + ((time * 3.0) as usize)) % 6;
+            let ch = if node == 0 { '╩' } else { '│' };
+            (ch, fg)
+        }
+        RoadStyle::Crypt => {
+            let fg = Color::rgb(189, 189, 189);
+            let ch = if roughness > 0.70 {
+                'x' // ancient catacomb cross-bone
+            } else if roughness > 0.35 {
+                '=' // weathered crypt slab foundation
+            } else {
+                '.' // subterranean catacomb ash
+            };
+            (ch, fg)
+        }
+        RoadStyle::Savanna => {
+            let fg = Color::rgb(161, 110, 80);
+            let ch = if roughness > 0.60 {
+                '~' // acacia subsurface root
+            } else if roughness > 0.30 {
+                '_' // compact red earth
+            } else {
+                '-' // arid soil horizon
+            };
+            (ch, fg)
+        }
+        RoadStyle::Mud => {
+            let fg = Color::rgb(62, 39, 35);
+            let ch = if roughness > 0.65 {
+                '≈' // bubbling mire
+            } else if roughness > 0.35 {
+                '~' // thick peat slurry
+            } else {
+                '=' // heavy bog bed
+            };
+            (ch, fg)
+        }
+        RoadStyle::Checkerboard => {
+            let fg = Color::rgb(189, 189, 189);
+            let tile = (x + ((time * 2.0) as usize)) % 4;
+            let ch = if tile < 2 { ' ' } else { '#' };
+            (ch, fg)
+        }
+        RoadStyle::None => (' ', Color::rgb(0, 0, 0)),
+    }
+}
+
 /// Render ground / road baseline directly at cow_bottom_y with procedural harmonic texture synthesis.
+/// Supports multi-row realistic ground depth (contact surface + subsurface foundation bed).
 pub fn render_road(
     fb: &mut FrameBuffer,
     style: RoadStyle,
@@ -2562,10 +1514,22 @@ pub fn render_road(
         return;
     }
 
+    // Row 0: Contact surface
     for x in 0..width {
         let (ch, fg) = calculate_road_texture(x, style, time);
         if ch != ' ' {
             let _ = fb.set(x, cow_bottom_y, Cell::new(ch, fg));
+        }
+    }
+
+    // Row 1: Subsurface foundation bed
+    let subsurface_y = cow_bottom_y + 1;
+    if subsurface_y < fb.height {
+        for x in 0..width {
+            let (ch, fg) = calculate_road_subsurface(x, style, time);
+            if ch != ' ' {
+                let _ = fb.set(x, subsurface_y, Cell::new(ch, fg));
+            }
         }
     }
 }

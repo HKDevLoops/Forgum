@@ -33,6 +33,7 @@
 
 #![doc(html_root_url = "https://docs.rs/forgum-platform/0.4.0")]
 
+pub mod biome;
 pub mod daemon_socket;
 pub mod error;
 pub mod guards;

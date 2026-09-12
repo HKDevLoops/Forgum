@@ -149,6 +149,16 @@ impl SimState {
             if !hexes.is_empty() {
                 cow_dna.palette = hexes;
             }
+        } else if config.color_mode == "natural"
+            || config.color_mode == "default"
+            || config.color_mode == "animal"
+            || config.color_mode == "animal_natural"
+            || cow_dna.palette.is_empty()
+        {
+            let natural_hexes = crate::color::get_natural_hex_palette(&config.cow);
+            if !natural_hexes.is_empty() {
+                cow_dna.palette = natural_hexes.iter().map(|&s| s.to_string()).collect();
+            }
         }
 
         let effect = effects::create_scene_effect(
@@ -237,12 +247,19 @@ impl SimState {
 
         // Render scenery layers before effect
         let (mtn_style, road_style, env_style) = self.scenery;
-        let has_scenery = env_style != crate::scenery::EnvironmentStyle::None
+        let _has_scenery = env_style != crate::scenery::EnvironmentStyle::None
             || mtn_style != crate::scenery::MountainStyle::None;
-        let road_y = if has_scenery && self.fb.height > self.cow_foot_y + 3 {
-            self.fb.height.saturating_sub(2).max(self.cow_foot_y + 1)
-        } else {
-            (self.cow_foot_y + 1).min(self.fb.height.saturating_sub(1))
+        let road_y = match self.cow_dna.base {
+            crate::dna::BaseAnim::Fly
+            | crate::dna::BaseAnim::Float
+            | crate::dna::BaseAnim::Abduction => {
+                // Flying/floating creatures soar in the upper atmosphere above tree canopies
+                self.fb.height.saturating_sub(3).max(self.cow_foot_y + 2)
+            }
+            _ => {
+                // Walking and ground creatures walk directly on the road surface
+                (self.cow_foot_y + 1).min(self.fb.height.saturating_sub(2))
+            }
         };
         let animal_h = self.cow_foot_y.max(1);
         crate::scenery::render_scenery_full(
@@ -364,6 +381,16 @@ impl SimState {
                     if !hexes.is_empty() {
                         self.cow_dna.palette = hexes;
                     }
+                } else if self.config.color_mode == "natural"
+                    || self.config.color_mode == "default"
+                    || self.config.color_mode == "animal"
+                    || self.config.color_mode == "animal_natural"
+                    || self.cow_dna.palette.is_empty()
+                {
+                    let natural_hexes = crate::color::get_natural_hex_palette(&self.config.cow);
+                    if !natural_hexes.is_empty() {
+                        self.cow_dna.palette = natural_hexes.iter().map(|&s| s.to_string()).collect();
+                    }
                 }
                 let env_override = self
                     .config
@@ -474,6 +501,14 @@ impl SimState {
             }
             ControlMsg::ColorMode(mode) => {
                 self.config.color_mode = mode.clone();
+                if (mode == "natural" || mode == "animal" || mode == "default" || mode == "animal_natural")
+                    && self.config.palette.is_none()
+                {
+                    let natural_hexes = crate::color::get_natural_hex_palette(&self.config.cow);
+                    if !natural_hexes.is_empty() {
+                        self.cow_dna.palette = natural_hexes.iter().map(|&s| s.to_string()).collect();
+                    }
+                }
                 let thoughts_glyph = if self.config.think { "o" } else { "\\" };
                 let cow_text = crate::cow::load_cow(
                     &self.config.cow,
@@ -524,10 +559,12 @@ fn sim_thread(
             break;
         }
         if max_frames > 0 && sim.frame_count >= max_frames {
+            crate::log_info!("engine", "SIM thread reached max_frames ({}), shutting down", max_frames);
             shutdown.trigger();
             break;
         }
         if sim.effect.is_done() {
+            crate::log_info!("engine", "SIM thread effect.is_done() returned true, shutting down");
             shutdown.trigger();
             break;
         }
@@ -551,6 +588,7 @@ fn sim_thread(
         while let Ok(msg) = control_rx.try_recv() {
             match msg {
                 ControlMsg::Stop => {
+                    crate::log_info!("engine", "SIM thread received ControlMsg::Stop, shutting down");
                     shutdown.trigger();
                     break;
                 }
@@ -605,7 +643,7 @@ fn sim_thread(
 
         // Send to render thread (bounded — backpressure if render is slow).
         if frame_tx.send(frame).is_err() {
-            // Render thread dropped its receiver → exit.
+            crate::log_warn!("engine", "SIM thread: render thread dropped receiver, exiting");
             break;
         }
 
@@ -761,6 +799,7 @@ fn render_thread(mut state: RenderState, frame_rx: Receiver<Arc<Frame>>, shutdow
         match frame_rx.recv_timeout(Duration::from_millis(50)) {
             Ok(frame) => {
                 if let Err(e) = state.render_frame(&frame) {
+                    crate::log_error!("engine", "RENDER thread error in render_frame: {}", e);
                     eprintln!("forgum: render error: {e}");
                     break;
                 }
@@ -769,7 +808,7 @@ fn render_thread(mut state: RenderState, frame_rx: Receiver<Arc<Frame>>, shutdow
                 continue;
             }
             Err(crossbeam_channel::RecvTimeoutError::Disconnected) => {
-                // SIM thread dropped its sender → exit.
+                crate::log_info!("engine", "RENDER thread: SIM thread dropped sender, exiting");
                 break;
             }
         }
@@ -1193,85 +1232,36 @@ pub fn run_engine_overlay(
             render_thread(render_state, frame_rx, render_shutdown);
         })?;
 
-    // In background overlay mode, strictly no tty reads — wait for frames or signal.
-    // In foreground overlay mode, poll keyboard for Ctrl+C, 'q', 'Q', Esc to allow clean exit.
-    let _raw_guard = if !config.background && crossterm::tty::IsTty::is_tty(&std::io::stdin()) {
-        forgum_platform::RawModeGuard::acquire().ok()
-    } else {
-        None
-    };
-
+    // In overlay mode, never touch or intercept stdin. Stdin belongs entirely to the active shell.
+    // Dynamic resize detection polls terminal::size() and notifies the SIM thread via control channel.
     let mut cur_total_cols = total_cols;
     let mut cur_total_rows = total_rows;
     let line_count = overlay_rows;
 
     while !shutdown.is_shutdown() {
-        if !config.background && crossterm::tty::IsTty::is_tty(&std::io::stdin()) {
-            if let Ok(true) = crossterm::event::poll(Duration::from_millis(30)) {
-                match crossterm::event::read() {
-                    Ok(crossterm::event::Event::Key(key)) => {
-                        use crossterm::event::{KeyCode, KeyModifiers};
-                        if (key.code == KeyCode::Char('c')
-                            && key.modifiers.contains(KeyModifiers::CONTROL))
-                            || key.code == KeyCode::Char('q')
-                            || key.code == KeyCode::Char('Q')
-                            || key.code == KeyCode::Esc
-                        {
-                            shutdown.trigger();
-                            break;
-                        }
-                    }
-                    Ok(crossterm::event::Event::Resize(w, h)) => {
-                        let w = (w.max(20)) as usize;
-                        let h = (h.max(1)) as usize;
-                        if w != cur_total_cols || h != cur_total_rows {
-                            cur_total_cols = w;
-                            cur_total_rows = h;
-                            let (new_cols, new_rows) = crate::render::compute_reserved_dimensions(
-                                w, h, line_count, &config,
-                            );
-                            crate::log_debug!(
-                                "engine",
-                                "Terminal resized to {}x{}; reserved canvas set to {}x{}",
-                                w,
-                                h,
-                                new_cols,
-                                new_rows
-                            );
-                            let _ = control_tx.send(ControlMsg::Resize {
-                                cols: new_cols as u16,
-                                rows: new_rows as u16,
-                            });
-                        }
-                    }
-                    _ => {}
-                }
+        if let Ok((w, h)) = crossterm::terminal::size() {
+            let w = (w.max(20)) as usize;
+            let h = (h.max(1)) as usize;
+            if w != cur_total_cols || h != cur_total_rows {
+                cur_total_cols = w;
+                cur_total_rows = h;
+                let (new_cols, new_rows) =
+                    crate::render::compute_reserved_dimensions(w, h, line_count, &config);
+                crate::log_debug!(
+                    "engine",
+                    "Terminal resized to {}x{}; reserved canvas set to {}x{}",
+                    w,
+                    h,
+                    new_cols,
+                    new_rows
+                );
+                let _ = control_tx.send(ControlMsg::Resize {
+                    cols: new_cols as u16,
+                    rows: new_rows as u16,
+                });
             }
-        } else {
-            if let Ok((w, h)) = crossterm::terminal::size() {
-                let w = (w.max(20)) as usize;
-                let h = (h.max(1)) as usize;
-                if w != cur_total_cols || h != cur_total_rows {
-                    cur_total_cols = w;
-                    cur_total_rows = h;
-                    let (new_cols, new_rows) =
-                        crate::render::compute_reserved_dimensions(w, h, line_count, &config);
-                    crate::log_debug!(
-                        "engine",
-                        "Terminal resized to {}x{}; reserved canvas set to {}x{}",
-                        w,
-                        h,
-                        new_cols,
-                        new_rows
-                    );
-                    let _ = control_tx.send(ControlMsg::Resize {
-                        cols: new_cols as u16,
-                        rows: new_rows as u16,
-                    });
-                }
-            }
-            std::thread::sleep(Duration::from_millis(50));
         }
+        std::thread::sleep(Duration::from_millis(50));
     }
 
     let _ = sim_handle.join();

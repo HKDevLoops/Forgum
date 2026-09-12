@@ -16,7 +16,7 @@ use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyModifiers};
 use ratatui::layout::{Constraint, Direction, Layout, Rect};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
-use ratatui::widgets::{Block, BorderType, Borders, List, ListItem, Paragraph};
+use ratatui::widgets::{Block, BorderType, Borders, Clear, List, ListItem, Paragraph, Wrap};
 use ratatui::Frame;
 
 use forgum_platform::protocol::{ConfigFormat, SceneConfig};
@@ -501,6 +501,9 @@ pub struct ShellInfo {
 pub enum Action {
     Quit,
     Save,
+    OpenEditor(PathBuf),
+    OpenSystemEditor(PathBuf),
+    InstallTerminalEditor,
 }
 
 /// Config parameter fields for Tab 5.
@@ -633,6 +636,8 @@ pub struct ConfigApp {
     pub status_message: String,
     pub animation_time: f32,
     pub cow_cache: HashMap<String, String>,
+    pub show_editor_modal: bool,
+    pub original_edit_value: String,
 }
 
 /// Detect the active host terminal name from environment markers.
@@ -815,6 +820,8 @@ impl ConfigApp {
                 .into(),
             animation_time: 0.0,
             cow_cache: HashMap::new(),
+            show_editor_modal: false,
+            original_edit_value: String::new(),
         };
 
         // Cache the initial cow
@@ -927,79 +934,495 @@ impl ConfigApp {
         );
     }
 
-    /// Handle keyboard input event.
+    /// Hot-reload full configuration from disk and re-sync all dropdowns and state.
+    pub fn set_config(&mut self, config: SceneConfig) {
+        self.config = config;
+        self.color_mode_dropdown = Dropdown::new(COLOR_MODE_OPTIONS.to_vec(), &self.config.color_mode);
+        self.environment_dropdown = Dropdown::new(
+            ENVIRONMENT_OPTIONS.to_vec(),
+            self.config.environment.as_deref().unwrap_or("pasture"),
+        );
+        self.road_dropdown = Dropdown::new(
+            ROAD_STYLE_OPTIONS.to_vec(),
+            self.config.road.as_deref().unwrap_or("dirt"),
+        );
+        self.mountain_dropdown = Dropdown::new(
+            MOUNTAIN_OPTIONS.to_vec(),
+            self.config.mountain.as_deref().unwrap_or("hills"),
+        );
+        self.animation_type_dropdown = Dropdown::new(
+            ANIMATION_TYPE_OPTIONS.to_vec(),
+            self.config.animation_type.as_deref().unwrap_or("animal_natural"),
+        );
+        self.attach_mode_dropdown = Dropdown::new(
+            vec!["banner", "split", "reactive", "manual"],
+            &self.config.shell_attach_mode,
+        );
+        self.cow_cache.clear();
+        self.ensure_cow_cached(&self.config.cow.clone());
+    }
+
+    /// Open the interactive modal requesting permission to open with system editor or install terminal editor.
+    pub fn open_editor_modal(&mut self) {
+        self.show_editor_modal = true;
+        self.status_message = "No terminal editor detected. Please choose an option.".to_string();
+    }
+
+    /// Close the interactive editor request modal.
+    pub fn close_editor_modal(&mut self) {
+        self.show_editor_modal = false;
+    }
+
+    /// Reload configuration and sync all dropdowns.
+    pub fn reload_config(&mut self, config: SceneConfig) {
+        self.set_config(config);
+    }
+
+    /// Resolve canonical config file path.
+    pub fn resolve_config_path(&self) -> PathBuf {
+        if let Some(p) = &self.config_path {
+            p.clone()
+        } else {
+            let default_dir = forgum_platform::paths::config_dir()
+                .unwrap_or_else(|_| PathBuf::from("."));
+            default_dir.join(format!("config.{}", self.config_format().extension()))
+        }
+    }
+
+    /// Handle keyboard and mouse input events.
     pub fn handle_event(&mut self, event: Event) -> anyhow::Result<Option<Action>> {
-        let Event::Key(key) = event else {
-            return Ok(None);
-        };
-        if key.kind != event::KeyEventKind::Press {
-            return Ok(None);
-        }
+        match event {
+            Event::Mouse(mouse) => self.handle_mouse_event(mouse),
+            Event::Key(key) => {
+                if key.kind != event::KeyEventKind::Press {
+                    return Ok(None);
+                }
 
-        // If currently editing text field on Config tab
-        if self.editing_config {
-            return self.handle_config_edit_key(key);
-        }
+                // If modal popup is active
+                if self.show_editor_modal {
+                    match key.code {
+                        KeyCode::Char('o') | KeyCode::Char('O') => {
+                            self.show_editor_modal = false;
+                            let path = self.resolve_config_path();
+                            return Ok(Some(Action::OpenSystemEditor(path)));
+                        }
+                        KeyCode::Char('i') | KeyCode::Char('I') => {
+                            self.show_editor_modal = false;
+                            return Ok(Some(Action::InstallTerminalEditor));
+                        }
+                        KeyCode::Esc | KeyCode::Char('q') => {
+                            self.show_editor_modal = false;
+                            self.status_message = "Editor request cancelled.".to_string();
+                            return Ok(None);
+                        }
+                        _ => return Ok(None),
+                    }
+                }
 
-        // Global keybindings
-        match key.code {
-            KeyCode::Char('q') | KeyCode::Esc => return Ok(Some(Action::Quit)),
-            KeyCode::Char('s') => return Ok(Some(Action::Save)),
-            KeyCode::Tab => {
-                let next = (self.current_tab as usize + 1) % Tab::ALL.len();
-                self.current_tab = Tab::ALL[next];
-                self.status_message = format!("Switched to {}", self.current_tab.mode_label());
-                return Ok(None);
+                // If currently editing text field on Config tab
+                if self.editing_config {
+                    return self.handle_config_edit_key(key);
+                }
+
+                // Global keybindings
+                match key.code {
+                    KeyCode::Char('q') | KeyCode::Esc => return Ok(Some(Action::Quit)),
+                    KeyCode::Char('s') => return Ok(Some(Action::Save)),
+                    KeyCode::Char('o') | KeyCode::Char('O') => {
+                        let path = self.resolve_config_path();
+                        return Ok(Some(Action::OpenEditor(path)));
+                    }
+                    KeyCode::Char('e') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                        let path = self.resolve_config_path();
+                        return Ok(Some(Action::OpenEditor(path)));
+                    }
+                    KeyCode::Tab => {
+                        let next = (self.current_tab as usize + 1) % Tab::ALL.len();
+                        self.current_tab = Tab::ALL[next];
+                        self.status_message = format!("Switched to {}", self.current_tab.mode_label());
+                        return Ok(None);
+                    }
+                    KeyCode::BackTab => {
+                        let prev = if self.current_tab as usize == 0 {
+                            Tab::ALL.len() - 1
+                        } else {
+                            self.current_tab as usize - 1
+                        };
+                        self.current_tab = Tab::ALL[prev];
+                        self.status_message = format!("Switched to {}", self.current_tab.mode_label());
+                        return Ok(None);
+                    }
+                    KeyCode::Char('r') => {
+                        self.randomize_mascot();
+                        return Ok(None);
+                    }
+                    KeyCode::Char('d') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                        self.open_config_directory();
+                        return Ok(None);
+                    }
+                    KeyCode::Char('1') => {
+                        self.current_tab = Tab::Mascots;
+                        self.status_message = format!("Switched to {}", self.current_tab.mode_label());
+                        return Ok(None);
+                    }
+                    KeyCode::Char('2') => {
+                        self.current_tab = Tab::Scenery;
+                        self.status_message = format!("Switched to {}", self.current_tab.mode_label());
+                        return Ok(None);
+                    }
+                    KeyCode::Char('3') => {
+                        self.current_tab = Tab::Effects;
+                        self.status_message = format!("Switched to {}", self.current_tab.mode_label());
+                        return Ok(None);
+                    }
+                    KeyCode::Char('4') => {
+                        self.current_tab = Tab::Installer;
+                        self.status_message = format!("Switched to {}", self.current_tab.mode_label());
+                        return Ok(None);
+                    }
+                    KeyCode::Char('5') => {
+                        self.current_tab = Tab::Config;
+                        self.status_message = format!("Switched to {}", self.current_tab.mode_label());
+                        return Ok(None);
+                    }
+                    _ => {}
+                }
+
+                // Tab-specific keybindings
+                match self.current_tab {
+                    Tab::Mascots => self.handle_mascots_key(key),
+                    Tab::Scenery => self.handle_scenery_key(key),
+                    Tab::Effects => self.handle_effects_key(key),
+                    Tab::Installer => self.handle_installer_key(key),
+                    Tab::Config => self.handle_config_key(key),
+                }
             }
-            KeyCode::BackTab => {
-                let prev = if self.current_tab as usize == 0 {
-                    Tab::ALL.len() - 1
+            _ => Ok(None),
+        }
+    }
+
+    /// Handle mouse interaction across all tabs, buttons, lists, and modal popups.
+    pub fn handle_mouse_event(&mut self, mouse: crossterm::event::MouseEvent) -> anyhow::Result<Option<Action>> {
+        use crossterm::event::{MouseButton, MouseEventKind};
+
+        let (term_w, term_h) = crossterm::terminal::size().unwrap_or((80, 24));
+
+        match mouse.kind {
+            MouseEventKind::Down(MouseButton::Left) => {
+                if self.show_editor_modal {
+                    let path = self.resolve_config_path();
+                    let width = 72.min(term_w.saturating_sub(4));
+                    let height = 12.min(term_h.saturating_sub(2));
+                    let modal_x = (term_w.saturating_sub(width)) / 2;
+                    let modal_y = (term_h.saturating_sub(height)) / 2;
+
+                    if mouse.row < modal_y || mouse.row >= modal_y + height
+                        || mouse.column < modal_x || mouse.column >= modal_x + width
+                    {
+                        self.show_editor_modal = false;
+                        self.status_message = "Editor request cancelled.".to_string();
+                        return Ok(None);
+                    }
+
+                    if mouse.row == modal_y + 5 {
+                        self.show_editor_modal = false;
+                        return Ok(Some(Action::OpenSystemEditor(path)));
+                    } else if mouse.row == modal_y + 6 {
+                        self.show_editor_modal = false;
+                        return Ok(Some(Action::InstallTerminalEditor));
+                    } else if mouse.row == modal_y + 7 {
+                        self.show_editor_modal = false;
+                        self.status_message = "Editor request cancelled.".to_string();
+                        return Ok(None);
+                    }
+                    return Ok(None);
+                }
+
+                // Top Header tab row: lines 0, 1, 2
+                if mouse.row <= 2 {
+                    if self.editing_config {
+                        self.commit_config_edit();
+                        self.editing_config = false;
+                    }
+                    let mode_w = 1 + match self.current_tab {
+                        Tab::Mascots => 13,
+                        Tab::Scenery => 13,
+                        Tab::Effects => 20,
+                        Tab::Installer => 21,
+                        Tab::Config => 19,
+                    };
+                    let mut cur = mode_w + 1;
+                    let mut clicked_tab = None;
+                    for tab in Tab::ALL {
+                        let w = tab.title().len() as u16;
+                        if mouse.column >= cur && mouse.column < cur + w {
+                            clicked_tab = Some(tab);
+                            break;
+                        }
+                        cur += w + 1;
+                    }
+                    let tab = clicked_tab.or_else(|| {
+                        if mouse.column < 26 {
+                            Some(Tab::Mascots)
+                        } else if mouse.column < 46 {
+                            Some(Tab::Scenery)
+                        } else if mouse.column < 62 {
+                            Some(Tab::Effects)
+                        } else if mouse.column < 82 {
+                            Some(Tab::Installer)
+                        } else {
+                            Some(Tab::Config)
+                        }
+                    });
+                    if let Some(t) = tab {
+                        self.current_tab = t;
+                        self.status_message = format!("Switched to {}", t.mode_label());
+                    }
+                    return Ok(None);
+                }
+
+                // Left column list area
+                let left_width = if self.current_tab == Tab::Installer {
+                    (term_w / 3).max(32).min(term_w.saturating_sub(40))
                 } else {
-                    self.current_tab as usize - 1
+                    (term_w / 3).max(24).min(term_w.saturating_sub(20))
                 };
-                self.current_tab = Tab::ALL[prev];
-                self.status_message = format!("Switched to {}", self.current_tab.mode_label());
-                return Ok(None);
+                let area_h = term_h.saturating_sub(5);
+
+                if mouse.column < left_width && mouse.row >= 3 && mouse.row < 3 + area_h {
+                    let row_idx = (mouse.row.saturating_sub(4)) as usize;
+                    match self.current_tab {
+                        Tab::Mascots => {
+                            let cows = CATEGORIES[self.mascot_category_idx].1;
+                            if row_idx < cows.len() {
+                                self.mascot_item_idx = row_idx;
+                                self.apply_selected_mascot();
+                            }
+                        }
+                        Tab::Scenery => {
+                            let chunks = Layout::default()
+                                .direction(Direction::Vertical)
+                                .constraints([Constraint::Percentage(60), Constraint::Percentage(40)])
+                                .split(Rect::new(0, 3, left_width, area_h));
+
+                            if mouse.row >= chunks[0].y + 1 && mouse.row < chunks[0].y + chunks[0].height {
+                                let idx = (mouse.row - (chunks[0].y + 1)) as usize;
+                                if idx < SCENERY_OPTIONS.len() {
+                                    self.scenery_idx = idx;
+                                    self.scenery_sub_focus = 0;
+                                    let env = SCENERY_OPTIONS[self.scenery_idx].0.to_string();
+                                    self.config.environment = Some(env.clone());
+                                    self.environment_dropdown = Dropdown::new(ENVIRONMENT_OPTIONS.to_vec(), &env);
+                                    self.saved = false;
+                                }
+                            } else if mouse.row >= chunks[1].y + 1 && mouse.row < chunks[1].y + chunks[1].height {
+                                let idx = (mouse.row - (chunks[1].y + 1)) as usize;
+                                if idx < ROAD_OPTIONS.len() {
+                                    self.road_idx = idx;
+                                    self.scenery_sub_focus = 1;
+                                    let rd = ROAD_OPTIONS[self.road_idx].0.to_string();
+                                    self.config.road = Some(rd.clone());
+                                    self.road_dropdown = Dropdown::new(ROAD_STYLE_OPTIONS.to_vec(), &rd);
+                                    self.saved = false;
+                                }
+                            }
+                        }
+                        Tab::Effects => {
+                            let chunks = Layout::default()
+                                .direction(Direction::Vertical)
+                                .constraints([Constraint::Percentage(60), Constraint::Percentage(40)])
+                                .split(Rect::new(0, 3, left_width, area_h));
+
+                            if mouse.row >= chunks[0].y + 1 && mouse.row < chunks[0].y + chunks[0].height {
+                                let idx = (mouse.row - (chunks[0].y + 1)) as usize;
+                                if idx < EFFECT_OPTIONS.len() {
+                                    self.effect_idx = idx;
+                                    self.fx_sub_focus = 0;
+                                    let eff = EFFECT_OPTIONS[self.effect_idx].0.to_string();
+                                    self.config.effect = eff.clone();
+                                    self.config.animation_type = Some(eff.clone());
+                                    self.animation_type_dropdown = Dropdown::new(ANIMATION_TYPE_OPTIONS.to_vec(), &eff);
+                                    self.saved = false;
+                                }
+                            } else if mouse.row >= chunks[1].y + 1 && mouse.row < chunks[1].y + chunks[1].height {
+                                let idx = (mouse.row - (chunks[1].y + 1)) as usize;
+                                if idx < COLOR_OPTIONS.len() {
+                                    self.color_idx = idx;
+                                    self.fx_sub_focus = 1;
+                                    let col = COLOR_OPTIONS[self.color_idx].0.to_string();
+                                    self.config.color_mode = col.clone();
+                                    self.color_mode_dropdown = Dropdown::new(COLOR_MODE_OPTIONS.to_vec(), &col);
+                                    self.saved = false;
+                                }
+                            }
+                        }
+                        Tab::Installer => {
+                            let chunks = Layout::default()
+                                .direction(Direction::Vertical)
+                                .constraints([Constraint::Percentage(55), Constraint::Percentage(45)])
+                                .split(Rect::new(0, 3, left_width, area_h));
+
+                            if mouse.row >= chunks[0].y + 1 && mouse.row < chunks[0].y + chunks[0].height {
+                                let idx = (mouse.row - (chunks[0].y + 1)) as usize;
+                                if idx < self.shells.len() {
+                                    self.selected_shell_idx = idx;
+                                    self.status_message = format!("Selected {}", self.shells[idx].shell);
+                                }
+                            }
+                        }
+                        Tab::Config => {
+                            if row_idx < ConfigField::ALL.len() {
+                                if self.editing_config {
+                                    self.commit_config_edit();
+                                    self.editing_config = false;
+                                }
+                                self.config_field_idx = row_idx;
+                                let field = ConfigField::ALL[row_idx];
+                                if field == ConfigField::Eyes
+                                    || field == ConfigField::Tongue
+                                    || field == ConfigField::Palette
+                                {
+                                    self.enter_config_edit();
+                                } else {
+                                    self.cycle_config_field(true);
+                                }
+                            }
+                        }
+                    }
+                }
             }
-            KeyCode::Char('r') => {
-                self.randomize_mascot();
-                return Ok(None);
+            MouseEventKind::ScrollDown => {
+                match self.current_tab {
+                    Tab::Mascots => {
+                        let cows = CATEGORIES[self.mascot_category_idx].1;
+                        self.mascot_item_idx = (self.mascot_item_idx + 1) % cows.len();
+                        self.apply_selected_mascot();
+                    }
+                    Tab::Scenery => {
+                        if self.scenery_sub_focus == 0 {
+                            self.scenery_idx = (self.scenery_idx + 1) % SCENERY_OPTIONS.len();
+                            let env = SCENERY_OPTIONS[self.scenery_idx].0.to_string();
+                            self.config.environment = Some(env.clone());
+                            self.environment_dropdown = Dropdown::new(ENVIRONMENT_OPTIONS.to_vec(), &env);
+                        } else {
+                            self.road_idx = (self.road_idx + 1) % ROAD_OPTIONS.len();
+                            let rd = ROAD_OPTIONS[self.road_idx].0.to_string();
+                            self.config.road = Some(rd.clone());
+                            self.road_dropdown = Dropdown::new(ROAD_STYLE_OPTIONS.to_vec(), &rd);
+                        }
+                        self.saved = false;
+                    }
+                    Tab::Effects => {
+                        if self.fx_sub_focus == 0 {
+                            self.effect_idx = (self.effect_idx + 1) % EFFECT_OPTIONS.len();
+                            let eff = EFFECT_OPTIONS[self.effect_idx].0.to_string();
+                            self.config.effect = eff.clone();
+                            self.config.animation_type = Some(eff.clone());
+                            self.animation_type_dropdown = Dropdown::new(ANIMATION_TYPE_OPTIONS.to_vec(), &eff);
+                        } else {
+                            self.color_idx = (self.color_idx + 1) % COLOR_OPTIONS.len();
+                            let col = COLOR_OPTIONS[self.color_idx].0.to_string();
+                            self.config.color_mode = col.clone();
+                            self.color_mode_dropdown = Dropdown::new(COLOR_MODE_OPTIONS.to_vec(), &col);
+                        }
+                        self.saved = false;
+                    }
+                    Tab::Installer => {
+                        if !self.shells.is_empty() {
+                            self.selected_shell_idx = (self.selected_shell_idx + 1) % self.shells.len();
+                        }
+                    }
+                    Tab::Config => {
+                        if self.editing_config {
+                            self.commit_config_edit();
+                            self.editing_config = false;
+                        }
+                        self.config_field_idx = (self.config_field_idx + 1) % ConfigField::ALL.len();
+                    }
+                }
             }
-            KeyCode::Char('o') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                self.open_config_directory();
-                return Ok(None);
-            }
-            KeyCode::Char('1') if self.current_tab != Tab::Config => {
-                self.current_tab = Tab::Mascots;
-                return Ok(None);
-            }
-            KeyCode::Char('2') if self.current_tab != Tab::Config => {
-                self.current_tab = Tab::Scenery;
-                return Ok(None);
-            }
-            KeyCode::Char('3') if self.current_tab != Tab::Config => {
-                self.current_tab = Tab::Effects;
-                return Ok(None);
-            }
-            KeyCode::Char('4') if self.current_tab != Tab::Config => {
-                self.current_tab = Tab::Installer;
-                return Ok(None);
-            }
-            KeyCode::Char('5') if self.current_tab != Tab::Config => {
-                self.current_tab = Tab::Config;
-                return Ok(None);
+            MouseEventKind::ScrollUp => {
+                match self.current_tab {
+                    Tab::Mascots => {
+                        let cows = CATEGORIES[self.mascot_category_idx].1;
+                        if self.mascot_item_idx > 0 {
+                            self.mascot_item_idx -= 1;
+                        } else {
+                            self.mascot_item_idx = cows.len().saturating_sub(1);
+                        }
+                        self.apply_selected_mascot();
+                    }
+                    Tab::Scenery => {
+                        if self.scenery_sub_focus == 0 {
+                            if self.scenery_idx > 0 {
+                                self.scenery_idx -= 1;
+                            } else {
+                                self.scenery_idx = SCENERY_OPTIONS.len().saturating_sub(1);
+                            }
+                            let env = SCENERY_OPTIONS[self.scenery_idx].0.to_string();
+                            self.config.environment = Some(env.clone());
+                            self.environment_dropdown = Dropdown::new(ENVIRONMENT_OPTIONS.to_vec(), &env);
+                        } else {
+                            if self.road_idx > 0 {
+                                self.road_idx -= 1;
+                            } else {
+                                self.road_idx = ROAD_OPTIONS.len().saturating_sub(1);
+                            }
+                            let rd = ROAD_OPTIONS[self.road_idx].0.to_string();
+                            self.config.road = Some(rd.clone());
+                            self.road_dropdown = Dropdown::new(ROAD_STYLE_OPTIONS.to_vec(), &rd);
+                        }
+                        self.saved = false;
+                    }
+                    Tab::Effects => {
+                        if self.fx_sub_focus == 0 {
+                            if self.effect_idx > 0 {
+                                self.effect_idx -= 1;
+                            } else {
+                                self.effect_idx = EFFECT_OPTIONS.len().saturating_sub(1);
+                            }
+                            let eff = EFFECT_OPTIONS[self.effect_idx].0.to_string();
+                            self.config.effect = eff.clone();
+                            self.config.animation_type = Some(eff.clone());
+                            self.animation_type_dropdown = Dropdown::new(ANIMATION_TYPE_OPTIONS.to_vec(), &eff);
+                        } else {
+                            if self.color_idx > 0 {
+                                self.color_idx -= 1;
+                            } else {
+                                self.color_idx = COLOR_OPTIONS.len().saturating_sub(1);
+                            }
+                            let col = COLOR_OPTIONS[self.color_idx].0.to_string();
+                            self.config.color_mode = col.clone();
+                            self.color_mode_dropdown = Dropdown::new(COLOR_MODE_OPTIONS.to_vec(), &col);
+                        }
+                        self.saved = false;
+                    }
+                    Tab::Installer => {
+                        if !self.shells.is_empty() {
+                            if self.selected_shell_idx > 0 {
+                                self.selected_shell_idx -= 1;
+                            } else {
+                                self.selected_shell_idx = self.shells.len().saturating_sub(1);
+                            }
+                        }
+                    }
+                    Tab::Config => {
+                        if self.editing_config {
+                            self.commit_config_edit();
+                            self.editing_config = false;
+                        }
+                        if self.config_field_idx > 0 {
+                            self.config_field_idx -= 1;
+                        } else {
+                            self.config_field_idx = ConfigField::ALL.len().saturating_sub(1);
+                        }
+                    }
+                }
             }
             _ => {}
         }
 
-        // Tab-specific keybindings
-        match self.current_tab {
-            Tab::Mascots => self.handle_mascots_key(key),
-            Tab::Scenery => self.handle_scenery_key(key),
-            Tab::Effects => self.handle_effects_key(key),
-            Tab::Installer => self.handle_installer_key(key),
-            Tab::Config => self.handle_config_key(key),
-        }
+        Ok(None)
     }
 
     fn handle_mascots_key(&mut self, key: KeyEvent) -> anyhow::Result<Option<Action>> {
@@ -1037,7 +1460,11 @@ impl ConfigApp {
             }
             KeyCode::Enter | KeyCode::Char(' ') => {
                 self.apply_selected_mascot();
-                self.status_message = format!("Selected mascot: {}", self.config.cow);
+                self.sync_mascot_scenery();
+            }
+            KeyCode::Char('b') | KeyCode::Char('r') => {
+                self.apply_selected_mascot();
+                self.sync_mascot_scenery();
             }
             _ => {}
         }
@@ -1048,7 +1475,31 @@ impl ConfigApp {
         let name = CATEGORIES[self.mascot_category_idx].1[self.mascot_item_idx].to_string();
         self.config.cow = name.clone();
         self.ensure_cow_cached(&name);
+        let biome = forgum_platform::biome::get_mascot_biome(&name);
+        self.status_message = format!("🐾 Mascot: {} | 🌿 Biome: {}", name, biome.biome_name);
         self.saved = false;
+    }
+
+    pub fn sync_mascot_scenery(&mut self) {
+        let name = self.config.cow.clone();
+        let biome = forgum_platform::biome::get_mascot_biome(&name);
+        if let Some(pos) = SCENERY_OPTIONS.iter().position(|(env, _)| env.eq_ignore_ascii_case(biome.environment)) {
+            self.scenery_idx = pos;
+            let env = SCENERY_OPTIONS[pos].0.to_string();
+            self.config.environment = Some(env.clone());
+            self.environment_dropdown = Dropdown::new(ENVIRONMENT_OPTIONS.to_vec(), &env);
+        }
+        if let Some(pos) = ROAD_OPTIONS.iter().position(|(rd, _)| rd.eq_ignore_ascii_case(biome.road)) {
+            self.road_idx = pos;
+            let rd = ROAD_OPTIONS[pos].0.to_string();
+            self.config.road = Some(rd.clone());
+            self.road_dropdown = Dropdown::new(ROAD_STYLE_OPTIONS.to_vec(), &rd);
+        }
+        let mtn = biome.mountain.to_string();
+        self.config.mountain = Some(mtn.clone());
+        self.mountain_dropdown = Dropdown::new(MOUNTAIN_OPTIONS.to_vec(), &mtn);
+        self.saved = false;
+        self.status_message = format!("🌿 Native habitat applied: {} (Atmosphere: {}, Ground: {}, Skyline: {})", biome.biome_name, biome.environment, biome.road, biome.mountain);
     }
 
     fn randomize_mascot(&mut self) {
@@ -1057,7 +1508,7 @@ impl ConfigApp {
         self.mascot_category_idx = cat_idx;
         self.mascot_item_idx = item_idx;
         self.apply_selected_mascot();
-        self.status_message = format!("Swapped to mascot: {}", self.config.cow);
+        self.sync_mascot_scenery();
     }
 
     fn handle_scenery_key(&mut self, key: KeyEvent) -> anyhow::Result<Option<Action>> {
@@ -1114,6 +1565,9 @@ impl ConfigApp {
                     self.config.environment.as_deref().unwrap_or("pasture"),
                     self.config.road.as_deref().unwrap_or("dirt")
                 );
+            }
+            KeyCode::Char('b') | KeyCode::Char('r') => {
+                self.sync_mascot_scenery();
             }
             _ => {}
         }
@@ -1438,9 +1892,9 @@ export extern "forgum" [
             }
             KeyCode::Enter => {
                 let field = ConfigField::ALL[self.config_field_idx];
-                if field == ConfigField::Duration || field == ConfigField::Fps {
-                    self.cycle_config_field(true);
-                } else if field == ConfigField::Eyes
+                if field == ConfigField::Duration
+                    || field == ConfigField::Fps
+                    || field == ConfigField::Eyes
                     || field == ConfigField::Tongue
                     || field == ConfigField::Palette
                 {
@@ -1452,24 +1906,18 @@ export extern "forgum" [
             KeyCode::Char('e') | KeyCode::Char('E') | KeyCode::Char('i') | KeyCode::Char('I') => {
                 self.enter_config_edit();
             }
-            KeyCode::Char(c @ '0'..='9') => {
-                let field = ConfigField::ALL[self.config_field_idx];
-                if field == ConfigField::Duration || field == ConfigField::Fps {
-                    self.config_edit_buffer = c.to_string();
-                    self.editing_config = true;
-                    self.edit_initial = false;
-                    self.status_message = format!(
-                        "Editing {}: typing '{}' (Enter to confirm, Esc to cancel)",
-                        field.label(),
-                        c
-                    );
-                }
-            }
             KeyCode::Char('t')
             | KeyCode::Char('T')
-            | KeyCode::Char('+')
+            | KeyCode::Char(' ') => {
+                let field = ConfigField::ALL[self.config_field_idx];
+                if field == ConfigField::Duration {
+                    self.enter_config_edit();
+                } else {
+                    self.cycle_config_field(true);
+                }
+            }
+            KeyCode::Char('+')
             | KeyCode::Char('=')
-            | KeyCode::Char(' ')
             | KeyCode::Right
             | KeyCode::Char('l')
             | KeyCode::Char(']') => {
@@ -1483,7 +1931,8 @@ export extern "forgum" [
                 self.cycle_config_field(false);
             }
             KeyCode::Char('o') | KeyCode::Char('O') => {
-                self.open_config_directory();
+                let path = self.resolve_config_path();
+                return Ok(Some(Action::OpenEditor(path)));
             }
             _ => {}
         }
@@ -1492,6 +1941,14 @@ export extern "forgum" [
 
     fn enter_config_edit(&mut self) {
         let field = ConfigField::ALL[self.config_field_idx];
+        self.original_edit_value = match field {
+            ConfigField::Duration => self.config.duration.to_string(),
+            ConfigField::Fps => self.config.fps.to_string(),
+            ConfigField::Eyes => self.config.eyes.clone(),
+            ConfigField::Tongue => self.config.tongue.clone(),
+            ConfigField::Palette => self.config.palette.clone().unwrap_or_default(),
+            _ => String::new(),
+        };
         self.edit_initial = true;
         match field {
             ConfigField::Duration => {
@@ -1604,10 +2061,48 @@ export extern "forgum" [
                 );
             }
             ConfigField::Eyes => {
-                self.enter_config_edit();
+                const EYE_PRESETS: [&str; 8] = ["oo", "..", "@@", "**", "$$", "==", "--", "00"];
+                let current = self.config.eyes.as_str();
+                let next = if forward {
+                    if let Some(pos) = EYE_PRESETS.iter().position(|&e| e == current) {
+                        EYE_PRESETS[(pos + 1) % EYE_PRESETS.len()]
+                    } else {
+                        EYE_PRESETS[0]
+                    }
+                } else {
+                    if let Some(pos) = EYE_PRESETS.iter().position(|&e| e == current) {
+                        EYE_PRESETS[(pos + EYE_PRESETS.len() - 1) % EYE_PRESETS.len()]
+                    } else {
+                        EYE_PRESETS[EYE_PRESETS.len() - 1]
+                    }
+                };
+                self.config.eyes = next.to_string();
+                self.cow_cache.clear();
+                self.ensure_cow_cached(&self.config.cow.clone());
+                self.saved = false;
+                self.status_message = format!("Eyes cycled to '{}' [Space/←/→: Cycle | e: Custom]", next);
             }
             ConfigField::Tongue => {
-                self.enter_config_edit();
+                const TONGUE_PRESETS: [&str; 5] = ["  ", "U ", "||", "--", "V "];
+                let current = self.config.tongue.as_str();
+                let next = if forward {
+                    if let Some(pos) = TONGUE_PRESETS.iter().position(|&t| t == current) {
+                        TONGUE_PRESETS[(pos + 1) % TONGUE_PRESETS.len()]
+                    } else {
+                        TONGUE_PRESETS[0]
+                    }
+                } else {
+                    if let Some(pos) = TONGUE_PRESETS.iter().position(|&t| t == current) {
+                        TONGUE_PRESETS[(pos + TONGUE_PRESETS.len() - 1) % TONGUE_PRESETS.len()]
+                    } else {
+                        TONGUE_PRESETS[TONGUE_PRESETS.len() - 1]
+                    }
+                };
+                self.config.tongue = next.to_string();
+                self.cow_cache.clear();
+                self.ensure_cow_cached(&self.config.cow.clone());
+                self.saved = false;
+                self.status_message = format!("Tongue cycled to '{}' [Space/←/→: Cycle | e: Custom]", next);
             }
             ConfigField::ColorMode => {
                 self.color_mode_dropdown.cycle(forward);
@@ -1621,7 +2116,34 @@ export extern "forgum" [
                 self.status_message = format!("Color mode switched to {}", current);
             }
             ConfigField::Palette => {
-                self.enter_config_edit();
+                const PALETTE_PRESETS: [&str; 5] = [
+                    "",
+                    "#ff007f,#00e5ff,#ffff00",
+                    "#ff5555,#50fa7b,#8be9fd",
+                    "#e67e22,#f39c12,#d35400",
+                    "#38ef7d,#11998e",
+                ];
+                let current = self.config.palette.as_deref().unwrap_or("");
+                let next = if forward {
+                    if let Some(pos) = PALETTE_PRESETS.iter().position(|&p| p == current) {
+                        PALETTE_PRESETS[(pos + 1) % PALETTE_PRESETS.len()]
+                    } else {
+                        PALETTE_PRESETS[1]
+                    }
+                } else {
+                    if let Some(pos) = PALETTE_PRESETS.iter().position(|&p| p == current) {
+                        PALETTE_PRESETS[(pos + PALETTE_PRESETS.len() - 1) % PALETTE_PRESETS.len()]
+                    } else {
+                        PALETTE_PRESETS[PALETTE_PRESETS.len() - 1]
+                    }
+                };
+                self.config.palette = if next.is_empty() { None } else { Some(next.to_string()) };
+                self.saved = false;
+                self.status_message = if next.is_empty() {
+                    "Palette set to default [Space/←/→: Cycle | e: Custom]".into()
+                } else {
+                    format!("Palette cycled to '{}' [Space/←/→: Cycle | e: Custom]", next)
+                };
             }
             ConfigField::Environment => {
                 self.environment_dropdown.cycle(forward);
@@ -1715,10 +2237,40 @@ export extern "forgum" [
                 self.editing_config = false;
             }
             KeyCode::Esc => {
+                match field {
+                    ConfigField::Duration => {
+                        if let Ok(v) = self.original_edit_value.parse::<u32>() {
+                            self.config.duration = v;
+                        }
+                    }
+                    ConfigField::Fps => {
+                        if let Ok(v) = self.original_edit_value.parse::<u16>() {
+                            self.config.fps = v;
+                        }
+                    }
+                    ConfigField::Eyes => {
+                        self.config.eyes = self.original_edit_value.clone();
+                        self.cow_cache.clear();
+                        self.ensure_cow_cached(&self.config.cow.clone());
+                    }
+                    ConfigField::Tongue => {
+                        self.config.tongue = self.original_edit_value.clone();
+                        self.cow_cache.clear();
+                        self.ensure_cow_cached(&self.config.cow.clone());
+                    }
+                    ConfigField::Palette => {
+                        self.config.palette = if self.original_edit_value.is_empty() {
+                            None
+                        } else {
+                            Some(self.original_edit_value.clone())
+                        };
+                    }
+                    _ => {}
+                }
                 self.editing_config = false;
-                self.status_message = "Edit cancelled.".to_string();
+                self.status_message = "Edit cancelled (original value restored).".to_string();
             }
-            KeyCode::Char(' ') if field == ConfigField::Duration || field == ConfigField::Fps => {
+            KeyCode::Char(' ') if field == ConfigField::Fps => {
                 self.commit_config_edit();
                 self.editing_config = false;
                 self.cycle_config_field(true);
@@ -1747,31 +2299,19 @@ export extern "forgum" [
             }
             KeyCode::Up => {
                 self.edit_initial = false;
-                if field == ConfigField::Duration || field == ConfigField::Fps {
-                    let clean = self
-                        .config_edit_buffer
-                        .trim()
-                        .trim_end_matches(|c: char| c.is_alphabetic() || c.is_whitespace());
-                    if let Ok(val) = clean.parse::<f64>() {
-                        self.config_edit_buffer = (val.round() as u32 + 1).to_string();
-                        self.commit_config_edit();
-                    }
+                self.commit_config_edit();
+                self.editing_config = false;
+                if self.config_field_idx > 0 {
+                    self.config_field_idx -= 1;
+                } else {
+                    self.config_field_idx = ConfigField::ALL.len() - 1;
                 }
             }
             KeyCode::Down => {
                 self.edit_initial = false;
-                if field == ConfigField::Duration || field == ConfigField::Fps {
-                    let clean = self
-                        .config_edit_buffer
-                        .trim()
-                        .trim_end_matches(|c: char| c.is_alphabetic() || c.is_whitespace());
-                    if let Ok(val) = clean.parse::<f64>() {
-                        let floor = if field == ConfigField::Fps { 1 } else { 0 };
-                        let current = val.round() as u32;
-                        self.config_edit_buffer = current.saturating_sub(1).max(floor).to_string();
-                        self.commit_config_edit();
-                    }
-                }
+                self.commit_config_edit();
+                self.editing_config = false;
+                self.config_field_idx = (self.config_field_idx + 1) % ConfigField::ALL.len();
             }
             KeyCode::Right => {
                 self.edit_initial = false;
@@ -1781,8 +2321,7 @@ export extern "forgum" [
                         .trim()
                         .trim_end_matches(|c: char| c.is_alphabetic() || c.is_whitespace());
                     if let Ok(val) = clean.parse::<f64>() {
-                        self.config_edit_buffer = (val.round() as u32 + 5).to_string();
-                        self.commit_config_edit();
+                        self.config_edit_buffer = (val.round() as u32 + 1).to_string();
                     }
                 }
             }
@@ -1796,8 +2335,7 @@ export extern "forgum" [
                     if let Ok(val) = clean.parse::<f64>() {
                         let floor = if field == ConfigField::Fps { 1 } else { 0 };
                         let current = val.round() as u32;
-                        self.config_edit_buffer = current.saturating_sub(5).max(floor).to_string();
-                        self.commit_config_edit();
+                        self.config_edit_buffer = current.saturating_sub(1).max(floor).to_string();
                     }
                 }
             }
@@ -1978,15 +2516,23 @@ export extern "forgum" [
                     ""
                 };
                 let mut end_pos = None;
+                let mut remaining = body_content;
                 let mut curr = 0;
-                for line in body_content.lines() {
+                while !remaining.is_empty() {
+                    let line_len = remaining
+                        .find('\n')
+                        .map(|idx| idx + 1)
+                        .unwrap_or(remaining.len());
+                    let line_with_nl = &remaining[..line_len];
+                    let line = line_with_nl.trim_end_matches(&['\r', '\n'][..]);
                     let trimmed = line.trim();
                     let clean = trimmed.trim_end_matches(';');
                     if clean == tag {
                         end_pos = Some(curr);
                         break;
                     }
-                    curr += line.len() + 1;
+                    curr += line_len;
+                    remaining = &remaining[line_len..];
                 }
                 if let Some(pos) = end_pos {
                     &body_content[..pos]
@@ -2011,9 +2557,8 @@ export extern "forgum" [
 
         let mut out = String::with_capacity(body.len());
         for line in body.lines() {
-            if line.contains('$') {
-                let mut l = line.to_string();
-
+            let mut l = line.to_string();
+            if l.contains('$') {
                 // 1. Expand thoughts placeholders (longest first)
                 for pat in [
                     r"\\$thoughts",
@@ -2083,11 +2628,14 @@ export extern "forgum" [
                     eye_idx += 1;
                     l.replace_range(pos..pos + pat.len(), glyph);
                 }
-
-                out.push_str(&l);
-            } else {
-                out.push_str(line);
             }
+
+            // 5. Unescape literal perl heredoc escapes: \$ to $, \@ to @, \# to #
+            if l.contains(r"\$") || l.contains(r"\@") || l.contains(r"\#") {
+                l = l.replace(r"\$", "$").replace(r"\@", "@").replace(r"\#", "#");
+            }
+
+            out.push_str(&l);
             out.push('\n');
         }
         while out.ends_with('\n') {
@@ -2127,6 +2675,85 @@ export extern "forgum" [
         self.render_zellij_header(f, chunks[0]);
         self.render_workspace(f, chunks[1]);
         self.render_zellij_footer(f, chunks[2]);
+
+        if self.show_editor_modal {
+            self.render_editor_modal(f, size);
+        }
+    }
+
+    /// Render centered modal dialog requesting action when no terminal editor is found.
+    fn render_editor_modal(&self, f: &mut Frame, area: Rect) {
+        let popup_width = 78.min(area.width.saturating_sub(4));
+        let popup_height = if area.width < 70 { 10 } else { 8 }.min(area.height.saturating_sub(2));
+
+        let x = area.x + (area.width.saturating_sub(popup_width)) / 2;
+        let y = area.y + (area.height.saturating_sub(popup_height)) / 2;
+        let popup_area = Rect::new(x, y, popup_width, popup_height);
+
+        f.render_widget(Clear, popup_area);
+
+        let block = Block::default()
+            .title(Span::styled(
+                " 📝 Forgum Config File Editor Request ",
+                Style::default()
+                    .fg(Color::Yellow)
+                    .add_modifier(Modifier::BOLD),
+            ))
+            .borders(Borders::ALL)
+            .border_type(BorderType::Rounded)
+            .border_style(Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD));
+
+        let inner = block.inner(popup_area);
+        f.render_widget(block, popup_area);
+
+        let lines = vec![
+            Line::from(""),
+            Line::from(Span::styled(
+                "No terminal editor (neovim/vim, nano, emacs) detected on your system.",
+                Style::default().fg(Color::White).add_modifier(Modifier::BOLD),
+            )),
+            Line::from(Span::styled(
+                "Do you want to open with system file editor, or install a terminal editor?",
+                Style::default().fg(Color::Gray),
+            )),
+            Line::from(""),
+            Line::from(vec![
+                Span::styled(
+                    "[O] ",
+                    Style::default()
+                        .fg(Color::Cyan)
+                        .add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(
+                    "Open with System Editor (Notepad/GUI)  ",
+                    Style::default().fg(Color::White),
+                ),
+                Span::styled("│  ", Style::default().fg(Color::DarkGray)),
+                Span::styled(
+                    "[I] ",
+                    Style::default()
+                        .fg(Color::Green)
+                        .add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(
+                    "Install Neovim (winget/scoop)  ",
+                    Style::default().fg(Color::White),
+                ),
+                Span::styled("│  ", Style::default().fg(Color::DarkGray)),
+                Span::styled(
+                    "[Esc] ",
+                    Style::default()
+                        .fg(Color::Red)
+                        .add_modifier(Modifier::BOLD),
+                ),
+                Span::styled("Cancel", Style::default().fg(Color::White)),
+            ]),
+        ];
+
+        let paragraph = Paragraph::new(lines)
+            .alignment(ratatui::layout::Alignment::Center)
+            .wrap(Wrap { trim: true });
+        f.render_widget(paragraph, inner);
     }
 
     /// Render Zellij-style top header with active mode badge, tabs, and format badge.
@@ -2207,8 +2834,21 @@ export extern "forgum" [
             return;
         }
 
-        let left_width = (area.width / 3).max(24).min(area.width.saturating_sub(20));
-        let right_width = area.width.saturating_sub(left_width);
+        let width = area.width;
+        let height = area.height;
+
+        // Tailwind-inspired adaptive split breakpoints:
+        // sm (< 76 cols): mobile/compact view, left panel 36% (min 22)
+        // md (76..=120 cols): tablet/standard view, left panel 28% (min 26, max 38)
+        // lg / xl (> 120 cols): desktop/wide view, left panel 24% (min 28, max 46)
+        let left_width = if width < 76 {
+            (width * 36 / 100).max(22).min(width.saturating_sub(20))
+        } else if width <= 120 {
+            (width * 28 / 100).max(26).min(38)
+        } else {
+            (width * 24 / 100).max(28).min(46)
+        };
+        let right_width = width.saturating_sub(left_width);
 
         let left_rect = Rect {
             x: area.x,
@@ -2233,12 +2873,24 @@ export extern "forgum" [
             Tab::Config => self.render_config_list(f, left_rect),
         }
 
+        // Adaptive Inspector Height:
+        // When height is tight (< 20 lines), collapse inspector to 4 lines to give maximum space to canvas
+        // When width is wide (> 120 cols) and height >= 24, expand inspector to 7 lines for rich metadata
+        // Otherwise 6 lines
+        let inspector_len = if height < 20 {
+            4
+        } else if width > 120 && height >= 24 {
+            7
+        } else {
+            6
+        };
+
         // Render right column: Upper = 30 FPS Live Preview, Lower = Inspector / Log
         let right_split = Layout::default()
             .direction(Direction::Vertical)
             .constraints([
-                Constraint::Min(10),   // Live Preview Canvas
-                Constraint::Length(6), // Inspector & Details / Log
+                Constraint::Min(8),                     // Live Preview Canvas
+                Constraint::Length(inspector_len),      // Inspector & Details / Log
             ])
             .split(right_rect);
 
@@ -2248,8 +2900,17 @@ export extern "forgum" [
 
     /// Render Grand Welcoming First-Time Setup TUI and Host Diagnostics workspace.
     fn render_installer_workspace(&self, f: &mut Frame, area: Rect) {
-        let left_width = (area.width / 3).max(32).min(area.width.saturating_sub(40));
-        let right_width = area.width.saturating_sub(left_width);
+        let width = area.width;
+        let height = area.height;
+
+        let left_width = if width < 80 {
+            (width * 38 / 100).max(28).min(width.saturating_sub(30))
+        } else if width <= 130 {
+            (width * 30 / 100).max(32).min(44)
+        } else {
+            (width * 25 / 100).max(34).min(50)
+        };
+        let right_width = width.saturating_sub(left_width);
 
         let left_rect = Rect {
             x: area.x,
@@ -2274,10 +2935,12 @@ export extern "forgum" [
         self.render_installer_list(f, left_split[0]);
         self.render_package_managers_card(f, left_split[1]);
 
+        let log_height = if height < 22 { 5 } else if height < 30 { 7 } else { 9 };
+
         // Right column split: Top = Grand Welcoming Hero & Diagnostics, Bottom = Log
         let right_split = Layout::default()
             .direction(Direction::Vertical)
-            .constraints([Constraint::Min(13), Constraint::Length(8)])
+            .constraints([Constraint::Min(10), Constraint::Length(log_height)])
             .split(right_rect);
 
         self.render_installer_hero_card(f, right_split[0]);
@@ -2326,12 +2989,14 @@ export extern "forgum" [
             Span::styled("forgum update", Style::default().fg(Color::Cyan)),
         ]));
 
-        let p = Paragraph::new(lines).block(
-            Block::default()
-                .borders(Borders::ALL)
-                .border_type(BorderType::Rounded)
-                .title(" Package Managers (p: Check) "),
-        );
+        let p = Paragraph::new(lines)
+            .wrap(Wrap { trim: true })
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .border_type(BorderType::Rounded)
+                    .title(" Package Managers (p: Check) "),
+            );
         f.render_widget(p, area);
     }
 
@@ -2595,12 +3260,14 @@ export extern "forgum" [
             _ => " 📦 Package Managers & Update Distribution (View 3/3, press 'l') ",
         };
 
-        let p = Paragraph::new(lines).block(
-            Block::default()
-                .borders(Borders::ALL)
-                .border_type(BorderType::Rounded)
-                .title(title),
-        );
+        let p = Paragraph::new(lines)
+            .wrap(Wrap { trim: true })
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .border_type(BorderType::Rounded)
+                    .title(title),
+            );
         f.render_widget(p, area);
     }
 
@@ -2624,12 +3291,14 @@ export extern "forgum" [
             })
             .collect();
 
-        let p = Paragraph::new(log_lines).block(
-            Block::default()
-                .borders(Borders::ALL)
-                .border_type(BorderType::Rounded)
-                .title(" Shell Installation & Diagnostics Log (i: Install, u: Uninstall, t: Test, p: Check Updates) "),
-        );
+        let p = Paragraph::new(log_lines)
+            .wrap(Wrap { trim: true })
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .border_type(BorderType::Rounded)
+                    .title(" Shell Installation & Diagnostics Log (i: Install, u: Uninstall, t: Test, p: Check Updates) "),
+            );
         f.render_widget(p, area);
     }
 
@@ -2665,7 +3334,16 @@ export extern "forgum" [
             CATEGORIES.len()
         );
 
-        let list = List::new(items).block(
+        let visible_rows = (area.height.saturating_sub(2) as usize).max(1);
+        let start_idx = if self.mascot_item_idx >= visible_rows {
+            self.mascot_item_idx + 1 - visible_rows
+        } else {
+            0
+        };
+        let visible_items: Vec<ListItem> =
+            items.into_iter().skip(start_idx).take(visible_rows).collect();
+
+        let list = List::new(visible_items).block(
             Block::default()
                 .borders(Borders::ALL)
                 .border_type(BorderType::Rounded)
@@ -2680,6 +3358,8 @@ export extern "forgum" [
             .constraints([Constraint::Percentage(60), Constraint::Percentage(40)])
             .split(area);
 
+        let native_biome = forgum_platform::biome::get_mascot_biome(&self.config.cow);
+
         // Scenery Archetypes list
         let scenery_items: Vec<ListItem> = SCENERY_OPTIONS
             .iter()
@@ -2687,6 +3367,7 @@ export extern "forgum" [
             .map(|(i, (name, _))| {
                 let is_sel = i == self.scenery_idx;
                 let is_focused = self.scenery_sub_focus == 0;
+                let is_native = name.eq_ignore_ascii_case(native_biome.environment);
                 let prefix = if is_sel { "▶ " } else { "  " };
                 let style = if is_sel && is_focused {
                     Style::default()
@@ -2697,15 +3378,31 @@ export extern "forgum" [
                 } else {
                     Style::default().fg(Color::White)
                 };
-                ListItem::new(Line::from(vec![
+                let mut spans = vec![
                     Span::styled(prefix, Style::default().fg(Color::Cyan)),
                     Span::styled(*name, style),
-                ]))
+                ];
+                if is_native {
+                    spans.push(Span::styled(" ★ Native", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)));
+                }
+                ListItem::new(Line::from(spans))
             })
             .collect();
 
-        let scenery_title = format!(" Biomes / Scenery ({}) ", SCENERY_OPTIONS.len());
-        let scenery_list = List::new(scenery_items).block(
+        let visible_rows_scenery = (chunks[0].height.saturating_sub(2) as usize).max(1);
+        let start_scenery = if self.scenery_idx >= visible_rows_scenery {
+            self.scenery_idx + 1 - visible_rows_scenery
+        } else {
+            0
+        };
+        let visible_scenery_items: Vec<ListItem> = scenery_items
+            .into_iter()
+            .skip(start_scenery)
+            .take(visible_rows_scenery)
+            .collect();
+
+        let scenery_title = format!(" Biomes / Scenery ({}) [Native: {}] ", SCENERY_OPTIONS.len(), native_biome.environment);
+        let scenery_list = List::new(visible_scenery_items).block(
             Block::default()
                 .borders(Borders::ALL)
                 .border_type(BorderType::Rounded)
@@ -2720,6 +3417,7 @@ export extern "forgum" [
             .map(|(i, (name, _))| {
                 let is_sel = i == self.road_idx;
                 let is_focused = self.scenery_sub_focus == 1;
+                let is_native = name.eq_ignore_ascii_case(native_biome.road);
                 let prefix = if is_sel { "▶ " } else { "  " };
                 let style = if is_sel && is_focused {
                     Style::default()
@@ -2730,15 +3428,31 @@ export extern "forgum" [
                 } else {
                     Style::default().fg(Color::White)
                 };
-                ListItem::new(Line::from(vec![
+                let mut spans = vec![
                     Span::styled(prefix, Style::default().fg(Color::Cyan)),
                     Span::styled(*name, style),
-                ]))
+                ];
+                if is_native {
+                    spans.push(Span::styled(" ★ Native", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)));
+                }
+                ListItem::new(Line::from(spans))
             })
             .collect();
 
-        let road_title = format!(" Road Surfaces ({}) ", ROAD_OPTIONS.len());
-        let road_list = List::new(road_items).block(
+        let visible_rows_road = (chunks[1].height.saturating_sub(2) as usize).max(1);
+        let start_road = if self.road_idx >= visible_rows_road {
+            self.road_idx + 1 - visible_rows_road
+        } else {
+            0
+        };
+        let visible_road_items: Vec<ListItem> = road_items
+            .into_iter()
+            .skip(start_road)
+            .take(visible_rows_road)
+            .collect();
+
+        let road_title = format!(" Road Surfaces ({}) [Native: {}] ", ROAD_OPTIONS.len(), native_biome.road);
+        let road_list = List::new(visible_road_items).block(
             Block::default()
                 .borders(Borders::ALL)
                 .border_type(BorderType::Rounded)
@@ -2777,8 +3491,20 @@ export extern "forgum" [
             })
             .collect();
 
+        let visible_rows_fx = (chunks[0].height.saturating_sub(2) as usize).max(1);
+        let start_fx = if self.effect_idx >= visible_rows_fx {
+            self.effect_idx + 1 - visible_rows_fx
+        } else {
+            0
+        };
+        let visible_effect_items: Vec<ListItem> = effect_items
+            .into_iter()
+            .skip(start_fx)
+            .take(visible_rows_fx)
+            .collect();
+
         let effects_title = format!(" Kinematics Effects ({}) ", EFFECT_OPTIONS.len());
-        let effect_list = List::new(effect_items).block(
+        let effect_list = List::new(visible_effect_items).block(
             Block::default()
                 .borders(Borders::ALL)
                 .border_type(BorderType::Rounded)
@@ -2810,8 +3536,20 @@ export extern "forgum" [
             })
             .collect();
 
+        let visible_rows_colors = (chunks[1].height.saturating_sub(2) as usize).max(1);
+        let start_color = if self.color_idx >= visible_rows_colors {
+            self.color_idx + 1 - visible_rows_colors
+        } else {
+            0
+        };
+        let visible_color_items: Vec<ListItem> = color_items
+            .into_iter()
+            .skip(start_color)
+            .take(visible_rows_colors)
+            .collect();
+
         let colors_title = format!(" Color Themes ({}) ", COLOR_OPTIONS.len());
-        let color_list = List::new(color_items).block(
+        let color_list = List::new(visible_color_items).block(
             Block::default()
                 .borders(Borders::ALL)
                 .border_type(BorderType::Rounded)
@@ -2855,7 +3593,19 @@ export extern "forgum" [
             })
             .collect();
 
-        let list = List::new(items).block(
+        let visible_rows_shells = (area.height.saturating_sub(2) as usize).max(1);
+        let start_shell = if self.selected_shell_idx >= visible_rows_shells {
+            self.selected_shell_idx + 1 - visible_rows_shells
+        } else {
+            0
+        };
+        let visible_shell_items: Vec<ListItem> = items
+            .into_iter()
+            .skip(start_shell)
+            .take(visible_rows_shells)
+            .collect();
+
+        let list = List::new(visible_shell_items).block(
             Block::default()
                 .borders(Borders::ALL)
                 .border_type(BorderType::Rounded)
@@ -2869,12 +3619,12 @@ export extern "forgum" [
         match field {
             ConfigField::Duration => {
                 if is_sel && self.editing_config {
-                    format!("✎ [ {}_ ]", self.config_edit_buffer)
+                    format!("✎ [ {}_ ] (Enter: Commit | Esc: Cancel)", self.config_edit_buffer)
                 } else if self.config.duration == 0 {
-                    "0 (infinite) [Space/Enter: Toggle | ←/→: Adjust | e: Type]".into()
+                    "0s (infinite / run until signal) [Enter/e: Edit Number | +/-: Step]".into()
                 } else {
                     format!(
-                        "{}s [Space/Enter: Toggle | ←/→: Adjust | e: Type]",
+                        "{}s [Enter/e: Edit Number | +/-: Step]",
                         self.config.duration
                     )
                 }
@@ -2994,7 +3744,19 @@ export extern "forgum" [
             })
             .collect();
 
-        let list = List::new(items).block(
+        let visible_rows_config = (area.height.saturating_sub(2) as usize).max(1);
+        let start_config = if self.config_field_idx >= visible_rows_config {
+            self.config_field_idx + 1 - visible_rows_config
+        } else {
+            0
+        };
+        let visible_config_items: Vec<ListItem> = items
+            .into_iter()
+            .skip(start_config)
+            .take(visible_rows_config)
+            .collect();
+
+        let list = List::new(visible_config_items).block(
             Block::default()
                 .borders(Borders::ALL)
                 .border_type(BorderType::Rounded)
@@ -3021,6 +3783,132 @@ export extern "forgum" [
         } else {
             (quantized_t, 1.0)
         }
+    }
+
+    /// Resolve authentic God-given natural coloration for a character glyph `ch`
+    /// at creature coordinate `(rel_x, rel_y)` on the animal silhouette.
+    #[inline]
+    pub fn natural_creature_color(
+        palette: &[(u8, u8, u8)],
+        rel_x: usize,
+        rel_y: usize,
+        ch: char,
+    ) -> (u8, u8, u8) {
+        if palette.is_empty() {
+            return (255, 255, 255);
+        }
+        if palette.len() == 1 {
+            return palette[0];
+        }
+
+        let c0 = palette[0];
+        let c1 = palette.get(1).copied().unwrap_or(c0);
+        let c2 = palette.get(2).copied().unwrap_or(c1);
+        let c3 = palette.get(3).copied().unwrap_or(c2);
+        let c4 = palette.get(4).copied().unwrap_or(c1);
+
+        // 1. Eyes: signature contrast or specific eye color
+        if matches!(ch, 'o' | 'O' | '@' | '^' | '*' | '$' | 'x' | 'X' | '=' | '0' | 'e' | '+' | 'v' | 'u' | 'w' | '8' | 'Q' | '•' | '●')
+            && (rel_y <= 4 || ch == 'o' || ch == 'O' || ch == '@' || ch == '*')
+        {
+            return c4;
+        }
+
+        // 2. Beak, muzzle, nostrils, snout, udder accents
+        if ch == '.' || ch == ',' || ch == 'w' || ch == 'W' || ch == 'v' || ch == 'V' || ch == 'u' || ch == 'U' || ch == ':' {
+            return c3;
+        }
+
+        // 3. Horns, ears, crest, crown (upper rows)
+        if (ch == '^' || ch == '/' || ch == '\\' || ch == '\'' || ch == '`') && rel_y <= 2 {
+            return c1;
+        }
+
+        // 4. Feet, paws, hooves, trotters, bottom row flippers
+        if ch == '_' || ch == '-' || ch == '|' || ch == ')' || ch == '(' {
+            if rel_y >= 3 && (ch == '_' || ch == '-' || ch == '|' || ch == ')') {
+                return c2;
+            }
+        }
+
+        // 5. Body markings, spots, stripes, and coat pattern (stable spatial hash)
+        let hash = ((rel_x.wrapping_mul(17) + rel_y.wrapping_mul(31)) ^ (rel_x.wrapping_mul(7))) % 100;
+        let chosen = if hash < 55 {
+            c0
+        } else if hash < 80 {
+            c1
+        } else {
+            c2
+        };
+
+        let (mut r, mut g, mut b) = chosen;
+        if ch != ' ' {
+            let lum = 0.299 * (r as f32) + 0.587 * (g as f32) + 0.114 * (b as f32);
+            if lum < 55.0 {
+                let boost = 55.0 - lum;
+                r = (r as f32 + boost * 0.9).min(255.0) as u8;
+                g = (g as f32 + boost * 0.95).min(255.0) as u8;
+                b = (b as f32 + boost * 1.05).min(255.0) as u8;
+            }
+        }
+        (r, g, b)
+    }
+
+    /// Authentic God-given natural color palettes (RGB tuples) for all 106 mascots.
+    pub fn get_mascot_natural_palette(mascot: &str) -> &'static [(u8, u8, u8)] {
+        forgum_platform::biome::get_natural_rgb_palette(mascot)
+    }
+
+    /// Dynamically find where the cow art begins in a potentially composed scene.
+    /// If a speech or thought bubble precedes the cow, returns the line index of the
+    /// first line of cow art. If no bubble is present, returns 0.
+    fn find_cow_start_line(text: &str) -> usize {
+        let lines: Vec<&str> = text.lines().collect();
+        if lines.is_empty() {
+            return 0;
+        }
+        let first = lines[0].trim();
+        // A speech or thought bubble starts with a top border of underscores, hyphens, or equals
+        if !(first.chars().all(|c| c == '_' || c == '-' || c == '=') && first.len() >= 3) {
+            return 0;
+        }
+        // Find bottom border
+        let mut bottom_border_idx = None;
+        for (i, line) in lines.iter().enumerate().skip(1) {
+            let trimmed = line.trim();
+            if (trimmed.starts_with('|')
+                && trimmed.ends_with('|')
+                && trimmed.chars().all(|c| c == '|' || c == '_' || c == '-'))
+                || (trimmed.starts_with('(')
+                    && trimmed.ends_with(')')
+                    && trimmed
+                        .chars()
+                        .all(|c| c == '(' || c == ')' || c == '_' || c == '-'))
+            {
+                bottom_border_idx = Some(i);
+                break;
+            }
+        }
+        let Some(b_idx) = bottom_border_idx else {
+            return 0;
+        };
+        // Skip connector lines
+        let mut cow_start = b_idx + 1;
+        while cow_start < lines.len() {
+            let trimmed = lines[cow_start].trim();
+            if trimmed.is_empty()
+                || trimmed == "o"
+                || trimmed == "\\"
+                || trimmed == "/"
+                || trimmed == "o o"
+                || trimmed == "\\ \\"
+            {
+                cow_start += 1;
+            } else {
+                break;
+            }
+        }
+        cow_start
     }
 
     /// Live Holographic Preview Canvas rendering ASCII mascot + procedural scenery & road.
@@ -3100,6 +3988,36 @@ export extern "forgum" [
                     Style::default().fg(Color::DarkGray),
                 )));
             }
+
+            // 1.5. Procedural midground trees & flora layer (parallax scrolling, between mountains & mascot)
+            let env_style = self.config.environment.as_deref().unwrap_or("pasture");
+            let tree_layer = match env_style {
+                "forest" => "  /\\   /\\    /\\/\\    /\\   /\\/\\    /\\   /\\    /\\/\\    /\\   ",
+                "pasture" => "   .---.       (:::)       .---.       (:::)       .---.   ",
+                "savanna" => "  _.~---~._        __~---~__        _.~---~._        __~---~__   ",
+                "arctic" => "    /▲\\         ^           /▲\\         ^           /▲\\    ",
+                "graveyard" => "    /|\\         †           /|\\         †           /|\\    ",
+                "jurassic" => "   \\ ^ /        *          \\ ^ /        *          \\ ^ /   ",
+                "swamp" => "   (:::)       ~-~         (:::)       ~-~         (:::)   ",
+                "city" | "space" | "cyber" | "none" => "",
+                _ => "   .---.       /\\/\\        .---.       /\\/\\        .---.   ",
+            };
+            if !tree_layer.is_empty() {
+                let tree_chars: Vec<char> = tree_layer.chars().collect();
+                let tree_start = (t * 2.4) as usize % tree_chars.len();
+                let tree_slice: String =
+                    tree_chars.iter().cycle().skip(tree_start).take(30).collect();
+                let tree_color = match env_style {
+                    "savanna" => Color::Rgb(139, 195, 74),
+                    "arctic" => Color::Rgb(224, 247, 250),
+                    "graveyard" => Color::Rgb(97, 97, 97),
+                    _ => Color::Rgb(76, 175, 80),
+                };
+                lines.push(Line::from(Span::styled(
+                    format!("  {tree_slice}"),
+                    Style::default().fg(tree_color),
+                )));
+            }
         }
 
         // 2. Procedural Animation Engine Execution
@@ -3113,6 +4031,7 @@ export extern "forgum" [
 
         let cow_lines: Vec<&str> = cow_art.lines().collect();
         let total_lines = cow_lines.len().max(1);
+        let cow_start_line = Self::find_cow_start_line(&cow_art);
 
         let mut leg_line_idx = total_lines.saturating_sub(1);
         for (idx, line) in cow_lines.iter().enumerate().rev() {
@@ -3125,7 +4044,7 @@ export extern "forgum" [
         for (i, raw_l) in cow_lines.iter().enumerate() {
             let mut l = raw_l.to_string();
 
-            // Eye blinking animation: blink active eyes to '--' or '- -'
+            // Eye blinking animation: blink active eyes to '--' or '- -' or '-_-'
             if is_blinking {
                 let eyes_to_blink = [
                     self.config.eyes.as_str(),
@@ -3135,26 +4054,57 @@ export extern "forgum" [
                     "^^",
                     "**",
                     "$$",
-                    "..",
                     "==",
                     "00",
+                    "xx",
+                    "XX",
                 ];
                 for eye in &eyes_to_blink {
                     if !eye.is_empty() && l.contains(eye) {
                         l = l.replace(eye, "--");
                     }
                 }
-                if l.contains("o o") {
-                    l = l.replace("o o", "- -");
+                // Dynamic separated eye patterns for current eye setting and common mascots
+                let mut glyphs_to_check = vec!['o', 'O', '@', '^', '*', '$', 'x', 'X'];
+                if let Some(c) = self.config.eyes.chars().next() {
+                    if !glyphs_to_check.contains(&c) {
+                        glyphs_to_check.push(c);
+                    }
                 }
-                if l.contains("O O") {
-                    l = l.replace("O O", "- -");
+                for &eg in &glyphs_to_check {
+                    let pat_sp = format!("{eg} {eg}");
+                    if l.contains(&pat_sp) {
+                        l = l.replace(&pat_sp, "- -");
+                    }
+                    let pat_2sp = format!("{eg}  {eg}");
+                    if l.contains(&pat_2sp) {
+                        l = l.replace(&pat_2sp, "-  -");
+                    }
+                    let pat_under = format!("{eg}_{eg}");
+                    if l.contains(&pat_under) {
+                        l = l.replace(&pat_under, "-_-");
+                    }
+                    let pat_dot = format!("{eg}.{eg}");
+                    if l.contains(&pat_dot) {
+                        l = l.replace(&pat_dot, "-.-");
+                    }
+                    let pat_dash = format!("{eg}-{eg}");
+                    if l.contains(&pat_dash) {
+                        l = l.replace(&pat_dash, "- -");
+                    }
                 }
-                if l.contains("^ ^") {
-                    l = l.replace("^ ^", "- -");
+                // Single-eye bracketed creatures (e.g. duck, elephant, snoopy, etc.)
+                if l.contains("( o )") {
+                    l = l.replace("( o )", "( - )");
                 }
-                if l.contains("* *") {
-                    l = l.replace("* *", "- -");
+                if l.contains("(o)") {
+                    l = l.replace("(o)", "(-)");
+                }
+                if l.contains("( O )") {
+                    l = l.replace("( O )", "( - )");
+                }
+                if l.contains("(O)") {
+                    l = l.replace("(O)", "(-)");
                 }
             }
 
@@ -3293,76 +4243,15 @@ export extern "forgum" [
                     "lolcat" => rainbow_colors[(i * 2) % rainbow_colors.len()],
                     "solid" => Color::Green,
                     "natural" | "animal_natural" | "animal" | "default" => {
-                        match self.config.cow.as_str() {
-                            "cat" | "cat2" | "catfence" | "kitty" | "kitten" | "meow" => match i % 5 {
-                                0 => Color::Rgb(255, 255, 255), // white
-                                1 => Color::Rgb(211, 84, 0),    // ginger
-                                2 => Color::Rgb(121, 85, 72),   // brown
-                                3 => Color::Rgb(255, 152, 0),   // orange
-                                _ => Color::Rgb(33, 33, 33),    // black
-                            },
-                            "bunny" => Color::Rgb(255, 255, 255), // white only in nature
-                            "doge" => match i % 3 {
-                                0 => Color::Rgb(229, 152, 102), // golden orange
-                                1 => Color::Rgb(211, 84, 0),
-                                _ => Color::Rgb(253, 254, 254), // white urajiro
-                            },
-                            "hippie" => match i % 5 {
-                                0 => Color::Rgb(255, 0, 127),
-                                1 => Color::Rgb(0, 229, 255),
-                                2 => Color::Rgb(255, 255, 0),
-                                3 => Color::Rgb(118, 255, 3),
-                                _ => Color::Rgb(213, 0, 249),
-                            },
-                            "hamster" => match i % 3 {
-                                0 => Color::Rgb(212, 163, 115), // golden brown
-                                1 => Color::Rgb(250, 237, 205), // cream belly
-                                _ => Color::Rgb(255, 182, 193), // pink paws
-                            },
-                            "mule" => match i % 3 {
-                                0 => Color::Rgb(92, 64, 51),  // brown
-                                1 => Color::Rgb(121, 85, 72),
-                                _ => Color::Rgb(62, 39, 35),
-                            },
-                            "pig" => match i % 3 {
-                                0 => Color::Rgb(255, 182, 193), // pink
-                                1 => Color::Rgb(255, 128, 171),
-                                _ => Color::Rgb(248, 187, 208),
-                            },
-                            "ram" => match i % 3 {
-                                0 => Color::Rgb(245, 245, 245), // fleece white
-                                1 => Color::Rgb(158, 158, 158), // horn grey
-                                _ => Color::Rgb(117, 117, 117),
-                            },
-                            "cow" | "default" | "fat-cow" => match i % 3 {
-                                0 => Color::White,
-                                1 => Color::Rgb(26, 26, 26), // black
-                                _ => Color::Rgb(255, 182, 193), // pink snout
-                            },
-                            "duck" => match i % 3 {
-                                0 => Color::Rgb(5, 150, 105),  // mallard green head
-                                1 => Color::Rgb(251, 191, 36), // yellow bill
-                                _ => Color::Rgb(120, 53, 15),  // brown body
-                            },
-                            "wolf" => match i % 3 {
-                                0 => Color::Rgb(156, 163, 175),
-                                1 => Color::Rgb(75, 85, 99),
-                                _ => Color::Rgb(31, 41, 55),
-                            },
-                            "tiger" => match i % 3 {
-                                0 => Color::Rgb(234, 88, 12),
-                                1 => Color::Rgb(24, 24, 27),
-                                _ => Color::White,
-                            },
-                            "tux" | "tux-big" => match i % 3 {
-                                0 => Color::White,
-                                1 => Color::Rgb(33, 33, 33),
-                                _ => Color::Rgb(255, 152, 0),
-                            },
-                            _ => Color::White,
-                        }
+                        let p = Self::get_mascot_natural_palette(&self.config.cow);
+                        let (r, g, b) = p[i % p.len()];
+                        Color::Rgb(r, g, b)
                     }
-                    _ => Color::White,
+                    _ => {
+                        let p = Self::get_mascot_natural_palette(&self.config.cow);
+                        let (r, g, b) = p[i % p.len()];
+                        Color::Rgb(r, g, b)
+                    }
                 }
             };
 
@@ -3379,10 +4268,52 @@ export extern "forgum" [
                 ""
             };
 
-            lines.push(Line::from(Span::styled(
-                format!("  {l}{sparkle}"),
-                Style::default().fg(color),
-            )));
+            let is_bubble_line = i < cow_start_line;
+            let animal_rel_y = i.saturating_sub(cow_start_line);
+
+            if is_bubble_line {
+                let mut spans = Vec::new();
+                spans.push(Span::raw("  "));
+                for ch in l.chars() {
+                    if ch == ' ' {
+                        spans.push(Span::raw(" "));
+                    } else if ch == 'o' || ch == 'O' || ch == '\\' || ch == '/' {
+                        spans.push(Span::styled(ch.to_string(), Style::default().fg(Color::Rgb(180, 230, 255))));
+                    } else if ch == '_' || ch == '-' || ch == '=' || ch == '(' || ch == ')' || ch == '|' || ch == '<' || ch == '>' || ch == '+' {
+                        spans.push(Span::styled(ch.to_string(), Style::default().fg(Color::Rgb(215, 225, 240))));
+                    } else {
+                        spans.push(Span::styled(ch.to_string(), Style::default().fg(Color::Rgb(255, 255, 255))));
+                    }
+                }
+                lines.push(Line::from(spans));
+            } else {
+                let is_natural = matches!(
+                    self.config.color_mode.as_str(),
+                    "natural" | "animal_natural" | "animal" | "default"
+                );
+                if is_natural && self.config.palette.is_none() {
+                    let p = Self::get_mascot_natural_palette(&self.config.cow);
+                    let mut spans = Vec::new();
+                    spans.push(Span::raw("  "));
+                    for (x, ch) in l.chars().enumerate() {
+                        if ch == ' ' {
+                            spans.push(Span::raw(" "));
+                        } else {
+                            let (r, g, b) = Self::natural_creature_color(p, x, animal_rel_y, ch);
+                            spans.push(Span::styled(ch.to_string(), Style::default().fg(Color::Rgb(r, g, b))));
+                        }
+                    }
+                    if !sparkle.is_empty() {
+                        spans.push(Span::styled(sparkle.to_string(), Style::default().fg(Color::Yellow)));
+                    }
+                    lines.push(Line::from(spans));
+                } else {
+                    lines.push(Line::from(Span::styled(
+                        format!("  {l}{sparkle}"),
+                        Style::default().fg(color),
+                    )));
+                }
+            }
         }
 
         // 3. Ground / Road surface (fast scroll, when background enabled)
@@ -3436,40 +4367,117 @@ export extern "forgum" [
         match self.current_tab {
             Tab::Mascots => {
                 let current_cow = &self.config.cow;
-                let desc = format!(
-                    "Active Mascot: {}\nCategory: {}\nArchetype movement: Animated gait cycle with procedural chew cadence.",
-                    current_cow, CATEGORIES[self.mascot_category_idx].0
-                );
-                let p = Paragraph::new(desc).block(
-                    Block::default()
-                        .borders(Borders::ALL)
-                        .border_type(BorderType::Rounded)
-                        .title(" Mascot Inspector "),
-                );
+                let biome = forgum_platform::biome::get_mascot_biome(current_cow);
+                let cat_name = CATEGORIES[self.mascot_category_idx].0;
+
+                let mut lines: Vec<Line> = Vec::with_capacity(8);
+                lines.push(Line::from(vec![
+                    Span::styled("Mascot: ", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
+                    Span::styled(current_cow.as_str(), Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
+                    Span::raw("  ("),
+                    Span::styled(cat_name, Style::default().fg(Color::White)),
+                    Span::raw(")"),
+                ]));
+                lines.push(Line::from(vec![
+                    Span::styled("Native Biome: ", Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)),
+                    Span::styled(biome.biome_name, Style::default().fg(Color::White)),
+                ]));
+                lines.push(Line::from(vec![
+                    Span::styled("Recommended: ", Style::default().fg(Color::Magenta).add_modifier(Modifier::BOLD)),
+                    Span::styled(format!("Env: {}  │  Road: {}  │  Skyline: {}", biome.environment, biome.road, biome.mountain), Style::default().fg(Color::White)),
+                ]));
+
+                let mut swatch_spans = vec![
+                    Span::styled("Palette: ", Style::default().fg(Color::LightBlue).add_modifier(Modifier::BOLD)),
+                ];
+                for (hex, &(r, g, b)) in biome.natural_palette.iter().zip(biome.natural_rgb.iter()) {
+                    swatch_spans.push(Span::styled("■ ", Style::default().fg(Color::Rgb(r, g, b))));
+                    swatch_spans.push(Span::styled(format!("{hex} "), Style::default().fg(Color::DarkGray)));
+                }
+                lines.push(Line::from(swatch_spans));
+
+                lines.push(Line::from(vec![
+                    Span::styled("Kinematics: ", Style::default().fg(Color::Yellow)),
+                    Span::styled(biome.movement_lore, Style::default().fg(Color::White)),
+                ]));
+                lines.push(Line::from(vec![
+                    Span::styled("Shortcuts: ", Style::default().fg(Color::DarkGray)),
+                    Span::styled("[Enter/b] Apply Native Scenery  │  [r] Random Mascot", Style::default().fg(Color::Cyan)),
+                ]));
+
+                let p = Paragraph::new(lines)
+                    .wrap(Wrap { trim: true })
+                    .block(
+                        Block::default()
+                            .borders(Borders::ALL)
+                            .border_type(BorderType::Rounded)
+                            .title(" 🐾 Mascot Inspector & Native Biome "),
+                    );
                 f.render_widget(p, area);
             }
             Tab::Scenery => {
+                let current_cow = &self.config.cow;
+                let biome = forgum_platform::biome::get_mascot_biome(current_cow);
+                let sc_name = SCENERY_OPTIONS[self.scenery_idx].0;
                 let sc_desc = SCENERY_OPTIONS[self.scenery_idx].1;
+                let rd_name = ROAD_OPTIONS[self.road_idx].0;
                 let rd_desc = ROAD_OPTIONS[self.road_idx].1;
-                let text = format!("Biome: {sc_desc}\nRoad: {rd_desc}");
-                let p = Paragraph::new(text).block(
-                    Block::default()
-                        .borders(Borders::ALL)
-                        .border_type(BorderType::Rounded)
-                        .title(" Landscape Details "),
-                );
+
+                let is_native_env = sc_name.eq_ignore_ascii_case(biome.environment);
+                let is_native_road = rd_name.eq_ignore_ascii_case(biome.road);
+
+                let mut lines: Vec<Line> = Vec::with_capacity(6);
+                lines.push(Line::from(vec![
+                    Span::styled("Atmosphere: ", Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)),
+                    Span::styled(sc_name, Style::default().fg(Color::Yellow)),
+                    if is_native_env {
+                        Span::styled(" ★ Native", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
+                    } else {
+                        Span::raw("")
+                    },
+                    Span::styled(format!(" — {sc_desc}"), Style::default().fg(Color::DarkGray)),
+                ]));
+                lines.push(Line::from(vec![
+                    Span::styled("Ground Surface: ", Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)),
+                    Span::styled(rd_name, Style::default().fg(Color::Yellow)),
+                    if is_native_road {
+                        Span::styled(" ★ Native", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
+                    } else {
+                        Span::raw("")
+                    },
+                    Span::styled(format!(" — {rd_desc}"), Style::default().fg(Color::DarkGray)),
+                ]));
+                lines.push(Line::from(vec![
+                    Span::styled(format!("Native for {}: ", current_cow), Style::default().fg(Color::Magenta).add_modifier(Modifier::BOLD)),
+                    Span::styled(format!("{} (Env: {}, Road: {}, Skyline: {})", biome.biome_name, biome.environment, biome.road, biome.mountain), Style::default().fg(Color::White)),
+                ]));
+                lines.push(Line::from(vec![
+                    Span::styled("Quick Action: ", Style::default().fg(Color::DarkGray)),
+                    Span::styled("[b/r] Sync to Native Biome", Style::default().fg(Color::Cyan)),
+                ]));
+
+                let p = Paragraph::new(lines)
+                    .wrap(Wrap { trim: true })
+                    .block(
+                        Block::default()
+                            .borders(Borders::ALL)
+                            .border_type(BorderType::Rounded)
+                            .title(" 🏔️ Landscape & Road Details "),
+                    );
                 f.render_widget(p, area);
             }
             Tab::Effects => {
                 let ef_desc = EFFECT_OPTIONS[self.effect_idx].1;
                 let cl_desc = COLOR_OPTIONS[self.color_idx].1;
                 let text = format!("Kinematics: {ef_desc}\nPalette: {cl_desc}");
-                let p = Paragraph::new(text).block(
-                    Block::default()
-                        .borders(Borders::ALL)
-                        .border_type(BorderType::Rounded)
-                        .title(" Dynamics & Rendering "),
-                );
+                let p = Paragraph::new(text)
+                    .wrap(Wrap { trim: true })
+                    .block(
+                        Block::default()
+                            .borders(Borders::ALL)
+                            .border_type(BorderType::Rounded)
+                            .title(" Dynamics & Rendering "),
+                    );
                 f.render_widget(p, area);
             }
             Tab::Installer => {
@@ -3481,25 +4489,29 @@ export extern "forgum" [
                     .map(|msg| Line::from(Span::styled(msg, Style::default().fg(Color::Cyan))))
                     .collect();
 
-                let p = Paragraph::new(log_lines).block(
-                    Block::default()
-                        .borders(Borders::ALL)
-                        .border_type(BorderType::Rounded)
-                        .title(
-                            " Shell Installation Action Log (i: Install, u: Uninstall, t: Test) ",
-                        ),
-                );
+                let p = Paragraph::new(log_lines)
+                    .wrap(Wrap { trim: true })
+                    .block(
+                        Block::default()
+                            .borders(Borders::ALL)
+                            .border_type(BorderType::Rounded)
+                            .title(
+                                " Shell Installation Action Log (i: Install, u: Uninstall, t: Test) ",
+                            ),
+                    );
                 f.render_widget(p, area);
             }
             Tab::Config => {
                 let field = ConfigField::ALL[self.config_field_idx];
                 let text = format!("Parameter: {}\n{}", field.label(), field.desc());
-                let p = Paragraph::new(text).block(
-                    Block::default()
-                        .borders(Borders::ALL)
-                        .border_type(BorderType::Rounded)
-                        .title(" Parameter Information "),
-                );
+                let p = Paragraph::new(text)
+                    .wrap(Wrap { trim: true })
+                    .block(
+                        Block::default()
+                            .borders(Borders::ALL)
+                            .border_type(BorderType::Rounded)
+                            .title(" Parameter Information "),
+                    );
                 f.render_widget(p, area);
             }
         }
@@ -3606,7 +4618,7 @@ export extern "forgum" [
                     " <o> ",
                     Style::default().bg(Color::DarkGray).fg(Color::Magenta),
                 ),
-                Span::raw(" Open Dir  "),
+                Span::raw(" Open Editor  "),
                 Span::styled(
                     " <s> ",
                     Style::default().bg(Color::DarkGray).fg(Color::Cyan),
@@ -3632,15 +4644,20 @@ export extern "forgum" [
                 ),
                 Span::raw(" Select  "),
                 Span::styled(
+                    " <b> ",
+                    Style::default().bg(Color::DarkGray).fg(Color::Cyan),
+                ),
+                Span::raw(" Native Biome  "),
+                Span::styled(
                     " <Space> ",
                     Style::default().bg(Color::DarkGray).fg(Color::White),
                 ),
                 Span::raw(" Toggle  "),
                 Span::styled(
-                    " <i> ",
-                    Style::default().bg(Color::DarkGray).fg(Color::Green),
+                    " <o> ",
+                    Style::default().bg(Color::DarkGray).fg(Color::Magenta),
                 ),
-                Span::raw(" Install  "),
+                Span::raw(" Open Editor  "),
                 Span::styled(
                     " <r> ",
                     Style::default().bg(Color::DarkGray).fg(Color::Yellow),
@@ -3793,58 +4810,59 @@ mod tests {
         // Initial duration is 0
         assert_eq!(app.config.duration, 0);
 
-        // Toggle forward on Duration using Enter (0 -> 1)
+        // Enter number edit mode on Duration using Enter
         app.handle_event(Event::Key(KeyEvent::new(
             KeyCode::Enter,
             KeyModifiers::NONE,
         )))
         .unwrap();
-        assert_eq!(app.config.duration, 1);
+        assert!(app.editing_config);
 
-        // Toggle forward using Space (1 -> 2)
+        // Type '7'
         app.handle_event(Event::Key(KeyEvent::new(
-            KeyCode::Char(' '),
+            KeyCode::Char('7'),
             KeyModifiers::NONE,
         )))
         .unwrap();
-        assert_eq!(app.config.duration, 2);
+        assert_eq!(app.config_edit_buffer, "7");
 
-        // Toggle forward using 't' (2 -> 3)
+        // Commit number edit using Enter
         app.handle_event(Event::Key(KeyEvent::new(
-            KeyCode::Char('t'),
+            KeyCode::Enter,
             KeyModifiers::NONE,
         )))
         .unwrap();
-        assert_eq!(app.config.duration, 3);
+        assert!(!app.editing_config);
+        assert_eq!(app.config.duration, 7);
 
-        // Cycle forward using '+' (3 -> 5)
+        // Cycle forward using '+' (7 -> 10)
         app.handle_event(Event::Key(KeyEvent::new(
             KeyCode::Char('+'),
             KeyModifiers::NONE,
         )))
         .unwrap();
-        assert_eq!(app.config.duration, 5);
+        assert_eq!(app.config.duration, 10);
 
-        // Cycle forward using Right arrow (5 -> 10)
+        // Cycle forward using Right arrow (10 -> 15)
         app.handle_event(Event::Key(KeyEvent::new(
             KeyCode::Right,
             KeyModifiers::NONE,
         )))
         .unwrap();
-        assert_eq!(app.config.duration, 10);
+        assert_eq!(app.config.duration, 15);
 
-        // Cycle backward using '-' (10 -> 5)
+        // Cycle backward using '-' (15 -> 10)
         app.handle_event(Event::Key(KeyEvent::new(
             KeyCode::Char('-'),
             KeyModifiers::NONE,
         )))
         .unwrap();
-        assert_eq!(app.config.duration, 5);
+        assert_eq!(app.config.duration, 10);
 
-        // Cycle backward using Left arrow (5 -> 3)
+        // Cycle backward using Left arrow (10 -> 5)
         app.handle_event(Event::Key(KeyEvent::new(KeyCode::Left, KeyModifiers::NONE)))
             .unwrap();
-        assert_eq!(app.config.duration, 3);
+        assert_eq!(app.config.duration, 5);
 
         // Move to FPS (field 1)
         app.handle_event(Event::Key(KeyEvent::new(KeyCode::Down, KeyModifiers::NONE)))

@@ -35,6 +35,22 @@ fn is_list_query(s: &str) -> bool {
 }
 
 pub fn run() -> ExitCode {
+    std::panic::set_hook(Box::new(|info| {
+        let msg = match info.payload().downcast_ref::<&'static str>() {
+            Some(s) => *s,
+            None => match info.payload().downcast_ref::<String>() {
+                Some(s) => &s[..],
+                None => "Box<Any>",
+            },
+        };
+        let location = info
+            .location()
+            .map(|l| format!("{}:{}:{}", l.file(), l.line(), l.column()))
+            .unwrap_or_else(|| "unknown location".to_string());
+        crate::log_error!("panic", "PANIC occurred at {}: {}", location, msg);
+        eprintln!("forgum panic at {}: {}", location, msg);
+    }));
+
     let mut argv: Vec<String> = std::env::args().collect();
     if let Some(arg0) = argv.first() {
         let file_stem = std::path::Path::new(arg0)
@@ -1406,17 +1422,18 @@ pub fn run() -> ExitCode {
             let path = forgum_platform::daemon_state_path(&session_id);
             if path.exists() {
                 if let Ok(state) = forgum_engine::daemon::DaemonState::read(&path) {
-                    if !state.is_alive() {
-                        let _ = std::io::Write::write_all(&mut std::io::stdout(), b"\x1b[r");
-                        forgum_engine::daemon::cleanup_daemon_state(&session_id);
+                    if state.is_alive() {
+                        let _ = forgum_engine::herd::send_command(&state.socket_path, r#"{"cmd":"STOP"}"#);
+                        std::thread::sleep(std::time::Duration::from_millis(60));
                     }
-                } else {
-                    let _ = std::io::Write::write_all(&mut std::io::stdout(), b"\x1b[r");
-                    forgum_engine::daemon::cleanup_daemon_state(&session_id);
                 }
+                forgum_engine::daemon::cleanup_daemon_state(&session_id);
             }
+            let _ = std::io::Write::write_all(&mut std::io::stdout(), b"\x1b[r\x1b[0m\x1b[?25h");
+            let _ = std::io::Write::flush(&mut std::io::stdout());
             let _ = crossterm::terminal::disable_raw_mode();
             let _ = crossterm::execute!(std::io::stdout(), crossterm::cursor::Show);
+            println!("forgum: pasture swept clean, terminal margins and cursor restored.");
             ExitCode::SUCCESS
         }
 
@@ -1551,8 +1568,16 @@ fn render_subcommand_with_scene(
         return run_daemon_child(args);
     }
 
-    if args.daemon {
-        // ── DAEMON MODE — PARENT PATH ────────────────────────────────
+    let is_split_mode = args.split_scroll
+        || scene.split_scroll
+        || args.reserve_rows.is_some()
+        || scene.reserve_rows.is_some()
+        || args.split_ratio.is_some()
+        || scene.split_ratio.is_some()
+        || scene.shell_attach_mode == "split";
+
+    if args.daemon || is_split_mode {
+        // ── DAEMON / SPLIT MODE — PARENT PATH ────────────────────────
         //
         // Spawn the actual daemon as a brand-new process via `Command::spawn`
         // (which is `posix_spawn` on POSIX and `CreateProcess` on Windows).
@@ -1662,6 +1687,16 @@ fn render_subcommand_with_scene(
             .collect();
         if !hexes.is_empty() {
             cow_dna.palette = hexes;
+        }
+    } else if scene.color_mode == "natural"
+        || scene.color_mode == "default"
+        || scene.color_mode == "animal"
+        || scene.color_mode == "animal_natural"
+        || cow_dna.palette.is_empty()
+    {
+        let natural_hexes = crate::color::get_natural_hex_palette(&scene.cow);
+        if !natural_hexes.is_empty() {
+            cow_dna.palette = natural_hexes.iter().map(|&s| s.to_string()).collect();
         }
     }
     let instance_id = std::process::id();
@@ -1838,11 +1873,42 @@ fn run_daemon_child(args: cli::Args) -> ExitCode {
     );
     let composed = cow::compose_scene_with_mode(&cow_text, &scene.text, is_thought);
     let animations = dna::load_animations(&data);
-    let cow_dna = dna::get_dna(&animations, &scene.cow);
+    let mut cow_dna = dna::get_dna(&animations, &scene.cow);
+    if let Some(ref pal_str) = scene.palette {
+        let hexes: Vec<String> = pal_str
+            .split(',')
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty())
+            .collect();
+        if !hexes.is_empty() {
+            cow_dna.palette = hexes;
+        }
+    } else if scene.color_mode == "natural"
+        || scene.color_mode == "default"
+        || scene.color_mode == "animal"
+        || scene.color_mode == "animal_natural"
+        || cow_dna.palette.is_empty()
+    {
+        let natural_hexes = crate::color::get_natural_hex_palette(&scene.cow);
+        if !natural_hexes.is_empty() {
+            cow_dna.palette = natural_hexes.iter().map(|&s| s.to_string()).collect();
+        }
+    }
     let instance_id = std::process::id();
     let shutdown = ShutdownFlag::new();
 
-    let result = if scene.background || scene.split_scroll {
+    let is_overlay_mode = scene.background
+        || scene.split_scroll
+        || args.split_scroll
+        || args.background
+        || args.reserve_rows.is_some()
+        || scene.reserve_rows.is_some()
+        || args.split_ratio.is_some()
+        || scene.split_ratio.is_some()
+        || scene.shell_attach_mode == "split"
+        || scene.shell_attach_mode == "reactive";
+
+    let result = if is_overlay_mode {
         render::render_loop_background(
             out,
             scene,

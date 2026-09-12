@@ -224,15 +224,23 @@ pub fn extract_heredoc_body(cow_template: &str) -> &str {
                 ""
             };
             let mut end_pos = None;
+            let mut remaining = body_content;
             let mut curr = 0;
-            for line in body_content.lines() {
+            while !remaining.is_empty() {
+                let line_len = remaining
+                    .find('\n')
+                    .map(|idx| idx + 1)
+                    .unwrap_or(remaining.len());
+                let line_with_nl = &remaining[..line_len];
+                let line = line_with_nl.trim_end_matches(&['\r', '\n'][..]);
                 let trimmed = line.trim();
                 let clean = trimmed.trim_end_matches(';');
                 if clean == tag {
                     end_pos = Some(curr);
                     break;
                 }
-                curr += line.len() + 1;
+                curr += line_len;
+                remaining = &remaining[line_len..];
             }
             if let Some(pos) = end_pos {
                 &body_content[..pos]
@@ -281,9 +289,8 @@ pub fn expand_cow_with_landmarks(
     let mut eye_idx = 0usize;
 
     for (row, line) in cow_body.lines().enumerate() {
+        let mut line = line.to_string();
         if line.contains('$') {
-            let mut line = line.to_string();
-
             // 1. Expand thoughts placeholders (longest first)
             for pat in [
                 r"\\$thoughts",
@@ -362,11 +369,14 @@ pub fn expand_cow_with_landmarks(
                     landmarks.push((row, pos + c_offset));
                 }
             }
-
-            result.push_str(&line);
-        } else {
-            result.push_str(line);
         }
+
+        // 5. Unescape literal perl heredoc escapes: \$ to $, \@ to @, \# to #
+        if line.contains(r"\$") || line.contains(r"\@") || line.contains(r"\#") {
+            line = line.replace(r"\$", "$").replace(r"\@", "@").replace(r"\#", "#");
+        }
+
+        result.push_str(&line);
         result.push('\n');
     }
 
@@ -382,7 +392,7 @@ pub fn expand_cow_with_landmarks(
 pub fn is_eye_glyph(ch: char) -> bool {
     matches!(
         ch,
-        'o' | 'O' | '@' | '^' | '*' | '$' | 'x' | 'X' | '.' | '=' | '0' | 'e' | '+' | 'v' | '-' | 'u' | 'w'
+        'o' | 'O' | '@' | '^' | '*' | '$' | 'x' | 'X' | '=' | '0' | 'e' | '+' | 'v' | 'u' | 'w' | '8' | 'Q' | '•' | '●'
     )
 }
 
@@ -419,6 +429,18 @@ pub fn detect_cow_eyes(cow_text: &str, cow_start_line: usize) -> Vec<(usize, usi
                             .collect();
                         if !eye_indices.is_empty() && eye_indices.len() <= 3 {
                             for col in eye_indices {
+                                eyes.push((row, col));
+                            }
+                            return eyes;
+                        }
+                        // Explicit dot-eyes inside brackets e.g. ( . . ) or (..)
+                        let dot_indices: Vec<usize> = span
+                            .iter()
+                            .enumerate()
+                            .filter_map(|(idx, &c)| if c == '.' { Some(i + 1 + idx) } else { None })
+                            .collect();
+                        if !dot_indices.is_empty() && dot_indices.len() <= 2 {
+                            for col in dot_indices {
                                 eyes.push((row, col));
                             }
                             return eyes;
@@ -482,18 +504,20 @@ pub fn detect_cow_eyes(cow_text: &str, cow_start_line: usize) -> Vec<(usize, usi
         for i in 0..len {
             let c = chars[i];
             if c != '^' && is_eye_glyph(c) {
-                let has_left_head = i >= 2
+                let has_left_head = i >= 1
                     && (chars[i - 1] == ' '
                         || chars[i - 1] == '('
                         || chars[i - 1] == '/'
-                        || chars[i - 1] == '|');
+                        || chars[i - 1] == '|'
+                        || chars[i - 1] == '<');
                 let has_right_head = i + 1 < len
                     && (chars[i + 1] == ' '
                         || chars[i + 1] == '\\'
                         || chars[i + 1] == ')'
                         || chars[i + 1] == '-'
                         || chars[i + 1] == '|'
-                        || chars[i + 1] == '`');
+                        || chars[i + 1] == '`'
+                        || chars[i + 1] == '>');
                 if has_left_head && has_right_head {
                     eyes.push((row, i));
                     return eyes;
@@ -907,7 +931,19 @@ fn pad_to(result: &mut String, target_len: usize) {
 
 /// Render the composed cow text (bubble + cow art) into a framebuffer.
 pub fn render_cow(fb: &mut FrameBuffer, composed: &str, color_mode: &str, time: f32) {
+    render_cow_with_palette(fb, composed, color_mode, &[], time);
+}
+
+/// Render the composed cow text (bubble + cow art) into a framebuffer with an explicit palette.
+pub fn render_cow_with_palette(
+    fb: &mut FrameBuffer,
+    composed: &str,
+    color_mode: &str,
+    palette: &[(u8, u8, u8)],
+    time: f32,
+) {
     let fg = Color::WHITE;
+    let cow_start_line = crate::effects::find_cow_start_line(composed);
     let mut x = 0usize;
     let mut y = 0usize;
 
@@ -921,7 +957,12 @@ pub fn render_cow(fb: &mut FrameBuffer, composed: &str, color_mode: &str, time: 
             break;
         }
         if x < fb.width {
-            let cell_fg = crate::effects::resolve_fg(color_mode, x, y, time, fg);
+            let cell_fg = if y < cow_start_line {
+                crate::effects::resolve_bubble_cell_fg(ch)
+            } else {
+                let rel_y = y.saturating_sub(cow_start_line);
+                crate::effects::resolve_fg_palette_char(color_mode, palette, x, rel_y, time, fg, ch)
+            };
             let _ = fb.set(x, y, Cell::new(ch, cell_fg));
         }
         x = x.saturating_add(1);
