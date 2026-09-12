@@ -154,8 +154,15 @@ fn open_tty() -> Result<Box<dyn Write + Send>, PlatformError> {
 }
 
 #[cfg(windows)]
+#[allow(unsafe_code)]
 fn open_tty() -> Result<Box<dyn Write + Send>, PlatformError> {
     use std::os::windows::fs::OpenOptionsExt;
+    use std::os::windows::io::AsRawHandle;
+    use windows_sys::Win32::System::Console::{
+        GetConsoleMode, SetConsoleMode, ENABLE_PROCESSED_OUTPUT, ENABLE_VIRTUAL_TERMINAL_PROCESSING,
+        ENABLE_WRAP_AT_EOL_OUTPUT,
+    };
+
     // `CONOUT$` is the Windows console output device. Open it with
     // FILE_SHARE_WRITE so it works alongside other console handles.
     let f = std::fs::OpenOptions::new()
@@ -169,6 +176,22 @@ fn open_tty() -> Result<Box<dyn Write + Send>, PlatformError> {
                 PlatformError::Io(e)
             }
         })?;
+
+    // Enable Virtual Terminal Processing on the CONOUT$ handle so ANSI/VT escape
+    // sequences (DECSTBM margins, cursor positioning, truecolor) are executed by
+    // the terminal driver instead of being ignored or printed raw.
+    let handle = f.as_raw_handle() as windows_sys::Win32::Foundation::HANDLE;
+    unsafe {
+        let mut mode: u32 = 0;
+        if GetConsoleMode(handle, &mut mode) != 0 {
+            let vt_mode = mode
+                | ENABLE_VIRTUAL_TERMINAL_PROCESSING
+                | ENABLE_PROCESSED_OUTPUT
+                | ENABLE_WRAP_AT_EOL_OUTPUT;
+            SetConsoleMode(handle, vt_mode);
+        }
+    }
+
     Ok(Box::new(f))
 }
 

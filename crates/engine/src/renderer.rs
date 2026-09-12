@@ -122,8 +122,8 @@ impl Renderer for AnsiRenderer {
         if self.mode == RenderMode::Banner {
             buf.extend_from_slice(b"\x1b8");
         } else if self.mode == RenderMode::Overlay {
-            // Atomically hide cursor and save cursor position/attributes before writing damage cells
-            buf.extend_from_slice(b"\x1b[?25l\x1b7");
+            // Atomically hide cursor, save cursor position/attributes, and ensure origin mode is OFF
+            buf.extend_from_slice(b"\x1b[?25l\x1b7\x1b[?6l");
         }
 
         let mut cur_y = 0;

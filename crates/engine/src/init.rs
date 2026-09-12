@@ -154,12 +154,14 @@ __forgum_clear() {{
   local state="$__FORGUM_RUNTIME/daemon.json"
   if [ -f "$state" ]; then
     local rows; rows=$(awk -F'"' '/ob_y1/{{print $4}}' "$state" 2>/dev/null || echo 0)
-    local top=$((rows + 1))
-    local total=${{LINES:-$(tput lines 2>/dev/null || echo 24)}}
-    printf '\x1b[%d;%dr\x1b[%d;1H\x1b[J' "$top" "$total" "$top"
-  else
-    command clear 2>/dev/null || printf '\x1b[H\x1b[2J'
+    if [ "$rows" -gt 0 ]; then
+      local top=$((rows + 1))
+      local total=${{LINES:-$(tput lines 2>/dev/null || echo 24)}}
+      printf '\x1b[%d;%dr\x1b[%d;1H\x1b[J' "$top" "$total" "$top"
+      return
+    fi
   fi
+  command clear 2>/dev/null || printf '\x1b[H\x1b[2J'
 }}
 alias clear='__forgum_clear'
 
@@ -248,12 +250,14 @@ __forgum_clear() {{
   local state="$__FORGUM_RUNTIME/daemon.json"
   if [ -f "$state" ]; then
     local rows; rows=$(awk -F'"' '/ob_y1/{{print $4}}' "$state" 2>/dev/null || echo 0)
-    local top=$((rows + 1))
-    local total=${{LINES:-$(tput lines 2>/dev/null || echo 24)}}
-    printf '\x1b[%d;%dr\x1b[%d;1H\x1b[J' "$top" "$total" "$top"
-  else
-    command clear 2>/dev/null || printf '\x1b[H\x1b[2J'
+    if [ "$rows" -gt 0 ]; then
+      local top=$((rows + 1))
+      local total=${{LINES:-$(tput lines 2>/dev/null || echo 24)}}
+      printf '\x1b[%d;%dr\x1b[%d;1H\x1b[J' "$top" "$total" "$top"
+      return
+    fi
   fi
+  command clear 2>/dev/null || printf '\x1b[H\x1b[2J'
 }}
 alias clear='__forgum_clear'
 
@@ -335,12 +339,14 @@ function clear
     set -l state $__forgum_runtime/daemon.json
     if test -f $state
         set -l rows (awk -F'"' '/ob_y1/{{print $4}}' $state 2>/dev/null; or echo 0)
-        set -l top (math $rows + 1)
-        set -l total (tput lines 2>/dev/null; or echo $LINES)
-        printf '\x1b[%d;%dr\x1b[%d;1H\x1b[J' $top $total $top
-    else
-        command clear
+        if test "$rows" -gt 0
+            set -l top (math $rows + 1)
+            set -l total (tput lines 2>/dev/null; or echo $LINES)
+            printf '\x1b[%d;%dr\x1b[%d;1H\x1b[J' $top $total $top
+            return
+        end
     end
+    command clear
 end
 
 function __forgum_sweep --on-event fish_prompt

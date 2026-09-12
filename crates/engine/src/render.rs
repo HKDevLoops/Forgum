@@ -178,6 +178,17 @@ pub fn render_loop_background(
     let (overlay_cols, overlay_rows) =
         compute_reserved_dimensions(cols as usize, rows as usize, line_count, &config);
 
+    // Update daemon state with the exact reserved rows so shell prompt hooks
+    // and split-clear commands know precisely where the shell partition begins!
+    let session_id = forgum_platform::detect_session_id();
+    let socket_path = forgum_platform::control_socket_path(&session_id);
+    let _ = crate::daemon::write_daemon_state(
+        instance_id,
+        overlay_rows as u16,
+        overlay_cols as u16,
+        &socket_path,
+    );
+
     crate::engine_core::run_engine_overlay(
         out,
         config,

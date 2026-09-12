@@ -741,15 +741,13 @@ impl RenderState {
         }
 
         if dims_changed && self.is_overlay && self.split_scroll {
-            let total_rows = crossterm::terminal::size()
-                .map(|(_, h)| h as usize)
-                .unwrap_or(self._total_rows);
+            let total_rows = forgum_platform::terminal_size().1 as usize;
             self._total_rows = total_rows;
             if total_rows > frame.rows + 2 {
                 let scroll_top = frame.rows + 1;
                 let _ = self
                     .out
-                    .write_all(format!("\x1b7\x1b[{scroll_top};{total_rows}r\x1b8").as_bytes());
+                    .write_all(format!("\x1b7\x1b[?6l\x1b[{scroll_top};{total_rows}r\x1b8").as_bytes());
             }
             if self.overlay_rows > frame.rows {
                 for y in (frame.rows + 1)..=self.overlay_rows {
@@ -1160,7 +1158,7 @@ pub fn run_engine_overlay(
     if can_split_scroll && total_rows > rows + 2 {
         let scroll_top = rows + 1;
         let _ = out
-            .write_all(format!("\x1b[{scroll_top};{total_rows}r\x1b[{scroll_top};1H").as_bytes());
+            .write_all(format!("\x1b[?6l\x1b[{scroll_top};{total_rows}r\x1b[{scroll_top};1H").as_bytes());
         let _ = out.flush();
     }
 
@@ -1242,27 +1240,34 @@ pub fn run_engine_overlay(
     let line_count = overlay_rows;
 
     while !shutdown.is_shutdown() {
-        if let Ok((w, h)) = crossterm::terminal::size() {
-            let w = (w.max(20)) as usize;
-            let h = (h.max(1)) as usize;
-            if w != cur_total_cols || h != cur_total_rows {
-                cur_total_cols = w;
-                cur_total_rows = h;
-                let (new_cols, new_rows) =
-                    crate::render::compute_reserved_dimensions(w, h, line_count, &config);
-                crate::log_debug!(
-                    "engine",
-                    "Terminal resized to {}x{}; reserved canvas set to {}x{}",
-                    w,
-                    h,
-                    new_cols,
-                    new_rows
-                );
-                let _ = control_tx.send(ControlMsg::Resize {
-                    cols: new_cols as u16,
-                    rows: new_rows as u16,
-                });
-            }
+        let (w_u16, h_u16) = forgum_platform::terminal_size();
+        let w = (w_u16.max(20)) as usize;
+        let h = (h_u16.max(1)) as usize;
+        if w != cur_total_cols || h != cur_total_rows {
+            cur_total_cols = w;
+            cur_total_rows = h;
+            let (new_cols, new_rows) =
+                crate::render::compute_reserved_dimensions(w, h, line_count, &config);
+            let session_id = forgum_platform::detect_session_id();
+            let socket_path = forgum_platform::control_socket_path(&session_id);
+            let _ = crate::daemon::write_daemon_state(
+                instance_id,
+                new_rows as u16,
+                new_cols as u16,
+                &socket_path,
+            );
+            crate::log_debug!(
+                "engine",
+                "Terminal resized to {}x{}; reserved canvas set to {}x{}",
+                w,
+                h,
+                new_cols,
+                new_rows
+            );
+            let _ = control_tx.send(ControlMsg::Resize {
+                cols: new_cols as u16,
+                rows: new_rows as u16,
+            });
         }
         std::thread::sleep(Duration::from_millis(50));
     }

@@ -556,7 +556,8 @@ impl TerminalCapabilities {
         let sync = detect_sync_support();
         let graphics = detect_graphics_cap();
         let emulator = detect_terminal_emulator();
-        let split_mode = if !is_tty {
+        let has_term = is_tty || has_controlling_terminal();
+        let split_mode = if !has_term {
             SplitMode::Disabled
         } else {
             emulator.recommended_split_mode()
@@ -586,14 +587,84 @@ pub fn detect_capabilities() -> TerminalCapabilities {
         .to_owned()
 }
 
-/// Read terminal size from stdout. Falls back to (80, 24) on error or when
-/// stdout is not a tty.
+/// Query the controlling terminal dimensions directly from `CONOUT$` (Windows)
+/// or `/dev/tty` (Unix). This is essential for background daemons or processes
+/// spawned with stdout redirected, ensuring they detect the true terminal size
+/// instead of falling back to 80x24.
+#[cfg(windows)]
+#[allow(unsafe_code)]
+pub fn query_controlling_terminal_size() -> Option<(u16, u16)> {
+    use std::os::windows::io::AsRawHandle;
+    use windows_sys::Win32::System::Console::{
+        GetConsoleScreenBufferInfo, CONSOLE_SCREEN_BUFFER_INFO,
+    };
+    let file = std::fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .open("CONOUT$")
+        .ok()?;
+    let handle = file.as_raw_handle() as windows_sys::Win32::Foundation::HANDLE;
+    unsafe {
+        let mut csbi: CONSOLE_SCREEN_BUFFER_INFO = std::mem::zeroed();
+        if GetConsoleScreenBufferInfo(handle, &mut csbi) != 0 {
+            let w = (csbi.srWindow.Right - csbi.srWindow.Left + 1) as u16;
+            let h = (csbi.srWindow.Bottom - csbi.srWindow.Top + 1) as u16;
+            if w > 0 && h > 0 {
+                return Some((w, h));
+            }
+        }
+    }
+    None
+}
+
+#[cfg(unix)]
+#[allow(unsafe_code)]
+pub fn query_controlling_terminal_size() -> Option<(u16, u16)> {
+    use std::os::unix::io::AsRawFd;
+    let file = std::fs::File::open("/dev/tty").ok()?;
+    unsafe {
+        let mut ws: libc::winsize = std::mem::zeroed();
+        if libc::ioctl(file.as_raw_fd(), libc::TIOCGWINSZ, &mut ws) == 0 {
+            if ws.ws_col > 0 && ws.ws_row > 0 {
+                return Some((ws.ws_col, ws.ws_row));
+            }
+        }
+    }
+    None
+}
+
+#[cfg(not(any(windows, unix)))]
+pub fn query_controlling_terminal_size() -> Option<(u16, u16)> {
+    None
+}
+
+/// Check if a controlling terminal is available (via CONOUT$ on Windows or /dev/tty on Unix).
+#[must_use]
+pub fn has_controlling_terminal() -> bool {
+    #[cfg(windows)]
+    {
+        std::fs::OpenOptions::new().write(true).open("CONOUT$").is_ok()
+    }
+    #[cfg(unix)]
+    {
+        std::path::Path::new("/dev/tty").exists()
+    }
+    #[cfg(not(any(windows, unix)))]
+    {
+        false
+    }
+}
+
+/// Read terminal size from stdout or controlling terminal. Falls back to (80, 24) on error.
 #[must_use]
 pub fn terminal_size() -> (u16, u16) {
     if let Ok((w, h)) = crossterm::terminal::size() {
         if w > 0 && h > 0 {
             return (w, h);
         }
+    }
+    if let Some((w, h)) = query_controlling_terminal_size() {
+        return (w, h);
     }
     (80, 24)
 }
@@ -636,7 +707,7 @@ pub fn detect_color_level() -> ColorLevel {
 /// supports it, or an allowlisted `TERM_PROGRAM` is set.
 #[must_use]
 pub fn detect_sync_support() -> bool {
-    if !is_stdout_tty() {
+    if !is_stdout_tty() && !has_controlling_terminal() {
         return false;
     }
     let emu = detect_terminal_emulator();
