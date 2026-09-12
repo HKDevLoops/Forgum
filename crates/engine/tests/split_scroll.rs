@@ -206,3 +206,41 @@ fn decstbm_escape_sequences_and_cursor_isolation() {
     let clear_line_seq = format!("\x1b7\x1b[{};1H\x1b[2K\x1b8", 12);
     assert_eq!(clear_line_seq, "\x1b7\x1b[12;1H\x1b[2K\x1b8");
 }
+
+#[test]
+fn cli_parses_split_mode_flag() {
+    let (args1, _) = parse_args(argv(&["forgum", "render", "--split-mode", "decstbm"])).unwrap();
+    assert_eq!(args1.split_mode, Some("decstbm".to_string()));
+    let cfg1 = build_scene_config(&args1).unwrap();
+    assert_eq!(cfg1.split_mode, Some("decstbm".to_string()));
+    assert!(cfg1.split_scroll);
+
+    let (args2, _) = parse_args(argv(&["forgum", "render", "--split-mode", "native"])).unwrap();
+    assert_eq!(args2.split_mode, Some("native".to_string()));
+    let cfg2 = build_scene_config(&args2).unwrap();
+    assert_eq!(cfg2.split_mode, Some("native".to_string()));
+
+    let (args3, _) = parse_args(argv(&["forgum", "render", "--split-mode", "precmd"])).unwrap();
+    assert_eq!(args3.split_mode, Some("precmd".to_string()));
+    let cfg3 = build_scene_config(&args3).unwrap();
+    assert_eq!(cfg3.split_mode, Some("precmd".to_string()));
+}
+
+#[test]
+fn config_merge_preserves_split_mode() {
+    let base = SceneConfig {
+        split_mode: Some("native".to_string()),
+        ..Default::default()
+    };
+    let overlay = SceneConfig::default();
+    let merged = merge(base, overlay);
+    assert_eq!(merged.split_mode, Some("native".to_string()));
+
+    let base2 = SceneConfig::default();
+    let overlay2 = SceneConfig {
+        split_mode: Some("precmd".to_string()),
+        ..Default::default()
+    };
+    let merged2 = merge(base2, overlay2);
+    assert_eq!(merged2.split_mode, Some("precmd".to_string()));
+}

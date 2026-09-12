@@ -208,6 +208,16 @@ pub struct Cli {
     )]
     pub split_ratio: Option<f32>,
 
+    /// Split adapter mode: 'decstbm', 'native', 'precmd', or 'auto'.
+    #[arg(
+        long,
+        global = true,
+        value_name = "MODE",
+        help = "Split adapter mode: 'decstbm', 'native', 'precmd', or 'auto'",
+        long_help = "Split shell execution adapter mode: 'decstbm' (DECSTBM hardware margins), 'native' (native pane split via tmux/wezterm/wt.exe), 'precmd' (dynamic inline shell prompt redraw fallback), or 'auto' (detect based on terminal emulator)."
+    )]
+    pub split_mode: Option<String>,
+
     /// Text inside the speech bubble.
     #[arg(
         long,
@@ -862,6 +872,7 @@ pub struct Args {
     pub reserve_rows: Option<u16>,
     pub reserve_cols: Option<u16>,
     pub split_ratio: Option<f32>,
+    pub split_mode: Option<String>,
     pub text: Option<String>,
     pub effect: Option<String>,
     pub eyes: Option<String>,
@@ -1029,6 +1040,7 @@ pub fn parse_args(argv: Vec<String>) -> Result<(Args, Option<Commands>), CliErro
         reserve_rows: cli.reserve_rows,
         reserve_cols: cli.reserve_cols,
         split_ratio: cli.split_ratio,
+        split_mode: cli.split_mode,
         text,
         effect: cli.effect,
         eyes: cli.eyes,
@@ -1211,6 +1223,12 @@ pub fn build_scene_config(args: &Args) -> Result<SceneConfig, String> {
     if let Some(sr) = args.split_ratio {
         cfg.split_ratio = Some(sr);
         cfg.split_scroll = true;
+    }
+    if let Some(sm) = &args.split_mode {
+        cfg.split_mode = Some(sm.clone());
+        if sm == "decstbm" {
+            cfg.split_scroll = true;
+        }
     }
     if let Some(t) = &args.text {
         cfg.text = t.clone();

@@ -371,6 +371,29 @@ pub fn run_health_check(explicit_config: Option<&Path>) -> HealthReport {
         suggestion: None,
     });
 
+    let decstbm_supported = caps.emulator.supports_decstbm();
+    let native_split_available = caps.emulator.native_split_available() || mux.is_active();
+    term_items.push(HealthItem {
+        status: if decstbm_supported {
+            HealthStatus::Ok
+        } else if matches!(caps.emulator, forgum_platform::TerminalEmulator::Dumb) {
+            HealthStatus::Info
+        } else {
+            HealthStatus::Warn
+        },
+        title: format!(
+            "Split Shell Adapter: Emulator='{}', Mode='{}'",
+            caps.emulator.name(),
+            caps.split_mode.as_str()
+        ),
+        details: vec![
+            format!("DECSTBM hardware margins: {}", if decstbm_supported { "supported" } else { "unsupported" }),
+            format!("DECSLRM horizontal margins: {}", if caps.emulator.supports_decslrm() { "supported" } else { "unsupported" }),
+            format!("Native Split API: {}", if native_split_available { "available" } else { "none (standard DECSTBM margin split)" }),
+        ],
+        suggestion: caps.emulator.limitation_notes().map(String::from),
+    });
+
     sections.push(HealthSection {
         name: "Terminal Capabilities & Color Protocols".into(),
         items: term_items,

@@ -191,6 +191,7 @@ pub fn merge(base: SceneConfig, overlay: SceneConfig) -> SceneConfig {
         animation: overlay.animation.or(base.animation),
         animation_type: overlay.animation_type.or(base.animation_type),
         image: overlay.image.or(base.image),
+        split_mode: overlay.split_mode.or(base.split_mode),
     }
 }
 

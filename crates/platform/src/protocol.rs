@@ -115,6 +115,10 @@ pub struct SceneConfig {
     /// Path to image file for rendering mascot directly from an image.
     #[serde(default)]
     pub image: Option<String>,
+
+    /// Split adapter execution mode: "decstbm", "native", "precmd", "disabled", or "auto".
+    #[serde(default)]
+    pub split_mode: Option<String>,
 }
 
 /// Supported configuration file formats.
@@ -257,6 +261,7 @@ impl Default for SceneConfig {
             animation: None,
             animation_type: None,
             image: None,
+            split_mode: None,
         }
     }
 }
@@ -373,6 +378,7 @@ mod tests {
             animation: Some("dynamic".into()),
             animation_type: Some("walk".into()),
             image: None,
+            split_mode: Some("decstbm".into()),
         };
 
         for format in [ConfigFormat::Json, ConfigFormat::Yaml, ConfigFormat::Toml] {

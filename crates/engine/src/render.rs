@@ -122,7 +122,7 @@ pub fn render_loop_foreground(
 #[allow(clippy::too_many_arguments)]
 pub fn render_loop_background(
     out: OutputHandle,
-    config: SceneConfig,
+    mut config: SceneConfig,
     shutdown: ShutdownFlag,
     composed_text: Option<&str>,
     cow_dna: CowDna,
@@ -148,6 +148,25 @@ pub fn render_loop_background(
         };
         println!("{cow_text}");
         return Ok(());
+    }
+
+    // Split Shell Overhaul:
+    // Check whether the detected emulator supports hardware DECSTBM scroll margins.
+    // If split mode is enabled, but the emulator lacks DECSTBM (e.g. legacy ConHost,
+    // Linux Virtual Console, dumb terminals), automatically fall back to Mode 3
+    // (Dynamic Shell Precmd Redraw / Banner) to prevent terminal display corruption.
+    let is_split_requested = config.split_scroll
+        || config.shell_attach_mode == "split"
+        || config.split_mode.as_deref() == Some("decstbm");
+
+    if is_split_requested && !caps.emulator.supports_decstbm() {
+        crate::log_warn!(
+            "render",
+            "Terminal '{}' does not support DECSTBM margins ({:?}). Gracefully downgrading to Mode 3 (Dynamic Precmd Fallback).",
+            caps.emulator.name(),
+            caps.emulator.limitation_notes()
+        );
+        config.split_scroll = false;
     }
 
     // Notice: In overlay background mode, we do NOT hide the cursor so the shell prompt

@@ -1154,8 +1154,10 @@ pub fn run_engine_overlay(
         return Ok(());
     }
 
-    // If split_scroll is enabled, lock scroll margins to rows below the overlay
-    if config.split_scroll && total_rows > rows + 2 {
+    // Mode 1: Pure DECSTBM margin split
+    // Only lock scroll margins if enabled AND the terminal emulator supports DECSTBM
+    let can_split_scroll = config.split_scroll && caps.emulator.supports_decstbm();
+    if can_split_scroll && total_rows > rows + 2 {
         let scroll_top = rows + 1;
         let _ = out
             .write_all(format!("\x1b[{scroll_top};{total_rows}r\x1b[{scroll_top};1H").as_bytes());
@@ -1164,13 +1166,14 @@ pub fn run_engine_overlay(
 
     crate::log_info!(
         "engine",
-        "Engine overlay initialized: {}x{} @ {} fps (cow='{}', effect='{}', split_scroll={})",
+        "Engine overlay initialized: {}x{} @ {} fps (cow='{}', effect='{}', split_scroll={}, can_split_scroll={})",
         cols,
         rows,
         config.fps,
         config.cow,
         config.effect,
-        config.split_scroll
+        config.split_scroll,
+        can_split_scroll
     );
 
     let (control_tx, control_rx) = unbounded::<ControlMsg>();
@@ -1188,7 +1191,7 @@ pub fn run_engine_overlay(
         active_composed,
     );
 
-    let render_state = RenderState::new_overlay(cols, rows, total_rows, config.split_scroll, out);
+    let render_state = RenderState::new_overlay(cols, rows, total_rows, can_split_scroll, out);
 
     if let Some(external_rx) = cmd_rx {
         let tx = control_tx.clone();

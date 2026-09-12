@@ -872,21 +872,56 @@ pub fn run() -> ExitCode {
                 .map(|rd| rd.filter_map(|e| e.ok()).count())
                 .unwrap_or(0);
 
+            let native_plan = forgum_platform::terminal::plan_native_split(
+                caps.emulator,
+                &mux,
+                10,
+                0.35,
+                &["render".to_string()],
+            );
+            let native_status = if let Some(plan) = native_plan {
+                format!("available ({})", plan.program)
+            } else {
+                "none".to_string()
+            };
+
             println!(
-                "Platform: {} {}",
+                "Platform:   {} {}",
                 std::env::consts::OS,
                 std::env::consts::ARCH
             );
-            println!("Engine:   {}", engine_path);
-            println!("Config:   {}", config_info);
-            println!("Logs:     {}", log_dir_info);
-            println!("Terminal: {}x{}", caps.width, caps.height);
-            println!("TTY:      {}", caps.is_tty);
-            println!("Color:    {}", caps.color.as_str());
-            println!("Sync:     {}", if caps.sync { "yes" } else { "no" });
-            println!("Graphics: {:?}", caps.graphics);
-            println!("Mux:      {}", mux.name());
-            println!("Cows:     {} loaded", cow_count);
+            println!("Engine:     {}", engine_path);
+            println!("Config:     {}", config_info);
+            println!("Logs:       {}", log_dir_info);
+            println!("Terminal:   {}x{}", caps.width, caps.height);
+            println!("Emulator:   {} ({})", caps.emulator.name(), caps.emulator.id());
+            println!("TTY:        {}", caps.is_tty);
+            println!("Color:      {}", caps.color.as_str());
+            println!("Sync:       {}", if caps.sync { "yes" } else { "no" });
+            println!(
+                "DECSTBM:    {}",
+                if caps.emulator.supports_decstbm() {
+                    "supported"
+                } else {
+                    "unsupported (fallback to precmd)"
+                }
+            );
+            println!(
+                "DECSLRM:    {}",
+                if caps.emulator.supports_decslrm() {
+                    "supported"
+                } else {
+                    "unsupported"
+                }
+            );
+            println!("Split Mode: {}", caps.split_mode.as_str());
+            println!("Native Split: {}", native_status);
+            println!("Graphics:   {:?}", caps.graphics);
+            println!("Mux:        {}", mux.name());
+            println!("Cows:       {} loaded", cow_count);
+            if let Some(limitation) = caps.emulator.limitation_notes() {
+                println!("Limitation: \x1b[1;33m{}\x1b[0m", limitation);
+            }
             ExitCode::SUCCESS
         }
 
@@ -1566,6 +1601,58 @@ fn render_subcommand_with_scene(
         // threads and allocate without the multi-threaded fork hazard.
         // Run the daemon body with cmd_rx hooked up.
         return run_daemon_child(args);
+    }
+
+    if args.split_mode.as_deref() == Some("native")
+        || scene.split_mode.as_deref() == Some("native")
+    {
+        let caps = forgum_platform::detect_capabilities();
+        let mux = forgum_platform::detect_mux();
+        let reserved_rows = args
+            .reserve_rows
+            .or(scene.reserve_rows)
+            .unwrap_or(10) as usize;
+        let ratio = args
+            .split_ratio
+            .or(scene.split_ratio)
+            .unwrap_or(0.35);
+        let mut forward_args: Vec<String> = std::env::args()
+            .skip(1)
+            .filter(|a| a != "--split-mode" && a != "native")
+            .collect();
+        forward_args.insert(0, "render".to_string());
+        if let Some(plan) = forgum_platform::plan_native_split(
+            caps.emulator,
+            &mux,
+            reserved_rows,
+            ratio,
+            &forward_args,
+        ) {
+            match std::process::Command::new(&plan.program)
+                .args(&plan.args)
+                .spawn()
+            {
+                Ok(_) => {
+                    println!(
+                        "Spawned native {} split pane ({})",
+                        plan.target, plan.explanation
+                    );
+                    return ExitCode::SUCCESS;
+                }
+                Err(e) => {
+                    eprintln!(
+                        "{PROGRAM}: failed to spawn native split command '{}': {e}. Falling back to standard DECSTBM split.",
+                        plan.program
+                    );
+                }
+            }
+        } else {
+            eprintln!(
+                "{PROGRAM}: native split API not supported on {} (mux: {}). Falling back to standard DECSTBM split.",
+                caps.emulator.name(),
+                mux.name()
+            );
+        }
     }
 
     let is_split_mode = args.split_scroll

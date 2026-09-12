@@ -5,9 +5,11 @@
 //! escape-sequence flavor.
 
 use std::sync::OnceLock;
+use serde::{Deserialize, Serialize};
 
 /// Color depth tiers we can target.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum ColorLevel {
     /// Basic 8 colors (CGA-era palette).
     Ansi8,
@@ -29,7 +31,8 @@ impl ColorLevel {
 }
 
 /// Graphics protocol a terminal may support.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum GraphicsCaps {
     /// No graphics protocol.
     None,
@@ -39,8 +42,496 @@ pub enum GraphicsCaps {
     Kitty,
 }
 
+/// Known terminal emulator types and environments.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum TerminalEmulator {
+    /// Microsoft Windows Terminal (wt.exe) with ConPTY.
+    WindowsTerminal,
+    /// WezTerm terminal emulator (wezterm-gui / wezterm cli).
+    WezTerm,
+    /// Kitty GPU-accelerated terminal emulator.
+    Kitty,
+    /// Alacritty GPU-accelerated VT-standard terminal emulator.
+    Alacritty,
+    /// Ghostty GPU-accelerated VT-standard terminal emulator.
+    Ghostty,
+    /// iTerm2 macOS terminal emulator.
+    ITerm2,
+    /// Foot Wayland-native terminal emulator.
+    Foot,
+    /// GNOME Terminal and VTE-based terminals (Tilix, Terminator, XFCE Terminal, Guake).
+    Vte,
+    /// KDE Konsole and Qt-based terminals (Yakuake).
+    Konsole,
+    /// Traditional X11 / VT terminals (xterm).
+    XTerm,
+    /// Unicode rxvt (urxvt).
+    Urxvt,
+    /// MinTTY (Git Bash / Cygwin / MSYS2).
+    Mintty,
+    /// Apple macOS default Terminal.app.
+    AppleTerminal,
+    /// Legacy Windows Console Host (conhost.exe without modern ConPTY / VT margins).
+    ConHost,
+    /// Linux Virtual Console (Kernel VT driver / FBDev `/dev/tty1-6`).
+    LinuxConsole,
+    /// Headless serial console or hypervisor terminal.
+    SerialConsole,
+    /// Non-interactive or dumb terminal (`TERM=dumb`, raw pipe).
+    Dumb,
+    /// Generic ANSI/VT-compatible terminal emulator.
+    GenericVt,
+}
+
+impl TerminalEmulator {
+    #[must_use]
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::WindowsTerminal => "Windows Terminal",
+            Self::WezTerm => "WezTerm",
+            Self::Kitty => "Kitty",
+            Self::Alacritty => "Alacritty",
+            Self::Ghostty => "Ghostty",
+            Self::ITerm2 => "iTerm2",
+            Self::Foot => "Foot",
+            Self::Vte => "VTE (GNOME Terminal/Tilix)",
+            Self::Konsole => "Konsole",
+            Self::XTerm => "XTerm",
+            Self::Urxvt => "urxvt",
+            Self::Mintty => "Mintty",
+            Self::AppleTerminal => "Apple Terminal",
+            Self::ConHost => "Legacy Windows ConHost",
+            Self::LinuxConsole => "Linux Virtual Console (TTY)",
+            Self::SerialConsole => "Serial/Hypervisor Console",
+            Self::Dumb => "Dumb / Non-TTY",
+            Self::GenericVt => "Generic VT",
+        }
+    }
+
+    #[must_use]
+    pub const fn id(self) -> &'static str {
+        match self {
+            Self::WindowsTerminal => "windows_terminal",
+            Self::WezTerm => "wezterm",
+            Self::Kitty => "kitty",
+            Self::Alacritty => "alacritty",
+            Self::Ghostty => "ghostty",
+            Self::ITerm2 => "iterm2",
+            Self::Foot => "foot",
+            Self::Vte => "vte",
+            Self::Konsole => "konsole",
+            Self::XTerm => "xterm",
+            Self::Urxvt => "urxvt",
+            Self::Mintty => "mintty",
+            Self::AppleTerminal => "apple_terminal",
+            Self::ConHost => "conhost",
+            Self::LinuxConsole => "linux_console",
+            Self::SerialConsole => "serial_console",
+            Self::Dumb => "dumb",
+            Self::GenericVt => "generic_vt",
+        }
+    }
+
+    /// Whether this terminal honors DEC Set Top and Bottom Margins (`\x1b[top;bottom r`).
+    #[must_use]
+    pub const fn supports_decstbm(self) -> bool {
+        match self {
+            Self::WindowsTerminal
+            | Self::WezTerm
+            | Self::Kitty
+            | Self::Alacritty
+            | Self::Ghostty
+            | Self::ITerm2
+            | Self::Foot
+            | Self::Vte
+            | Self::Konsole
+            | Self::XTerm
+            | Self::Urxvt
+            | Self::Mintty
+            | Self::AppleTerminal
+            | Self::GenericVt => true,
+            Self::ConHost | Self::LinuxConsole | Self::SerialConsole | Self::Dumb => false,
+        }
+    }
+
+    /// Whether this terminal supports DEC Set Left and Right Margins (`\x1b[?69h` + `\x1b[left;right s`).
+    #[must_use]
+    pub const fn supports_decslrm(self) -> bool {
+        match self {
+            Self::WezTerm
+            | Self::Alacritty
+            | Self::Ghostty
+            | Self::ITerm2
+            | Self::Foot
+            | Self::XTerm => true,
+            _ => false,
+        }
+    }
+
+    /// Whether this terminal honors DEC 2026 synchronized updates (`\x1b[?2026h`).
+    #[must_use]
+    pub const fn supports_sync_updates(self) -> bool {
+        match self {
+            Self::WindowsTerminal
+            | Self::WezTerm
+            | Self::Kitty
+            | Self::Ghostty
+            | Self::ITerm2
+            | Self::Foot
+            | Self::Alacritty => true,
+            _ => false,
+        }
+    }
+
+    /// Whether an external native split-pane API or CLI command exists for this emulator.
+    #[must_use]
+    pub const fn native_split_available(self) -> bool {
+        match self {
+            Self::WindowsTerminal | Self::WezTerm | Self::Kitty | Self::ITerm2 => true,
+            _ => false,
+        }
+    }
+
+    /// Known hardware, virtualization, or firmware limitation notes.
+    #[must_use]
+    pub const fn limitation_notes(self) -> Option<&'static str> {
+        match self {
+            Self::ConHost => Some(
+                "Legacy Windows ConHost lacks DECSTBM scroll isolation; use Windows Terminal or precmd fallback.",
+            ),
+            Self::LinuxConsole => Some(
+                "Linux Virtual Console (Kernel VT) does not support DECSTBM scroll isolation; banner or precmd redraw recommended.",
+            ),
+            Self::SerialConsole => Some(
+                "Serial / Hypervisor console detected; high-latency or minimal VT support.",
+            ),
+            Self::Dumb => Some(
+                "Dumb terminal or raw pipe; cursor positioning and margins disabled.",
+            ),
+            _ => None,
+        }
+    }
+
+    /// Recommended split shell adapter mode for this terminal.
+    #[must_use]
+    pub const fn recommended_split_mode(self) -> SplitMode {
+        if !self.supports_decstbm() {
+            if matches!(self, Self::Dumb) {
+                SplitMode::Disabled
+            } else {
+                SplitMode::PrecmdFallback
+            }
+        } else {
+            SplitMode::Decstbm
+        }
+    }
+}
+
+/// Split shell execution adapter modes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SplitMode {
+    /// Mode 1: Pure DECSTBM margin split (Standard for Alacritty, Ghostty, Foot, VTE, Konsole, XTerm, Mintty, macOS Terminal, modern Windows Terminal).
+    Decstbm,
+    /// Mode 2: Native Multiplexer / Terminal API split (tmux, zellij, wezterm cli, kitty remote, wt.exe).
+    NativeApi,
+    /// Mode 3: Dynamic Shell Precmd Redraw Fallback (for terminals lacking DECSTBM like legacy ConHost, Linux TTY, VMs).
+    PrecmdFallback,
+    /// Mode 4: Plain text / banner fallback (unsupported / dumb / pipes).
+    Disabled,
+}
+
+impl SplitMode {
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Decstbm => "decstbm",
+            Self::NativeApi => "native_api",
+            Self::PrecmdFallback => "precmd_fallback",
+            Self::Disabled => "disabled",
+        }
+    }
+}
+
+/// Native split pane execution plan.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct NativeSplitPlan {
+    pub target: &'static str,
+    pub program: String,
+    pub args: Vec<String>,
+    pub explanation: &'static str,
+}
+
+/// Plan a native multiplexer or terminal split pane command.
+pub fn plan_native_split(
+    emulator: TerminalEmulator,
+    mux: &crate::mux::Mux,
+    rows: usize,
+    ratio: f32,
+    forgum_args: &[String],
+) -> Option<NativeSplitPlan> {
+    // 1. Multiplexers take precedence when active
+    match mux {
+        crate::mux::Mux::Tmux { .. } => {
+            let mut args = vec![
+                "split-window".to_string(),
+                "-b".to_string(),
+                "-v".to_string(),
+                "-l".to_string(),
+                rows.max(1).to_string(),
+            ];
+            args.extend_from_slice(forgum_args);
+            return Some(NativeSplitPlan {
+                target: "tmux",
+                program: "tmux".to_string(),
+                args,
+                explanation: "Creates a native tmux split pane docked above the current pane",
+            });
+        }
+        crate::mux::Mux::Zellij { .. } => {
+            let mut args = vec![
+                "action".to_string(),
+                "new-pane".to_string(),
+                "-d".to_string(),
+                "up".to_string(),
+                "--".to_string(),
+            ];
+            args.extend_from_slice(forgum_args);
+            return Some(NativeSplitPlan {
+                target: "zellij",
+                program: "zellij".to_string(),
+                args,
+                explanation: "Creates a native Zellij pane docked upward",
+            });
+        }
+        crate::mux::Mux::WezTerm { .. } => {
+            let percent = ((ratio.clamp(0.1, 0.8)) * 100.0).round() as u32;
+            let mut args = vec![
+                "cli".to_string(),
+                "split-pane".to_string(),
+                "--top".to_string(),
+                "--percent".to_string(),
+                percent.to_string(),
+                "--".to_string(),
+            ];
+            args.extend_from_slice(forgum_args);
+            return Some(NativeSplitPlan {
+                target: "wezterm",
+                program: "wezterm".to_string(),
+                args,
+                explanation: "Creates a native WezTerm top pane via wezterm cli",
+            });
+        }
+        _ => {}
+    }
+
+    // 2. Terminal emulator native split APIs
+    match emulator {
+        TerminalEmulator::WezTerm => {
+            let percent = ((ratio.clamp(0.1, 0.8)) * 100.0).round() as u32;
+            let mut args = vec![
+                "cli".to_string(),
+                "split-pane".to_string(),
+                "--top".to_string(),
+                "--percent".to_string(),
+                percent.to_string(),
+                "--".to_string(),
+            ];
+            args.extend_from_slice(forgum_args);
+            Some(NativeSplitPlan {
+                target: "wezterm",
+                program: "wezterm".to_string(),
+                args,
+                explanation: "Creates a native WezTerm top pane via wezterm cli",
+            })
+        }
+        TerminalEmulator::Kitty => {
+            let percent = ((ratio.clamp(0.1, 0.8)) * 100.0).round() as u32;
+            let mut args = vec![
+                "@".to_string(),
+                "launch".to_string(),
+                "--location=hsplit".to_string(),
+                format!("--bias={percent}"),
+            ];
+            args.extend_from_slice(forgum_args);
+            Some(NativeSplitPlan {
+                target: "kitty",
+                program: "kitty".to_string(),
+                args,
+                explanation: "Creates a native Kitty horizontal split via kitty remote control",
+            })
+        }
+        TerminalEmulator::WindowsTerminal => {
+            let mut args = vec![
+                "-w".to_string(),
+                "0".to_string(),
+                "sp".to_string(),
+                "-H".to_string(),
+                "-s".to_string(),
+                format!("{:.2}", ratio.clamp(0.1, 0.8)),
+            ];
+            args.extend_from_slice(forgum_args);
+            Some(NativeSplitPlan {
+                target: "windows_terminal",
+                program: "wt.exe".to_string(),
+                args,
+                explanation: "Creates a native Windows Terminal horizontal split pane via wt.exe CLI",
+            })
+        }
+        TerminalEmulator::ITerm2 => {
+            let script = format!(
+                "tell application \"iTerm2\" to tell current session of current window to split horizontally with default profile command \"{}\"",
+                forgum_args.join(" ")
+            );
+            Some(NativeSplitPlan {
+                target: "iterm2",
+                program: "osascript".to_string(),
+                args: vec!["-e".to_string(), script],
+                explanation: "Creates a native iTerm2 horizontal split pane via AppleScript",
+            })
+        }
+        _ => None,
+    }
+}
+
+/// Detect the terminal emulator identity from the process environment.
+#[must_use]
+pub fn detect_terminal_emulator() -> TerminalEmulator {
+    // Windows Terminal
+    if std::env::var_os("WT_SESSION").is_some() || std::env::var_os("WT_PROFILE_ID").is_some() {
+        return TerminalEmulator::WindowsTerminal;
+    }
+
+    // WezTerm
+    if std::env::var_os("WEZTERM_PANE").is_some()
+        || std::env::var_os("WEZTERM_EXECUTABLE").is_some()
+        || std::env::var_os("WEZTERM_UNIX_SOCKET").is_some()
+    {
+        return TerminalEmulator::WezTerm;
+    }
+
+    // Kitty
+    if std::env::var_os("KITTY_WINDOW_ID").is_some() || std::env::var_os("KITTY_PID").is_some() {
+        return TerminalEmulator::Kitty;
+    }
+
+    // Ghostty
+    if std::env::var_os("GHOSTTY_RESOURCES_DIR").is_some() {
+        return TerminalEmulator::Ghostty;
+    }
+
+    // Alacritty
+    if std::env::var_os("ALACRITTY_LOG").is_some()
+        || std::env::var_os("ALACRITTY_WINDOW_ID").is_some()
+        || std::env::var_os("ALACRITTY_SOCKET").is_some()
+    {
+        return TerminalEmulator::Alacritty;
+    }
+
+    // Foot
+    if std::env::var_os("FOOT_SERVER_SOCKET").is_some() {
+        return TerminalEmulator::Foot;
+    }
+
+    // iTerm2
+    if std::env::var_os("ITERM_SESSION_ID").is_some() {
+        return TerminalEmulator::ITerm2;
+    }
+
+    // Mintty
+    if std::env::var_os("MINTTY_SHORTCUT").is_some() {
+        return TerminalEmulator::Mintty;
+    }
+
+    // VTE-based (GNOME Terminal, Tilix, Terminator, XFCE Terminal)
+    if std::env::var_os("VTE_VERSION").is_some()
+        || std::env::var_os("TILIX_ID").is_some()
+        || std::env::var_os("TERMINATOR_UUID").is_some()
+    {
+        return TerminalEmulator::Vte;
+    }
+
+    // Konsole / Yakuake
+    if std::env::var_os("KONSOLE_VERSION").is_some()
+        || std::env::var_os("KONSOLE_DBUS_SERVICE").is_some()
+        || std::env::var_os("KONSOLE_DBUS_SESSION").is_some()
+    {
+        return TerminalEmulator::Konsole;
+    }
+
+    // Urxvt
+    if std::env::var_os("RXVT_SOCKET").is_some() {
+        return TerminalEmulator::Urxvt;
+    }
+
+    // XTerm
+    if std::env::var_os("XTERM_VERSION").is_some() {
+        return TerminalEmulator::XTerm;
+    }
+
+    // Check TERM_PROGRAM
+    if let Ok(tp) = std::env::var("TERM_PROGRAM") {
+        let tp_lower = tp.to_ascii_lowercase();
+        match tp_lower.as_str() {
+            "wezterm" => return TerminalEmulator::WezTerm,
+            "kitty" => return TerminalEmulator::Kitty,
+            "ghostty" => return TerminalEmulator::Ghostty,
+            "alacritty" => return TerminalEmulator::Alacritty,
+            "foot" => return TerminalEmulator::Foot,
+            "iterm.app" | "iterm2" => return TerminalEmulator::ITerm2,
+            "mintty" => return TerminalEmulator::Mintty,
+            "apple_terminal" => return TerminalEmulator::AppleTerminal,
+            "vscode" => return TerminalEmulator::GenericVt,
+            _ => {}
+        }
+    }
+
+    // Check TERM
+    if let Ok(term) = std::env::var("TERM") {
+        let term_lower = term.to_ascii_lowercase();
+        if term_lower == "dumb" {
+            return TerminalEmulator::Dumb;
+        }
+        if term_lower == "linux" {
+            return TerminalEmulator::LinuxConsole;
+        }
+        if term_lower.contains("ghostty") {
+            return TerminalEmulator::Ghostty;
+        }
+        if term_lower.contains("kitty") {
+            return TerminalEmulator::Kitty;
+        }
+        if term_lower.contains("alacritty") {
+            return TerminalEmulator::Alacritty;
+        }
+        if term_lower.contains("foot") {
+            return TerminalEmulator::Foot;
+        }
+        if term_lower.contains("rxvt") {
+            return TerminalEmulator::Urxvt;
+        }
+        if term_lower == "xterm" || term_lower.contains("xterm") {
+            return TerminalEmulator::XTerm;
+        }
+        if matches!(
+            term_lower.as_str(),
+            "vt100" | "vt102" | "vt220" | "serial" | "cons25"
+        ) {
+            return TerminalEmulator::SerialConsole;
+        }
+    }
+
+    // Fallback for Windows: if on Windows OS and no modern terminal matched, it's legacy ConHost
+    if cfg!(windows) || std::env::consts::OS == "windows" {
+        return TerminalEmulator::ConHost;
+    }
+
+    TerminalEmulator::GenericVt
+}
+
 /// Cached terminal capability snapshot.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TerminalCapabilities {
     pub color: ColorLevel,
     pub width: u16,
@@ -50,6 +541,10 @@ pub struct TerminalCapabilities {
     pub sync: bool,
     /// Graphics protocol the terminal is believed to support. Default None.
     pub graphics: GraphicsCaps,
+    /// Detected terminal emulator identity.
+    pub emulator: TerminalEmulator,
+    /// Recommended split shell adapter mode.
+    pub split_mode: SplitMode,
 }
 
 impl TerminalCapabilities {
@@ -60,6 +555,12 @@ impl TerminalCapabilities {
         let is_tty = is_stdout_tty();
         let sync = detect_sync_support();
         let graphics = detect_graphics_cap();
+        let emulator = detect_terminal_emulator();
+        let split_mode = if !is_tty {
+            SplitMode::Disabled
+        } else {
+            emulator.recommended_split_mode()
+        };
         Self {
             color,
             width,
@@ -67,6 +568,8 @@ impl TerminalCapabilities {
             is_tty,
             sync,
             graphics,
+            emulator,
+            split_mode,
         }
     }
 }
@@ -129,35 +632,21 @@ pub fn detect_color_level() -> ColorLevel {
 
 /// Whether the terminal is believed to support DEC 2026 synchronized updates.
 ///
-/// We do NOT actually send the Device Attributes `\x1b[?2026$p` probe: a
-/// round-trip read on a tty is unsafe inside a capability probe (it can block
-/// or consume bytes meant for the application). Instead we use a conservative
-/// allowlist of known-supporting terminal programs, and default to `false`
-/// (the safe, no-op choice) for everything else.
-///
-/// Returns `true` only when stdout is a tty AND one of: `WT_SESSION` is set
-/// (Windows Terminal), or `TERM_PROGRAM` is one of iTerm.app, WezTerm, ghostty,
-/// or vscode.
+/// Returns `true` only when stdout is a tty AND either the detected emulator
+/// supports it, or an allowlisted `TERM_PROGRAM` is set.
 #[must_use]
 pub fn detect_sync_support() -> bool {
     if !is_stdout_tty() {
         return false;
     }
-    if std::env::var_os("WT_SESSION").is_some() {
-        return true;
-    }
-    if std::env::var_os("KITTY_PID").is_some() {
+    let emu = detect_terminal_emulator();
+    if emu.supports_sync_updates() {
         return true;
     }
     if let Ok(tp) = std::env::var("TERM_PROGRAM") {
         match tp.to_ascii_lowercase().as_str() {
-            "iterm.app" | "wezterm" | "ghostty" | "vscode" | "tabby" | "hyper" => return true,
+            "vscode" | "tabby" | "hyper" => return true,
             _ => {}
-        }
-    }
-    if let Ok(term) = std::env::var("TERM") {
-        if term.to_ascii_lowercase().contains("ghostty") {
-            return true;
         }
     }
     false
@@ -308,5 +797,210 @@ mod tests {
         let caps = TerminalCapabilities::probe();
         let _: bool = caps.sync;
         let _: GraphicsCaps = caps.graphics;
+        let _: TerminalEmulator = caps.emulator;
+        let _: SplitMode = caps.split_mode;
+    }
+
+    #[test]
+    fn terminal_emulator_names_and_ids() {
+        let emulators = [
+            (TerminalEmulator::WindowsTerminal, "Windows Terminal", "windows_terminal"),
+            (TerminalEmulator::WezTerm, "WezTerm", "wezterm"),
+            (TerminalEmulator::Kitty, "Kitty", "kitty"),
+            (TerminalEmulator::Alacritty, "Alacritty", "alacritty"),
+            (TerminalEmulator::Ghostty, "Ghostty", "ghostty"),
+            (TerminalEmulator::ITerm2, "iTerm2", "iterm2"),
+            (TerminalEmulator::Foot, "Foot", "foot"),
+            (TerminalEmulator::Vte, "VTE (GNOME Terminal/Tilix)", "vte"),
+            (TerminalEmulator::Konsole, "Konsole", "konsole"),
+            (TerminalEmulator::XTerm, "XTerm", "xterm"),
+            (TerminalEmulator::Urxvt, "urxvt", "urxvt"),
+            (TerminalEmulator::Mintty, "Mintty", "mintty"),
+            (TerminalEmulator::AppleTerminal, "Apple Terminal", "apple_terminal"),
+            (TerminalEmulator::ConHost, "Legacy Windows ConHost", "conhost"),
+            (TerminalEmulator::LinuxConsole, "Linux Virtual Console (TTY)", "linux_console"),
+            (TerminalEmulator::SerialConsole, "Serial/Hypervisor Console", "serial_console"),
+            (TerminalEmulator::Dumb, "Dumb / Non-TTY", "dumb"),
+            (TerminalEmulator::GenericVt, "Generic VT", "generic_vt"),
+        ];
+
+        for (emu, name, id) in emulators {
+            assert_eq!(emu.name(), name);
+            assert_eq!(emu.id(), id);
+        }
+    }
+
+    #[test]
+    fn terminal_emulator_decstbm_and_split_modes() {
+        // Modern terminals support DECSTBM and default to Decstbm mode
+        assert!(TerminalEmulator::WindowsTerminal.supports_decstbm());
+        assert_eq!(TerminalEmulator::WindowsTerminal.recommended_split_mode(), SplitMode::Decstbm);
+
+        assert!(TerminalEmulator::WezTerm.supports_decstbm());
+        assert!(TerminalEmulator::WezTerm.supports_decslrm());
+        assert!(TerminalEmulator::WezTerm.native_split_available());
+
+        assert!(TerminalEmulator::Kitty.supports_decstbm());
+        assert!(TerminalEmulator::Kitty.native_split_available());
+
+        assert!(TerminalEmulator::Alacritty.supports_decstbm());
+        assert!(TerminalEmulator::Ghostty.supports_decstbm());
+        assert!(TerminalEmulator::Foot.supports_decstbm());
+        assert!(TerminalEmulator::Vte.supports_decstbm());
+        assert!(TerminalEmulator::Konsole.supports_decstbm());
+        assert!(TerminalEmulator::ITerm2.supports_decstbm());
+
+        // Hardware / legacy limitations
+        assert!(!TerminalEmulator::ConHost.supports_decstbm());
+        assert_eq!(TerminalEmulator::ConHost.recommended_split_mode(), SplitMode::PrecmdFallback);
+        assert!(TerminalEmulator::ConHost.limitation_notes().is_some());
+
+        assert!(!TerminalEmulator::LinuxConsole.supports_decstbm());
+        assert_eq!(TerminalEmulator::LinuxConsole.recommended_split_mode(), SplitMode::PrecmdFallback);
+        assert!(TerminalEmulator::LinuxConsole.limitation_notes().is_some());
+
+        assert!(!TerminalEmulator::Dumb.supports_decstbm());
+        assert_eq!(TerminalEmulator::Dumb.recommended_split_mode(), SplitMode::Disabled);
+    }
+
+    #[test]
+    fn plan_native_split_multiplexers_and_apis() {
+        let no_mux = crate::mux::Mux::None;
+        let tmux_mux = crate::mux::Mux::Tmux {
+            pane: "%1".into(),
+            session: "dev".into(),
+        };
+        let zellij_mux = crate::mux::Mux::Zellij {
+            tab: "main".into(),
+        };
+
+        let args = vec!["render".to_string(), "--animal".to_string(), "tux".to_string()];
+
+        // Tmux plan
+        let plan_tmux = plan_native_split(TerminalEmulator::GenericVt, &tmux_mux, 12, 0.35, &args);
+        assert!(plan_tmux.is_some());
+        let p_tmux = plan_tmux.unwrap();
+        assert_eq!(p_tmux.target, "tmux");
+        assert_eq!(p_tmux.program, "tmux");
+        assert!(p_tmux.args.contains(&"split-window".to_string()));
+        assert!(p_tmux.args.contains(&"12".to_string()));
+
+        // Zellij plan
+        let plan_zellij = plan_native_split(TerminalEmulator::GenericVt, &zellij_mux, 12, 0.35, &args);
+        assert!(plan_zellij.is_some());
+        let p_zellij = plan_zellij.unwrap();
+        assert_eq!(p_zellij.target, "zellij");
+        assert_eq!(p_zellij.program, "zellij");
+
+        // WezTerm plan
+        let plan_wez = plan_native_split(TerminalEmulator::WezTerm, &no_mux, 10, 0.30, &args);
+        assert!(plan_wez.is_some());
+        let p_wez = plan_wez.unwrap();
+        assert_eq!(p_wez.target, "wezterm");
+        assert_eq!(p_wez.program, "wezterm");
+        assert!(p_wez.args.contains(&"split-pane".to_string()));
+        assert!(p_wez.args.contains(&"30".to_string()));
+
+        // Kitty plan
+        let plan_kitty = plan_native_split(TerminalEmulator::Kitty, &no_mux, 10, 0.25, &args);
+        assert!(plan_kitty.is_some());
+        let p_kitty = plan_kitty.unwrap();
+        assert_eq!(p_kitty.target, "kitty");
+        assert_eq!(p_kitty.program, "kitty");
+        assert!(p_kitty.args.contains(&"--bias=25".to_string()));
+
+        // Windows Terminal plan
+        let plan_wt = plan_native_split(TerminalEmulator::WindowsTerminal, &no_mux, 10, 0.35, &args);
+        assert!(plan_wt.is_some());
+        let p_wt = plan_wt.unwrap();
+        assert_eq!(p_wt.target, "windows_terminal");
+        assert_eq!(p_wt.program, "wt.exe");
+        assert!(p_wt.args.contains(&"sp".to_string()));
+
+        // Alacritty has no native split API (pure VT)
+        let plan_alacritty = plan_native_split(TerminalEmulator::Alacritty, &no_mux, 10, 0.35, &args);
+        assert!(plan_alacritty.is_none());
+    }
+
+    #[test]
+    fn detect_terminal_emulator_environment_variables() {
+        let _guard = ENV_LOCK.lock().unwrap_or_else(|p| p.into_inner());
+
+        // Helper to clear common emulator indicators
+        let clear_vars = || {
+            std::env::remove_var("WT_SESSION");
+            std::env::remove_var("WT_PROFILE_ID");
+            std::env::remove_var("WEZTERM_PANE");
+            std::env::remove_var("WEZTERM_EXECUTABLE");
+            std::env::remove_var("WEZTERM_UNIX_SOCKET");
+            std::env::remove_var("KITTY_WINDOW_ID");
+            std::env::remove_var("KITTY_PID");
+            std::env::remove_var("GHOSTTY_RESOURCES_DIR");
+            std::env::remove_var("ALACRITTY_LOG");
+            std::env::remove_var("ALACRITTY_WINDOW_ID");
+            std::env::remove_var("ALACRITTY_SOCKET");
+            std::env::remove_var("FOOT_SERVER_SOCKET");
+            std::env::remove_var("ITERM_SESSION_ID");
+            std::env::remove_var("MINTTY_SHORTCUT");
+            std::env::remove_var("VTE_VERSION");
+            std::env::remove_var("TILIX_ID");
+            std::env::remove_var("TERMINATOR_UUID");
+            std::env::remove_var("KONSOLE_VERSION");
+            std::env::remove_var("KONSOLE_DBUS_SERVICE");
+            std::env::remove_var("RXVT_SOCKET");
+            std::env::remove_var("XTERM_VERSION");
+            std::env::remove_var("TERM_PROGRAM");
+            std::env::remove_var("TERM");
+        };
+
+        clear_vars();
+        std::env::set_var("WT_SESSION", "9876-uuid");
+        assert_eq!(detect_terminal_emulator(), TerminalEmulator::WindowsTerminal);
+
+        clear_vars();
+        std::env::set_var("WEZTERM_PANE", "3");
+        assert_eq!(detect_terminal_emulator(), TerminalEmulator::WezTerm);
+
+        clear_vars();
+        std::env::set_var("KITTY_WINDOW_ID", "1");
+        assert_eq!(detect_terminal_emulator(), TerminalEmulator::Kitty);
+
+        clear_vars();
+        std::env::set_var("GHOSTTY_RESOURCES_DIR", "/usr/share/ghostty");
+        assert_eq!(detect_terminal_emulator(), TerminalEmulator::Ghostty);
+
+        clear_vars();
+        std::env::set_var("ALACRITTY_LOG", "/tmp/alacritty.log");
+        assert_eq!(detect_terminal_emulator(), TerminalEmulator::Alacritty);
+
+        clear_vars();
+        std::env::set_var("FOOT_SERVER_SOCKET", "/run/user/1000/foot.sock");
+        assert_eq!(detect_terminal_emulator(), TerminalEmulator::Foot);
+
+        clear_vars();
+        std::env::set_var("ITERM_SESSION_ID", "w0t0p0:...");
+        assert_eq!(detect_terminal_emulator(), TerminalEmulator::ITerm2);
+
+        clear_vars();
+        std::env::set_var("VTE_VERSION", "7600");
+        assert_eq!(detect_terminal_emulator(), TerminalEmulator::Vte);
+
+        clear_vars();
+        std::env::set_var("KONSOLE_VERSION", "230800");
+        assert_eq!(detect_terminal_emulator(), TerminalEmulator::Konsole);
+
+        clear_vars();
+        std::env::set_var("TERM", "linux");
+        assert_eq!(detect_terminal_emulator(), TerminalEmulator::LinuxConsole);
+
+        clear_vars();
+        std::env::set_var("TERM", "dumb");
+        assert_eq!(detect_terminal_emulator(), TerminalEmulator::Dumb);
+
+        clear_vars();
+        std::env::set_var("TERM", "vt100");
+        assert_eq!(detect_terminal_emulator(), TerminalEmulator::SerialConsole);
+
+        clear_vars();
     }
 }

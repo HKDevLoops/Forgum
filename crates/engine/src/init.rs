@@ -145,6 +145,24 @@ forgum-init() {{
   "$__FORGUM_ENGINE" init "$@"
 }}
 
+__forgum_exit() {{
+  printf '\x1b[r\x1b[?25h\x1b[0m'
+}}
+trap '__forgum_exit' EXIT 2>/dev/null
+
+__forgum_clear() {{
+  local state="$__FORGUM_RUNTIME/daemon.json"
+  if [ -f "$state" ]; then
+    local rows; rows=$(awk -F'"' '/ob_y1/{{print $4}}' "$state" 2>/dev/null || echo 0)
+    local top=$((rows + 1))
+    local total=${{LINES:-$(tput lines 2>/dev/null || echo 24)}}
+    printf '\x1b[%d;%dr\x1b[%d;1H\x1b[J' "$top" "$total" "$top"
+  else
+    command clear 2>/dev/null || printf '\x1b[H\x1b[2J'
+  fi
+}}
+alias clear='__forgum_clear'
+
 __forgum_precmd() {{
   [ -z "$__FORGUM_ENGINE" ] && return
   local state="$__FORGUM_RUNTIME/daemon.json"
@@ -222,6 +240,23 @@ forgum-init() {{
   "$__FORGUM_ENGINE" init "$@"
 }}
 
+TRAPEXIT() {{
+  printf '\x1b[r\x1b[?25h\x1b[0m'
+}}
+
+__forgum_clear() {{
+  local state="$__FORGUM_RUNTIME/daemon.json"
+  if [ -f "$state" ]; then
+    local rows; rows=$(awk -F'"' '/ob_y1/{{print $4}}' "$state" 2>/dev/null || echo 0)
+    local top=$((rows + 1))
+    local total=${{LINES:-$(tput lines 2>/dev/null || echo 24)}}
+    printf '\x1b[%d;%dr\x1b[%d;1H\x1b[J' "$top" "$total" "$top"
+  else
+    command clear 2>/dev/null || printf '\x1b[H\x1b[2J'
+  fi
+}}
+alias clear='__forgum_clear'
+
 __forgum_precmd() {{
   [ -z "$__FORGUM_ENGINE" ] && return
   local state="$__FORGUM_RUNTIME/daemon.json"
@@ -292,6 +327,22 @@ function forgum-init
     $__forgum_engine init $argv
 end
 
+function __forgum_exit --on-event fish_exit
+    printf '\x1b[r\x1b[?25h\x1b[0m'
+end
+
+function clear
+    set -l state $__forgum_runtime/daemon.json
+    if test -f $state
+        set -l rows (awk -F'"' '/ob_y1/{{print $4}}' $state 2>/dev/null; or echo 0)
+        set -l top (math $rows + 1)
+        set -l total (tput lines 2>/dev/null; or echo $LINES)
+        printf '\x1b[%d;%dr\x1b[%d;1H\x1b[J' $top $total $top
+    else
+        command clear
+    end
+end
+
 function __forgum_sweep --on-event fish_prompt
     set -q __forgum_engine; or return
     set state $__forgum_runtime/daemon.json
@@ -309,7 +360,7 @@ function __forgum_sweep --on-event fish_prompt
     end
     if test -f "$__forgum_config"
         set -l auto (grep -o '"auto_render_on_prompt":\s*[^,}}]*' "$__forgum_config" 2>/dev/null | awk '{{print $2}}')
-        set -l mode (grep -o '"shell_attach_mode":\s*"[^"]*"' "$__forgum_config" 2>/dev/null | cut -d'"' -f4)
+        set -l mode (grep -o '"shell_attach_mode":\s*"[^"]*"' "$__FORGUM_CONFIG" 2>/dev/null | cut -d'"' -f4)
         if test "$auto" != "false"
             switch "$mode"
                 case banner
@@ -356,6 +407,28 @@ function forgum-init {{
     & $__ForgumEngine init @Args
 }}
 
+Register-EngineEvent -SourceIdentifier ([System.Management.Automation.PsEngineEvent]::Exiting) -Action {{
+    $esc = if ($PSVersionTable.PSVersion.Major -ge 7) {{ '`e' }} else {{ [char]27 }}
+    [Console]::Write("$esc[r$esc[?25h$esc[0m")
+}} -EA SilentlyContinue | Out-Null
+
+function global:Clear-Host {{
+    $esc = if ($PSVersionTable.PSVersion.Major -ge 7) {{ '`e' }} else {{ [char]27 }}
+    $state = Join-Path $env:TEMP 'Forgum\daemon.json'
+    if (Test-Path $state) {{
+        try {{
+            $info = Get-Content $state -Raw | ConvertFrom-Json
+            if ($info.ob_y1 -and $Host.UI.RawUI) {{
+                $top = [int]$info.ob_y1 + 1
+                $h = $Host.UI.RawUI.WindowSize.Height
+                [Console]::Write("$esc[$($top);$($h)r$esc[$($top);1H$esc[J")
+                return
+            }}
+        }} catch {{ }}
+    }}
+    [Console]::Clear()
+}}
+
 $global:__ForgumPromptBackup = $function:prompt
 $global:__ForgumEsc = if ($PSVersionTable.PSVersion.Major -ge 7) {{ '`e' }} else {{ [char]27 }}
 function global:prompt {{
@@ -371,6 +444,11 @@ function global:prompt {{
                 [Console]::Write("$esc[r")
                 [Console]::Write("$esc8$esc[0m")
                 Remove-Item $state -Force
+            }} elseif ($info.ob_y1 -and $Host.UI.RawUI -and $Host.UI.RawUI.CursorPosition.Y -lt [int]$info.ob_y1) {{
+                $pos = $Host.UI.RawUI.CursorPosition
+                $pos.Y = [int]$info.ob_y1
+                $pos.X = 0
+                $Host.UI.RawUI.CursorPosition = $pos
             }}
         }} catch {{ }}
     }}
@@ -455,6 +533,28 @@ function forgum-init {{
     & $__ForgumEngine init @Args
 }}
 
+Register-EngineEvent -SourceIdentifier ([System.Management.Automation.PsEngineEvent]::Exiting) -Action {{
+    $esc = if ($PSVersionTable.PSVersion.Major -ge 7) {{ '`e' }} else {{ [char]27 }}
+    [Console]::Write("$esc[r$esc[?25h$esc[0m")
+}} -EA SilentlyContinue | Out-Null
+
+function global:Clear-Host {{
+    $esc = if ($PSVersionTable.PSVersion.Major -ge 7) {{ '`e' }} else {{ [char]27 }}
+    $state = Join-Path $env:TEMP 'Forgum\daemon.json'
+    if (Test-Path $state) {{
+        try {{
+            $info = Get-Content $state -Raw | ConvertFrom-Json
+            if ($info.ob_y1 -and $Host.UI.RawUI) {{
+                $top = [int]$info.ob_y1 + 1
+                $h = $Host.UI.RawUI.WindowSize.Height
+                [Console]::Write("$esc[$($top);$($h)r$esc[$($top);1H$esc[J")
+                return
+            }}
+        }} catch {{ }}
+    }}
+    [Console]::Clear()
+}}
+
 $global:__ForgumPromptBackup = $function:prompt
 $global:__ForgumEsc = if ($PSVersionTable.PSVersion.Major -ge 7) {{ '`e' }} else {{ [char]27 }}
 function global:prompt {{
@@ -470,6 +570,11 @@ function global:prompt {{
                 [Console]::Write("$esc[r")
                 [Console]::Write("$esc8$esc[0m")
                 Remove-Item $state -Force
+            }} elseif ($info.ob_y1 -and $Host.UI.RawUI -and $Host.UI.RawUI.CursorPosition.Y -lt [int]$info.ob_y1) {{
+                $pos = $Host.UI.RawUI.CursorPosition
+                $pos.Y = [int]$info.ob_y1
+                $pos.X = 0
+                $Host.UI.RawUI.CursorPosition = $pos
             }}
         }} catch {{ }}
     }}
@@ -519,6 +624,14 @@ fn forgum {{|@args|
     $__forgum_engine $@args
   }}}}
 }}
+fn forgum-init {{|@args|
+  $__forgum_engine init $@args
+}}
+set edit:before-readline = [ $@edit:before-readline {{{{
+  try {{{{
+    $__forgum_engine sweep 2>/dev/null
+  }}}} catch _ {{{{ }}}}
+}}}} ]
 # <<< forgum <<<
 "#
     )
@@ -535,6 +648,9 @@ def --wrapped forgum [...rest] {{
     }} else {{
         ^"{engine}" ...$rest
     }}
+}}
+def --wrapped forgum-init [...rest] {{
+    ^"{engine}" init ...$rest
 }}
 # <<< forgum <<<
 "#
@@ -554,6 +670,19 @@ def _forgum_cmd(args, stdin=None):
 
 aliases['forgum'] = _forgum_cmd
 aliases['forgum-init'] = lambda args, stdin=None: !({engine} init @(args))
+
+@events.on_precmd
+def __forgum_precmd():
+    try:
+        !({engine} sweep)
+    except Exception:
+        pass
+
+@events.on_exit
+def __forgum_exit():
+    import sys
+    sys.stdout.write("\x1b[r\x1b[?25h\x1b[0m")
+    sys.stdout.flush()
 # <<< forgum <<<
 "#
     )
@@ -565,6 +694,7 @@ fn generate_tcsh_hook(engine: &str, extra: &str) -> String {
 # Generated by forgum init tcsh — do not edit by hand
 alias forgum '{engine} render --background --duration 0{extra}'
 alias forgum-init '{engine} init'
+alias precmd '{engine} sweep'
 # <<< forgum <<<
 "#
     )
@@ -583,6 +713,7 @@ forgum() {{
     fi
 }}
 alias forgum-init='{engine} init'
+trap '{engine} sweep 2>/dev/null; printf "\x1b[r\x1b[?25h\x1b[0m"' EXIT
 # <<< forgum <<<
 "#
     )
@@ -599,6 +730,9 @@ fn forgum
     else
         {engine} @args
     end
+end
+fn forgum-init
+    {engine} init @args
 end
 # <<< forgum <<<
 "#
@@ -617,6 +751,10 @@ proc forgum(...args) {{
         {engine} @args
     }}
 }}
+proc forgum-init(...args) {{
+    {engine} init @args
+}}
+trap '{engine} sweep 2>/dev/null; printf "\x1b[r\x1b[?25h\x1b[0m"' EXIT
 # <<< forgum <<<
 "#
     )
@@ -635,6 +773,7 @@ function forgum() {{
     fi
 }}
 alias forgum-init='{engine} init'
+trap '{engine} sweep 2>/dev/null; printf "\x1b[r\x1b[?25h\x1b[0m"' EXIT
 # <<< forgum <<<
 "#
     )
@@ -860,14 +999,10 @@ mod tests {
 
     #[test]
     fn forgum_init_shim_present_in_all_shells() {
-        for shell in [
-            Shell::Bash,
-            Shell::Zsh,
-            Shell::Fish,
-            Shell::Pwsh,
-            Shell::PowerShell,
-            Shell::Cmd,
-        ] {
+        for &shell in Shell::ALL {
+            if shell == Shell::Carapace {
+                continue;
+            }
             let hook = generate_hook(shell, "/usr/bin/forgum-engine");
             assert!(
                 hook.contains("forgum-init"),
