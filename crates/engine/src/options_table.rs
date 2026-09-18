@@ -877,6 +877,18 @@ pub fn render_options(category: &str) -> String {
                 "path/to/mascot.png (PNG, JPG, BMP, etc.)",
                 "Convert image to ASCII art and use as custom mascot",
             ],
+            vec![
+                "split_mode",
+                "string",
+                "seamless, decstbm, native, precmd, disabled, auto",
+                "Split shell execution adapter mode (seamless single-pane mode)",
+            ],
+            vec![
+                "editor",
+                "string",
+                "nvim, vim, emacs, nano, code, notepad, auto",
+                "Preferred text editor command for editing configuration",
+            ],
         ];
         out.push_str(&format_table(&c_headers, &c_rows));
     }

@@ -78,6 +78,9 @@ pub fn write_daemon_state(
         started_at: chrono_free_timestamp(),
     };
     state.write(&state_path)?;
+    if let Ok(rt) = forgum_platform::runtime_dir() {
+        let _ = state.write(&rt.join("daemon.json"));
+    }
     Ok(state_path)
 }
 
@@ -92,6 +95,60 @@ fn chrono_free_timestamp() -> String {
 pub fn cleanup_daemon_state(session_id: &str) {
     let path = forgum_platform::daemon_state_path(session_id);
     let _ = std::fs::remove_file(path);
+    if let Ok(rt) = forgum_platform::runtime_dir() {
+        let _ = std::fs::remove_file(rt.join("daemon.json"));
+    }
+}
+
+/// Stop any active daemon running in the current session and reset terminal margins.
+pub fn stop_session_daemon_and_reset_margins() {
+    let session_id = forgum_platform::detect_session_id();
+    let path = forgum_platform::daemon_state_path(&session_id);
+    let mut ob_y1: u16 = 0;
+    let mut had_daemon = false;
+    if path.exists() {
+        if let Ok(state) = DaemonState::read(&path) {
+            ob_y1 = state.ob_y1;
+            had_daemon = true;
+            if state.is_alive() {
+                let _ = crate::herd::send_command(&state.socket_path, r#"{"cmd":"STOP"}"#);
+                std::thread::sleep(std::time::Duration::from_millis(60));
+                if state.is_alive() {
+                    let _ = forgum_platform::kill_process(state.pid);
+                }
+            }
+        }
+        cleanup_daemon_state(&session_id);
+    } else if let Ok(rt) = forgum_platform::runtime_dir() {
+        let generic = rt.join("daemon.json");
+        if generic.exists() {
+            if let Ok(state) = DaemonState::read(&generic) {
+                ob_y1 = state.ob_y1;
+                had_daemon = true;
+                if state.is_alive() {
+                    let _ = crate::herd::send_command(&state.socket_path, r#"{"cmd":"STOP"}"#);
+                    std::thread::sleep(std::time::Duration::from_millis(60));
+                    if state.is_alive() {
+                        let _ = forgum_platform::kill_process(state.pid);
+                    }
+                }
+            }
+            let _ = std::fs::remove_file(&generic);
+        }
+    }
+
+    if had_daemon {
+        let mut clean_buf = Vec::new();
+        clean_buf.extend_from_slice(b"\x1b7");
+        if ob_y1 > 0 {
+            for y in 1..=(ob_y1 as usize).min(60) {
+                clean_buf.extend_from_slice(format!("\x1b[{y};1H\x1b[2K").as_bytes());
+            }
+        }
+        clean_buf.extend_from_slice(b"\x1b[r\x1b[?6l\x1b[?69l\x1b8\x1b[0m\x1b[?25h");
+        let _ = std::io::Write::write_all(&mut std::io::stdout(), &clean_buf);
+        let _ = std::io::Write::flush(&mut std::io::stdout());
+    }
 }
 
 #[cfg(test)]

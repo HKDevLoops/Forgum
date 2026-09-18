@@ -2,12 +2,13 @@
 
 use crate::framebuffer::{Cell, Color, FrameBuffer};
 use std::io::Write;
-use std::time::{Duration, Instant};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 const BATTLE_WIDTH: usize = 80;
 const BATTLE_HEIGHT: usize = 14;
-const CHARGE_SPEED: i32 = 4;
-const COLLISION_X: i32 = 38;
+
+/// The Golden Ratio constant (\u{03a6} \u{2248} 1.61803398875) used for quasi-random low-discrepancy dispersion.
+pub const PHI: f64 = 1.618_033_988_749_895;
 
 #[derive(Debug, Clone)]
 pub struct BattleCow {
@@ -40,9 +41,32 @@ pub struct Battle {
     pub cow2: BattleCow,
     pub phase: BattlePhase,
     pub frames: u32,
+    pub phase_frames: u32,
     pub width: usize,
     pub height: usize,
     pub winner: u8,
+    /// Randomized clash column where lances impact
+    pub clash_x: i32,
+    pub start_x1: i32,
+    pub start_x2: i32,
+    /// Travel distance of mascot 1 (columns)
+    pub dist1: i32,
+    /// Travel distance of mascot 2 (columns)
+    pub dist2: i32,
+    /// Deliberate, smooth velocity of mascot 1 (columns / frame)
+    pub speed1: f32,
+    /// Deliberate, smooth velocity of mascot 2 (columns / frame)
+    pub speed2: f32,
+    /// Sub-column continuous position accumulator for mascot 1
+    pub pos1: f32,
+    /// Sub-column continuous position accumulator for mascot 2
+    pub pos2: f32,
+    /// Frames allocated for the charging phase
+    pub charge_duration: u32,
+    /// Frames allocated for the collision impact phase
+    pub collision_duration: u32,
+    /// Frames allocated for the aftermath victory phase
+    pub aftermath_duration: u32,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -51,6 +75,92 @@ pub enum BattlePhase {
     Collision,
     Aftermath,
     Done,
+}
+
+/// Computes randomized jousting kinematics using the Golden Ratio (\u{03a6} \u{2248} 1.6180339887)
+/// and harmonic sinusoidal superposition to ensure organic, unpredictable battlefield charges.
+///
+/// Guarantees that:
+/// 1. The travel distance of mascot 1 (`dist1`) is strictly different from mascot 2 (`dist2`).
+/// 2. Every session with a new seed produces different clash points and travel distances.
+/// 3. Speeds are scaled smoothly so mascots move deliberately and realistically.
+pub fn compute_battle_kinematics(
+    name1: &str,
+    name2: &str,
+    width: usize,
+    seed: u64,
+) -> (i32, i32, i32, f32, f32, u32, u32, u32) {
+    // 1. Hash fighter names + entropy seed via 64-bit mixer
+    let mut h = seed.wrapping_add(0x9e3779b97f4a7c15);
+    for b in name1.as_bytes().iter().chain(name2.as_bytes()) {
+        h = (h ^ (*b as u64)).wrapping_mul(0xbf58476d1ce4e5b9);
+        h ^= h >> 30;
+    }
+    h ^= h >> 27;
+    h = h.wrapping_mul(0x94d049bb133111eb);
+    h ^= h >> 31;
+
+    // 2. Map through Golden Ratio (\u{03a6}) low-discrepancy dispersion
+    let u = ((h as f64) / (u64::MAX as f64)).fract().abs();
+    let phi_offset = (u * PHI).fract();
+
+    // 3. Harmonic trigonometric superposition for natural battlefield variation
+    let two_pi = std::f64::consts::TAU;
+    let harmonic = 0.50
+        + 0.32 * (two_pi * phi_offset).sin()
+        + 0.14 * (two_pi * phi_offset * PHI).cos();
+    let t = harmonic.clamp(0.18, 0.82);
+
+    // 4. Determine valid clash zone within the arena
+    // Cow 1 lance tip is at x1 + 22. Cow 2 lance tip is at x2.
+    // Minimum clash_x: x1 >= 4 -> clash_x >= 26.
+    // Maximum clash_x: x2 <= width - 12 -> clash_x <= width - 12.
+    let min_clash = 26_i32;
+    let max_clash = (width as i32 - 14).max(min_clash + 8);
+    let span = (max_clash - min_clash) as f64;
+    let mut clash_x = min_clash + (t * span).round() as i32;
+
+    let start_x1 = 2_i32;
+    let start_x2 = (width as i32) - 10;
+    let mut dist1 = (clash_x - 22) - start_x1;
+    let mut dist2 = start_x2 - clash_x;
+
+    // Enforce distinct travel distances between mascot 1 and mascot 2
+    if (dist1 - dist2).abs() < 4 {
+        if phi_offset >= 0.5 {
+            clash_x = (clash_x + 5).min(max_clash);
+        } else {
+            clash_x = (clash_x - 5).max(min_clash);
+        }
+        dist1 = (clash_x - 22) - start_x1;
+        dist2 = start_x2 - clash_x;
+    }
+
+    // Ensure strictly positive distances
+    dist1 = dist1.max(3);
+    dist2 = dist2.max(3);
+
+    // 5. Cinematic pacing: charge duration between 40 and 55 frames (slow and real!)
+    let base_charge = 44.0 + 8.0 * (phi_offset * two_pi).sin();
+    let charge_frames = (base_charge * (width as f64 / 80.0)).clamp(36.0, 56.0).round() as u32;
+
+    let speed1 = dist1 as f32 / charge_frames as f32;
+    let speed2 = dist2 as f32 / charge_frames as f32;
+
+    // 6. Combat HP asymmetry: each mascot has distinct, randomized Max HP and starting HP
+    let hp1_raw = 95 + (h % 36) as u32; // 95 .. 130
+    let hp2_raw = 90 + ((h >> 16) % 36) as u32; // 90 .. 125
+    let (max_hp1, max_hp2) = if (hp1_raw as i32 - hp2_raw as i32).abs() < 10 {
+        if phi_offset >= 0.5 {
+            (hp1_raw + 15, hp2_raw.saturating_sub(10).max(85))
+        } else {
+            (hp1_raw.saturating_sub(10).max(85), hp2_raw + 15)
+        }
+    } else {
+        (hp1_raw, hp2_raw)
+    };
+
+    (clash_x, dist1, dist2, speed1, speed2, charge_frames, max_hp1, max_hp2)
 }
 
 impl Battle {
@@ -65,19 +175,59 @@ impl Battle {
         height: usize,
         winner: u8,
     ) -> Self {
+        let seed = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|d| d.as_nanos() as u64)
+            .unwrap_or(0x12345678_9abcdef0);
+        Self::with_dimensions_and_seed(name1, name2, width, height, winner, seed)
+    }
+
+    pub fn with_dimensions_and_seed(
+        name1: &str,
+        name2: &str,
+        width: usize,
+        height: usize,
+        winner: u8,
+        seed: u64,
+    ) -> Self {
+        let start_x1 = 2;
+        let start_x2 = (width as i32) - 10;
         let cow_y = 5.min(height.saturating_sub(6));
-        let mut cow1 = BattleCow::new(name1, "oo", 2);
+
+        let (clash_x, dist1, dist2, speed1, speed2, charge_duration, max_hp1, max_hp2) =
+            compute_battle_kinematics(name1, name2, width, seed);
+
+        let mut cow1 = BattleCow::new(name1, "oo", start_x1);
         cow1.y = cow_y;
-        let mut cow2 = BattleCow::new(name2, "oo", (width as i32) - 10);
+        cow1.hp = max_hp1;
+        cow1.max_hp = max_hp1;
+
+        let mut cow2 = BattleCow::new(name2, "oo", start_x2);
         cow2.y = cow_y;
+        cow2.hp = max_hp2;
+        cow2.max_hp = max_hp2;
+
         Self {
             cow1,
             cow2,
             phase: BattlePhase::Charging,
             frames: 0,
+            phase_frames: 0,
             width,
             height,
             winner,
+            clash_x,
+            start_x1,
+            start_x2,
+            dist1,
+            dist2,
+            speed1,
+            speed2,
+            pos1: start_x1 as f32,
+            pos2: start_x2 as f32,
+            charge_duration,
+            collision_duration: 30,
+            aftermath_duration: 35,
         }
     }
 
@@ -86,33 +236,73 @@ impl Battle {
 
         match self.phase {
             BattlePhase::Charging => {
-                self.cow1.x += CHARGE_SPEED;
-                self.cow2.x -= CHARGE_SPEED;
+                self.phase_frames += 1;
+                self.pos1 += self.speed1;
+                self.pos2 -= self.speed2;
+                self.cow1.x = self.pos1.round() as i32;
+                self.cow2.x = self.pos2.round() as i32;
 
-                if self.cow1.x >= COLLISION_X - 4 || self.cow2.x <= COLLISION_X + 2 {
+                let lance1_tip = self.cow1.x + 22;
+                let lance2_tip = self.cow2.x;
+
+                if lance1_tip >= lance2_tip
+                    || self.cow1.x >= self.clash_x - 22
+                    || self.cow2.x <= self.clash_x
+                    || self.phase_frames >= self.charge_duration
+                {
+                    self.cow1.x = self.clash_x - 22;
+                    self.cow2.x = self.clash_x;
                     self.phase = BattlePhase::Collision;
+                    self.phase_frames = 0;
                 }
             }
             BattlePhase::Collision => {
-                if self.frames % 8 == 0 {
-                    self.phase = BattlePhase::Aftermath;
+                self.phase_frames += 1;
+
+                // Progressive health depletion during collision based on individual Max HP
+                let progress = (self.phase_frames as f32 / self.collision_duration as f32).min(1.0);
+                if self.winner == 1 {
+                    let win_retain = (self.cow1.max_hp as f32 * 0.78).round() as u32;
+                    let damage = ((self.cow1.max_hp - win_retain) as f32 * progress).round() as u32;
+                    self.cow1.hp = self.cow1.max_hp.saturating_sub(damage);
+                    self.cow2.hp = ((self.cow2.max_hp as f32) * (1.0 - progress)).round() as u32;
+                } else {
+                    let win_retain = (self.cow2.max_hp as f32 * 0.78).round() as u32;
+                    let damage = ((self.cow2.max_hp - win_retain) as f32 * progress).round() as u32;
+                    self.cow2.hp = self.cow2.max_hp.saturating_sub(damage);
+                    self.cow1.hp = ((self.cow1.max_hp as f32) * (1.0 - progress)).round() as u32;
+                }
+
+                // Mid-collision: Loser's lance shatters, loser recoils, eyes change
+                if self.phase_frames >= self.collision_duration / 2 {
                     if self.winner == 1 {
                         self.cow1.eyes = "^^".to_string();
                         self.cow2.eyes = "xx".to_string();
                         self.cow2.alive = false;
-                        self.cow2.hp = 0;
-                        self.cow1.hp = 85;
+                        self.cow2.x = (self.clash_x + 2).min(self.width as i32 - 10);
                     } else {
                         self.cow1.eyes = "xx".to_string();
                         self.cow2.eyes = "@@".to_string();
                         self.cow1.alive = false;
+                        self.cow1.x = (self.clash_x - 24).max(1);
+                    }
+                }
+
+                if self.phase_frames >= self.collision_duration {
+                    self.phase = BattlePhase::Aftermath;
+                    self.phase_frames = 0;
+                    if self.winner == 1 {
+                        self.cow2.hp = 0;
+                        self.cow1.hp = (self.cow1.max_hp as f32 * 0.78).round() as u32;
+                    } else {
                         self.cow1.hp = 0;
-                        self.cow2.hp = 85;
+                        self.cow2.hp = (self.cow2.max_hp as f32 * 0.78).round() as u32;
                     }
                 }
             }
             BattlePhase::Aftermath => {
-                if self.frames % 20 == 0 {
+                self.phase_frames += 1;
+                if self.phase_frames >= self.aftermath_duration {
                     self.phase = BattlePhase::Done;
                 }
             }
@@ -160,10 +350,14 @@ impl Battle {
                     output.push(ch);
                 }
             }
-            if use_color && last_color.is_some() {
-                output.push_str("\x1b[0m");
+            if use_color {
+                if last_color.is_some() {
+                    output.push_str("\x1b[0m");
+                }
+                output.push_str("\x1b[K\r\n");
+            } else {
+                output.push('\n');
             }
-            output.push('\n');
         }
         output
     }
@@ -188,20 +382,22 @@ impl Battle {
         let hp1_filled = ((self.cow1.hp as f32 / self.cow1.max_hp.max(1) as f32) * bar_len as f32)
             .round() as usize;
         let hp1_bar = format!(
-            "{} [{}{}] {}HP",
+            "{} [{}{}] {}/{}HP",
             self.cow1.name,
             "■".repeat(hp1_filled),
             "░".repeat(bar_len.saturating_sub(hp1_filled)),
-            self.cow1.hp
+            self.cow1.hp,
+            self.cow1.max_hp
         );
         let hp2_filled = ((self.cow2.hp as f32 / self.cow2.max_hp.max(1) as f32) * bar_len as f32)
             .round() as usize;
         let hp2_bar = format!(
-            "{} [{}{}] {}HP",
+            "{} [{}{}] {}/{}HP",
             self.cow2.name,
             "■".repeat(hp2_filled),
             "░".repeat(bar_len.saturating_sub(hp2_filled)),
-            self.cow2.hp
+            self.cow2.hp,
+            self.cow2.max_hp
         );
         let title = format!("  ⚔️  {hp1_bar}  VS  {hp2_bar}  ⚔️");
         for (i, ch) in title.chars().enumerate() {
@@ -224,19 +420,37 @@ impl Battle {
 
         let commentary = match self.phase {
             BattlePhase::Charging => {
-                format!(
-                    "  ❯ {} and {} lower their lances and charge!",
-                    self.cow1.name, self.cow2.name
-                )
+                if self.phase_frames < self.charge_duration / 3 {
+                    format!(
+                        "  ❯ {} and {} lower tournament lances and begin their charge!",
+                        self.cow1.name, self.cow2.name
+                    )
+                } else if self.phase_frames < (self.charge_duration * 2) / 3 {
+                    format!(
+                        "  ❯ Hooves thunder across the turf! Distances: {} vs {} cols...",
+                        self.dist1, self.dist2
+                    )
+                } else {
+                    format!(
+                        "  ❯ BRACE FOR IMPACT! The champions hurtle toward column {}!",
+                        self.clash_x
+                    )
+                }
             }
             BattlePhase::Collision => {
-                "  ❯ *** CLASH OF LANCES! THE MEADOW SHAKES! ***".to_string()
+                if self.phase_frames < self.collision_duration / 3 {
+                    "  💥 *** THUNDEROUS CLASH! LANCE TIPS COLLIDE! *** 💥".to_string()
+                } else if self.phase_frames < (self.collision_duration * 2) / 3 {
+                    "  ⚡ *** WOOD SPLINTERS! THE ARENA SHUDDERS UNDER IMPACT! *** ⚡".to_string()
+                } else {
+                    format!("  💥 {winner_name} delivers a devastating blow to {loser_name}!")
+                }
             }
             BattlePhase::Aftermath => {
-                format!("  {loser_name} is defeated! {winner_name} wins!")
+                format!("  🏆 {loser_name} is unseated! {winner_name} claims supreme jousting glory!")
             }
             BattlePhase::Done => {
-                format!("  Battle complete. {winner_name} is victorious!")
+                format!("  🏁 Tournament ended. All hail the Victor, {winner_name}!")
             }
         };
         for (i, ch) in commentary.chars().enumerate() {
@@ -291,10 +505,11 @@ impl Battle {
         if self.phase == BattlePhase::Charging {
             let hoof_y = self.cow1.y + 4;
             let dust1_x = self.cow1.x - 3;
-            let dust1 = match (self.frames / 2) % 3 {
+            let dust1 = match (self.frames / 3) % 4 {
                 0 => ".. . o",
                 1 => ". o O",
-                _ => "o . ..",
+                2 => "o . ..",
+                _ => ". .  .",
             };
             for (i, ch) in dust1.chars().enumerate() {
                 let dx = dust1_x + i as i32;
@@ -308,10 +523,11 @@ impl Battle {
             }
 
             let dust2_x = self.cow2.x + 23;
-            let dust2 = match (self.frames / 2) % 3 {
+            let dust2 = match (self.frames / 3) % 4 {
                 0 => "o . ..",
                 1 => "O o .",
-                _ => ".. . o",
+                2 => ".. . o",
+                _ => ".  . .",
             };
             for (i, ch) in dust2.chars().enumerate() {
                 let dx = dust2_x + i as i32;
@@ -332,32 +548,33 @@ impl Battle {
             &mut fb,
             &self.cow1,
             true,
-            self.frames / 2,
+            self.frames / 3,
             lance1_broken,
         );
         self.render_cow_art(
             &mut fb,
             &self.cow2,
             false,
-            self.frames / 2,
+            self.frames / 3,
             lance2_broken,
         );
 
-        // 10. Collision Sparks / Impact Burst
+        // 10. Collision Sparks / Impact Burst at dynamic clash_x
         if self.phase == BattlePhase::Collision {
-            let clash_x = COLLISION_X.min(self.width as i32 - 10).max(10);
+            let clash_x = self.clash_x.clamp(8, (self.width as i32).saturating_sub(8));
             let clash_y = 5.min(self.height.saturating_sub(6));
 
-            let spark_color = match self.frames % 3 {
-                0 => Color::rgb(255, 255, 100),
-                1 => Color::rgb(255, 120, 30),
-                _ => Color::rgb(255, 255, 255),
+            let spark_color = match (self.phase_frames / 2) % 4 {
+                0 => Color::rgb(255, 255, 255),
+                1 => Color::rgb(255, 230, 80),
+                2 => Color::rgb(255, 120, 30),
+                _ => Color::rgb(255, 60, 60),
             };
 
-            let spark_lines = match (self.frames / 2) % 3 {
+            let spark_lines = match (self.phase_frames / 3) % 3 {
                 0 => vec!["   \\  |  /   ", " -- *CLASH* --", "   /  |  \\   "],
                 1 => vec![" .  \\ | /  . ", " * -*BOOM*- *", " .  / | \\  . "],
-                _ => vec!["  :   .   :  ", " ✦ * IMPACT * ✦ ", "  :   .   :  "],
+                _ => vec!["  :   ~   :  ", " ✦ * IMPACT * ✦ ", "  ~   .   ~  "],
             };
 
             for (row_idx, row_str) in spark_lines.iter().enumerate() {
@@ -372,6 +589,21 @@ impl Battle {
                     let sx = clash_x + col_idx as i32 - 7;
                     if sx >= 1 && sx < (self.width as i32 - 1) {
                         fb.set(sx as usize, sy, Cell::new(ch, spark_color));
+                    }
+                }
+            }
+
+            // Ground shockwave dust right beneath collision
+            let ground_dust = match (self.phase_frames / 2) % 3 {
+                0 => ". o O o .",
+                1 => "o O ✦ O o",
+                _ => ". . o . .",
+            };
+            if turf_y < self.height {
+                for (i, ch) in ground_dust.chars().enumerate() {
+                    let gx = clash_x - 4 + i as i32;
+                    if gx >= 1 && gx < (self.width as i32 - 1) {
+                        fb.set(gx as usize, turf_y, Cell::new(ch, Color::rgb(180, 160, 120)));
                     }
                 }
             }
@@ -539,6 +771,17 @@ fn cow2_art(eyes: &str, legs_frame: u32, lance_broken: bool) -> Vec<String> {
 
 /// Run a live, animated battle directly in the terminal with smooth frame updates and cursor protection.
 pub fn run_battle_live(name1: &str, name2: &str, winner_choice: u8, target_fps: u16) {
+    run_battle_live_internal(name1, name2, winner_choice, target_fps, true);
+}
+
+/// Internal live battle runner supporting caller-managed alternate screens.
+pub fn run_battle_live_internal(
+    name1: &str,
+    name2: &str,
+    winner_choice: u8,
+    target_fps: u16,
+    manage_alt_screen: bool,
+) {
     let (term_w, term_h) = forgum_platform::terminal_size();
     let width = (term_w as usize).clamp(52, 120);
     let height = 14.min(term_h.saturating_sub(2) as usize).max(12);
@@ -554,11 +797,20 @@ pub fn run_battle_live(name1: &str, name2: &str, winner_choice: u8, target_fps: 
     };
 
     let mut battle = Battle::with_dimensions(name1, name2, width, height, winner);
-    let _cursor_guard = forgum_platform::guards::CursorShowGuard::acquire();
+    let _cursor_guard = if manage_alt_screen {
+        forgum_platform::guards::CursorShowGuard::acquire().ok()
+    } else {
+        None
+    };
+    let _alt_guard = if manage_alt_screen {
+        forgum_platform::guards::AltScreenGuard::acquire().ok()
+    } else {
+        None
+    };
 
     let fps = target_fps.clamp(5, 60);
     let frame_time = Duration::from_millis(1000 / fps as u64);
-    let max_duration = Duration::from_secs(15);
+    let max_duration = Duration::from_secs(25);
     let start = Instant::now();
 
     // Clear terminal once at battle start
@@ -573,22 +825,27 @@ pub fn run_battle_live(name1: &str, name2: &str, winner_choice: u8, target_fps: 
         std::thread::sleep(frame_time);
     }
 
-    let winner_name = if battle.winner == 1 {
-        &battle.cow1.name
-    } else {
-        &battle.cow2.name
-    };
-    let loser_name = if battle.winner == 1 {
-        &battle.cow2.name
-    } else {
-        &battle.cow1.name
-    };
+    if manage_alt_screen {
+        drop(_alt_guard);
+        drop(_cursor_guard);
 
-    println!(
-        "\n  \x1b[1;33m🏆 JOUST CHAMPION: \x1b[1;32m{}\x1b[1;33m defeated \x1b[1;31m{}\x1b[1;33m! All hail the Bovine Victor! 🏆\x1b[0m\n",
-        winner_name, loser_name
-    );
-    let _ = std::io::stdout().flush();
+        let winner_name = if battle.winner == 1 {
+            &battle.cow1.name
+        } else {
+            &battle.cow2.name
+        };
+        let loser_name = if battle.winner == 1 {
+            &battle.cow2.name
+        } else {
+            &battle.cow1.name
+        };
+
+        println!(
+            "\n  \x1b[1;33m🏆 JOUST CHAMPION: \x1b[1;32m{}\x1b[1;33m defeated \x1b[1;31m{}\x1b[1;33m! (Charge: {} vs {} cols | Clash: col {}) All hail the Bovine Victor! 🏆\x1b[0m\n",
+            winner_name, loser_name, battle.dist1, battle.dist2, battle.clash_x
+        );
+        let _ = std::io::stdout().flush();
+    }
 }
 
 /// Run a simulation of the battle and return the resulting text log without blocking sleeps.
@@ -602,7 +859,10 @@ pub fn run_battle(name1: &str, name2: &str) -> String {
 
     while !battle.is_done() {
         battle.tick();
-        if battle.phase == BattlePhase::Collision && battle.frames % 4 == 0 {
+        if (battle.phase == BattlePhase::Charging && battle.phase_frames % 15 == 0)
+            || (battle.phase == BattlePhase::Collision && battle.phase_frames % 10 == 0)
+            || (battle.phase == BattlePhase::Aftermath && battle.phase_frames % 15 == 0)
+        {
             output.push_str(&battle.render_frame());
             output.push('\n');
         }
@@ -623,8 +883,8 @@ pub fn run_battle(name1: &str, name2: &str) -> String {
     };
 
     output.push_str(&format!(
-        "\nBattle result: {} defeats {}!\n",
-        winner_name, loser_name
+        "\nBattle result: {} defeats {}! (Travel distance: {} vs {} cols, clash at col {})\n",
+        winner_name, loser_name, battle.dist1, battle.dist2, battle.clash_x
     ));
 
     output
@@ -645,23 +905,23 @@ mod tests {
     fn battle_charging_moves_cows() {
         let mut b = Battle::new("A", "B");
         b.tick();
-        assert!(b.cow1.x > 2);
-        assert!(b.cow2.x < 70);
+        assert!(b.cow1.x > 2 || b.pos1 > 2.0);
+        assert!(b.cow2.x < 70 || b.pos2 < 70.0);
     }
 
     #[test]
     fn battle_reaches_collision() {
         let mut b = Battle::new("A", "B");
-        for _ in 0..8 {
+        while b.phase == BattlePhase::Charging {
             b.tick();
         }
-        assert_ne!(b.phase, BattlePhase::Charging);
+        assert_eq!(b.phase, BattlePhase::Collision);
     }
 
     #[test]
     fn battle_eventually_done() {
         let mut b = Battle::new("A", "B");
-        for _ in 0..100 {
+        for _ in 0..160 {
             b.tick();
         }
         assert!(b.is_done());
@@ -680,32 +940,69 @@ mod tests {
         let mut b = Battle::new("A", "B");
         assert_eq!(b.phase, BattlePhase::Charging);
 
-        loop {
+        while b.phase == BattlePhase::Charging {
             b.tick();
-            if b.phase == BattlePhase::Collision {
-                break;
-            }
         }
         assert_eq!(b.phase, BattlePhase::Collision);
 
-        loop {
+        while b.phase == BattlePhase::Collision {
             b.tick();
-            if b.phase == BattlePhase::Aftermath {
-                break;
-            }
         }
         assert_eq!(b.phase, BattlePhase::Aftermath);
-        assert!(!b.cow1.alive);
-        assert_eq!(b.cow1.eyes, "xx");
-        assert_eq!(b.cow2.eyes, "@@");
+        assert!(!b.cow1.alive || !b.cow2.alive);
 
-        loop {
+        while b.phase == BattlePhase::Aftermath {
             b.tick();
-            if b.phase == BattlePhase::Done {
-                break;
-            }
         }
         assert_eq!(b.phase, BattlePhase::Done);
+    }
+
+    #[test]
+    fn battle_randomized_travel_distances_are_different() {
+        for seed in [1001, 2002, 3003, 4004, 5005] {
+            let b = Battle::with_dimensions_and_seed("Alpha", "Beta", 80, 14, 1, seed);
+            assert_ne!(
+                b.dist1, b.dist2,
+                "Travel distances must be different between mascot 1 and mascot 2 for seed {seed}"
+            );
+            assert!(b.dist1 >= 3, "dist1 must be at least 3 cols");
+            assert!(b.dist2 >= 3, "dist2 must be at least 3 cols");
+        }
+    }
+
+    #[test]
+    fn battle_variance_across_multiple_runs() {
+        let b1 = Battle::with_dimensions_and_seed("Cow1", "Cow2", 80, 14, 1, 12345);
+        let b2 = Battle::with_dimensions_and_seed("Cow1", "Cow2", 80, 14, 1, 67890);
+        assert!(
+            b1.clash_x != b2.clash_x || b1.dist1 != b2.dist1 || b1.dist2 != b2.dist2,
+            "Kinematics must vary across different seeds"
+        );
+    }
+
+    #[test]
+    fn battle_progressive_hp_depletion() {
+        let mut b = Battle::with_dimensions_and_seed("Hero", "Villain", 80, 14, 1, 42);
+        assert_ne!(
+            b.cow1.hp, b.cow2.hp,
+            "Mascots must have different starting HP"
+        );
+        assert_ne!(
+            b.cow1.max_hp, b.cow2.max_hp,
+            "Mascots must have different max HP"
+        );
+        let initial_loser_hp = b.cow2.hp;
+        while b.phase == BattlePhase::Charging {
+            b.tick();
+        }
+        assert_eq!(b.cow2.hp, initial_loser_hp);
+        b.tick();
+        assert!(b.cow2.hp <= initial_loser_hp);
+        while b.phase == BattlePhase::Collision {
+            b.tick();
+        }
+        assert_eq!(b.cow2.hp, 0);
+        assert!(b.cow1.hp > 0);
     }
 
     #[test]

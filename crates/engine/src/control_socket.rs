@@ -20,6 +20,7 @@ pub enum ControlCmd {
     Speed(f32),
     Cow(String),
     Text(String),
+    Think(String),
     Eyes(String),
     Tongue(String),
     Color(String),
@@ -134,6 +135,7 @@ pub fn parse_cmd(line: &str) -> ControlCmd {
             }
             "COW" => ControlCmd::Cow(req.arg.unwrap_or_default()),
             "TEXT" => ControlCmd::Text(req.arg.unwrap_or_default()),
+            "THINK" => ControlCmd::Think(req.arg.unwrap_or_default()),
             "EYES" => ControlCmd::Eyes(req.arg.unwrap_or_default()),
             "TONGUE" => ControlCmd::Tongue(req.arg.unwrap_or_default()),
             "COLOR" => ControlCmd::Color(req.arg.unwrap_or_default()),
@@ -392,6 +394,12 @@ mod tests {
     fn parse_text_with_arg() {
         let cmd = parse_cmd(r#"{"cmd":"TEXT","arg":"hello"}"#);
         assert!(matches!(cmd, ControlCmd::Text(ref s) if s == "hello"));
+    }
+
+    #[test]
+    fn parse_think_with_arg() {
+        let cmd = parse_cmd(r#"{"cmd":"THINK","arg":"pondering deeply"}"#);
+        assert!(matches!(cmd, ControlCmd::Think(ref s) if s == "pondering deeply"));
     }
 
     #[test]

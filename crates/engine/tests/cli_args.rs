@@ -230,6 +230,31 @@ fn battle_subcommand_custom_names() {
 }
 
 #[test]
+fn rps_battle_subcommand_and_alias() {
+    let (a, cmd) = parse_args(argv(&[
+        "forgum-engine",
+        "rps-battle",
+        "--player",
+        "Knight",
+        "--cpu",
+        "Dragon",
+        "--choice",
+        "rock",
+    ]))
+    .unwrap();
+    assert_eq!(a.command, Command::RpsBattle);
+    assert!(
+        matches!(cmd, Some(Commands::RpsBattle { player, cpu, choice, .. }) if player == "Knight" && cpu == "Dragon" && choice == Some("rock".to_string()))
+    );
+
+    let (a_alias, cmd_alias) = parse_args(argv(&["forgum-engine", "rps", "-c", "scissors"])).unwrap();
+    assert_eq!(a_alias.command, Command::RpsBattle);
+    assert!(
+        matches!(cmd_alias, Some(Commands::RpsBattle { choice, .. }) if choice == Some("scissors".to_string()))
+    );
+}
+
+#[test]
 fn theme_list_subcommand() {
     let (a, cmd) = parse_args(argv(&["forgum-engine", "theme", "list"])).unwrap();
     assert_eq!(a.command, Command::Theme);
@@ -651,4 +676,127 @@ fn logs_flags_open_raw_filter_parse() {
     } else {
         panic!("expected Commands::Logs with filter");
     }
+}
+
+#[test]
+fn config_set_and_get_args_parse_cleanly() {
+    let (a, cmd) = parse_args(argv(&["forgum", "config", "set", "split_mode", "seamless"])).unwrap();
+    assert_eq!(a.command, Command::Config);
+    if let Some(Commands::Config { key, value, extra_value, .. }) = cmd {
+        assert_eq!(key.as_deref(), Some("set"));
+        assert_eq!(value.as_deref(), Some("split_mode"));
+        assert_eq!(extra_value.as_deref(), Some("seamless"));
+    } else {
+        panic!("expected Commands::Config with set split_mode seamless");
+    }
+
+    let (_, cmd_get) = parse_args(argv(&["forgum", "config", "get", "editor"])).unwrap();
+    if let Some(Commands::Config { key, value, .. }) = cmd_get {
+        assert_eq!(key.as_deref(), Some("get"));
+        assert_eq!(value.as_deref(), Some("editor"));
+    } else {
+        panic!("expected Commands::Config with get editor");
+    }
+
+    let (_, cmd_direct) = parse_args(argv(&["forgum", "config", "split_mode", "seamless"])).unwrap();
+    if let Some(Commands::Config { key, value, .. }) = cmd_direct {
+        assert_eq!(key.as_deref(), Some("split_mode"));
+        assert_eq!(value.as_deref(), Some("seamless"));
+    } else {
+        panic!("expected Commands::Config with split_mode seamless");
+    }
+}
+
+#[test]
+fn split_mode_seamless_flag_parses_cleanly() {
+    let (a, _) = parse_args(argv(&["forgum", "render", "--split-mode", "seamless"])).unwrap();
+    assert_eq!(a.split_mode.as_deref(), Some("seamless"));
+}
+
+#[test]
+fn scene_config_roundtrips_all_27_fields_with_split_mode_editor_and_random() {
+    use forgum_platform::protocol::RandomSetting;
+    let mut cfg = SceneConfig::default();
+    cfg.split_mode = Some("seamless".into());
+    cfg.editor = Some("nvim".into());
+    cfg.random = Some(RandomSetting::Bool(true));
+
+    let json = serde_json::to_string(&cfg).unwrap();
+    let loaded: SceneConfig = serde_json::from_str(&json).unwrap();
+    assert_eq!(loaded.split_mode.as_deref(), Some("seamless"));
+    assert_eq!(loaded.editor.as_deref(), Some("nvim"));
+    assert_eq!(loaded.random, Some(RandomSetting::Bool(true)));
+}
+
+#[test]
+fn cli_random_flags_parse_cleanly() {
+    // 1. --random without target defaults to "all"
+    let (a1, _) = parse_args(argv(&["forgum", "render", "--random"])).unwrap();
+    assert_eq!(a1.random.as_deref(), Some("all"));
+
+    // 2. -r short flag defaults to "all"
+    let (a2, _) = parse_args(argv(&["forgum", "-r"])).unwrap();
+    assert_eq!(a2.random.as_deref(), Some("all"));
+
+    // 3. --random with target
+    let (a3, _) = parse_args(argv(&["forgum", "--random", "mascot"])).unwrap();
+    assert_eq!(a3.random.as_deref(), Some("mascot"));
+
+    // 4. build_scene_config applies random
+    let cfg = build_scene_config(&a1).unwrap();
+    assert!(cfg.random.is_some());
+    assert!(cfg.random.as_ref().unwrap().is_enabled());
+}
+
+#[test]
+fn resolve_scene_randomness_mascot_scenery_fx_thought() {
+    let tmp = tempfile::tempdir().unwrap();
+    let cows_dir = tmp.path().join("Cows");
+    std::fs::create_dir_all(&cows_dir).unwrap();
+    std::fs::write(cows_dir.join("tux.cow"), "tux").unwrap();
+    std::fs::write(cows_dir.join("dragon.cow"), "dragon").unwrap();
+
+    let fortunes_dir = tmp.path().join("Fortunes");
+    std::fs::create_dir_all(&fortunes_dir).unwrap();
+    std::fs::write(
+        fortunes_dir.join("fortunes.txt"),
+        "Fortune Alpha%\nFortune Beta%\nFortune Gamma",
+    )
+    .unwrap();
+
+    let mut scene = SceneConfig {
+        cow: "RANDOM".to_string(),
+        environment: Some("random".to_string()),
+        road: Some("RANDOM".to_string()),
+        mountain: Some("random".to_string()),
+        effect: "RANDOM".to_string(),
+        text: "random".to_string(),
+        ..SceneConfig::default()
+    };
+
+    let args = forgum_engine::cli::Args::default();
+    forgum_engine::runner::resolve_scene_randomness(&mut scene, tmp.path(), &args);
+
+    // Mascot resolved to one of the available cows
+    assert!(scene.cow == "tux" || scene.cow == "dragon");
+
+    // Scenery resolved to valid non-none styles
+    assert_ne!(scene.environment.as_deref(), Some("random"));
+    assert_ne!(scene.environment.as_deref(), Some("none"));
+    assert_ne!(scene.road.as_deref(), Some("random"));
+    assert_ne!(scene.road.as_deref(), Some("none"));
+    assert_ne!(scene.mountain.as_deref(), Some("random"));
+    assert_ne!(scene.mountain.as_deref(), Some("none"));
+
+    // Effect resolved to valid effect
+    assert_ne!(scene.effect, "random");
+    assert_ne!(scene.effect, "RANDOM");
+    assert!(forgum_engine::effects::ALL_EFFECTS.contains(&scene.effect.as_str()));
+
+    // Text resolved to one of the fortunes
+    assert!(
+        scene.text == "Fortune Alpha"
+            || scene.text == "Fortune Beta"
+            || scene.text == "Fortune Gamma"
+    );
 }

@@ -402,3 +402,43 @@ fn shell_sweepers_reset_scroll_margins_and_guard_split_launch() {
         "powershell split mode must guard against duplicate daemon launch"
     );
 }
+
+#[test]
+fn shell_preexec_hooks_reset_margins_before_command_execution() {
+    // Bash: trap DEBUG and __forgum_preexec
+    let bash = generate_hook(Shell::Bash, ENGINE);
+    assert!(bash.contains("__forgum_preexec()"));
+    assert!(bash.contains("trap '__forgum_preexec' DEBUG"));
+
+    // Zsh: add-zsh-hook preexec
+    let zsh = generate_hook(Shell::Zsh, ENGINE);
+    assert!(zsh.contains("__forgum_preexec()"));
+    assert!(zsh.contains("add-zsh-hook preexec __forgum_preexec"));
+
+    // Fish: __forgum_preexec --on-event fish_preexec
+    let fish = generate_hook(Shell::Fish, ENGINE);
+    assert!(fish.contains("function __forgum_preexec --on-event fish_preexec"));
+
+    // Pwsh & PowerShell: Set-PSReadLineKeyHandler -Key Enter
+    let pwsh = generate_hook(Shell::Pwsh, ENGINE);
+    assert!(pwsh.contains("Set-PSReadLineKeyHandler -Key Enter"));
+    assert!(pwsh.contains("[Microsoft.PowerShell.PSConsoleReadLine]::AcceptLine()"));
+
+    let ps = generate_hook(Shell::PowerShell, ENGINE);
+    assert!(ps.contains("Set-PSReadLineKeyHandler -Key Enter"));
+    assert!(ps.contains("[Microsoft.PowerShell.PSConsoleReadLine]::AcceptLine()"));
+}
+
+#[test]
+fn shell_subcommand_forwarding_includes_interactive_commands() {
+    let interactive_cmds = ["tui", "rps-battle", "battle", "image", "arena", "think"];
+    for shell in [Shell::Bash, Shell::Zsh, Shell::Fish, Shell::Pwsh, Shell::PowerShell] {
+        let hook = generate_hook(shell, ENGINE);
+        for cmd in interactive_cmds {
+            assert!(
+                hook.contains(cmd),
+                "shell {shell} must forward subcommand '{cmd}'"
+            );
+        }
+    }
+}

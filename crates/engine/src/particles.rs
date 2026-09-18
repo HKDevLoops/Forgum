@@ -95,7 +95,19 @@ impl ParticlePool {
     }
 
     /// Render active particles into the framebuffer.
-    pub fn render(&self, fb: &mut FrameBuffer, _time: f32, alpha_fn: fn(f32) -> f32) {
+    pub fn render(&self, fb: &mut FrameBuffer, time: f32, alpha_fn: fn(f32) -> f32) {
+        self.render_with_cutoff(fb, time, alpha_fn, 0);
+    }
+
+    /// Render active particles into the framebuffer with a vertical exclusion cutoff.
+    /// Particles located at `yi < min_y` are occluded and not drawn (strictly protects speech bubbles).
+    pub fn render_with_cutoff(
+        &self,
+        fb: &mut FrameBuffer,
+        _time: f32,
+        alpha_fn: fn(f32) -> f32,
+        min_y: usize,
+    ) {
         for (_key, p) in self.particles.iter() {
             let xi = p.x as i32;
             let yi = p.y as i32;
@@ -104,7 +116,7 @@ impl ParticlePool {
             }
             let xi = xi as usize;
             let yi = yi as usize;
-            if xi >= fb.width || yi >= fb.height {
+            if xi >= fb.width || yi >= fb.height || yi < min_y {
                 continue;
             }
             let life_ratio = (p.life / p.max_life).clamp(0.0, 1.0);
@@ -457,6 +469,43 @@ mod tests {
         fb.swap();
         let cell = fb.get(5, 3);
         assert_eq!(cell.ch, 'Z');
+    }
+
+    #[test]
+    fn pool_render_with_cutoff_occludes_speech_bubbles() {
+        let mut pool = ParticlePool::new();
+        // Particle 1 in bubble zone (y = 2)
+        pool.spawn(Particle {
+            x: 10.0,
+            y: 2.0,
+            vx: 0.0,
+            vy: 0.0,
+            life: 1.0,
+            max_life: 1.0,
+            ch: '*',
+            color: Color::WHITE,
+        });
+        // Particle 2 in creature zone (y = 6)
+        pool.spawn(Particle {
+            x: 10.0,
+            y: 6.0,
+            vx: 0.0,
+            vy: 0.0,
+            life: 1.0,
+            max_life: 1.0,
+            ch: '#',
+            color: Color::WHITE,
+        });
+
+        let mut fb = FrameBuffer::new(80, 24);
+        // Bubble cutoff at y = 4 (bubble occupies rows 0..4)
+        pool.render_with_cutoff(&mut fb, 0.0, |v| v, 4);
+        fb.swap();
+
+        // Bubble zone particle at y=2 must NOT be rendered
+        assert_eq!(fb.get(10, 2).ch, ' ');
+        // Creature zone particle at y=6 MUST be rendered
+        assert_eq!(fb.get(10, 6).ch, '#');
     }
 
     #[test]

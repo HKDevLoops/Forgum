@@ -188,6 +188,7 @@ You can control split shell behavior via CLI arguments or through the central co
 
 - `--split-scroll`: Enable scrolling margin overlay. Restricts terminal scrolling to the region beneath the cow animation.
 - `--split-mode <MODE>`: Explicitly select the split mode:
+  - `seamless`: Seamless inline single-pane execution without viewport margins, flickering, or pane boundary disruption.
   - `decstbm`: Force DECSTBM hardware margins (fails gracefully if unsupported).
   - `native-api`: Spawn a native multiplexer or terminal emulator pane via CLI/IPC.
   - `precmd-fallback`: Force shell precmd banner redraw without hardware margins.

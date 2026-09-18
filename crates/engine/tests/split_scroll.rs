@@ -25,8 +25,24 @@ fn compute_reserved_dimensions_width_consciousness_ultrawide() {
 
     // Ultrawide with taller mascot (16 lines)
     let (_, rows_tall) = compute_reserved_dimensions(200, 60, 16, &config);
-    // target = 16.max(12).min(60 * 40 / 100 = 24) -> 16
     assert_eq!(rows_tall, 16);
+}
+
+#[test]
+fn compute_reserved_dimensions_tall_mascot_adaptive_sizing() {
+    let config = SceneConfig {
+        split_scroll: true,
+        ..Default::default()
+    };
+
+    // Charizard / tall mascots (41 lines including bubble and road clearance) in standard widescreen
+    let (_, rows_tall) = compute_reserved_dimensions(140, 60, 41, &config);
+    // Preserves full 41 rows without arbitrary 22-row clipping, leaving 19 rows for shell prompt
+    assert_eq!(rows_tall, 41);
+
+    // In a vertically constrained terminal (35 rows), safe prompt headroom (35 - 4 = 31) bounds reservation cleanly
+    let (_, rows_constrained) = compute_reserved_dimensions(140, 35, 41, &config);
+    assert_eq!(rows_constrained, 31);
 }
 
 #[test]

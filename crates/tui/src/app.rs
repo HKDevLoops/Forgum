@@ -22,6 +22,43 @@ use ratatui::Frame;
 use forgum_platform::protocol::{ConfigFormat, SceneConfig};
 use forgum_platform::shell::Shell;
 
+/// Tailwind CSS inspired color tokens for modern vibrant terminal styling.
+pub mod tailwind {
+    use ratatui::style::Color;
+
+    pub const SLATE_900: Color = Color::Rgb(15, 23, 42);
+    pub const SLATE_800: Color = Color::Rgb(30, 41, 59);
+    pub const SLATE_700: Color = Color::Rgb(51, 65, 85);
+    pub const SLATE_600: Color = Color::Rgb(71, 85, 105);
+    pub const SLATE_400: Color = Color::Rgb(148, 163, 184);
+    pub const SLATE_300: Color = Color::Rgb(203, 213, 225);
+    pub const SLATE_200: Color = Color::Rgb(226, 232, 240);
+    pub const SLATE_100: Color = Color::Rgb(241, 245, 249);
+
+    pub const INDIGO_600: Color = Color::Rgb(79, 70, 229);
+    pub const INDIGO_500: Color = Color::Rgb(99, 102, 241);
+    pub const INDIGO_400: Color = Color::Rgb(129, 140, 248);
+
+    pub const VIOLET_500: Color = Color::Rgb(139, 92, 246);
+    pub const VIOLET_400: Color = Color::Rgb(167, 139, 250);
+
+    pub const SKY_500: Color = Color::Rgb(14, 165, 233);
+    pub const SKY_400: Color = Color::Rgb(56, 189, 248);
+
+    pub const CYAN_500: Color = Color::Rgb(6, 182, 212);
+    pub const CYAN_400: Color = Color::Rgb(34, 211, 238);
+
+    pub const EMERALD_600: Color = Color::Rgb(5, 150, 105);
+    pub const EMERALD_500: Color = Color::Rgb(16, 185, 129);
+    pub const EMERALD_400: Color = Color::Rgb(52, 211, 153);
+
+    pub const AMBER_500: Color = Color::Rgb(245, 158, 11);
+    pub const AMBER_400: Color = Color::Rgb(251, 191, 36);
+
+    pub const ROSE_500: Color = Color::Rgb(244, 63, 94);
+    pub const ROSE_400: Color = Color::Rgb(251, 113, 133);
+}
+
 /// Tab identifiers for top-level navigation (Zellij-style).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Tab {
@@ -511,24 +548,40 @@ pub enum Action {
 pub enum ConfigField {
     Duration = 0,
     Fps = 1,
-    Eyes = 2,
-    Tongue = 3,
-    ColorMode = 4,
-    Palette = 5,
-    Environment = 6,
-    Road = 7,
-    Mountain = 8,
-    AnimationType = 9,
-    Background = 10,
-    AutoRenderOnPrompt = 11,
-    ShellAttachMode = 12,
-    ConfigFormat = 13,
+    Text = 2,
+    Think = 3,
+    ThoughtInterval = 4,
+    Eyes = 5,
+    Tongue = 6,
+    ColorMode = 7,
+    Palette = 8,
+    Environment = 9,
+    Road = 10,
+    Mountain = 11,
+    Animation = 12,
+    AnimationType = 13,
+    Background = 14,
+    AutoRenderOnPrompt = 15,
+    ShellAttachMode = 16,
+    DefaultShell = 17,
+    SplitMode = 18,
+    SplitScroll = 19,
+    SplitRatio = 20,
+    ReserveRows = 21,
+    ReserveCols = 22,
+    Image = 23,
+    Editor = 24,
+    ConfigFormat = 25,
+    Random = 26,
 }
 
 impl ConfigField {
-    pub const ALL: [ConfigField; 14] = [
+    pub const ALL: [ConfigField; 27] = [
         ConfigField::Duration,
         ConfigField::Fps,
+        ConfigField::Text,
+        ConfigField::Think,
+        ConfigField::ThoughtInterval,
         ConfigField::Eyes,
         ConfigField::Tongue,
         ConfigField::ColorMode,
@@ -536,17 +589,30 @@ impl ConfigField {
         ConfigField::Environment,
         ConfigField::Road,
         ConfigField::Mountain,
+        ConfigField::Animation,
         ConfigField::AnimationType,
         ConfigField::Background,
         ConfigField::AutoRenderOnPrompt,
         ConfigField::ShellAttachMode,
+        ConfigField::DefaultShell,
+        ConfigField::SplitMode,
+        ConfigField::SplitScroll,
+        ConfigField::SplitRatio,
+        ConfigField::ReserveRows,
+        ConfigField::ReserveCols,
+        ConfigField::Image,
+        ConfigField::Editor,
         ConfigField::ConfigFormat,
+        ConfigField::Random,
     ];
 
     pub fn label(self) -> &'static str {
         match self {
             ConfigField::Duration => "duration",
             ConfigField::Fps => "fps",
+            ConfigField::Text => "text",
+            ConfigField::Think => "think",
+            ConfigField::ThoughtInterval => "thought_interval",
             ConfigField::Eyes => "eyes",
             ConfigField::Tongue => "tongue",
             ConfigField::ColorMode => "color_mode",
@@ -554,11 +620,21 @@ impl ConfigField {
             ConfigField::Environment => "environment",
             ConfigField::Road => "road",
             ConfigField::Mountain => "mountain",
+            ConfigField::Animation => "animation",
             ConfigField::AnimationType => "animation_type",
             ConfigField::Background => "background",
             ConfigField::AutoRenderOnPrompt => "auto_render_on_prompt",
             ConfigField::ShellAttachMode => "shell_attach_mode",
+            ConfigField::DefaultShell => "default_shell",
+            ConfigField::SplitMode => "split_mode",
+            ConfigField::SplitScroll => "split_scroll",
+            ConfigField::SplitRatio => "split_ratio",
+            ConfigField::ReserveRows => "reserve_rows",
+            ConfigField::ReserveCols => "reserve_cols",
+            ConfigField::Image => "image",
+            ConfigField::Editor => "editor",
             ConfigField::ConfigFormat => "config_format",
+            ConfigField::Random => "random",
         }
     }
 
@@ -566,6 +642,9 @@ impl ConfigField {
         match self {
             ConfigField::Duration => "Animation lifetime in seconds (0 = infinite / until signal)",
             ConfigField::Fps => "Target frame rate (30 = cinematic, 60 = ultra-smooth)",
+            ConfigField::Text => "Dialogue message string rendered inside speech or thought bubble",
+            ConfigField::Think => "Bubble style: thought bubble with circles 'o' (true) or speech bubble with '\\' (false)",
+            ConfigField::ThoughtInterval => "Interval in seconds between rotating thought quotes in background mode (0 = permanent)",
             ConfigField::Eyes => "ASCII characters for eyes (e.g. 'oo', '$$', 'XX', '@@')",
             ConfigField::Tongue => "ASCII characters for tongue (e.g. 'U ', '  ', '||')",
             ConfigField::ColorMode => "Color rendering palette mode: natural, animal, rainbow, solid, none",
@@ -573,13 +652,21 @@ impl ConfigField {
             ConfigField::Environment => "Atmospheric particle system: pasture, inferno, ocean, arctic, city, forest, savanna, swamp, space, cyber, graveyard, jurassic, hive, throne, none",
             ConfigField::Road => "Ground terrain surface style: dirt, cobblestone, magma, ice, seabed, sidewalk, roof, grid, crypt, savanna, mud, tracks, checkerboard, none",
             ConfigField::Mountain => "Horizon background silhouette: hills, peaks, volcano, iceberg, skyline, seamount, plateau, crater, gothic, castle, garden, none",
+            ConfigField::Animation => "Animation mode: dynamic (continuous simulation frames) or static (frozen single frame)",
             ConfigField::AnimationType => "Kinematic animation driver: animal_natural, walk, breathe, float, fly, talk, sway, pulse, glitch, particles, dissolve",
             ConfigField::Background => "Daemon non-blocking prompt overlay mode (true/false)",
             ConfigField::AutoRenderOnPrompt => "Trigger mascot automatically on shell prompt enter",
-            ConfigField::ShellAttachMode => {
-                "Prompt hook integration: banner, split, reactive, manual"
-            }
+            ConfigField::ShellAttachMode => "Prompt hook integration: banner, split, reactive, manual",
+            ConfigField::DefaultShell => "Default shell used for hook generation and prompts: auto, bash, zsh, fish, pwsh, nu",
+            ConfigField::SplitMode => "Single-pane split execution mode: seamless (simultaneous in same pane), auto, decstbm, native, precmd, disabled",
+            ConfigField::SplitScroll => "Terminal margin split scrolling (DECSTBM hardware scroll region)",
+            ConfigField::SplitRatio => "Dynamic ratio of total terminal height reserved for animation canvas (0.1..0.8)",
+            ConfigField::ReserveRows => "Explicit fixed rows reserved at top of terminal for animation canvas (e.g. 12)",
+            ConfigField::ReserveCols => "Explicit fixed columns reserved for animation canvas (e.g. 80, 0 = full width)",
+            ConfigField::Image => "Path to image file for rendering mascot directly from PNG/JPEG/WEBP image",
+            ConfigField::Editor => "Preferred text editor: auto, nvim, vim, emacs, nano, helix, micro, code, notepad",
             ConfigField::ConfigFormat => "File serialization syntax: JSON, YAML, or TOML",
+            ConfigField::Random => "Universally randomize mascot, scenery, fx, and thoughts on startup",
         }
     }
 
@@ -628,8 +715,11 @@ pub struct ConfigApp {
     pub road_dropdown: Dropdown,
     pub mountain_dropdown: Dropdown,
     pub animation_type_dropdown: Dropdown,
+    pub animation_dropdown: Dropdown,
     pub attach_mode_dropdown: Dropdown,
     pub format_dropdown: Dropdown,
+    pub split_mode_dropdown: Dropdown,
+    pub editor_dropdown: Dropdown,
 
     // Shared state
     pub saved: bool,
@@ -712,11 +802,23 @@ impl ConfigApp {
                 }),
         );
 
+        let animation_dropdown = Dropdown::new(
+            vec!["dynamic", "static"],
+            config.animation.as_deref().unwrap_or("dynamic"),
+        );
         let attach_mode_dropdown = Dropdown::new(
             vec!["banner", "split", "reactive", "manual"],
             &config.shell_attach_mode,
         );
         let format_dropdown = Dropdown::new(vec!["json", "yaml", "toml"], format.extension());
+        let split_mode_dropdown = Dropdown::new(
+            vec!["seamless", "auto", "decstbm", "native", "precmd", "disabled"],
+            config.split_mode.as_deref().unwrap_or("seamless"),
+        );
+        let editor_dropdown = Dropdown::new(
+            vec!["auto", "nvim", "vim", "emacs", "nano", "helix", "micro", "code", "notepad"],
+            config.editor.as_deref().unwrap_or("auto"),
+        );
 
         // Find initial mascot indices
         let mut init_cat = 0;
@@ -813,8 +915,11 @@ impl ConfigApp {
             road_dropdown,
             mountain_dropdown,
             animation_type_dropdown,
+            animation_dropdown,
             attach_mode_dropdown,
             format_dropdown,
+            split_mode_dropdown,
+            editor_dropdown,
             saved: false,
             status_message: "Welcome to Forgum! Use <Tab> to navigate, 'i' to install shell hooks."
                 .into(),
@@ -954,9 +1059,21 @@ impl ConfigApp {
             ANIMATION_TYPE_OPTIONS.to_vec(),
             self.config.animation_type.as_deref().unwrap_or("animal_natural"),
         );
+        self.animation_dropdown = Dropdown::new(
+            vec!["dynamic", "static"],
+            self.config.animation.as_deref().unwrap_or("dynamic"),
+        );
         self.attach_mode_dropdown = Dropdown::new(
             vec!["banner", "split", "reactive", "manual"],
             &self.config.shell_attach_mode,
+        );
+        self.split_mode_dropdown = Dropdown::new(
+            vec!["seamless", "auto", "decstbm", "native", "precmd", "disabled"],
+            self.config.split_mode.as_deref().unwrap_or("seamless"),
+        );
+        self.editor_dropdown = Dropdown::new(
+            vec!["auto", "nvim", "vim", "emacs", "nano", "helix", "micro", "code", "notepad"],
+            self.config.editor.as_deref().unwrap_or("auto"),
         );
         self.cow_cache.clear();
         self.ensure_cow_cached(&self.config.cow.clone());
@@ -1028,6 +1145,10 @@ impl ConfigApp {
                 match key.code {
                     KeyCode::Char('q') | KeyCode::Esc => return Ok(Some(Action::Quit)),
                     KeyCode::Char('s') => return Ok(Some(Action::Save)),
+                    KeyCode::Char('o') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                        let path = self.resolve_config_path();
+                        return Ok(Some(Action::OpenEditor(path)));
+                    }
                     KeyCode::Char('o') | KeyCode::Char('O') => {
                         let path = self.resolve_config_path();
                         return Ok(Some(Action::OpenEditor(path)));
@@ -1894,9 +2015,17 @@ export extern "forgum" [
                 let field = ConfigField::ALL[self.config_field_idx];
                 if field == ConfigField::Duration
                     || field == ConfigField::Fps
+                    || field == ConfigField::Text
+                    || field == ConfigField::ThoughtInterval
                     || field == ConfigField::Eyes
                     || field == ConfigField::Tongue
                     || field == ConfigField::Palette
+                    || field == ConfigField::DefaultShell
+                    || field == ConfigField::SplitRatio
+                    || field == ConfigField::ReserveRows
+                    || field == ConfigField::ReserveCols
+                    || field == ConfigField::Image
+                    || field == ConfigField::Editor
                 {
                     self.enter_config_edit();
                 } else {
@@ -1910,7 +2039,7 @@ export extern "forgum" [
             | KeyCode::Char('T')
             | KeyCode::Char(' ') => {
                 let field = ConfigField::ALL[self.config_field_idx];
-                if field == ConfigField::Duration {
+                if field == ConfigField::Duration || field == ConfigField::Text {
                     self.enter_config_edit();
                 } else {
                     self.cycle_config_field(true);
@@ -1944,9 +2073,29 @@ export extern "forgum" [
         self.original_edit_value = match field {
             ConfigField::Duration => self.config.duration.to_string(),
             ConfigField::Fps => self.config.fps.to_string(),
+            ConfigField::Text => self.config.text.clone(),
+            ConfigField::ThoughtInterval => self.config.thought_interval.to_string(),
             ConfigField::Eyes => self.config.eyes.clone(),
             ConfigField::Tongue => self.config.tongue.clone(),
             ConfigField::Palette => self.config.palette.clone().unwrap_or_default(),
+            ConfigField::DefaultShell => self.config.default_shell.clone(),
+            ConfigField::SplitRatio => self
+                .config
+                .split_ratio
+                .map(|r| r.to_string())
+                .unwrap_or_else(|| "auto".into()),
+            ConfigField::ReserveRows => self
+                .config
+                .reserve_rows
+                .map(|r| r.to_string())
+                .unwrap_or_else(|| "auto".into()),
+            ConfigField::ReserveCols => self
+                .config
+                .reserve_cols
+                .map(|c| c.to_string())
+                .unwrap_or_else(|| "auto".into()),
+            ConfigField::Image => self.config.image.clone().unwrap_or_default(),
+            ConfigField::Editor => self.config.editor.clone().unwrap_or_else(|| "auto".into()),
             _ => String::new(),
         };
         self.edit_initial = true;
@@ -1962,6 +2111,18 @@ export extern "forgum" [
                 self.status_message =
                     "Editing Target FPS: type number (1..240) and press Enter (Esc to cancel)"
                         .into();
+            }
+            ConfigField::Text => {
+                self.config_edit_buffer = self.config.text.clone();
+                self.editing_config = true;
+                self.status_message =
+                    "Editing Dialogue Text: type message and press Enter (Esc to cancel)".into();
+            }
+            ConfigField::ThoughtInterval => {
+                self.config_edit_buffer = self.config.thought_interval.to_string();
+                self.editing_config = true;
+                self.status_message =
+                    "Editing Thought Interval (seconds): type number and press Enter (Esc to cancel)".into();
             }
             ConfigField::Eyes => {
                 self.config_edit_buffer = self.config.eyes.clone();
@@ -1980,6 +2141,56 @@ export extern "forgum" [
                 self.editing_config = true;
                 self.status_message =
                     "Editing Palette: type comma-separated hex codes (e.g. '#ffffff,#1a1a1a') and press Enter (Esc to cancel)"
+                        .into();
+            }
+            ConfigField::DefaultShell => {
+                self.config_edit_buffer = self.config.default_shell.clone();
+                self.editing_config = true;
+                self.status_message =
+                    "Editing Default Shell: type shell name (e.g. 'pwsh', 'zsh', 'fish') or 'auto' and press Enter (Esc to cancel)"
+                        .into();
+            }
+            ConfigField::SplitRatio => {
+                self.config_edit_buffer = self
+                    .config
+                    .split_ratio
+                    .map(|r| r.to_string())
+                    .unwrap_or_else(|| "auto".into());
+                self.editing_config = true;
+                self.status_message =
+                    "Editing Split Ratio: type float (0.1..0.8) or 'auto' and press Enter (Esc to cancel)".into();
+            }
+            ConfigField::ReserveRows => {
+                self.config_edit_buffer = self
+                    .config
+                    .reserve_rows
+                    .map(|r| r.to_string())
+                    .unwrap_or_else(|| "auto".into());
+                self.editing_config = true;
+                self.status_message =
+                    "Editing Reserve Rows: type rows count (e.g. 12) or 'auto' and press Enter (Esc to cancel)".into();
+            }
+            ConfigField::ReserveCols => {
+                self.config_edit_buffer = self
+                    .config
+                    .reserve_cols
+                    .map(|c| c.to_string())
+                    .unwrap_or_else(|| "auto".into());
+                self.editing_config = true;
+                self.status_message =
+                    "Editing Reserve Cols: type cols count (e.g. 80) or 'auto' and press Enter (Esc to cancel)".into();
+            }
+            ConfigField::Image => {
+                self.config_edit_buffer = self.config.image.clone().unwrap_or_default();
+                self.editing_config = true;
+                self.status_message =
+                    "Editing Mascot Image Path: type image file path or 'none' and press Enter (Esc to cancel)".into();
+            }
+            ConfigField::Editor => {
+                self.config_edit_buffer = self.config.editor.clone().unwrap_or_else(|| "auto".into());
+                self.editing_config = true;
+                self.status_message =
+                    "Editing Preferred Editor: type editor command (e.g. 'nvim', 'emacs', 'nano', 'code') and press Enter (Esc to cancel)"
                         .into();
             }
             _ => {
@@ -2226,6 +2437,279 @@ export extern "forgum" [
                     self.format_dropdown.current().to_uppercase()
                 );
             }
+            ConfigField::SplitMode => {
+                self.split_mode_dropdown.cycle(forward);
+                let current = self.split_mode_dropdown.current();
+                self.config.split_mode = Some(current.clone());
+                self.saved = false;
+                self.status_message = format!("Split execution mode switched to {}", current);
+            }
+            ConfigField::SplitScroll => {
+                self.config.split_scroll = !self.config.split_scroll;
+                self.saved = false;
+                self.status_message = format!(
+                    "Split scroll region {}",
+                    if self.config.split_scroll {
+                        "ENABLED (DECSTBM margin scroll)"
+                    } else {
+                        "DISABLED"
+                    }
+                );
+            }
+            ConfigField::Text => {
+                const TEXT_PRESETS: [&str; 6] = [
+                    "",
+                    "Hello, world!",
+                    "Forgum terminal engine!",
+                    "Stay curious & keep coding!",
+                    "哞 ~ Forgum!",
+                    "The terminal is our canvas!",
+                ];
+                let cur = self.config.text.as_str();
+                let next = if forward {
+                    if let Some(pos) = TEXT_PRESETS.iter().position(|&t| t == cur) {
+                        TEXT_PRESETS[(pos + 1) % TEXT_PRESETS.len()]
+                    } else {
+                        TEXT_PRESETS[1]
+                    }
+                } else {
+                    if let Some(pos) = TEXT_PRESETS.iter().position(|&t| t == cur) {
+                        TEXT_PRESETS[(pos + TEXT_PRESETS.len() - 1) % TEXT_PRESETS.len()]
+                    } else {
+                        TEXT_PRESETS[TEXT_PRESETS.len() - 1]
+                    }
+                };
+                self.config.text = next.to_string();
+                self.cow_cache.clear();
+                self.ensure_cow_cached(&self.config.cow.clone());
+                self.saved = false;
+                self.status_message = if next.is_empty() {
+                    "Dialogue text cleared (no bubble) [Space/←/→: Cycle | e: Type custom]".into()
+                } else {
+                    format!("Dialogue text cycled to '{}' [Space/←/→: Cycle | e: Type custom]", next)
+                };
+            }
+            ConfigField::Think => {
+                self.config.think = !self.config.think;
+                self.cow_cache.clear();
+                self.ensure_cow_cached(&self.config.cow.clone());
+                self.saved = false;
+                self.status_message = format!(
+                    "Bubble mode switched to {}",
+                    if self.config.think {
+                        "Thought bubble ('o' connector)"
+                    } else {
+                        "Speech bubble ('\\' connector)"
+                    }
+                );
+            }
+            ConfigField::ThoughtInterval => {
+                const THOUGHT_PRESETS: [u32; 7] = [0, 10, 30, 60, 120, 300, 600];
+                let current = self.config.thought_interval;
+                let next = if forward {
+                    if let Some(pos) = THOUGHT_PRESETS.iter().position(|&t| t == current) {
+                        THOUGHT_PRESETS[(pos + 1) % THOUGHT_PRESETS.len()]
+                    } else {
+                        THOUGHT_PRESETS
+                            .iter()
+                            .copied()
+                            .find(|&t| t > current)
+                            .unwrap_or(THOUGHT_PRESETS[0])
+                    }
+                } else {
+                    if let Some(pos) = THOUGHT_PRESETS.iter().position(|&t| t == current) {
+                        THOUGHT_PRESETS[(pos + THOUGHT_PRESETS.len() - 1) % THOUGHT_PRESETS.len()]
+                    } else {
+                        THOUGHT_PRESETS
+                            .iter()
+                            .copied()
+                            .rev()
+                            .find(|&t| t < current)
+                            .unwrap_or(THOUGHT_PRESETS[THOUGHT_PRESETS.len() - 1])
+                    }
+                };
+                self.config.thought_interval = next;
+                self.saved = false;
+                self.status_message =
+                    format!("Thought interval set to {}s [Space/←/→: Cycle | e: Type]", next);
+            }
+            ConfigField::Animation => {
+                self.animation_dropdown.cycle(forward);
+                let current = self.animation_dropdown.current();
+                self.config.animation = Some(current.clone());
+                self.saved = false;
+                self.status_message = format!("Animation mode switched to {}", current);
+            }
+            ConfigField::DefaultShell => {
+                const SHELL_PRESETS: [&str; 9] = [
+                    "",
+                    "pwsh",
+                    "powershell",
+                    "bash",
+                    "zsh",
+                    "fish",
+                    "nu",
+                    "cmd",
+                    "elvish",
+                ];
+                let cur = self.config.default_shell.as_str();
+                let next = if forward {
+                    if let Some(pos) = SHELL_PRESETS.iter().position(|&s| s == cur) {
+                        SHELL_PRESETS[(pos + 1) % SHELL_PRESETS.len()]
+                    } else {
+                        SHELL_PRESETS[1]
+                    }
+                } else {
+                    if let Some(pos) = SHELL_PRESETS.iter().position(|&s| s == cur) {
+                        SHELL_PRESETS[(pos + SHELL_PRESETS.len() - 1) % SHELL_PRESETS.len()]
+                    } else {
+                        SHELL_PRESETS[SHELL_PRESETS.len() - 1]
+                    }
+                };
+                self.config.default_shell = next.to_string();
+                self.saved = false;
+                self.status_message = if next.is_empty() {
+                    "Default shell set to auto-detect [Space/←/→: Cycle | e: Type]".into()
+                } else {
+                    format!("Default shell switched to '{}' [Space/←/→: Cycle | e: Type]", next)
+                };
+            }
+            ConfigField::SplitRatio => {
+                const RATIO_PRESETS: [Option<f32>; 6] = [
+                    None,
+                    Some(0.20),
+                    Some(0.25),
+                    Some(0.30),
+                    Some(0.35),
+                    Some(0.40),
+                ];
+                let cur = self.config.split_ratio;
+                let next = if forward {
+                    if let Some(pos) = RATIO_PRESETS.iter().position(|&r| r == cur) {
+                        RATIO_PRESETS[(pos + 1) % RATIO_PRESETS.len()]
+                    } else {
+                        RATIO_PRESETS[1]
+                    }
+                } else {
+                    if let Some(pos) = RATIO_PRESETS.iter().position(|&r| r == cur) {
+                        RATIO_PRESETS[(pos + RATIO_PRESETS.len() - 1) % RATIO_PRESETS.len()]
+                    } else {
+                        RATIO_PRESETS[RATIO_PRESETS.len() - 1]
+                    }
+                };
+                self.config.split_ratio = next;
+                self.saved = false;
+                self.status_message = if let Some(r) = next {
+                    format!("Split ratio adjusted to {:.2} [Space/←/→: Cycle | e: Type]", r)
+                } else {
+                    "Split ratio set to auto (adaptive viewport) [Space/←/→: Cycle | e: Type]".into()
+                };
+            }
+            ConfigField::ReserveRows => {
+                const ROWS_PRESETS: [Option<u16>; 7] = [
+                    None,
+                    Some(8),
+                    Some(10),
+                    Some(12),
+                    Some(14),
+                    Some(16),
+                    Some(20),
+                ];
+                let cur = self.config.reserve_rows;
+                let next = if forward {
+                    if let Some(pos) = ROWS_PRESETS.iter().position(|&r| r == cur) {
+                        ROWS_PRESETS[(pos + 1) % ROWS_PRESETS.len()]
+                    } else {
+                        ROWS_PRESETS[1]
+                    }
+                } else {
+                    if let Some(pos) = ROWS_PRESETS.iter().position(|&r| r == cur) {
+                        ROWS_PRESETS[(pos + ROWS_PRESETS.len() - 1) % ROWS_PRESETS.len()]
+                    } else {
+                        ROWS_PRESETS[ROWS_PRESETS.len() - 1]
+                    }
+                };
+                self.config.reserve_rows = next;
+                self.saved = false;
+                self.status_message = if let Some(r) = next {
+                    format!("Reserve rows set to {} rows [Space/←/→: Cycle | e: Type]", r)
+                } else {
+                    "Reserve rows set to auto (dynamic calculation) [Space/←/→: Cycle | e: Type]".into()
+                };
+            }
+            ConfigField::ReserveCols => {
+                const COLS_PRESETS: [Option<u16>; 7] = [
+                    None,
+                    Some(40),
+                    Some(60),
+                    Some(80),
+                    Some(100),
+                    Some(120),
+                    Some(140),
+                ];
+                let cur = self.config.reserve_cols;
+                let next = if forward {
+                    if let Some(pos) = COLS_PRESETS.iter().position(|&c| c == cur) {
+                        COLS_PRESETS[(pos + 1) % COLS_PRESETS.len()]
+                    } else {
+                        COLS_PRESETS[1]
+                    }
+                } else {
+                    if let Some(pos) = COLS_PRESETS.iter().position(|&c| c == cur) {
+                        COLS_PRESETS[(pos + COLS_PRESETS.len() - 1) % COLS_PRESETS.len()]
+                    } else {
+                        COLS_PRESETS[COLS_PRESETS.len() - 1]
+                    }
+                };
+                self.config.reserve_cols = next;
+                self.saved = false;
+                self.status_message = if let Some(c) = next {
+                    format!("Reserve cols set to {} cols [Space/←/→: Cycle | e: Type]", c)
+                } else {
+                    "Reserve cols set to auto (full width) [Space/←/→: Cycle | e: Type]".into()
+                };
+            }
+            ConfigField::Image => {
+                self.enter_config_edit();
+            }
+            ConfigField::Editor => {
+                self.editor_dropdown.cycle(forward);
+                let current = self.editor_dropdown.current();
+                self.config.editor = if current == "auto" {
+                    None
+                } else {
+                    Some(current.clone())
+                };
+                self.saved = false;
+                self.status_message = format!("Preferred editor switched to {}", current);
+            }
+            ConfigField::Random => {
+                let next = match &self.config.random {
+                    None | Some(forgum_platform::protocol::RandomSetting::Bool(false)) => {
+                        Some(forgum_platform::protocol::RandomSetting::Bool(true))
+                    }
+                    Some(forgum_platform::protocol::RandomSetting::Bool(true)) => {
+                        Some(forgum_platform::protocol::RandomSetting::String("mascot".into()))
+                    }
+                    Some(forgum_platform::protocol::RandomSetting::String(s)) => match s.as_str() {
+                        "mascot" => Some(forgum_platform::protocol::RandomSetting::String("scenery".into())),
+                        "scenery" => Some(forgum_platform::protocol::RandomSetting::String("fx".into())),
+                        "fx" => Some(forgum_platform::protocol::RandomSetting::String("thought".into())),
+                        _ => None,
+                    },
+                    _ => None,
+                };
+                self.config.random = next;
+                self.saved = false;
+                self.status_message = format!(
+                    "Random mode: {}",
+                    self.config
+                        .random
+                        .as_ref()
+                        .map(|r| r.to_string())
+                        .unwrap_or_else(|| "disabled".into())
+                );
+            }
         }
     }
 
@@ -2265,6 +2749,35 @@ export extern "forgum" [
                             Some(self.original_edit_value.clone())
                         };
                     }
+                    ConfigField::Text => {
+                        self.config.text = self.original_edit_value.clone();
+                        self.cow_cache.clear();
+                        self.ensure_cow_cached(&self.config.cow.clone());
+                    }
+                    ConfigField::ThoughtInterval => {
+                        if let Ok(v) = self.original_edit_value.parse::<u32>() {
+                            self.config.thought_interval = v;
+                        }
+                    }
+                    ConfigField::DefaultShell => {
+                        self.config.default_shell = self.original_edit_value.clone();
+                    }
+                    ConfigField::SplitRatio => {
+                        self.config.split_ratio = self.original_edit_value.parse::<f32>().ok();
+                    }
+                    ConfigField::ReserveRows => {
+                        self.config.reserve_rows = self.original_edit_value.parse::<u16>().ok();
+                    }
+                    ConfigField::ReserveCols => {
+                        self.config.reserve_cols = self.original_edit_value.parse::<u16>().ok();
+                    }
+                    ConfigField::Image => {
+                        self.config.image = if self.original_edit_value.is_empty() {
+                            None
+                        } else {
+                            Some(self.original_edit_value.clone())
+                        };
+                    }
                     _ => {}
                 }
                 self.editing_config = false;
@@ -2276,24 +2789,54 @@ export extern "forgum" [
                 self.cycle_config_field(true);
             }
             KeyCode::Char('+') | KeyCode::Char('=')
-                if field == ConfigField::Duration || field == ConfigField::Fps =>
+                if field == ConfigField::Duration
+                    || field == ConfigField::Fps
+                    || field == ConfigField::ThoughtInterval
+                    || field == ConfigField::ReserveRows
+                    || field == ConfigField::ReserveCols =>
             {
                 self.commit_config_edit();
                 self.cycle_config_field(true);
                 self.config_edit_buffer = match field {
                     ConfigField::Duration => self.config.duration.to_string(),
                     ConfigField::Fps => self.config.fps.to_string(),
+                    ConfigField::ThoughtInterval => self.config.thought_interval.to_string(),
+                    ConfigField::ReserveRows => self
+                        .config
+                        .reserve_rows
+                        .map(|r| r.to_string())
+                        .unwrap_or_else(|| "auto".into()),
+                    ConfigField::ReserveCols => self
+                        .config
+                        .reserve_cols
+                        .map(|c| c.to_string())
+                        .unwrap_or_else(|| "auto".into()),
                     _ => self.config_edit_buffer.clone(),
                 };
             }
             KeyCode::Char('-') | KeyCode::Char('_')
-                if field == ConfigField::Duration || field == ConfigField::Fps =>
+                if field == ConfigField::Duration
+                    || field == ConfigField::Fps
+                    || field == ConfigField::ThoughtInterval
+                    || field == ConfigField::ReserveRows
+                    || field == ConfigField::ReserveCols =>
             {
                 self.commit_config_edit();
                 self.cycle_config_field(false);
                 self.config_edit_buffer = match field {
                     ConfigField::Duration => self.config.duration.to_string(),
                     ConfigField::Fps => self.config.fps.to_string(),
+                    ConfigField::ThoughtInterval => self.config.thought_interval.to_string(),
+                    ConfigField::ReserveRows => self
+                        .config
+                        .reserve_rows
+                        .map(|r| r.to_string())
+                        .unwrap_or_else(|| "auto".into()),
+                    ConfigField::ReserveCols => self
+                        .config
+                        .reserve_cols
+                        .map(|c| c.to_string())
+                        .unwrap_or_else(|| "auto".into()),
                     _ => self.config_edit_buffer.clone(),
                 };
             }
@@ -2315,7 +2858,12 @@ export extern "forgum" [
             }
             KeyCode::Right => {
                 self.edit_initial = false;
-                if field == ConfigField::Duration || field == ConfigField::Fps {
+                if field == ConfigField::Duration
+                    || field == ConfigField::Fps
+                    || field == ConfigField::ThoughtInterval
+                    || field == ConfigField::ReserveRows
+                    || field == ConfigField::ReserveCols
+                {
                     let clean = self
                         .config_edit_buffer
                         .trim()
@@ -2323,11 +2871,23 @@ export extern "forgum" [
                     if let Ok(val) = clean.parse::<f64>() {
                         self.config_edit_buffer = (val.round() as u32 + 1).to_string();
                     }
+                } else if field == ConfigField::SplitRatio {
+                    let clean = self.config_edit_buffer.trim();
+                    if let Ok(val) = clean.parse::<f32>() {
+                        self.config_edit_buffer = format!("{:.2}", (val + 0.05).min(0.95));
+                    } else {
+                        self.config_edit_buffer = "0.30".to_string();
+                    }
                 }
             }
             KeyCode::Left => {
                 self.edit_initial = false;
-                if field == ConfigField::Duration || field == ConfigField::Fps {
+                if field == ConfigField::Duration
+                    || field == ConfigField::Fps
+                    || field == ConfigField::ThoughtInterval
+                    || field == ConfigField::ReserveRows
+                    || field == ConfigField::ReserveCols
+                {
                     let clean = self
                         .config_edit_buffer
                         .trim()
@@ -2335,7 +2895,15 @@ export extern "forgum" [
                     if let Ok(val) = clean.parse::<f64>() {
                         let floor = if field == ConfigField::Fps { 1 } else { 0 };
                         let current = val.round() as u32;
-                        self.config_edit_buffer = current.saturating_sub(1).max(floor).to_string();
+                        self.config_edit_buffer =
+                            current.saturating_sub(1).max(floor).to_string();
+                    }
+                } else if field == ConfigField::SplitRatio {
+                    let clean = self.config_edit_buffer.trim();
+                    if let Ok(val) = clean.parse::<f32>() {
+                        self.config_edit_buffer = format!("{:.2}", (val - 0.05).max(0.05));
+                    } else {
+                        self.config_edit_buffer = "0.25".to_string();
                     }
                 }
             }
@@ -2372,13 +2940,22 @@ export extern "forgum" [
                 self.config_edit_buffer.clear();
             }
             KeyCode::Char(c) if !key.modifiers.contains(KeyModifiers::CONTROL) => {
-                if (field == ConfigField::Duration || field == ConfigField::Fps)
+                let is_integer_numeric = field == ConfigField::Duration
+                    || field == ConfigField::Fps
+                    || field == ConfigField::ThoughtInterval
+                    || field == ConfigField::ReserveRows
+                    || field == ConfigField::ReserveCols;
+                let is_float_numeric = field == ConfigField::SplitRatio;
+
+                if is_integer_numeric
                     && !c.is_ascii_digit()
                     && c != 's'
                     && c != 'f'
                     && c != 'p'
                 {
                     // Ignore non-digit characters on numeric fields so buffer isn't corrupted
+                } else if is_float_numeric && !c.is_ascii_digit() && c != '.' {
+                    // Ignore non-digit/period characters on float ratio fields
                 } else if self.edit_initial {
                     self.config_edit_buffer = c.to_string();
                     self.edit_initial = false;
@@ -2430,6 +3007,24 @@ export extern "forgum" [
                     );
                 }
             }
+            ConfigField::Text => {
+                self.config.text = self.config_edit_buffer.clone();
+                self.cow_cache.clear();
+                self.ensure_cow_cached(&self.config.cow.clone());
+                self.saved = false;
+                self.status_message = format!("✓ Dialogue text set to '{}'", self.config.text);
+            }
+            ConfigField::ThoughtInterval => {
+                let trimmed = self.config_edit_buffer.trim();
+                let clean =
+                    trimmed.trim_end_matches(|c: char| c.is_alphabetic() || c.is_whitespace());
+                if let Ok(val) = clean.parse::<f64>() {
+                    let n = val.max(0.0).round() as u32;
+                    self.config.thought_interval = n;
+                    self.saved = false;
+                    self.status_message = format!("✓ Thought interval set to {}s", n);
+                }
+            }
             ConfigField::Eyes => {
                 self.config.eyes = self.config_edit_buffer.clone();
                 self.cow_cache.clear();
@@ -2454,6 +3049,90 @@ export extern "forgum" [
                     self.config.palette = Some(trimmed.clone());
                     self.saved = false;
                     self.status_message = format!("✓ Palette set to '{}'", trimmed);
+                }
+            }
+            ConfigField::DefaultShell => {
+                let trimmed = self.config_edit_buffer.trim().to_string();
+                self.config.default_shell = if trimmed.eq_ignore_ascii_case("auto") {
+                    String::new()
+                } else {
+                    trimmed
+                };
+                self.saved = false;
+                self.status_message = if self.config.default_shell.is_empty() {
+                    "✓ Default shell set to auto-detect".into()
+                } else {
+                    format!("✓ Default shell set to '{}'", self.config.default_shell)
+                };
+            }
+            ConfigField::SplitRatio => {
+                let trimmed = self.config_edit_buffer.trim();
+                if trimmed.is_empty()
+                    || trimmed.eq_ignore_ascii_case("auto")
+                    || trimmed.eq_ignore_ascii_case("none")
+                {
+                    self.config.split_ratio = None;
+                    self.saved = false;
+                    self.status_message = "✓ Split ratio set to auto-adaptive".into();
+                } else if let Ok(val) = trimmed.parse::<f32>() {
+                    let r = val.clamp(0.05, 0.95);
+                    self.config.split_ratio = Some(r);
+                    self.saved = false;
+                    self.status_message = format!("✓ Split ratio set to {:.2}", r);
+                }
+            }
+            ConfigField::ReserveRows => {
+                let trimmed = self.config_edit_buffer.trim();
+                if trimmed.is_empty()
+                    || trimmed.eq_ignore_ascii_case("auto")
+                    || trimmed.eq_ignore_ascii_case("none")
+                {
+                    self.config.reserve_rows = None;
+                    self.saved = false;
+                    self.status_message = "✓ Reserve rows set to auto".into();
+                } else if let Ok(val) = trimmed.parse::<u16>() {
+                    self.config.reserve_rows = Some(val);
+                    self.saved = false;
+                    self.status_message = format!("✓ Reserve rows set to {}", val);
+                }
+            }
+            ConfigField::ReserveCols => {
+                let trimmed = self.config_edit_buffer.trim();
+                if trimmed.is_empty()
+                    || trimmed.eq_ignore_ascii_case("auto")
+                    || trimmed.eq_ignore_ascii_case("none")
+                {
+                    self.config.reserve_cols = None;
+                    self.saved = false;
+                    self.status_message = "✓ Reserve cols set to auto".into();
+                } else if let Ok(val) = trimmed.parse::<u16>() {
+                    self.config.reserve_cols = Some(val);
+                    self.saved = false;
+                    self.status_message = format!("✓ Reserve cols set to {}", val);
+                }
+            }
+            ConfigField::Image => {
+                let trimmed = self.config_edit_buffer.trim().to_string();
+                if trimmed.is_empty() || trimmed.eq_ignore_ascii_case("none") {
+                    self.config.image = None;
+                    self.saved = false;
+                    self.status_message = "✓ Mascot image cleared".into();
+                } else {
+                    self.config.image = Some(trimmed.clone());
+                    self.saved = false;
+                    self.status_message = format!("✓ Mascot image set to '{}'", trimmed);
+                }
+            }
+            ConfigField::Editor => {
+                let trimmed = self.config_edit_buffer.trim().to_string();
+                if trimmed.is_empty() || trimmed.eq_ignore_ascii_case("auto") {
+                    self.config.editor = None;
+                    self.saved = false;
+                    self.status_message = "✓ Preferred editor set to auto-detect".to_string();
+                } else {
+                    self.config.editor = Some(trimmed.clone());
+                    self.saved = false;
+                    self.status_message = format!("✓ Preferred editor set to '{}'", trimmed);
                 }
             }
             _ => {}
@@ -2696,12 +3375,12 @@ export extern "forgum" [
             .title(Span::styled(
                 " 📝 Forgum Config File Editor Request ",
                 Style::default()
-                    .fg(Color::Yellow)
+                    .fg(tailwind::AMBER_400)
                     .add_modifier(Modifier::BOLD),
             ))
             .borders(Borders::ALL)
             .border_type(BorderType::Rounded)
-            .border_style(Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD));
+            .border_style(Style::default().fg(tailwind::AMBER_500).add_modifier(Modifier::BOLD));
 
         let inner = block.inner(popup_area);
         f.render_widget(block, popup_area);
@@ -2757,29 +3436,30 @@ export extern "forgum" [
     }
 
     /// Render Zellij-style top header with active mode badge, tabs, and format badge.
+    /// Styled with Tailwind CSS-inspired design tokens for a modern vibrant look.
     fn render_zellij_header(&self, f: &mut Frame, area: Rect) {
         let mut line_spans = Vec::new();
 
-        // Active mode pill (high contrast)
+        // Active mode pill — Indigo-600 bg with bright white text
         line_spans.push(Span::styled(
             format!(" {} ", self.current_tab.mode_label()),
             Style::default()
-                .bg(Color::Cyan)
-                .fg(Color::Black)
+                .bg(tailwind::INDIGO_600)
+                .fg(tailwind::SLATE_100)
                 .add_modifier(Modifier::BOLD),
         ));
         line_spans.push(Span::raw(" "));
 
-        // Tabs 1-5
+        // Tabs 1-5 — Emerald active, Slate inactive
         for tab in Tab::ALL {
             let is_active = tab == self.current_tab;
             let style = if is_active {
                 Style::default()
-                    .bg(Color::Yellow)
-                    .fg(Color::Black)
+                    .bg(tailwind::EMERALD_500)
+                    .fg(tailwind::SLATE_900)
                     .add_modifier(Modifier::BOLD)
             } else {
-                Style::default().fg(Color::White)
+                Style::default().fg(tailwind::SLATE_400)
             };
             line_spans.push(Span::styled(tab.title(), style));
             line_spans.push(Span::raw(" "));
@@ -2798,17 +3478,18 @@ export extern "forgum" [
         let block = Block::default()
             .borders(Borders::ALL)
             .border_type(BorderType::Rounded)
+            .border_style(Style::default().fg(tailwind::INDIGO_500))
             .title(Span::styled(
-                " 🐮 FORGUM TERMINAL MATRIX ",
+                " ✨ FORGUM CONFIGURATOR ",
                 Style::default()
-                    .fg(Color::Magenta)
+                    .fg(tailwind::VIOLET_500)
                     .add_modifier(Modifier::BOLD),
             ));
 
         let p = Paragraph::new(title_line).block(block);
         f.render_widget(p, area);
 
-        // Render right-aligned badge in header if width permits
+        // Render right-aligned badge in header if width permits — Amber-400 version/format
         if area.width > 70 {
             let badge_width = right_info.len() as u16;
             let badge_rect = Rect {
@@ -2820,7 +3501,7 @@ export extern "forgum" [
             let badge_p = Paragraph::new(Line::from(Span::styled(
                 right_info,
                 Style::default()
-                    .fg(Color::Green)
+                    .fg(tailwind::AMBER_400)
                     .add_modifier(Modifier::BOLD),
             )));
             f.render_widget(badge_p, badge_rect);
@@ -3639,6 +4320,29 @@ export extern "forgum" [
                     )
                 }
             }
+            ConfigField::Text => {
+                if is_sel && self.editing_config {
+                    format!("✎ [ {}_ ]", self.config_edit_buffer)
+                } else if self.config.text.is_empty() {
+                    "\"\" (no bubble) [Enter/e: Edit Text]".into()
+                } else {
+                    format!("\"{}\" [Enter/e: Edit Text]", self.config.text)
+                }
+            }
+            ConfigField::Think => {
+                if self.config.think {
+                    "✔ ON (thought bubble 'o') [Space/Enter toggle]".into()
+                } else {
+                    "✖ OFF (speech bubble '\\') [Space/Enter toggle]".into()
+                }
+            }
+            ConfigField::ThoughtInterval => {
+                if is_sel && self.editing_config {
+                    format!("✎ [ {}_ ]", self.config_edit_buffer)
+                } else {
+                    format!("{}s [Enter/e: Edit | +/-: Step]", self.config.thought_interval)
+                }
+            }
             ConfigField::Eyes => {
                 if is_sel && self.editing_config {
                     format!("✎ [ {}_ ]", self.config_edit_buffer)
@@ -3687,6 +4391,12 @@ export extern "forgum" [
                     self.config.mountain.as_deref().unwrap_or("none")
                 )
             }
+            ConfigField::Animation => {
+                format!(
+                    "{} (←/→ cycle)",
+                    self.config.animation.as_deref().unwrap_or("dynamic")
+                )
+            }
             ConfigField::AnimationType => {
                 format!(
                     "{} (←/→ cycle)",
@@ -3710,12 +4420,91 @@ export extern "forgum" [
             ConfigField::ShellAttachMode => {
                 format!("{} (←/→ cycle)", self.config.shell_attach_mode)
             }
+            ConfigField::DefaultShell => {
+                if is_sel && self.editing_config {
+                    format!("✎ [ {}_ ]", self.config_edit_buffer)
+                } else if self.config.default_shell.is_empty() {
+                    "auto (detected) [Enter/e: Edit | ←/→: Cycle]".into()
+                } else {
+                    format!("{} [Enter/e: Edit | ←/→: Cycle]", self.config.default_shell)
+                }
+            }
+            ConfigField::SplitMode => {
+                format!("{} (←/→ cycle)", self.split_mode_dropdown.current())
+            }
+            ConfigField::SplitScroll => {
+                if self.config.split_scroll {
+                    "✔ ON (Space/Enter to toggle)".into()
+                } else {
+                    "✖ OFF (Space/Enter to toggle)".into()
+                }
+            }
+            ConfigField::SplitRatio => {
+                if is_sel && self.editing_config {
+                    format!("✎ [ {}_ ]", self.config_edit_buffer)
+                } else if let Some(r) = self.config.split_ratio {
+                    format!("{:.2} [Enter/e: Edit | +/-: Step]", r)
+                } else {
+                    "auto (None) [Enter/e: Edit | +/-: Step]".into()
+                }
+            }
+            ConfigField::ReserveRows => {
+                if is_sel && self.editing_config {
+                    format!("✎ [ {}_ ]", self.config_edit_buffer)
+                } else if let Some(r) = self.config.reserve_rows {
+                    format!("{} rows [Enter/e: Edit | +/-: Step]", r)
+                } else {
+                    "auto (None) [Enter/e: Edit | +/-: Step]".into()
+                }
+            }
+            ConfigField::ReserveCols => {
+                if is_sel && self.editing_config {
+                    format!("✎ [ {}_ ]", self.config_edit_buffer)
+                } else if let Some(c) = self.config.reserve_cols {
+                    format!("{} cols [Enter/e: Edit | +/-: Step]", c)
+                } else {
+                    "auto (None) [Enter/e: Edit | +/-: Step]".into()
+                }
+            }
+            ConfigField::Image => {
+                if is_sel && self.editing_config {
+                    format!("✎ [ {}_ ]", self.config_edit_buffer)
+                } else if let Some(img) = &self.config.image {
+                    format!("'{}' [Enter/e: Edit Path]", img)
+                } else {
+                    "none [Enter/e: Type Path]".into()
+                }
+            }
+            ConfigField::Editor => {
+                if is_sel && self.editing_config {
+                    format!("✎ [ {}_ ]", self.config_edit_buffer)
+                } else {
+                    format!(
+                        "{} (←/→ cycle | Enter/e: Type)",
+                        self.config.editor.as_deref().unwrap_or("auto")
+                    )
+                }
+            }
             ConfigField::ConfigFormat => {
                 format!(
                     "{} (←/→ cycle)",
                     self.format_dropdown.current().to_uppercase()
                 )
             }
+            ConfigField::Random => match &self.config.random {
+                Some(forgum_platform::protocol::RandomSetting::Bool(true)) => {
+                    "✔ ALL (Space/Enter to cycle)".into()
+                }
+                Some(forgum_platform::protocol::RandomSetting::Bool(false)) | None => {
+                    "✖ OFF (Space/Enter to cycle)".into()
+                }
+                Some(forgum_platform::protocol::RandomSetting::String(s)) => {
+                    format!("{s} (Space/Enter to cycle)")
+                }
+                Some(forgum_platform::protocol::RandomSetting::List(l)) => {
+                    format!("{} (Space/Enter to cycle)", l.join(", "))
+                }
+            },
         }
     }
 
@@ -3728,19 +4517,44 @@ export extern "forgum" [
                 let prefix = if is_sel { "▶ " } else { "  " };
                 let val_str = self.field_value(*field, is_sel);
 
-                let label_style = if is_sel {
-                    Style::default()
-                        .fg(Color::Yellow)
-                        .add_modifier(Modifier::BOLD)
+                let (label_style, line_style) = if is_sel {
+                    (
+                        Style::default()
+                            .fg(tailwind::AMBER_400)
+                            .add_modifier(Modifier::BOLD),
+                        Style::default().bg(tailwind::SLATE_800),
+                    )
                 } else {
-                    Style::default().fg(Color::White)
+                    (
+                        Style::default().fg(tailwind::SLATE_100),
+                        Style::default(),
+                    )
+                };
+
+                let val_color = if val_str.contains("✔ ON") {
+                    tailwind::EMERALD_400
+                } else if val_str.contains("✖ OFF") {
+                    tailwind::ROSE_400
+                } else if val_str.contains("seamless") {
+                    tailwind::VIOLET_400
+                } else if is_sel {
+                    tailwind::SKY_400
+                } else {
+                    tailwind::CYAN_400
+                };
+
+                let prefix_color = if is_sel {
+                    tailwind::AMBER_400
+                } else {
+                    tailwind::SLATE_600
                 };
 
                 ListItem::new(Line::from(vec![
-                    Span::styled(prefix, Style::default().fg(Color::Cyan)),
-                    Span::styled(format!("{:<24}", field.label()), label_style),
-                    Span::styled(val_str, Style::default().fg(Color::Cyan)),
+                    Span::styled(prefix, Style::default().fg(prefix_color)),
+                    Span::styled(format!("{:<20}", field.label()), label_style),
+                    Span::styled(val_str, Style::default().fg(val_color)),
                 ]))
+                .style(line_style)
             })
             .collect();
 
@@ -3760,7 +4574,13 @@ export extern "forgum" [
             Block::default()
                 .borders(Borders::ALL)
                 .border_type(BorderType::Rounded)
-                .title(" In-Memory Settings "),
+                .border_style(Style::default().fg(tailwind::INDIGO_500))
+                .title(Span::styled(
+                    " ⚙️ Configuration Matrix (100% Parity) ",
+                    Style::default()
+                        .fg(tailwind::SKY_400)
+                        .add_modifier(Modifier::BOLD),
+                )),
         );
         f.render_widget(list, area);
     }
@@ -3956,7 +4776,7 @@ export extern "forgum" [
             Span::styled(
                 format!("  {hud_line}"),
                 Style::default()
-                    .fg(Color::Cyan)
+                    .fg(tailwind::SKY_400)
                     .add_modifier(Modifier::BOLD),
             ),
         ]));
@@ -4044,166 +4864,170 @@ export extern "forgum" [
         for (i, raw_l) in cow_lines.iter().enumerate() {
             let mut l = raw_l.to_string();
 
-            // Eye blinking animation: blink active eyes to '--' or '- -' or '-_-'
-            if is_blinking {
-                let eyes_to_blink = [
-                    self.config.eyes.as_str(),
-                    "oo",
-                    "OO",
-                    "@@",
-                    "^^",
-                    "**",
-                    "$$",
-                    "==",
-                    "00",
-                    "xx",
-                    "XX",
-                ];
-                for eye in &eyes_to_blink {
-                    if !eye.is_empty() && l.contains(eye) {
-                        l = l.replace(eye, "--");
+            // Animal body animations ONLY run below the speech/thought bubble
+            if i >= cow_start_line {
+                // Eye blinking animation: blink active eyes to '--' or '- -' or '-_-'
+                if is_blinking {
+                    let eyes_to_blink = [
+                        self.config.eyes.as_str(),
+                        "oo",
+                        "OO",
+                        "@@",
+                        "^^",
+                        "**",
+                        "$$",
+                        "==",
+                        "00",
+                        "xx",
+                        "XX",
+                    ];
+                    for eye in &eyes_to_blink {
+                        if !eye.is_empty() && l.contains(eye) {
+                            l = l.replace(eye, "--");
+                        }
+                    }
+                    // Dynamic separated eye patterns for current eye setting and common mascots
+                    let mut glyphs_to_check = vec!['o', 'O', '@', '^', '*', '$', 'x', 'X'];
+                    if let Some(c) = self.config.eyes.chars().next() {
+                        if !glyphs_to_check.contains(&c) {
+                            glyphs_to_check.push(c);
+                        }
+                    }
+                    for &eg in &glyphs_to_check {
+                        let pat_sp = format!("{eg} {eg}");
+                        if l.contains(&pat_sp) {
+                            l = l.replace(&pat_sp, "- -");
+                        }
+                        let pat_2sp = format!("{eg}  {eg}");
+                        if l.contains(&pat_2sp) {
+                            l = l.replace(&pat_2sp, "-  -");
+                        }
+                        let pat_under = format!("{eg}_{eg}");
+                        if l.contains(&pat_under) {
+                            l = l.replace(&pat_under, "-_-");
+                        }
+                        let pat_dot = format!("{eg}.{eg}");
+                        if l.contains(&pat_dot) {
+                            l = l.replace(&pat_dot, "-.-");
+                        }
+                        let pat_dash = format!("{eg}-{eg}");
+                        if l.contains(&pat_dash) {
+                            l = l.replace(&pat_dash, "- -");
+                        }
+                    }
+                    // Single-eye bracketed creatures (e.g. duck, elephant, snoopy, etc.)
+                    if l.contains("( o )") {
+                        l = l.replace("( o )", "( - )");
+                    }
+                    if l.contains("(o)") {
+                        l = l.replace("(o)", "(-)");
+                    }
+                    if l.contains("( O )") {
+                        l = l.replace("( O )", "( - )");
+                    }
+                    if l.contains("(O)") {
+                        l = l.replace("(O)", "(-)");
                     }
                 }
-                // Dynamic separated eye patterns for current eye setting and common mascots
-                let mut glyphs_to_check = vec!['o', 'O', '@', '^', '*', '$', 'x', 'X'];
-                if let Some(c) = self.config.eyes.chars().next() {
-                    if !glyphs_to_check.contains(&c) {
-                        glyphs_to_check.push(c);
-                    }
-                }
-                for &eg in &glyphs_to_check {
-                    let pat_sp = format!("{eg} {eg}");
-                    if l.contains(&pat_sp) {
-                        l = l.replace(&pat_sp, "- -");
-                    }
-                    let pat_2sp = format!("{eg}  {eg}");
-                    if l.contains(&pat_2sp) {
-                        l = l.replace(&pat_2sp, "-  -");
-                    }
-                    let pat_under = format!("{eg}_{eg}");
-                    if l.contains(&pat_under) {
-                        l = l.replace(&pat_under, "-_-");
-                    }
-                    let pat_dot = format!("{eg}.{eg}");
-                    if l.contains(&pat_dot) {
-                        l = l.replace(&pat_dot, "-.-");
-                    }
-                    let pat_dash = format!("{eg}-{eg}");
-                    if l.contains(&pat_dash) {
-                        l = l.replace(&pat_dash, "- -");
-                    }
-                }
-                // Single-eye bracketed creatures (e.g. duck, elephant, snoopy, etc.)
-                if l.contains("( o )") {
-                    l = l.replace("( o )", "( - )");
-                }
-                if l.contains("(o)") {
-                    l = l.replace("(o)", "(-)");
-                }
-                if l.contains("( O )") {
-                    l = l.replace("( O )", "( - )");
-                }
-                if l.contains("(O)") {
-                    l = l.replace("(O)", "(-)");
-                }
-            }
 
-            // Cud chewing / mouth cadence
-            if is_chewing && l.contains("(__)") {
-                l = l.replace("(__)", if chew_cycle > 0.52 { "(=-)" } else { "(-=)" });
-            }
-
-            let eff = if self.config.effect == "animal_natural" || self.config.effect == "default" {
-                match self.config.cow.as_str() {
-                    "duck" | "pterodactyl" | "golden-eagle" | "tweety-bird" => "fly",
-                    "bunny" | "hamster" | "corgi" | "cat" | "cat2" | "catfence" | "kitty" | "kitten"
-                    | "doge" | "mule" | "pig" | "ram" | "sheep" | "goat" | "goat2" | "wolf" | "tiger"
-                    | "panther" | "fox" | "hedgehog" | "armadillo" | "rhino" => "walk",
-                    "dolphin" | "whale" | "docker-whale" | "happy-whale" | "octopus" | "smiling-octopus"
-                    | "squid" | "jellyfish" | "seahorse" | "seahorse-big" => "sway",
-                    "ghost" | "unipony" | "wizard" | "atat" => "float",
-                    _ => "breathe",
+                // Cud chewing / mouth cadence
+                if is_chewing && l.contains("(__)") {
+                    l = l.replace("(__)", if chew_cycle > 0.52 { "(=-)" } else { "(-=)" });
                 }
-            } else {
-                self.config.effect.as_str()
-            };
 
-            // Effect kinematics
-            match eff {
-                "walk" => {
-                    if i == leg_line_idx {
-                        if l.contains("||     ||") {
-                            l = match walk_phase {
-                                0 => l.replace("||     ||", "|/     /|"),
-                                1 => l.replace("||     ||", "/|     |/"),
-                                2 => l.replace("||     ||", "|\\     \\|"),
-                                _ => l.replace("||     ||", "\\|     |\\"),
+                let eff = if self.config.effect == "animal_natural" || self.config.effect == "default" {
+                    match self.config.cow.as_str() {
+                        "duck" | "pterodactyl" | "golden-eagle" | "tweety-bird" => "fly",
+                        "bunny" | "hamster" | "corgi" | "cat" | "cat2" | "catfence" | "kitty" | "kitten"
+                        | "doge" | "mule" | "pig" | "ram" | "sheep" | "goat" | "goat2" | "wolf" | "tiger"
+                        | "panther" | "fox" | "hedgehog" | "armadillo" | "rhino" => "walk",
+                        "dolphin" | "whale" | "docker-whale" | "happy-whale" | "octopus" | "smiling-octopus"
+                        | "squid" | "jellyfish" | "seahorse" | "seahorse-big" => "sway",
+                        "ghost" | "unipony" | "wizard" | "atat" => "float",
+                        _ => "breathe",
+                    }
+                } else {
+                    self.config.effect.as_str()
+                };
+
+                // Effect kinematics
+                match eff {
+                    "walk" => {
+                        if i == leg_line_idx {
+                            if l.contains("||     ||") {
+                                l = match walk_phase {
+                                    0 => l.replace("||     ||", "|/     /|"),
+                                    1 => l.replace("||     ||", "/|     |/"),
+                                    2 => l.replace("||     ||", "|\\     \\|"),
+                                    _ => l.replace("||     ||", "\\|     |\\"),
+                                };
+                            } else if l.contains("/ \\") {
+                                l = match walk_phase {
+                                    0 | 2 => l.replace("/ \\", "| |"),
+                                    1 => l.replace("/ \\", "\\ /"),
+                                    _ => l,
+                                };
+                            }
+                        }
+                    }
+                    "breathe" => {
+                        if is_inhale {
+                            if l.contains("___") {
+                                l = l.replace("___", "~~~");
+                            } else if l.contains("__") {
+                                l = l.replace("__", "~~");
+                            }
+                            if l.contains("---") {
+                                l = l.replace("---", "===");
+                            } else if l.contains("--") {
+                                l = l.replace("--", "==");
+                            }
+                        }
+                    }
+                    "float" => {
+                        let wave_shift = ((t * 2.8 + i as f32 * 0.4).sin() * 1.5) as i32;
+                        let pad = (wave_shift + 2).max(0) as usize;
+                        l = format!("{}{l}", " ".repeat(pad));
+                    }
+                    "fly" => {
+                        if is_wing_up {
+                            if l.contains('\\') && !l.contains('/') {
+                                l = l.replace('\\', "/");
+                            }
+                        } else if l.contains('/') && !l.contains('\\') {
+                            l = l.replace('/', "\\");
+                        }
+                    }
+                    "talk" => {
+                        let talk_chars = ['_', '.', 'o', 'O', 'w', '='];
+                        let talk_ch = talk_chars[((t * 12.0) as usize + i) % talk_chars.len()];
+                        if l.contains("(__)") {
+                            l = l.replace("(__)", &format!("({talk_ch}{talk_ch})"));
+                        } else if l.contains("(_)") {
+                            l = l.replace("(_)", &format!("({talk_ch})"));
+                        }
+                    }
+                    "sway" => {
+                        let rel = (total_lines.saturating_sub(i)) as f32 / total_lines as f32;
+                        let sway_amt = ((t * 3.2).sin() * rel * 3.0) as i32;
+                        let pad = (sway_amt + 3).max(0) as usize;
+                        l = format!("{}{l}", " ".repeat(pad));
+                    }
+                    "glitch" if ((t * 15.0) as usize + i) % 7 == 0 => {
+                        let mut chars: Vec<char> = l.chars().collect();
+                        if let Some(pos) = chars.iter().position(|c| !c.is_whitespace()) {
+                            chars[pos] = match ((t * 10.0) as usize) % 4 {
+                                0 => '#',
+                                1 => '~',
+                                2 => '?',
+                                3 => '!',
+                                _ => '!',
                             };
-                        } else if l.contains("/ \\") {
-                            l = match walk_phase {
-                                0 | 2 => l.replace("/ \\", "| |"),
-                                1 => l.replace("/ \\", "\\ /"),
-                                _ => l,
-                            };
+                            l = chars.into_iter().collect();
                         }
                     }
+                    _ => {}
                 }
-                "breathe" => {
-                    if is_inhale {
-                        if l.contains("___") {
-                            l = l.replace("___", "~~~");
-                        } else if l.contains("__") {
-                            l = l.replace("__", "~~");
-                        }
-                        if l.contains("---") {
-                            l = l.replace("---", "===");
-                        } else if l.contains("--") {
-                            l = l.replace("--", "==");
-                        }
-                    }
-                }
-                "float" => {
-                    let wave_shift = ((t * 2.8 + i as f32 * 0.4).sin() * 1.5) as i32;
-                    let pad = (wave_shift + 2).max(0) as usize;
-                    l = format!("{}{l}", " ".repeat(pad));
-                }
-                "fly" => {
-                    if is_wing_up {
-                        if l.contains('\\') && !l.contains('/') {
-                            l = l.replace('\\', "/");
-                        }
-                    } else if l.contains('/') && !l.contains('\\') {
-                        l = l.replace('/', "\\");
-                    }
-                }
-                "talk" => {
-                    let talk_chars = ['_', '.', 'o', 'O', 'w', '='];
-                    let talk_ch = talk_chars[((t * 12.0) as usize + i) % talk_chars.len()];
-                    if l.contains("(__)") {
-                        l = l.replace("(__)", &format!("({talk_ch}{talk_ch})"));
-                    } else if l.contains("(_)") {
-                        l = l.replace("(_)", &format!("({talk_ch})"));
-                    }
-                }
-                "sway" => {
-                    let rel = (total_lines.saturating_sub(i)) as f32 / total_lines as f32;
-                    let sway_amt = ((t * 3.2).sin() * rel * 3.0) as i32;
-                    let pad = (sway_amt + 3).max(0) as usize;
-                    l = format!("{}{l}", " ".repeat(pad));
-                }
-                "glitch" if ((t * 15.0) as usize + i) % 7 == 0 => {
-                    let mut chars: Vec<char> = l.chars().collect();
-                    if let Some(pos) = chars.iter().position(|c| !c.is_whitespace()) {
-                        chars[pos] = match ((t * 10.0) as usize) % 4 {
-                            0 => '#',
-                            1 => '~',
-                            2 => '?',
-                            _ => '!',
-                        };
-                        l = chars.into_iter().collect();
-                    }
-                }
-                _ => {}
             }
 
             let color = if let Some(palette_str) = &self.config.palette {
@@ -4272,17 +5096,51 @@ export extern "forgum" [
             let animal_rel_y = i.saturating_sub(cow_start_line);
 
             if is_bubble_line {
+                let trimmed = l.trim();
+                let is_connector_line = trimmed == "o"
+                    || trimmed == "\\"
+                    || trimmed == "/"
+                    || trimmed == "o o"
+                    || trimmed == "\\ \\";
+                let is_border_line = (trimmed.starts_with('_') && trimmed.chars().all(|c| c == '_'))
+                    || (trimmed.starts_with('-') && trimmed.chars().all(|c| c == '-'))
+                    || (trimmed.starts_with('(') && trimmed.ends_with(')') && trimmed.chars().all(|c| c == '(' || c == ')' || c == '_'))
+                    || (trimmed.starts_with('|') && trimmed.ends_with('|') && trimmed.chars().all(|c| c == '|' || c == '_'));
+
+                let first_non_space = l.chars().position(|c| !c.is_whitespace());
+                let last_non_space = l
+                    .chars()
+                    .enumerate()
+                    .filter(|(_, c)| !c.is_whitespace())
+                    .last()
+                    .map(|(idx, _)| idx);
+
                 let mut spans = Vec::new();
                 spans.push(Span::raw("  "));
-                for ch in l.chars() {
+                for (col_idx, ch) in l.chars().enumerate() {
                     if ch == ' ' {
                         spans.push(Span::raw(" "));
-                    } else if ch == 'o' || ch == 'O' || ch == '\\' || ch == '/' {
-                        spans.push(Span::styled(ch.to_string(), Style::default().fg(Color::Rgb(180, 230, 255))));
-                    } else if ch == '_' || ch == '-' || ch == '=' || ch == '(' || ch == ')' || ch == '|' || ch == '<' || ch == '>' || ch == '+' {
-                        spans.push(Span::styled(ch.to_string(), Style::default().fg(Color::Rgb(215, 225, 240))));
+                    } else if is_connector_line {
+                        spans.push(Span::styled(
+                            ch.to_string(),
+                            Style::default().fg(Color::Rgb(180, 230, 255)),
+                        ));
+                    } else if is_border_line
+                        || Some(col_idx) == first_non_space
+                        || Some(col_idx) == last_non_space
+                    {
+                        spans.push(Span::styled(
+                            ch.to_string(),
+                            Style::default().fg(Color::Rgb(215, 225, 240)),
+                        ));
                     } else {
-                        spans.push(Span::styled(ch.to_string(), Style::default().fg(Color::Rgb(255, 255, 255))));
+                        // All inner characters of the thought or speech bubble message: 100% crystal clear bright white
+                        spans.push(Span::styled(
+                            ch.to_string(),
+                            Style::default()
+                                .fg(Color::Rgb(255, 255, 255))
+                                .add_modifier(Modifier::BOLD),
+                        ));
                     }
                 }
                 lines.push(Line::from(spans));
@@ -4357,7 +5215,13 @@ export extern "forgum" [
             Block::default()
                 .borders(Borders::ALL)
                 .border_type(BorderType::Rounded)
-                .title(title),
+                .border_style(Style::default().fg(tailwind::INDIGO_500))
+                .title(Span::styled(
+                    title,
+                    Style::default()
+                        .fg(tailwind::EMERALD_400)
+                        .add_modifier(Modifier::BOLD),
+                )),
         );
         f.render_widget(p, area);
     }
@@ -4411,7 +5275,13 @@ export extern "forgum" [
                         Block::default()
                             .borders(Borders::ALL)
                             .border_type(BorderType::Rounded)
-                            .title(" 🐾 Mascot Inspector & Native Biome "),
+                            .border_style(Style::default().fg(tailwind::INDIGO_400))
+                            .title(Span::styled(
+                                " 🐾 Mascot Inspector & Native Biome ",
+                                Style::default()
+                                    .fg(tailwind::VIOLET_400)
+                                    .add_modifier(Modifier::BOLD),
+                            )),
                     );
                 f.render_widget(p, area);
             }
@@ -4462,7 +5332,13 @@ export extern "forgum" [
                         Block::default()
                             .borders(Borders::ALL)
                             .border_type(BorderType::Rounded)
-                            .title(" 🏔️ Landscape & Road Details "),
+                            .border_style(Style::default().fg(tailwind::INDIGO_400))
+                            .title(Span::styled(
+                                " 🏔️ Landscape & Road Details ",
+                                Style::default()
+                                    .fg(tailwind::VIOLET_400)
+                                    .add_modifier(Modifier::BOLD),
+                            )),
                     );
                 f.render_widget(p, area);
             }
@@ -4476,7 +5352,13 @@ export extern "forgum" [
                         Block::default()
                             .borders(Borders::ALL)
                             .border_type(BorderType::Rounded)
-                            .title(" Dynamics & Rendering "),
+                            .border_style(Style::default().fg(tailwind::INDIGO_400))
+                            .title(Span::styled(
+                                " ✨ Dynamics & Rendering ",
+                                Style::default()
+                                    .fg(tailwind::VIOLET_400)
+                                    .add_modifier(Modifier::BOLD),
+                            )),
                     );
                 f.render_widget(p, area);
             }
@@ -4486,7 +5368,7 @@ export extern "forgum" [
                     .iter()
                     .rev()
                     .take(area.height.saturating_sub(2) as usize)
-                    .map(|msg| Line::from(Span::styled(msg, Style::default().fg(Color::Cyan))))
+                    .map(|msg| Line::from(Span::styled(msg, Style::default().fg(tailwind::SKY_400))))
                     .collect();
 
                 let p = Paragraph::new(log_lines)
@@ -4495,184 +5377,243 @@ export extern "forgum" [
                         Block::default()
                             .borders(Borders::ALL)
                             .border_type(BorderType::Rounded)
-                            .title(
-                                " Shell Installation Action Log (i: Install, u: Uninstall, t: Test) ",
-                            ),
+                            .border_style(Style::default().fg(tailwind::INDIGO_400))
+                            .title(Span::styled(
+                                " 🚀 Shell Installation Action Log (i: Install, u: Uninstall, t: Test) ",
+                                Style::default()
+                                    .fg(tailwind::EMERALD_400)
+                                    .add_modifier(Modifier::BOLD),
+                            )),
                     );
                 f.render_widget(p, area);
             }
             Tab::Config => {
                 let field = ConfigField::ALL[self.config_field_idx];
-                let text = format!("Parameter: {}\n{}", field.label(), field.desc());
-                let p = Paragraph::new(text)
+                let val_str = self.field_value(field, true);
+
+                let mut lines: Vec<Line> = Vec::with_capacity(10);
+                lines.push(Line::from(vec![
+                    Span::styled("Parameter: ", Style::default().fg(tailwind::VIOLET_400).add_modifier(Modifier::BOLD)),
+                    Span::styled(field.label(), Style::default().fg(tailwind::AMBER_400).add_modifier(Modifier::BOLD)),
+                ]));
+                lines.push(Line::from(vec![
+                    Span::styled("Value: ", Style::default().fg(tailwind::SKY_400).add_modifier(Modifier::BOLD)),
+                    Span::styled(
+                        &val_str,
+                        Style::default().fg(if val_str.contains("✔ ON") {
+                            tailwind::EMERALD_400
+                        } else if val_str.contains("✖ OFF") {
+                            tailwind::ROSE_400
+                        } else {
+                            tailwind::SLATE_100
+                        }),
+                    ),
+                ]));
+                lines.push(Line::from(""));
+                lines.push(Line::from(Span::styled(
+                    field.desc(),
+                    Style::default().fg(tailwind::SLATE_300),
+                )));
+                lines.push(Line::from(""));
+                lines.push(Line::from(vec![
+                    Span::styled("Shortcuts: ", Style::default().fg(tailwind::SLATE_600)),
+                    Span::styled("[e/Enter] ", Style::default().fg(tailwind::EMERALD_400)),
+                    Span::styled("Edit  ", Style::default().fg(tailwind::SLATE_300)),
+                    Span::styled("[+/-] ", Style::default().fg(tailwind::AMBER_400)),
+                    Span::styled("Step  ", Style::default().fg(tailwind::SLATE_300)),
+                    Span::styled("[o] ", Style::default().fg(tailwind::VIOLET_400)),
+                    Span::styled("Editor  ", Style::default().fg(tailwind::SLATE_300)),
+                    Span::styled("[s] ", Style::default().fg(tailwind::CYAN_400)),
+                    Span::styled("Save", Style::default().fg(tailwind::SLATE_300)),
+                ]));
+
+                let p = Paragraph::new(lines)
                     .wrap(Wrap { trim: true })
                     .block(
                         Block::default()
                             .borders(Borders::ALL)
                             .border_type(BorderType::Rounded)
-                            .title(" Parameter Information "),
+                            .border_style(Style::default().fg(tailwind::INDIGO_400))
+                            .title(Span::styled(
+                                " ⚙️ Parameter Details ",
+                                Style::default()
+                                    .fg(tailwind::VIOLET_400)
+                                    .add_modifier(Modifier::BOLD),
+                            )),
                     );
                 f.render_widget(p, area);
             }
         }
     }
 
-    /// Bottom Zellij-style status and keybinding bar with stylized rounded tags.
+    /// Bottom Zellij-style status and keybinding bar with Tailwind dark pill badges.
     fn render_zellij_footer(&self, f: &mut Frame, area: Rect) {
         let help_spans = if self.current_tab == Tab::Installer {
             vec![
                 Span::styled(
                     " <Tab/1-5> ",
-                    Style::default().bg(Color::DarkGray).fg(Color::White),
+                    Style::default().bg(tailwind::SLATE_800).fg(tailwind::SLATE_200),
                 ),
-                Span::raw(" Tabs  "),
+                Span::styled(" Tabs  ", Style::default().fg(tailwind::SLATE_400)),
                 Span::styled(
                     " <j/k> ",
-                    Style::default().bg(Color::DarkGray).fg(Color::White),
+                    Style::default().bg(tailwind::SLATE_800).fg(tailwind::SLATE_200),
                 ),
-                Span::raw(" Shell  "),
+                Span::styled(" Shell  ", Style::default().fg(tailwind::SLATE_400)),
                 Span::styled(
                     " <i> ",
-                    Style::default().bg(Color::DarkGray).fg(Color::Green),
+                    Style::default().bg(tailwind::SLATE_800).fg(tailwind::EMERALD_400),
                 ),
-                Span::raw(" Install  "),
-                Span::styled(" <u> ", Style::default().bg(Color::DarkGray).fg(Color::Red)),
-                Span::raw(" Uninstall  "),
+                Span::styled(" Install  ", Style::default().fg(tailwind::SLATE_300)),
+                Span::styled(
+                    " <u> ",
+                    Style::default().bg(tailwind::SLATE_800).fg(tailwind::ROSE_400),
+                ),
+                Span::styled(" Uninstall  ", Style::default().fg(tailwind::SLATE_300)),
                 Span::styled(
                     " <t> ",
-                    Style::default().bg(Color::DarkGray).fg(Color::Yellow),
+                    Style::default().bg(tailwind::SLATE_800).fg(tailwind::AMBER_400),
                 ),
-                Span::raw(" Test  "),
+                Span::styled(" Test  ", Style::default().fg(tailwind::SLATE_300)),
                 Span::styled(
                     " <l> ",
-                    Style::default().bg(Color::DarkGray).fg(Color::Cyan),
+                    Style::default().bg(tailwind::SLATE_800).fg(tailwind::CYAN_400),
                 ),
-                Span::raw(" License/Info  "),
+                Span::styled(" License  ", Style::default().fg(tailwind::SLATE_300)),
                 Span::styled(
                     " <p> ",
-                    Style::default().bg(Color::DarkGray).fg(Color::Magenta),
+                    Style::default().bg(tailwind::SLATE_800).fg(tailwind::VIOLET_400),
                 ),
-                Span::raw(" Updates  "),
-                Span::styled(" <q> ", Style::default().bg(Color::DarkGray).fg(Color::Red)),
-                Span::raw(" Quit  "),
+                Span::styled(" Updates  ", Style::default().fg(tailwind::SLATE_300)),
+                Span::styled(
+                    " <q> ",
+                    Style::default().bg(tailwind::SLATE_800).fg(tailwind::ROSE_500),
+                ),
+                Span::styled(" Quit  ", Style::default().fg(tailwind::SLATE_300)),
                 Span::styled(
                     format!(" │ {}", self.status_message),
-                    Style::default().fg(Color::Cyan),
+                    Style::default().fg(tailwind::SKY_400),
                 ),
             ]
         } else if self.current_tab == Tab::Config && self.editing_config {
             vec![
                 Span::styled(
                     " <Enter> ",
-                    Style::default().bg(Color::DarkGray).fg(Color::Green),
+                    Style::default().bg(tailwind::SLATE_800).fg(tailwind::EMERALD_400),
                 ),
-                Span::raw(" Confirm  "),
+                Span::styled(" Confirm  ", Style::default().fg(tailwind::SLATE_300)),
                 Span::styled(
                     " <Esc> ",
-                    Style::default().bg(Color::DarkGray).fg(Color::Red),
+                    Style::default().bg(tailwind::SLATE_800).fg(tailwind::ROSE_400),
                 ),
-                Span::raw(" Cancel  "),
+                Span::styled(" Cancel  ", Style::default().fg(tailwind::SLATE_300)),
                 Span::styled(
                     " <Up/Down> ",
-                    Style::default().bg(Color::DarkGray).fg(Color::Cyan),
+                    Style::default().bg(tailwind::SLATE_800).fg(tailwind::SKY_400),
                 ),
-                Span::raw(" Step ±1  "),
+                Span::styled(" Step ±1  ", Style::default().fg(tailwind::SLATE_300)),
                 Span::styled(
                     " <Left/Right> ",
-                    Style::default().bg(Color::DarkGray).fg(Color::Cyan),
+                    Style::default().bg(tailwind::SLATE_800).fg(tailwind::SKY_400),
                 ),
-                Span::raw(" Step ±5  "),
+                Span::styled(" Step ±5  ", Style::default().fg(tailwind::SLATE_300)),
                 Span::styled(
                     " <Ctrl+U> ",
-                    Style::default().bg(Color::DarkGray).fg(Color::Yellow),
+                    Style::default().bg(tailwind::SLATE_800).fg(tailwind::AMBER_400),
                 ),
-                Span::raw(" Clear  "),
+                Span::styled(" Clear  ", Style::default().fg(tailwind::SLATE_300)),
                 Span::styled(
                     format!(" │ {}", self.status_message),
-                    Style::default().fg(Color::Cyan),
+                    Style::default().fg(tailwind::SKY_400),
                 ),
             ]
         } else if self.current_tab == Tab::Config {
             vec![
                 Span::styled(
                     " <Tab> ",
-                    Style::default().bg(Color::DarkGray).fg(Color::White),
+                    Style::default().bg(tailwind::SLATE_800).fg(tailwind::SLATE_200),
                 ),
-                Span::raw(" Tabs  "),
+                Span::styled(" Tabs  ", Style::default().fg(tailwind::SLATE_400)),
                 Span::styled(
                     " <j/k> ",
-                    Style::default().bg(Color::DarkGray).fg(Color::White),
+                    Style::default().bg(tailwind::SLATE_800).fg(tailwind::SLATE_200),
                 ),
-                Span::raw(" Select  "),
+                Span::styled(" Select  ", Style::default().fg(tailwind::SLATE_400)),
                 Span::styled(
                     " <e/Enter> ",
-                    Style::default().bg(Color::DarkGray).fg(Color::Green),
+                    Style::default().bg(tailwind::SLATE_800).fg(tailwind::EMERALD_400),
                 ),
-                Span::raw(" Edit  "),
+                Span::styled(" Edit  ", Style::default().fg(tailwind::SLATE_300)),
                 Span::styled(
                     " <+/-> ",
-                    Style::default().bg(Color::DarkGray).fg(Color::Yellow),
+                    Style::default().bg(tailwind::SLATE_800).fg(tailwind::AMBER_400),
                 ),
-                Span::raw(" Step  "),
+                Span::styled(" Step  ", Style::default().fg(tailwind::SLATE_300)),
                 Span::styled(
                     " <o> ",
-                    Style::default().bg(Color::DarkGray).fg(Color::Magenta),
+                    Style::default().bg(tailwind::SLATE_800).fg(tailwind::VIOLET_400),
                 ),
-                Span::raw(" Open Editor  "),
+                Span::styled(" Open Editor  ", Style::default().fg(tailwind::SLATE_300)),
                 Span::styled(
                     " <s> ",
-                    Style::default().bg(Color::DarkGray).fg(Color::Cyan),
+                    Style::default().bg(tailwind::SLATE_800).fg(tailwind::CYAN_400),
                 ),
-                Span::raw(" Save  "),
-                Span::styled(" <q> ", Style::default().bg(Color::DarkGray).fg(Color::Red)),
-                Span::raw(" Quit  "),
+                Span::styled(" Save  ", Style::default().fg(tailwind::SLATE_300)),
+                Span::styled(
+                    " <q> ",
+                    Style::default().bg(tailwind::SLATE_800).fg(tailwind::ROSE_500),
+                ),
+                Span::styled(" Quit  ", Style::default().fg(tailwind::SLATE_300)),
                 Span::styled(
                     format!(" │ {}", self.status_message),
-                    Style::default().fg(Color::Cyan),
+                    Style::default().fg(tailwind::SKY_400),
                 ),
             ]
         } else {
             vec![
                 Span::styled(
                     " <Tab/1-5> ",
-                    Style::default().bg(Color::DarkGray).fg(Color::White),
+                    Style::default().bg(tailwind::SLATE_800).fg(tailwind::SLATE_200),
                 ),
-                Span::raw(" Switch Tab  "),
+                Span::styled(" Switch Tab  ", Style::default().fg(tailwind::SLATE_400)),
                 Span::styled(
                     " <j/k> ",
-                    Style::default().bg(Color::DarkGray).fg(Color::White),
+                    Style::default().bg(tailwind::SLATE_800).fg(tailwind::SLATE_200),
                 ),
-                Span::raw(" Select  "),
+                Span::styled(" Select  ", Style::default().fg(tailwind::SLATE_400)),
                 Span::styled(
                     " <b> ",
-                    Style::default().bg(Color::DarkGray).fg(Color::Cyan),
+                    Style::default().bg(tailwind::SLATE_800).fg(tailwind::CYAN_400),
                 ),
-                Span::raw(" Native Biome  "),
+                Span::styled(" Native Biome  ", Style::default().fg(tailwind::SLATE_300)),
                 Span::styled(
                     " <Space> ",
-                    Style::default().bg(Color::DarkGray).fg(Color::White),
+                    Style::default().bg(tailwind::SLATE_800).fg(tailwind::SLATE_200),
                 ),
-                Span::raw(" Toggle  "),
+                Span::styled(" Toggle  ", Style::default().fg(tailwind::SLATE_300)),
                 Span::styled(
                     " <o> ",
-                    Style::default().bg(Color::DarkGray).fg(Color::Magenta),
+                    Style::default().bg(tailwind::SLATE_800).fg(tailwind::VIOLET_400),
                 ),
-                Span::raw(" Open Editor  "),
+                Span::styled(" Open Editor  ", Style::default().fg(tailwind::SLATE_300)),
                 Span::styled(
                     " <r> ",
-                    Style::default().bg(Color::DarkGray).fg(Color::Yellow),
+                    Style::default().bg(tailwind::SLATE_800).fg(tailwind::AMBER_400),
                 ),
-                Span::raw(" Random  "),
+                Span::styled(" Random  ", Style::default().fg(tailwind::SLATE_300)),
                 Span::styled(
                     " <s> ",
-                    Style::default().bg(Color::DarkGray).fg(Color::Cyan),
+                    Style::default().bg(tailwind::SLATE_800).fg(tailwind::CYAN_400),
                 ),
-                Span::raw(" Save  "),
-                Span::styled(" <q> ", Style::default().bg(Color::DarkGray).fg(Color::Red)),
-                Span::raw(" Quit  "),
+                Span::styled(" Save  ", Style::default().fg(tailwind::SLATE_300)),
+                Span::styled(
+                    " <q> ",
+                    Style::default().bg(tailwind::SLATE_800).fg(tailwind::ROSE_500),
+                ),
+                Span::styled(" Quit  ", Style::default().fg(tailwind::SLATE_300)),
                 Span::styled(
                     format!(" │ {}", self.status_message),
-                    Style::default().fg(Color::Cyan),
+                    Style::default().fg(tailwind::SKY_400),
                 ),
             ]
         };
@@ -5156,6 +6097,19 @@ mod tests {
         )))
         .unwrap();
         assert_ne!(app.format, initial_fmt);
+
+        // 10. Cycle Random Mode
+        app.config_field_idx = ConfigField::Random as usize;
+        assert_eq!(app.config.random, None);
+        app.handle_event(Event::Key(KeyEvent::new(
+            KeyCode::Enter,
+            KeyModifiers::NONE,
+        )))
+        .unwrap();
+        assert_eq!(
+            app.config.random,
+            Some(forgum_platform::protocol::RandomSetting::Bool(true))
+        );
     }
 
     #[test]

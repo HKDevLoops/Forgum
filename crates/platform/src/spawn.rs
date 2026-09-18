@@ -404,6 +404,111 @@ pub fn process_is_alive(pid: u32) -> bool {
     }
 }
 
+/// Terminate a process by PID (Unix).
+#[cfg(unix)]
+#[allow(unsafe_code)]
+pub fn kill_process(pid: u32) -> bool {
+    unsafe { libc::kill(pid as i32, libc::SIGKILL) == 0 }
+}
+
+/// Terminate a process by PID (Windows).
+#[cfg(windows)]
+#[allow(unsafe_code)]
+pub fn kill_process(pid: u32) -> bool {
+    use windows_sys::Win32::Foundation::CloseHandle;
+    use windows_sys::Win32::System::Threading::{OpenProcess, TerminateProcess, PROCESS_TERMINATE};
+    unsafe {
+        let handle = OpenProcess(PROCESS_TERMINATE, 0, pid);
+        if handle.is_null() {
+            return false;
+        }
+        let ok = TerminateProcess(handle, 1);
+        CloseHandle(handle);
+        ok != 0
+    }
+}
+
+/// Find all running forgum / forgum-engine process IDs on the system (excluding current process).
+#[cfg(windows)]
+#[allow(unsafe_code)]
+pub fn find_forgum_pids() -> Vec<u32> {
+    use windows_sys::Win32::Foundation::CloseHandle;
+    use windows_sys::Win32::System::Diagnostics::ToolHelp::{
+        CreateToolhelp32Snapshot, Process32FirstW, Process32NextW, PROCESSENTRY32W,
+        TH32CS_SNAPPROCESS,
+    };
+
+    let me = std::process::id();
+    let mut pids = Vec::new();
+    unsafe {
+        let snap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+        if snap.is_null() {
+            return pids;
+        }
+        let mut entry: PROCESSENTRY32W = std::mem::zeroed();
+        entry.dwSize = std::mem::size_of::<PROCESSENTRY32W>() as u32;
+        if Process32FirstW(snap, &mut entry) != 0 {
+            loop {
+                if entry.th32ProcessID != me {
+                    let wide: &[u16] = &entry.szExeFile;
+                    let len = wide.iter().position(|&c| c == 0).unwrap_or(wide.len());
+                    let name = String::from_utf16_lossy(&wide[..len]).to_lowercase();
+                    if name.starts_with("forgum") {
+                        pids.push(entry.th32ProcessID);
+                    }
+                }
+                if Process32NextW(snap, &mut entry) == 0 {
+                    break;
+                }
+            }
+        }
+        CloseHandle(snap);
+    }
+    pids
+}
+
+/// Find all running forgum / forgum-engine process IDs on the system (excluding current process).
+#[cfg(unix)]
+pub fn find_forgum_pids() -> Vec<u32> {
+    let me = std::process::id();
+    let mut pids = Vec::new();
+
+    // Check /proc directory on Linux
+    if let Ok(entries) = std::fs::read_dir("/proc") {
+        for entry in entries.flatten() {
+            let file_name = entry.file_name();
+            let name_str = file_name.to_string_lossy();
+            if let Ok(pid) = name_str.parse::<u32>() {
+                if pid != me {
+                    let comm_path = entry.path().join("comm");
+                    if let Ok(comm) = std::fs::read_to_string(&comm_path) {
+                        let comm_lower = comm.trim().to_lowercase();
+                        if comm_lower.contains("forgum") {
+                            pids.push(pid);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Fallback: use pgrep on macOS or systems where /proc isn't populated
+    if pids.is_empty() {
+        if let Ok(output) = std::process::Command::new("pgrep").arg("-f").arg("forgum").output() {
+            let out_str = String::from_utf8_lossy(&output.stdout);
+            for line in out_str.lines() {
+                if let Ok(pid) = line.trim().parse::<u32>() {
+                    if pid != me {
+                        pids.push(pid);
+                    }
+                }
+            }
+        }
+    }
+
+    pids
+}
+
 /// Execute a command, falling back to OS shell invocation if direct execution fails.
 pub fn execute_command_with_shell_fallback(cmd: &[String]) -> io::Result<std::process::Output> {
     if cmd.is_empty() {

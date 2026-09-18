@@ -104,7 +104,7 @@ pub fn load_cow_with_landmarks(
 /// directory and the user's custom cows directory, and return its basename.
 /// Otherwise return `cow_name` unchanged.
 pub fn resolve_cow_name(cow_name: &str, data_dir: &Path) -> String {
-    if cow_name != "random" {
+    if !cow_name.trim().eq_ignore_ascii_case("random") {
         let clean = cow_name.trim().to_ascii_lowercase();
         let cow_name = match clean.as_str() {
             "cow" | "cowsay" | "the-cow" => "default",
@@ -1527,6 +1527,13 @@ mod tests {
         assert!(
             seen.len() > 1,
             "random must pick different cows across calls"
+        );
+
+        // Verify uppercase RANDOM works identically
+        let name_upper = resolve_cow_name("RANDOM", &tmp);
+        assert!(
+            name_upper == "alpha" || name_upper == "bravo" || name_upper == "charlie",
+            "RANDOM must resolve to a valid cow: {name_upper}"
         );
         let _ = std::fs::remove_dir_all(&tmp);
     }

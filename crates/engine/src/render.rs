@@ -157,6 +157,7 @@ pub fn render_loop_background(
     // (Dynamic Shell Precmd Redraw / Banner) to prevent terminal display corruption.
     let is_split_requested = config.split_scroll
         || config.shell_attach_mode == "split"
+        || config.split_mode.as_deref() == Some("seamless")
         || config.split_mode.as_deref() == Some("decstbm");
 
     if is_split_requested && !caps.emulator.supports_decstbm() {
@@ -174,7 +175,7 @@ pub fn render_loop_background(
     let max_frames = compute_max_frames(config.duration, config.fps);
 
     let cow_foot = effects::find_cow_foot_y(cow_display);
-    let line_count = (cow_foot + 2).max(cow_display.lines().count()).max(1);
+    let line_count = (cow_foot + 4).max(cow_display.lines().count() + 3).max(6);
     let (overlay_cols, overlay_rows) =
         compute_reserved_dimensions(cols as usize, rows as usize, line_count, &config);
 
@@ -225,17 +226,15 @@ pub fn compute_reserved_dimensions(
         ((total_rows as f32) * clamped_ratio).round() as usize
     } else if config.split_scroll || config.shell_attach_mode == "split" {
         // Dynamic adaptive sizing based on terminal width consciousness and height:
-        let target = if total_cols >= 160 {
-            // Ultrawide: expansive panoramic canvas
-            mascot_lines.max(12).min(total_rows * 40 / 100)
+        // Seamlessly accommodates tall creatures without arbitrary row clamps
+        let min_scenic = if total_cols >= 160 {
+            12
         } else if total_cols >= 100 {
-            // Standard widescreen
-            mascot_lines.max(10).min(total_rows * 38 / 100)
+            10
         } else {
-            // Compact terminal (<100 cols)
-            mascot_lines.max(8).min(total_rows * 35 / 100)
+            8
         };
-        target.clamp(6, 22)
+        mascot_lines.max(min_scenic)
     } else {
         mascot_lines
     };
@@ -284,7 +283,7 @@ pub fn render_loop_banner(
     let _cur = CursorShowGuard::acquire()?;
 
     let cow_foot = effects::find_cow_foot_y(cow_display);
-    let line_count = (cow_foot + 2).max(cow_display.lines().count()).max(1);
+    let line_count = (cow_foot + 4).max(cow_display.lines().count() + 3).max(6);
     let banner_rows = line_count.min((rows as usize).saturating_sub(1)).max(1);
 
     // In banner mode, default duration to 2s burst if 0

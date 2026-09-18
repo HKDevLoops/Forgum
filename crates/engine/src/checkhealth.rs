@@ -138,7 +138,7 @@ pub fn run_health_check(explicit_config: Option<&Path>) -> HealthReport {
         suggestion: None,
     });
 
-    let engine_exe = std::env::current_exe().unwrap_or_else(|_| PathBuf::from("forgum-engine"));
+    let engine_exe = std::env::current_exe().unwrap_or_else(|_| PathBuf::from("forgum"));
     sys_items.push(HealthItem {
         status: if engine_exe.is_file() {
             HealthStatus::Ok
@@ -153,7 +153,7 @@ pub fn run_health_check(explicit_config: Option<&Path>) -> HealthReport {
         suggestion: if engine_exe.is_file() {
             None
         } else {
-            Some("Ensure forgum-engine is placed in a directory on your system PATH.".into())
+            Some("Ensure forgum is placed in a directory on your system PATH.".into())
         },
     });
 
@@ -340,7 +340,16 @@ pub fn run_health_check(explicit_config: Option<&Path>) -> HealthReport {
         title: format!("Color Capabilities: {}", caps.color.as_str()),
         details: vec![
             format!("24-bit TrueColor RGB: {}", has_truecolor),
-            format!("COLORTERM env: {:?}", std::env::var("COLORTERM").ok()),
+            format!(
+                "Detection Source: {}",
+                if std::env::var("COLORTERM").is_ok() {
+                    "COLORTERM environment variable"
+                } else if caps.emulator.supports_truecolor() {
+                    "Natively supported by detected terminal emulator"
+                } else {
+                    "Fallback profile / TERM default"
+                }
+            ),
         ],
         suggestion: if has_truecolor {
             None
@@ -603,9 +612,11 @@ pub fn run_health_check(explicit_config: Option<&Path>) -> HealthReport {
 
         let suggestion = if !diag.user_action_items.is_empty() {
             Some(format!(
-                "Triage: {}. Run `forgum logs --diagnose` for full report.",
+                "Triage: {}. Run `forgum logs --diagnose` for full report or `forgum logs --clear` to reset history.",
                 diag.user_action_items[0]
             ))
+        } else if diag.errors_count > 0 {
+            Some("Historical errors found in log sample. Run `forgum logs --clear` to clear stale historical logs.".into())
         } else if text_size > 10 * 1024 * 1024 {
             Some("Logs exceed 10 MB. Run `forgum logs --clear` to truncate old events.".into())
         } else {

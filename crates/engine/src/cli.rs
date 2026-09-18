@@ -111,6 +111,7 @@ pub struct Cli {
     #[arg(
         long,
         visible_alias = "env",
+        visible_alias = "scenery",
         global = true,
         value_name = "ENVIRONMENT",
         help = "Thematic particle environment (pasture, inferno...). Run 'forgum list scenery'",
@@ -251,6 +252,19 @@ pub struct Cli {
         long_help = "Animation effect to apply ('animal_natural' for creature's signature DNA animation, walk, breathe, float, fly, talk, sway, pulse, glitch, particles, dissolve). Run 'forgum list effects' for complete options."
     )]
     pub effect: Option<String>,
+
+    /// Universally randomize mascot, scenery biome, effects, and thoughts.
+    #[arg(
+        long,
+        short = 'r',
+        global = true,
+        num_args = 0..=1,
+        default_missing_value = "all",
+        value_name = "TARGET",
+        help = "Universally randomize mascot, scenery, effects, and thoughts (or 'all', 'mascot', 'scenery', 'fx', 'thought')",
+        long_help = "Universally randomize creature mascot, scenery biome/road/mountain, effects/animation, and fortunes on every invocation. Optional target: 'all', 'mascot', 'scenery', 'fx', 'thought'."
+    )]
+    pub random: Option<String>,
 
     /// Eye string (e.g. "oo", "$$").
     #[arg(
@@ -438,9 +452,12 @@ pub enum Commands {
         /// Set a key to a value (headless), or 'list' to view options.
         #[arg(value_name = "KEY")]
         key: Option<String>,
-        /// Value for --key.
+        /// Value for --key or target key for 'set'/'get'.
         #[arg(value_name = "VALUE")]
         value: Option<String>,
+        /// Additional value when 'config set <key> <value>' syntax is passed.
+        #[arg(value_name = "EXTRA_VALUE")]
+        extra_value: Option<String>,
         /// Migrate configuration to another format (json, yaml, toml).
         #[arg(long, value_name = "FORMAT")]
         migrate: Option<String>,
@@ -565,13 +582,54 @@ pub enum Commands {
         /// Force battle victor: 1 for fighter1, 2 for fighter2, 0 for random.
         #[arg(long, default_value = "0")]
         winner: u8,
-        /// Frame rate for live animation (default 15).
-        #[arg(long, default_value = "15")]
+        /// Frame rate for live animation (default 12 for majestic, realistic pacing).
+        #[arg(long, default_value = "12")]
+        fps: u16,
+    },
+    /// Interactive Rock Paper Scissors mascot battle (User vs Computer).
+    #[command(name = "rps-battle", alias = "rps")]
+    RpsBattle {
+        /// Name of the player's mascot / fighter.
+        #[arg(long, default_value = "Player")]
+        player: String,
+
+        /// Name of the computer's mascot / fighter.
+        #[arg(long, default_value = "Computer")]
+        cpu: String,
+
+        /// Pre-selected player weapon: rock (r), paper (p), or scissors (s).
+        #[arg(short, long, value_name = "WEAPON")]
+        choice: Option<String>,
+
+        /// Headless / non-interactive mode (dumps battle log without live prompt).
+        #[arg(long)]
+        headless: bool,
+
+        /// Frame rate for live joust animation playback (default 12).
+        #[arg(long, default_value = "12")]
         fps: u16,
     },
     /// Emergency recovery command to restore terminal cursor, disable raw mode, clear temporary pipes, and exit cleanly.
     #[command(alias = "clean")]
     Sweep,
+    /// Stop any running animation, split mode, or background daemon and restore terminal space.
+    #[command(
+        name = "stop",
+        alias = "kill",
+        alias = "halt",
+        alias = "reset",
+        alias = "unreserve",
+        alias = "clear-margins",
+        alias = "clear_margins"
+    )]
+    Stop {
+        /// Stop all running Forgum animations across all sessions, not just current.
+        #[arg(short = 'a', long)]
+        all: bool,
+        /// Force kill immediately without waiting for graceful socket shutdown.
+        #[arg(long)]
+        force: bool,
+    },
     /// Convert an image to ASCII art or save as a custom cow mascot.
     Image {
         /// Path to the image file.
@@ -836,6 +894,7 @@ pub enum Command {
     Say,
     Timer,
     Battle,
+    RpsBattle,
     Doctor,
     Checkhealth,
     Logs,
@@ -844,6 +903,7 @@ pub enum Command {
     Uninstall,
     Update,
     Sweep,
+    Stop,
     Image,
     Unknown(String),
 }
@@ -888,6 +948,7 @@ pub struct Args {
     pub text_only: bool,
     pub think: bool,
     pub list: Option<String>,
+    pub random: Option<String>,
 }
 
 /// Error type returned by `parse_args`, carrying the intended process exit code.
@@ -927,7 +988,7 @@ pub fn parse_args(argv: Vec<String>) -> Result<(Args, Option<Commands>), CliErro
     // Validate animation static vs dynamic consistency
     if cli.animation.as_deref() == Some("static") {
         if let Some(at) = &cli.animation_type {
-            if at != "static" {
+            if at != "static" && at != "random" {
                 return Err(CliError {
                     exit_code: 64,
                     message: format!(
@@ -998,6 +1059,7 @@ pub fn parse_args(argv: Vec<String>) -> Result<(Args, Option<Commands>), CliErro
         Some(Commands::Say { .. }) => (Command::Say, None, false),
         Some(Commands::Timer { .. }) => (Command::Timer, None, false),
         Some(Commands::Battle { .. }) => (Command::Battle, None, false),
+        Some(Commands::RpsBattle { .. }) => (Command::RpsBattle, None, false),
         Some(Commands::Doctor) => (Command::Doctor, None, false),
         Some(Commands::Checkhealth { .. }) => (Command::Checkhealth, None, false),
         Some(Commands::Logs { .. }) => (Command::Logs, None, false),
@@ -1007,6 +1069,7 @@ pub fn parse_args(argv: Vec<String>) -> Result<(Args, Option<Commands>), CliErro
         Some(Commands::Uninstall { .. }) => (Command::Uninstall, None, false),
         Some(Commands::Update { .. }) => (Command::Update, None, false),
         Some(Commands::Sweep) => (Command::Sweep, None, false),
+        Some(Commands::Stop { .. }) => (Command::Stop, None, false),
         Some(Commands::Image { .. }) => (Command::Image, None, false),
     };
 
@@ -1053,6 +1116,7 @@ pub fn parse_args(argv: Vec<String>) -> Result<(Args, Option<Commands>), CliErro
         text_only: cli.text_only,
         think,
         list: cli.list,
+        random: cli.random,
     };
 
     Ok((args, cli.command))
@@ -1176,6 +1240,9 @@ pub fn build_scene_config(args: &Args) -> Result<SceneConfig, String> {
     }
     if let Some(p) = &args.palette {
         cfg.palette = Some(p.clone());
+    }
+    if let Some(r) = &args.random {
+        cfg.random = Some(forgum_platform::protocol::RandomSetting::String(r.clone()));
     }
 
     // Normalize color_mode aliases to "natural"
@@ -1339,7 +1406,7 @@ pub fn generate_command_suggestion(query: &str) -> Option<String> {
                 "render", "think", "fortune", "tui", "init", "completions", "list",
                 "status", "doctor", "checkhealth", "config", "logs", "tmux", "status-line",
                 "herd", "theme", "demo", "showcase", "remote", "say", "timer", "battle",
-                "sweep", "clean",
+                "sweep", "clean", "stop", "kill", "halt", "reset", "unreserve", "clear-margins",
                 "--animal", "--animation", "--effect", "--environment", "--road", "--mountain",
                 "--color-mode", "--palette", "--thought-interval", "--split-scroll", "--text",
                 "--think", "--background", "--banner", "--duration", "--fps", "--list",

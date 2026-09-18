@@ -482,9 +482,15 @@ pub fn detect_session_id() -> String {
         return format!("kitty-{}", win);
     }
     if let Ok(wt) = std::env::var("WT_SESSION") {
+        if let Some(ppid) = crate::parent_pid() {
+            return format!("wt-{}-pane-{}", wt, ppid);
+        }
         return format!("wt-{}", wt);
     }
     if let Ok(iterm) = std::env::var("ITERM_SESSION_ID") {
+        if let Some(ppid) = crate::parent_pid() {
+            return format!("iterm-{}-pane-{}", iterm, ppid);
+        }
         return format!("iterm-{}", iterm);
     }
     // Fallback: parent shell PID

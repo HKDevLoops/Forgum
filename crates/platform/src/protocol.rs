@@ -119,6 +119,133 @@ pub struct SceneConfig {
     /// Split adapter execution mode: "decstbm", "native", "precmd", "disabled", or "auto".
     #[serde(default)]
     pub split_mode: Option<String>,
+
+    /// Preferred text editor command (e.g. "nvim", "vim", "emacs", "nano", "code", "notepad", or "auto").
+    #[serde(default)]
+    pub editor: Option<String>,
+
+    /// Universal random mode setting: randomize mascots, scenery, fx, static/dynamic animations, and thoughts on startup.
+    #[serde(default)]
+    pub random: Option<RandomSetting>,
+}
+
+/// Universal random configuration setting.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum RandomSetting {
+    Bool(bool),
+    String(String),
+    List(Vec<String>),
+}
+
+impl RandomSetting {
+    #[must_use]
+    pub fn is_enabled(&self) -> bool {
+        match self {
+            Self::Bool(b) => *b,
+            Self::String(s) => {
+                let trimmed = s.trim();
+                !trimmed.is_empty()
+                    && !trimmed.eq_ignore_ascii_case("false")
+                    && !trimmed.eq_ignore_ascii_case("none")
+                    && !trimmed.eq_ignore_ascii_case("off")
+                    && !trimmed.eq_ignore_ascii_case("0")
+            }
+            Self::List(l) => !l.is_empty(),
+        }
+    }
+
+    #[must_use]
+    pub fn matches(&self, category: &str) -> bool {
+        if !self.is_enabled() {
+            return false;
+        }
+        match self {
+            Self::Bool(b) => *b,
+            Self::String(s) => {
+                let s_lower = s.to_ascii_lowercase();
+                if s_lower == "all"
+                    || s_lower == "true"
+                    || s_lower == "yes"
+                    || s_lower == "1"
+                    || s_lower == "random"
+                {
+                    return true;
+                }
+                s_lower.split(',').any(|part| {
+                    let part = part.trim();
+                    part == category
+                        || (category == "fx"
+                            && (part == "animation" || part == "anim" || part == "effect"))
+                        || (category == "animation"
+                            && (part == "fx" || part == "anim" || part == "effect"))
+                        || (category == "mascot" && (part == "cow" || part == "animal"))
+                        || (category == "scenery"
+                            && (part == "environment"
+                                || part == "env"
+                                || part == "road"
+                                || part == "mountain"))
+                        || (category == "thought"
+                            && (part == "fortune" || part == "text" || part == "quote"))
+                })
+            }
+            Self::List(l) => l.iter().any(|item| {
+                let item_lower = item.trim().to_ascii_lowercase();
+                item_lower == "all"
+                    || item_lower == "true"
+                    || item_lower == "random"
+                    || item_lower == category
+                    || (category == "fx"
+                        && (item_lower == "animation"
+                            || item_lower == "anim"
+                            || item_lower == "effect"))
+                    || (category == "animation"
+                        && (item_lower == "fx"
+                            || item_lower == "anim"
+                            || item_lower == "effect"))
+                    || (category == "mascot" && (item_lower == "cow" || item_lower == "animal"))
+                    || (category == "scenery"
+                        && (item_lower == "environment"
+                            || item_lower == "env"
+                            || item_lower == "road"
+                            || item_lower == "mountain"))
+                    || (category == "thought"
+                        && (item_lower == "fortune"
+                            || item_lower == "text"
+                            || item_lower == "quote"))
+            }),
+        }
+    }
+
+    #[must_use]
+    pub fn randomizes_mascot(&self) -> bool {
+        self.matches("mascot")
+    }
+
+    #[must_use]
+    pub fn randomizes_scenery(&self) -> bool {
+        self.matches("scenery")
+    }
+
+    #[must_use]
+    pub fn randomizes_fx(&self) -> bool {
+        self.matches("fx")
+    }
+
+    #[must_use]
+    pub fn randomizes_thought(&self) -> bool {
+        self.matches("thought")
+    }
+}
+
+impl std::fmt::Display for RandomSetting {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Bool(b) => write!(f, "{}", if *b { "all" } else { "false" }),
+            Self::String(s) => write!(f, "{s}"),
+            Self::List(l) => write!(f, "{}", l.join(", ")),
+        }
+    }
 }
 
 /// Supported configuration file formats.
@@ -262,6 +389,8 @@ impl Default for SceneConfig {
             animation_type: None,
             image: None,
             split_mode: None,
+            editor: None,
+            random: None,
         }
     }
 }
@@ -379,6 +508,8 @@ mod tests {
             animation_type: Some("walk".into()),
             image: None,
             split_mode: Some("decstbm".into()),
+            editor: Some("nvim".into()),
+            random: Some(RandomSetting::Bool(true)),
         };
 
         for format in [ConfigFormat::Json, ConfigFormat::Yaml, ConfigFormat::Toml] {
@@ -393,5 +524,62 @@ mod tests {
         let json = r#"{"duration":0}"#;
         let s: SceneConfig = serde_json::from_str(json).unwrap();
         assert_eq!(s.duration, 0);
+    }
+
+    #[test]
+    fn random_setting_boolean_deserialization() {
+        let json = r#"{"random":true}"#;
+        let s: SceneConfig = serde_json::from_str(json).unwrap();
+        assert_eq!(s.random, Some(RandomSetting::Bool(true)));
+        let rnd = s.random.unwrap();
+        assert!(rnd.is_enabled());
+        assert!(rnd.randomizes_mascot());
+        assert!(rnd.randomizes_scenery());
+        assert!(rnd.randomizes_fx());
+        assert!(rnd.randomizes_thought());
+    }
+
+    #[test]
+    fn random_setting_string_deserialization() {
+        let json = r#"{"random":"mascot,fx"}"#;
+        let s: SceneConfig = serde_json::from_str(json).unwrap();
+        assert_eq!(s.random, Some(RandomSetting::String("mascot,fx".into())));
+        let rnd = s.random.unwrap();
+        assert!(rnd.is_enabled());
+        assert!(rnd.randomizes_mascot());
+        assert!(rnd.randomizes_fx());
+        assert!(!rnd.randomizes_scenery());
+        assert!(!rnd.randomizes_thought());
+    }
+
+    #[test]
+    fn random_setting_list_deserialization() {
+        let json = r#"{"random":["scenery","thought"]}"#;
+        let s: SceneConfig = serde_json::from_str(json).unwrap();
+        assert_eq!(
+            s.random,
+            Some(RandomSetting::List(vec![
+                "scenery".into(),
+                "thought".into()
+            ]))
+        );
+        let rnd = s.random.unwrap();
+        assert!(rnd.is_enabled());
+        assert!(!rnd.randomizes_mascot());
+        assert!(rnd.randomizes_scenery());
+        assert!(!rnd.randomizes_fx());
+        assert!(rnd.randomizes_thought());
+    }
+
+    #[test]
+    fn random_setting_toml_yaml_roundtrip() {
+        let toml_str = "random = true\n";
+        let parsed_toml = SceneConfig::parse_with_format(toml_str, ConfigFormat::Toml).unwrap();
+        assert_eq!(parsed_toml.random, Some(RandomSetting::Bool(true)));
+
+        let yaml_str = "random: all\n";
+        let parsed_yaml = SceneConfig::parse_with_format(yaml_str, ConfigFormat::Yaml).unwrap();
+        assert_eq!(parsed_yaml.random, Some(RandomSetting::String("all".into())));
+        assert!(parsed_yaml.random.unwrap().randomizes_mascot());
     }
 }

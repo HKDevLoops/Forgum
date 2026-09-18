@@ -1,4 +1,4 @@
-//! `forgum-engine` — the Forgum animation engine binary.
+//! `forgum` — the Forgum animation engine binary.
 //!
 //! Phase 2: clap CLI, native cow renderer, fortune, shell hooks, completions.
 //! Phase 0: RAII guards, signal handlers, no keystroke reads, `duration=0` semantics.
@@ -188,7 +188,7 @@ pub fn run() -> ExitCode {
         }
 
         // ── think ───────────────────────────────────────────────────
-        Some(cli::Commands::Think { .. }) => render_subcommand(args),
+        Some(cli::Commands::Think { thought }) => handle_think_command(args, thought),
 
         // ── init <shell> ────────────────────────────────────────────
         Some(cli::Commands::Init {
@@ -389,9 +389,10 @@ pub fn run() -> ExitCode {
             list,
             key,
             value,
+            extra_value,
             migrate,
         }) => {
-            if list || key.as_deref().is_some_and(is_list_query) {
+            if list || key.as_deref().is_some_and(is_list_query) || value.as_deref().is_some_and(is_list_query) {
                 let table = forgum_engine::options_table::render_options("config");
                 print!("{table}");
                 return ExitCode::SUCCESS;
@@ -438,218 +439,292 @@ pub fn run() -> ExitCode {
                     }
                 };
 
-            if let (Some(k), Some(v)) = (key.clone(), value.clone()) {
-                // Headless `config set <key> <value>`.
-                let printed = v.clone();
-                let mut cfg = read_config_file(&cfg_path).unwrap_or_default();
-                let parse_err: Option<String> = match k.as_str() {
-                    "cow" => {
-                        cfg.cow = v;
-                        None
-                    }
-                    "text" => {
-                        cfg.text = v;
-                        None
-                    }
-                    "effect" => {
-                        cfg.effect = v;
-                        None
-                    }
-                    "background" => match v.parse::<bool>() {
-                        Ok(b) => {
-                            cfg.background = b;
-                            None
-                        }
-                        Err(e) => Some(format!("{e}")),
-                    },
-                    "duration" => match v.parse::<u32>() {
-                        Ok(n) => {
-                            cfg.duration = n;
-                            None
-                        }
-                        Err(e) => Some(format!("{e}")),
-                    },
-                    "fps" => match v.parse::<u16>() {
-                        Ok(n) => {
-                            cfg.fps = n;
-                            None
-                        }
-                        Err(e) => Some(format!("{e}")),
-                    },
-                    "eyes" => {
-                        cfg.eyes = v;
-                        None
-                    }
-                    "tongue" => {
-                        cfg.tongue = v;
-                        None
-                    }
-                    "default_shell" => {
-                        cfg.default_shell = v;
-                        None
-                    }
-                    "auto_render_on_prompt" => match v.parse::<bool>() {
-                        Ok(b) => {
-                            cfg.auto_render_on_prompt = b;
-                            None
-                        }
-                        Err(e) => Some(format!("{e}")),
-                    },
-                    "think" => match v.parse::<bool>() {
-                        Ok(b) => {
-                            cfg.think = b;
-                            None
-                        }
-                        Err(e) => Some(format!("{e}")),
-                    },
-                    "color_mode" => {
-                        cfg.color_mode = v;
-                        None
-                    }
-                    "shell_attach_mode" | "attach_mode" => {
-                        cfg.shell_attach_mode = v;
-                        None
-                    }
-                    "environment" | "env" => {
-                        cfg.environment = if v.is_empty() || v == "none" {
-                            None
-                        } else {
-                            Some(v)
-                        };
-                        None
-                    }
-                    "road" => {
-                        cfg.road = if v.is_empty() || v == "none" {
-                            None
-                        } else {
-                            Some(v)
-                        };
-                        None
-                    }
-                    "mountain" | "mtn" => {
-                        cfg.mountain = if v.is_empty() || v == "none" {
-                            None
-                        } else {
-                            Some(v)
-                        };
-                        None
-                    }
-                    "palette" => {
-                        cfg.palette = if v.is_empty() || v == "none" {
-                            None
-                        } else {
-                            Some(v)
-                        };
-                        None
-                    }
-                    "thought_interval" => match v.parse::<u32>() {
-                        Ok(n) => {
-                            cfg.thought_interval = n;
-                            None
-                        }
-                        Err(e) => Some(format!("{e}")),
-                    },
-                    "split_scroll" => match v.parse::<bool>() {
-                        Ok(b) => {
-                            cfg.split_scroll = b;
-                            None
-                        }
-                        Err(e) => Some(format!("{e}")),
-                    },
-                    "reserve_rows" => match v.parse::<u16>() {
-                        Ok(n) => {
-                            cfg.reserve_rows = Some(n);
-                            None
-                        }
-                        Err(e) => Some(format!("{e}")),
-                    },
-                    "reserve_cols" => match v.parse::<u16>() {
-                        Ok(n) => {
-                            cfg.reserve_cols = Some(n);
-                            None
-                        }
-                        Err(e) => Some(format!("{e}")),
-                    },
-                    "split_ratio" => match v.parse::<f32>() {
-                        Ok(r) => {
-                            cfg.split_ratio = Some(r);
-                            None
-                        }
-                        Err(e) => Some(format!("{e}")),
-                    },
-                    "animation" => {
-                        cfg.animation = if v.is_empty() || v == "none" {
-                            None
-                        } else {
-                            Some(v)
-                        };
-                        None
-                    }
-                    "animation_type" | "anim_type" => {
-                        cfg.animation_type = if v.is_empty() || v == "none" {
-                            None
-                        } else {
-                            Some(v)
-                        };
-                        None
-                    }
-                    "image" => {
-                        cfg.image = if v.is_empty() || v == "none" {
-                            None
-                        } else {
-                            Some(v)
-                        };
-                        None
-                    }
-                    other => {
-                        eprintln!("unknown config key: {other}");
-                        eprintln!(
-                            "supported keys: cow, text, effect, background, duration, \
-                             fps, eyes, tongue, default_shell, auto_render_on_prompt, think, \
-                             color_mode, shell_attach_mode, environment, road, mountain, \
-                             palette, thought_interval, split_scroll, reserve_rows, reserve_cols, \
-                             split_ratio, animation, animation_type, image"
-                        );
-                        return ExitCode::from(1);
-                    }
-                };
-                if let Some(e) = parse_err {
-                    eprintln!("invalid value for `{k}`: {e}");
+            // Support:
+            // 1. `config set <key> <val>`
+            // 2. `config get <key>`
+            // 3. `config <key> <val>` (implicit set)
+            // 4. `config <key>` (implicit get)
+            // 5. `config` / `config --tui` (open TUI)
+            enum ConfigOp {
+                Set(String, String),
+                Get(String),
+                OpenTui,
+            }
+
+            let op = match (key.as_deref(), value.as_deref(), extra_value.as_deref()) {
+                (Some("set"), Some(k), Some(v)) => ConfigOp::Set(k.to_string(), v.to_string()),
+                (Some("set"), Some(_k), None) => {
+                    eprintln!("usage: forgum config set <key> <value>");
                     return ExitCode::from(1);
                 }
-                if let Err(e) = write_config_file(&cfg_path, &cfg, cfg_format) {
-                    eprintln!("{PROGRAM}: cannot write config: {e}");
-                    return ExitCode::from(e.exit_code() as u8);
+                (Some("get"), Some(k), _) => ConfigOp::Get(k.to_string()),
+                (Some(k), Some(v), _) => ConfigOp::Set(k.to_string(), v.to_string()),
+                (Some(k), None, _) => ConfigOp::Get(k.to_string()),
+                (None, None, _) => ConfigOp::OpenTui,
+                _ => ConfigOp::OpenTui,
+            };
+
+            match op {
+                ConfigOp::Get(k) => {
+                    let cfg = read_config_file(&cfg_path).unwrap_or_default();
+                    match k.as_str() {
+                        "cow" => println!("{}", cfg.cow),
+                        "text" => println!("{}", cfg.text),
+                        "effect" => println!("{}", cfg.effect),
+                        "background" => println!("{}", cfg.background),
+                        "duration" => println!("{}", cfg.duration),
+                        "fps" => println!("{}", cfg.fps),
+                        "eyes" => println!("{}", cfg.eyes),
+                        "tongue" => println!("{}", cfg.tongue),
+                        "default_shell" => println!("{}", cfg.default_shell),
+                        "auto_render_on_prompt" => println!("{}", cfg.auto_render_on_prompt),
+                        "think" => println!("{}", cfg.think),
+                        "color_mode" => println!("{}", cfg.color_mode),
+                        "shell_attach_mode" | "attach_mode" => println!("{}", cfg.shell_attach_mode),
+                        "environment" | "env" => println!("{}", cfg.environment.as_deref().unwrap_or("none")),
+                        "road" => println!("{}", cfg.road.as_deref().unwrap_or("none")),
+                        "mountain" | "mtn" => println!("{}", cfg.mountain.as_deref().unwrap_or("none")),
+                        "palette" => println!("{}", cfg.palette.as_deref().unwrap_or("none")),
+                        "thought_interval" => println!("{}", cfg.thought_interval),
+                        "split_scroll" => println!("{}", cfg.split_scroll),
+                        "reserve_rows" => println!("{}", cfg.reserve_rows.map(|n| n.to_string()).unwrap_or_else(|| "none".to_string())),
+                        "reserve_cols" => println!("{}", cfg.reserve_cols.map(|n| n.to_string()).unwrap_or_else(|| "none".to_string())),
+                        "split_ratio" => println!("{}", cfg.split_ratio.map(|r| r.to_string()).unwrap_or_else(|| "none".to_string())),
+                        "animation" => println!("{}", cfg.animation.as_deref().unwrap_or("none")),
+                        "animation_type" | "anim_type" => println!("{}", cfg.animation_type.as_deref().unwrap_or("none")),
+                        "image" => println!("{}", cfg.image.as_deref().unwrap_or("none")),
+                        "split_mode" => println!("{}", cfg.split_mode.as_deref().unwrap_or("none")),
+                        "editor" => println!("{}", cfg.editor.as_deref().unwrap_or("auto")),
+                        other => {
+                            eprintln!("unknown config key: {other}");
+                            eprintln!(
+                                "supported keys: cow, text, effect, background, duration, \
+                                 fps, eyes, tongue, default_shell, auto_render_on_prompt, think, \
+                                 color_mode, shell_attach_mode, environment, road, mountain, \
+                                 palette, thought_interval, split_scroll, split_mode, reserve_rows, reserve_cols, \
+                                 split_ratio, animation, animation_type, image, editor"
+                            );
+                            return ExitCode::from(1);
+                        }
+                    }
+                    ExitCode::SUCCESS
                 }
-                println!(
-                    "set {k} = {printed} in {} ({})",
-                    cfg_path.display(),
-                    cfg_format.display_name()
-                );
-                ExitCode::SUCCESS
-            } else if tui {
-                // Interactive TUI (only available in tui-enabled builds).
-                let code = forgum_engine::config_tui::run(&cfg_path);
-                ExitCode::from(code as u8)
-            } else {
-                if let Some(ref k) = key {
-                    if k == "set" && value.is_none() {
-                        eprintln!(
-                            "usage: forgum config set <key> <value>  (or `forgum config --tui` / `forgum tui`)"
-                        );
+                ConfigOp::Set(k, v) => {
+                    let printed = v.clone();
+                    let mut cfg = read_config_file(&cfg_path).unwrap_or_default();
+                    let parse_err: Option<String> = match k.as_str() {
+                        "cow" => {
+                            cfg.cow = v;
+                            None
+                        }
+                        "text" => {
+                            cfg.text = v;
+                            None
+                        }
+                        "effect" => {
+                            cfg.effect = v;
+                            None
+                        }
+                        "background" => match v.parse::<bool>() {
+                            Ok(b) => {
+                                cfg.background = b;
+                                None
+                            }
+                            Err(e) => Some(format!("{e}")),
+                        },
+                        "duration" => match v.parse::<u32>() {
+                            Ok(n) => {
+                                cfg.duration = n;
+                                None
+                            }
+                            Err(e) => Some(format!("{e}")),
+                        },
+                        "fps" => match v.parse::<u16>() {
+                            Ok(n) => {
+                                cfg.fps = n;
+                                None
+                            }
+                            Err(e) => Some(format!("{e}")),
+                        },
+                        "eyes" => {
+                            cfg.eyes = v;
+                            None
+                        }
+                        "tongue" => {
+                            cfg.tongue = v;
+                            None
+                        }
+                        "default_shell" => {
+                            cfg.default_shell = v;
+                            None
+                        }
+                        "auto_render_on_prompt" => match v.parse::<bool>() {
+                            Ok(b) => {
+                                cfg.auto_render_on_prompt = b;
+                                None
+                            }
+                            Err(e) => Some(format!("{e}")),
+                        },
+                        "think" => match v.parse::<bool>() {
+                            Ok(b) => {
+                                cfg.think = b;
+                                None
+                            }
+                            Err(e) => Some(format!("{e}")),
+                        },
+                        "color_mode" => {
+                            cfg.color_mode = v;
+                            None
+                        }
+                        "shell_attach_mode" | "attach_mode" => {
+                            cfg.shell_attach_mode = v;
+                            None
+                        }
+                        "environment" | "env" => {
+                            cfg.environment = if v.is_empty() || v == "none" {
+                                None
+                            } else {
+                                Some(v)
+                            };
+                            None
+                        }
+                        "road" => {
+                            cfg.road = if v.is_empty() || v == "none" {
+                                None
+                            } else {
+                                Some(v)
+                            };
+                            None
+                        }
+                        "mountain" | "mtn" => {
+                            cfg.mountain = if v.is_empty() || v == "none" {
+                                None
+                            } else {
+                                Some(v)
+                            };
+                            None
+                        }
+                        "palette" => {
+                            cfg.palette = if v.is_empty() || v == "none" {
+                                None
+                            } else {
+                                Some(v)
+                            };
+                            None
+                        }
+                        "thought_interval" => match v.parse::<u32>() {
+                            Ok(n) => {
+                                cfg.thought_interval = n;
+                                None
+                            }
+                            Err(e) => Some(format!("{e}")),
+                        },
+                        "split_scroll" => match v.parse::<bool>() {
+                            Ok(b) => {
+                                cfg.split_scroll = b;
+                                None
+                            }
+                            Err(e) => Some(format!("{e}")),
+                        },
+                        "reserve_rows" => match v.parse::<u16>() {
+                            Ok(n) => {
+                                cfg.reserve_rows = Some(n);
+                                None
+                            }
+                            Err(e) => Some(format!("{e}")),
+                        },
+                        "reserve_cols" => match v.parse::<u16>() {
+                            Ok(n) => {
+                                cfg.reserve_cols = Some(n);
+                                None
+                            }
+                            Err(e) => Some(format!("{e}")),
+                        },
+                        "split_ratio" => match v.parse::<f32>() {
+                            Ok(r) => {
+                                cfg.split_ratio = Some(r);
+                                None
+                            }
+                            Err(e) => Some(format!("{e}")),
+                        },
+                        "animation" => {
+                            cfg.animation = if v.is_empty() || v == "none" {
+                                None
+                            } else {
+                                Some(v)
+                            };
+                            None
+                        }
+                        "animation_type" | "anim_type" => {
+                            cfg.animation_type = if v.is_empty() || v == "none" {
+                                None
+                            } else {
+                                Some(v)
+                            };
+                            None
+                        }
+                        "image" => {
+                            cfg.image = if v.is_empty() || v == "none" {
+                                None
+                            } else {
+                                Some(v)
+                            };
+                            None
+                        }
+                        "split_mode" => {
+                            cfg.split_mode = if v.is_empty() || v == "none" {
+                                None
+                            } else {
+                                Some(v)
+                            };
+                            None
+                        }
+                        "editor" => {
+                            cfg.editor = if v.is_empty() || v == "none" {
+                                None
+                            } else {
+                                Some(v)
+                            };
+                            None
+                        }
+                        other => {
+                            eprintln!("unknown config key: {other}");
+                            eprintln!(
+                                "supported keys: cow, text, effect, background, duration, \
+                                 fps, eyes, tongue, default_shell, auto_render_on_prompt, think, \
+                                 color_mode, shell_attach_mode, environment, road, mountain, \
+                                 palette, thought_interval, split_scroll, split_mode, reserve_rows, reserve_cols, \
+                                 split_ratio, animation, animation_type, image, editor"
+                            );
+                            return ExitCode::from(1);
+                        }
+                    };
+                    if let Some(e) = parse_err {
+                        eprintln!("invalid value for `{k}`: {e}");
                         return ExitCode::from(1);
                     }
+                    if let Err(e) = write_config_file(&cfg_path, &cfg, cfg_format) {
+                        eprintln!("{PROGRAM}: cannot write config: {e}");
+                        return ExitCode::from(e.exit_code() as u8);
+                    }
+                    println!(
+                        "set {k} = {printed} in {} ({})",
+                        cfg_path.display(),
+                        cfg_format.display_name()
+                    );
+                    ExitCode::SUCCESS
                 }
-                // Default: open the TUI when available, else print help.
-                if cfg!(feature = "tui") {
-                    let code = forgum_engine::config_tui::run(&cfg_path);
-                    return ExitCode::from(code as u8);
+                ConfigOp::OpenTui => {
+                    if tui || cfg!(feature = "tui") {
+                        let code = forgum_engine::config_tui::run(&cfg_path);
+                        ExitCode::from(code as u8)
+                    } else {
+                        eprintln!(
+                            "usage: forgum config set <key> <value>  (or `forgum config --tui` in a tui-enabled build)"
+                        );
+                        ExitCode::from(1)
+                    }
                 }
-                eprintln!(
-                    "usage: forgum config set <key> <value>  (or `forgum config --tui` \
-                     in a tui-enabled build)"
-                );
-                ExitCode::from(1)
             }
         }
 
@@ -844,8 +919,7 @@ pub fn run() -> ExitCode {
 
         // ── status ──────────────────────────────────────────────────
         Some(cli::Commands::Status) | None if args.command == cli::Command::Status => {
-            println!("ok");
-            ExitCode::SUCCESS
+            handle_status_command(&args)
         }
 
         // ── doctor ─────────────────────────────────────────────────
@@ -855,7 +929,7 @@ pub fn run() -> ExitCode {
             let engine_path = std::env::current_exe()
                 .ok()
                 .and_then(|p| p.to_str().map(String::from))
-                .unwrap_or_else(|| "forgum-engine".to_string());
+                .unwrap_or_else(|| "forgum".to_string());
             let config_info = forgum_platform::detect_config_file(args.config.as_deref())
                 .map(|(p, fmt)| format!("{} ({})", p.display(), fmt.display_name()))
                 .unwrap_or_else(|e| format!("(error: {e})"));
@@ -954,7 +1028,7 @@ pub fn run() -> ExitCode {
             let engine_path = std::env::current_exe()
                 .ok()
                 .and_then(|p| p.to_str().map(String::from))
-                .unwrap_or_else(|| "forgum-engine".to_string());
+                .unwrap_or_else(|| "forgum".to_string());
             print!(
                 "{}",
                 forgum_engine::init::generate_tmux_config(&engine_path)
@@ -969,7 +1043,7 @@ pub fn run() -> ExitCode {
             let engine_path = std::env::current_exe()
                 .ok()
                 .and_then(|p| p.to_str().map(String::from))
-                .unwrap_or_else(|| "forgum-engine".to_string());
+                .unwrap_or_else(|| "forgum".to_string());
             print!(
                 "{}",
                 forgum_engine::init::generate_zellij_config(&engine_path)
@@ -984,7 +1058,7 @@ pub fn run() -> ExitCode {
             let engine_path = std::env::current_exe()
                 .ok()
                 .and_then(|p| p.to_str().map(String::from))
-                .unwrap_or_else(|| "forgum-engine".to_string());
+                .unwrap_or_else(|| "forgum".to_string());
             print!(
                 "{}",
                 forgum_engine::init::generate_wezterm_config(&engine_path)
@@ -999,7 +1073,7 @@ pub fn run() -> ExitCode {
             let engine_path = std::env::current_exe()
                 .ok()
                 .and_then(|p| p.to_str().map(String::from))
-                .unwrap_or_else(|| "forgum-engine".to_string());
+                .unwrap_or_else(|| "forgum".to_string());
             print!(
                 "{}",
                 forgum_engine::init::generate_screen_config(&engine_path)
@@ -1394,9 +1468,31 @@ pub fn run() -> ExitCode {
             let n1 = fighter1.unwrap_or(name1);
             let n2 = fighter2.unwrap_or(name2);
             if !headless && forgum_platform::is_stdout_tty() {
+                forgum_engine::daemon::stop_session_daemon_and_reset_margins();
                 forgum_engine::battle::run_battle_live(&n1, &n2, winner, fps);
             } else {
                 let output = forgum_engine::battle::run_battle(&n1, &n2);
+                print!("{output}");
+            }
+            ExitCode::SUCCESS
+        }
+
+        // ── rps-battle ───────────────────────────────────────────────
+        Some(cli::Commands::RpsBattle {
+            player,
+            cpu,
+            choice,
+            headless,
+            fps,
+        }) => {
+            let parsed_choice = choice
+                .as_deref()
+                .and_then(forgum_engine::rps::RpsMove::from_str);
+            if !headless && forgum_platform::is_stdout_tty() {
+                forgum_engine::daemon::stop_session_daemon_and_reset_margins();
+                forgum_engine::rps::run_rps_battle_live(&player, &cpu, parsed_choice, 1, fps);
+            } else {
+                let output = forgum_engine::rps::run_rps_battle(&player, &cpu, parsed_choice);
                 print!("{output}");
             }
             ExitCode::SUCCESS
@@ -1451,26 +1547,12 @@ pub fn run() -> ExitCode {
             }
         },
 
+        // ── stop / kill / halt / reset / unreserve / clear-margins ───
+        Some(cli::Commands::Stop { all, force }) => handle_stop_command(all, force),
+        None if args.command == cli::Command::Stop => handle_stop_command(false, false),
+
         // ── sweep ───────────────────────────────────────────────────
-        Some(cli::Commands::Sweep) => {
-            let session_id = forgum_platform::detect_session_id();
-            let path = forgum_platform::daemon_state_path(&session_id);
-            if path.exists() {
-                if let Ok(state) = forgum_engine::daemon::DaemonState::read(&path) {
-                    if state.is_alive() {
-                        let _ = forgum_engine::herd::send_command(&state.socket_path, r#"{"cmd":"STOP"}"#);
-                        std::thread::sleep(std::time::Duration::from_millis(60));
-                    }
-                }
-                forgum_engine::daemon::cleanup_daemon_state(&session_id);
-            }
-            let _ = std::io::Write::write_all(&mut std::io::stdout(), b"\x1b[r\x1b[0m\x1b[?25h");
-            let _ = std::io::Write::flush(&mut std::io::stdout());
-            let _ = crossterm::terminal::disable_raw_mode();
-            let _ = crossterm::execute!(std::io::stdout(), crossterm::cursor::Show);
-            println!("forgum: pasture swept clean, terminal margins and cursor restored.");
-            ExitCode::SUCCESS
-        }
+        Some(cli::Commands::Sweep) => handle_stop_command(false, false),
 
         // ── image ───────────────────────────────────────────────────
         Some(cli::Commands::Image {
@@ -1565,6 +1647,505 @@ pub fn run() -> ExitCode {
     }
 }
 
+struct PaneGuard {
+    session_id: String,
+    _server: Option<forgum_engine::control_socket::ControlServer>,
+}
+
+impl PaneGuard {
+    /// Register an instance (foreground/banner/background) so that any second invocation
+    /// on the same pane sees this PID and refuses to render. Starts a control socket server
+    /// so live commands (like `forgum think` or `forgum stop`) can reach it.
+    fn acquire(
+        session_id: &str,
+        pid: u32,
+    ) -> (Self, Option<crossbeam_channel::Receiver<crate::control_socket::ControlCmd>>) {
+        let socket_path = forgum_platform::control_socket_path(session_id);
+        let (server, cmd_rx) =
+            match forgum_engine::control_socket::ControlServer::start(socket_path.clone()) {
+                Ok((srv, rx)) => (Some(srv), Some(rx)),
+                Err(_) => (None, None),
+            };
+        let sock_str = if server.is_some() {
+            socket_path.to_string_lossy().to_string()
+        } else {
+            String::new()
+        };
+        let state_path = forgum_platform::daemon_state_path(session_id);
+        let state = daemon::DaemonState {
+            pid,
+            ob_y1: 0,
+            cols: forgum_platform::terminal_size().0,
+            socket_path: sock_str,
+            started_at: std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| format!("{}Z", d.as_secs()))
+                .unwrap_or_else(|_| "unknown".into()),
+        };
+        let _ = state.write(&state_path);
+        if let Ok(rt) = forgum_platform::runtime_dir() {
+            let _ = state.write(&rt.join("daemon.json"));
+        }
+        (
+            Self {
+                session_id: session_id.to_string(),
+                _server: server,
+            },
+            cmd_rx,
+        )
+    }
+}
+
+impl Drop for PaneGuard {
+    fn drop(&mut self) {
+        daemon::cleanup_daemon_state(&self.session_id);
+    }
+}
+
+fn handle_status_command(args: &cli::Args) -> ExitCode {
+    let version = env!("CARGO_PKG_VERSION");
+    let source = forgum_platform::detect_installation_source();
+    let detected_cfg = forgum_platform::detect_config_file(args.config.as_deref());
+    let (config_path_display, config_fmt_display) = match &detected_cfg {
+        Ok((p, fmt)) => (p.display().to_string(), fmt.display_name().to_string()),
+        Err(e) => (format!("None ({e})"), "None".to_string()),
+    };
+
+    let cfg = match build_scene_config(args) {
+        Ok(s) => s,
+        Err(_) => forgum_engine::protocol::SceneConfig::default(),
+    };
+
+    let session_id = forgum_platform::detect_session_id();
+    let state_path = forgum_platform::daemon_state_path(&session_id);
+    let daemon_status = if state_path.exists() {
+        if let Ok(st) = daemon::DaemonState::read(&state_path) {
+            if st.is_alive() {
+                format!(
+                    "\x1b[1;32mActive\x1b[0m (PID {}, socket: '{}')",
+                    st.pid,
+                    if st.socket_path.is_empty() { "foreground" } else { &st.socket_path }
+                )
+            } else {
+                "\x1b[1;33mIdle\x1b[0m (previous session terminated)".to_string()
+            }
+        } else {
+            "\x1b[1;33mIdle\x1b[0m".to_string()
+        }
+    } else {
+        "\x1b[1;33mIdle\x1b[0m (0 running on current pane)".to_string()
+    };
+
+    let is_tty = crossterm::tty::IsTty::is_tty(&std::io::stdout());
+    let (c_bold, c_cyan, c_green, c_yellow, c_reset) = if is_tty {
+        ("\x1b[1m", "\x1b[1;36m", "\x1b[1;32m", "\x1b[1;33m", "\x1b[0m")
+    } else {
+        ("", "", "", "", "")
+    };
+
+    println!("{c_cyan}=============================================================================={c_reset}");
+    println!("{c_bold}forgum status — Engine v{version}{c_reset}");
+    println!("{c_cyan}=============================================================================={c_reset}\n");
+
+    // 1. Release & Update Subsystem (Scoop-style Status)
+    println!("{c_cyan}## Updates & Release Subsystem (Scoop Status){c_reset}");
+    println!("  • Current Version:  {c_green}v{version}{c_reset} (installed)");
+    println!("  • Install Channel:  {c_bold}{}{c_reset}", source.name());
+    println!("  • Update Channel:   GitHub Releases (https://github.com/HKDevLoops/Forgum/releases/latest)");
+    println!("  • Update Check:     `forgum update --check` (or `{}`)", source.check_command());
+    println!("  • Upgrade Command:  `forgum update` (or `{}`)", source.update_command());
+    println!("  • Status:           {c_green}✓ Up to date{c_reset} (v{version} is the latest release build)\n");
+
+    // 2. Active User Configurations
+    println!("{c_cyan}## Active User Configurations{c_reset}");
+    println!("  • Config File:      {c_bold}{config_path_display}{c_reset} ({config_fmt_display})");
+    println!("  • Mascot (cow):     {c_yellow}'{}'{c_reset}", cfg.cow);
+    println!("  • Animation Effect: {c_yellow}'{}'{c_reset}", cfg.effect);
+    println!("  • Target FPS:       {c_bold}{}{c_reset}", cfg.fps);
+    println!("  • Color Mode:       {c_yellow}'{}'{c_reset}{}", cfg.color_mode, if let Some(ref pal) = cfg.palette { format!(" (palette: {pal})") } else { String::new() });
+    println!("  • Shell Attach:     {c_yellow}'{}'{c_reset}", cfg.shell_attach_mode);
+    println!("  • Auto on Prompt:   {c_bold}{}{c_reset}", cfg.auto_render_on_prompt);
+    println!("  • Duration:         {c_bold}{}s{c_reset} (0 = permanent / persistent)", cfg.duration);
+    println!("  • Space Split:      split_scroll={}, ratio={}, reserve_rows={}",
+        cfg.split_scroll,
+        cfg.split_ratio.map(|r| format!("{:.2}", r)).unwrap_or_else(|| "auto".into()),
+        cfg.reserve_rows.map(|r| r.to_string()).unwrap_or_else(|| "auto".into())
+    );
+    if let Some(ref env) = cfg.environment {
+        println!("  • Environment:      {c_yellow}'{env}'{c_reset}");
+    }
+    if let Some(ref rd) = cfg.road {
+        println!("  • Road Texture:     {c_yellow}'{rd}'{c_reset}");
+    }
+    if let Some(ref mtn) = cfg.mountain {
+        println!("  • Mountain Range:   {c_yellow}'{mtn}'{c_reset}");
+    }
+    let random_display = match &cfg.random {
+        Some(forgum_platform::protocol::RandomSetting::Bool(true)) => {
+            format!("{c_green}all (universally active on startup){c_reset}")
+        }
+        Some(forgum_platform::protocol::RandomSetting::Bool(false)) => {
+            format!("{c_yellow}disabled{c_reset}")
+        }
+        Some(forgum_platform::protocol::RandomSetting::String(s)) => {
+            format!("{c_green}'{s}'{c_reset}")
+        }
+        Some(forgum_platform::protocol::RandomSetting::List(l)) => {
+            format!("{c_green}'{}'{c_reset}", l.join(", "))
+        }
+        None => format!("{c_yellow}disabled (default){c_reset}"),
+    };
+    println!("  • Random Mode:      {random_display}");
+    println!("  • Daemon Session:   {daemon_status}\n");
+
+    // 3. What's New in this Release
+    println!("{c_cyan}## What's New in this Release (v{version}){c_reset}");
+    println!("  {c_green}• 🎲 First-Class RANDOM Property:{c_reset} Universally randomizes mascots, scenery biomes, effects, static/dynamic animations, and thoughts on startup.");
+    println!("  {c_green}• 🛡️  Single-Instance Pane Guard:{c_reset} Eliminates overlapping animation renders on the same pane; forwards thoughts and commands live via IPC.");
+    println!("  {c_green}• ⚡ Universal IPC Control Socket:{c_reset} Foreground, banner, and background modes listen on control sockets for live thought hotswapping.");
+    println!("  {c_green}• 🌿 True Kinematic Bobbing:{c_reset} Physical sinusoidal floating/flying kinematics for aerial creatures with anchored speech bubbles.");
+    println!("  {c_green}• 🎨 Native TrueColor Detection:{c_reset} Automatic 16.7M 24-bit RGB TrueColor palette activation on Windows Terminal, WezTerm, and modern emulators.");
+    println!("  {c_green}• 📐 Clean Space & Margin Reset:{c_reset} DECSTBM scroll margins and reserved rows are restored cleanly without erasing terminal history.");
+    println!("  {c_green}• 🚀 <100MB RAM Nature Math:{c_reset} Zero-allocation procedural mountain, tree, and road rendering running strictly on pre-allocated framebuffers.");
+    println!("{c_cyan}=============================================================================={c_reset}");
+
+    ExitCode::SUCCESS
+}
+
+fn handle_stop_command(all: bool, force: bool) -> ExitCode {
+    let mut stopped_count = 0;
+    let mut known_pids = std::collections::HashSet::new();
+
+    // 1. Session and runtime daemon state discovery
+    let session_id = forgum_platform::detect_session_id();
+    let session_path = forgum_platform::daemon_state_path(&session_id);
+    let mut max_ob_y1: u16 = 0;
+
+    let mut state_paths = Vec::new();
+    if session_path.exists() {
+        state_paths.push(session_path.clone());
+    }
+
+    if let Ok(rt) = forgum_platform::runtime_dir() {
+        let generic = rt.join("daemon.json");
+        if generic.exists() && !state_paths.contains(&generic) {
+            state_paths.push(generic);
+        }
+
+        if all || state_paths.is_empty() {
+            if let Ok(entries) = std::fs::read_dir(&rt) {
+                for entry in entries.flatten() {
+                    let path = entry.path();
+                    let file_name = entry.file_name();
+                    let name_str = file_name.to_string_lossy();
+                    if name_str.starts_with("daemon-") && name_str.ends_with(".json") && !state_paths.contains(&path) {
+                        state_paths.push(path);
+                    }
+                }
+            }
+        }
+    }
+
+    for path in &state_paths {
+        if let Ok(state) = daemon::DaemonState::read(path) {
+            if state.ob_y1 > max_ob_y1 {
+                max_ob_y1 = state.ob_y1;
+            }
+            known_pids.insert(state.pid);
+            if state.is_alive() {
+                if !force {
+                    let _ = crate::herd::send_command(&state.socket_path, r#"{"cmd":"STOP"}"#);
+                    std::thread::sleep(std::time::Duration::from_millis(60));
+                }
+                if force || state.is_alive() {
+                    if forgum_platform::kill_process(state.pid) {
+                        stopped_count += 1;
+                    }
+                } else {
+                    stopped_count += 1;
+                }
+            }
+        }
+        let _ = std::fs::remove_file(path);
+    }
+
+    // Clean daemon state for current session
+    daemon::cleanup_daemon_state(&session_id);
+
+    // 2. Scan OS process table for any unlisted / orphaned forgum processes
+    let unlisted = forgum_platform::find_forgum_pids();
+    for pid in unlisted {
+        if all || !known_pids.contains(&pid) {
+            if forgum_platform::kill_process(pid) {
+                stopped_count += 1;
+            }
+        }
+    }
+
+    // Clean up any remaining socket or state files in runtime directory
+    if let Ok(rt) = forgum_platform::runtime_dir() {
+        if let Ok(entries) = std::fs::read_dir(&rt) {
+            for entry in entries.flatten() {
+                let name = entry.file_name();
+                let name_str = name.to_string_lossy();
+                if name_str.starts_with("daemon") || name_str.ends_with(".sock") {
+                    let _ = std::fs::remove_file(entry.path());
+                }
+            }
+        }
+    }
+
+    // 3. Complete space reservation and terminal margins reset
+    let (_, height) = forgum_platform::terminal_size();
+    let mut clean_buf = Vec::new();
+    if max_ob_y1 > 0 {
+        let clear_rows = (max_ob_y1 as usize).min(height as usize);
+        clean_buf.extend_from_slice(b"\x1b7");
+        for y in 1..=clear_rows {
+            clean_buf.extend_from_slice(format!("\x1b[{y};1H\x1b[2K").as_bytes());
+        }
+        clean_buf.extend_from_slice(b"\x1b[r\x1b[?6l\x1b[?69l\x1b8\x1b[0m\x1b[?25h");
+    } else if stopped_count > 0 {
+        let clear_rows = (height as usize).min(16);
+        clean_buf.extend_from_slice(b"\x1b7");
+        for y in 1..=clear_rows {
+            clean_buf.extend_from_slice(format!("\x1b[{y};1H\x1b[2K").as_bytes());
+        }
+        clean_buf.extend_from_slice(b"\x1b[r\x1b[?6l\x1b[?69l\x1b8\x1b[0m\x1b[?25h");
+    } else {
+        // Reset margins cleanly without destroying existing terminal scrollback lines
+        clean_buf.extend_from_slice(b"\x1b[r\x1b[?6l\x1b[?69l\x1b8\x1b[0m\x1b[?25h");
+    }
+    let _ = std::io::Write::write_all(&mut std::io::stdout(), &clean_buf);
+    let _ = std::io::Write::flush(&mut std::io::stdout());
+
+    // Disable raw mode if left active
+    let _ = crossterm::terminal::disable_raw_mode();
+
+    if stopped_count > 0 {
+        println!("forgum: stopped {stopped_count} running animation(s), terminal margins and reserved space reset.");
+    } else {
+        println!("forgum: pasture cleared; terminal margins and reserved space reset.");
+    }
+
+    ExitCode::SUCCESS
+}
+
+fn handle_think_command(mut args: cli::Args, thought: Vec<String>) -> ExitCode {
+    let data = match data_dir() {
+        Ok(d) => d,
+        Err(e) => {
+            eprintln!("{PROGRAM}: cannot find data directory: {e}");
+            return ExitCode::from(78);
+        }
+    };
+
+    let thought_text = if !thought.is_empty() {
+        let joined = thought.join(" ");
+        if joined.trim().eq_ignore_ascii_case("random") {
+            fortune::random_fortune(&data)
+                .unwrap_or_else(|| "The cow that never moos has the most to say.".to_string())
+        } else {
+            joined
+        }
+    } else if let Some(ref t) = args.text {
+        if t.trim().eq_ignore_ascii_case("random") {
+            fortune::random_fortune(&data)
+                .unwrap_or_else(|| "The cow that never moos has the most to say.".to_string())
+        } else {
+            t.clone()
+        }
+    } else if !crossterm::tty::IsTty::is_tty(&std::io::stdin()) {
+        use std::io::Read;
+        let mut buf = String::new();
+        let _ = std::io::stdin().read_to_string(&mut buf);
+        let trimmed = buf.trim().to_string();
+        if !trimmed.is_empty() && !trimmed.eq_ignore_ascii_case("random") {
+            trimmed
+        } else {
+            fortune::random_fortune(&data)
+                .unwrap_or_else(|| "The cow that never moos has the most to say.".to_string())
+        }
+    } else {
+        fortune::random_fortune(&data)
+            .unwrap_or_else(|| "The cow that never moos has the most to say.".to_string())
+    };
+
+    // 1. Check if an active session daemon is running. If so, forward via IPC to update in-place without duplicate process.
+    let session_id = forgum_platform::detect_session_id();
+    let state_path = forgum_platform::daemon_state_path(&session_id);
+    let mut active_socket: Option<String> = None;
+
+    // Track whether we found a live foreground instance (no IPC socket) vs a live daemon (with socket).
+    let mut foreground_alive = false;
+
+    if state_path.exists() {
+        if let Ok(state) = daemon::DaemonState::read(&state_path) {
+            if state.is_alive() {
+                if state.socket_path.is_empty() {
+                    // Foreground instance: has no control socket — cannot IPC-forward.
+                    foreground_alive = true;
+                } else {
+                    active_socket = Some(state.socket_path);
+                }
+            }
+        }
+    }
+    if active_socket.is_none() && !foreground_alive {
+        if let Ok(rt) = forgum_platform::runtime_dir() {
+            let generic = rt.join("daemon.json");
+            if generic.exists() {
+                if let Ok(state) = daemon::DaemonState::read(&generic) {
+                    if state.is_alive() {
+                        if state.socket_path.is_empty() {
+                            foreground_alive = true;
+                        } else {
+                            active_socket = Some(state.socket_path);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if !args.daemon {
+        if let Some(socket_path) = active_socket {
+            // Live daemon with IPC socket: forward all flags then the thought text.
+            if let Some(ref cow) = args.cow {
+                let payload = serde_json::json!({"cmd": "COW", "arg": cow}).to_string();
+                let _ = crate::herd::send_command(&socket_path, &payload);
+            }
+            if let Some(ref color) = args.color_mode {
+                let payload = serde_json::json!({"cmd": "COLOR", "arg": color}).to_string();
+                let _ = crate::herd::send_command(&socket_path, &payload);
+            }
+            let payload = serde_json::json!({"cmd": "THINK", "arg": thought_text}).to_string();
+            if crate::herd::send_command(&socket_path, &payload).is_ok() {
+                return ExitCode::SUCCESS;
+            }
+        }
+        if foreground_alive {
+            // An instance is already running on this pane: another instance on the same pane must not render or overlap.
+            return ExitCode::SUCCESS;
+        }
+    }
+
+    // 2. Clean up any dead/stale session daemon to prevent visual collisions.
+    // (stop_session_daemon_and_reset_margins is safe and no-ops if no daemon was running)
+    daemon::stop_session_daemon_and_reset_margins();
+
+    // 3. If --daemon was explicitly requested, stop existing daemon and spawn a new one cleanly.
+    if args.daemon {
+        args.think = true;
+        args.text = Some(thought_text);
+        return spawn_daemon_parent(&args);
+    }
+
+    // 4. If explicit animation flags were passed, run bounded foreground animation.
+    let has_explicit_animation = args.animation.is_some()
+        || args.effect.is_some()
+        || args.duration.is_some()
+        || args.banner;
+
+    if has_explicit_animation {
+        let mut scene = match build_scene_config(&args) {
+            Ok(s) => s,
+            Err(e) => {
+                eprintln!("{PROGRAM}: {e}");
+                return ExitCode::from(65);
+            }
+        };
+        scene.think = true;
+        scene.text = thought_text;
+        scene.background = false;
+        scene.split_scroll = false;
+        if scene.duration == 0 {
+            scene.duration = 2; // Bounded burst animation, never hang forever
+        }
+        return render_subcommand_with_scene(args, scene);
+    }
+
+    // 5. Standalone cowthink mode: print static composed thought cow cleanly to stdout.
+    let mut scene = match build_scene_config(&args) {
+        Ok(s) => s,
+        Err(_) => forgum_engine::protocol::SceneConfig::default(),
+    };
+    scene.think = true;
+    scene.text = thought_text;
+    resolve_scene_randomness(&mut scene, &data, &args);
+
+    let thoughts_glyph = "o";
+    let cow_text = cow::load_cow(
+        &scene.cow,
+        &data,
+        &scene.eyes,
+        &scene.tongue,
+        thoughts_glyph,
+    );
+    let composed = cow::compose_scene_with_mode(&cow_text, &scene.text, true);
+
+    print_colored_scene(&composed, &scene.cow, &scene.color_mode, scene.palette.as_deref());
+    ExitCode::SUCCESS
+}
+
+fn print_colored_scene(
+    composed: &str,
+    animal_name: &str,
+    color_mode: &str,
+    custom_palette: Option<&str>,
+) {
+    if !crossterm::tty::IsTty::is_tty(&std::io::stdout()) || color_mode == "none" {
+        print!("{composed}");
+        return;
+    }
+
+    let palette_tuples: Vec<(u8, u8, u8)> = if let Some(pal) = custom_palette {
+        let hexes: Vec<String> = pal
+            .split(',')
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty())
+            .collect();
+        crate::color::parse_palette(&hexes)
+    } else {
+        crate::color::get_natural_palette(animal_name).to_vec()
+    };
+
+    let cow_start_line = forgum_engine::effects::find_cow_start_line(composed);
+    let mut out = std::io::stdout().lock();
+    use std::io::Write;
+
+    for (y, line) in composed.lines().enumerate() {
+        let is_bubble_line = y < cow_start_line;
+        let animal_rel_y = y.saturating_sub(cow_start_line);
+
+        let mut current_fg: Option<crate::framebuffer::Color> = None;
+
+        for (x, ch) in line.chars().enumerate() {
+            let cell_fg = if is_bubble_line {
+                crate::effects::resolve_bubble_line_char_fg(line, x, ch)
+            } else {
+                crate::effects::resolve_fg_palette_char(
+                    color_mode,
+                    &palette_tuples,
+                    x,
+                    animal_rel_y,
+                    0.0,
+                    crate::framebuffer::Color::WHITE,
+                    ch,
+                )
+            };
+
+            if current_fg != Some(cell_fg) {
+                current_fg = Some(cell_fg);
+                let _ = write!(out, "\x1b[38;2;{};{};{}m", cell_fg.r, cell_fg.g, cell_fg.b);
+            }
+            let _ = write!(out, "{ch}");
+        }
+        let _ = writeln!(out, "\x1b[0m");
+    }
+    let _ = out.flush();
+}
+
 fn render_subcommand(args: cli::Args) -> ExitCode {
     // Read scene from --file or stdin (capped to 4 MB per BUG-D4 / BUG-D5).
     let scene_input = match forgum_engine::protocol_io::read_scene(args.file.as_deref(), true) {
@@ -1586,6 +2167,151 @@ fn render_subcommand(args: cli::Args) -> ExitCode {
     };
     scene = forgum_engine::config::merge(scene_input, scene);
     render_subcommand_with_scene(args, scene)
+}
+
+/// Universally resolve all `RANDOM` parameters: mascot, scenery (environment/road/mountain),
+/// fx and animation (including static vs dynamic animations), and fortune thoughts.
+pub fn resolve_scene_randomness(
+    scene: &mut forgum_engine::protocol::SceneConfig,
+    data_dir: &std::path::Path,
+    explicit_args: &cli::Args,
+) {
+    let random_setting = scene.random.clone();
+
+    // ── 1. MASCOT (COW) ──────────────────────────────────────────────────
+    let should_randomize_cow = scene.cow.trim().eq_ignore_ascii_case("random")
+        || (random_setting.as_ref().map_or(false, |r| r.randomizes_mascot())
+            && explicit_args.cow.is_none());
+
+    if should_randomize_cow {
+        scene.cow = cow::resolve_cow_name("random", data_dir);
+        // Auto-adapt animal profile defaults if user didn't explicitly override them
+        let profile = crate::scenery::get_animal_profile(&scene.cow);
+        if explicit_args.eyes.is_none() && (scene.eyes.is_empty() || scene.eyes == "oo") {
+            scene.eyes = profile.eyes.to_string();
+        }
+        if explicit_args.tongue.is_none() && (scene.tongue.is_empty() || scene.tongue == "  ") {
+            scene.tongue = profile.tongue.to_string();
+        }
+        if explicit_args.palette.is_none() && scene.palette.is_none() {
+            let natural_hexes = crate::color::get_natural_hex_palette(&scene.cow);
+            if !natural_hexes.is_empty() {
+                scene.palette = Some(natural_hexes.join(","));
+            }
+        }
+        // If scenery was NOT explicitly pinned and NOT separately randomized, default to animal's native biome
+        if explicit_args.environment.is_none()
+            && scene.environment.as_deref().map_or(true, |e| e == "default" || e.is_empty())
+            && !random_setting.as_ref().map_or(false, |r| r.randomizes_scenery())
+        {
+            scene.environment = Some(profile.environment.as_str().to_string());
+            scene.road = Some(profile.road.as_str().to_string());
+            scene.mountain = Some(profile.mountain.as_str().to_string());
+        }
+    } else {
+        scene.cow = cow::resolve_cow_name(&scene.cow, data_dir);
+    }
+
+    // ── 2. SCENERY (ENVIRONMENT / ROAD / MOUNTAIN) ──────────────────────
+    let should_randomize_env = scene
+        .environment
+        .as_deref()
+        .map_or(false, |s| s.trim().eq_ignore_ascii_case("random"))
+        || (random_setting.as_ref().map_or(false, |r| r.randomizes_scenery())
+            && explicit_args.environment.is_none());
+
+    let should_randomize_road = scene
+        .road
+        .as_deref()
+        .map_or(false, |s| s.trim().eq_ignore_ascii_case("random"))
+        || (random_setting.as_ref().map_or(false, |r| r.randomizes_scenery())
+            && explicit_args.road.is_none());
+
+    let should_randomize_mountain = scene
+        .mountain
+        .as_deref()
+        .map_or(false, |s| s.trim().eq_ignore_ascii_case("random"))
+        || (random_setting.as_ref().map_or(false, |r| r.randomizes_scenery())
+            && explicit_args.mountain.is_none());
+
+    if should_randomize_env {
+        let picked_env = crate::scenery::EnvironmentStyle::random();
+        scene.environment = Some(picked_env.as_str().to_string());
+
+        // Harmonize road and mountain to the random biome if not explicitly locked or separately randomized
+        if !should_randomize_road && explicit_args.road.is_none() && scene.road.is_none() {
+            let (dyn_mtn, dyn_road) = crate::scenery::environment_scenery_defaults(picked_env);
+            scene.road = Some(dyn_road.as_str().to_string());
+            if !should_randomize_mountain && explicit_args.mountain.is_none() && scene.mountain.is_none() {
+                scene.mountain = Some(dyn_mtn.as_str().to_string());
+            }
+        }
+    }
+
+    if should_randomize_road {
+        scene.road = Some(crate::scenery::RoadStyle::random().as_str().to_string());
+    }
+
+    if should_randomize_mountain {
+        scene.mountain = Some(crate::scenery::MountainStyle::random().as_str().to_string());
+    }
+
+    // ── 3. FX AND ANIMATIONS (STATIC & DYNAMIC) ─────────────────────────
+    let should_randomize_anim = scene
+        .animation
+        .as_deref()
+        .map_or(false, |s| s.trim().eq_ignore_ascii_case("random"))
+        || (random_setting.as_ref().map_or(false, |r| r.randomizes_fx())
+            && explicit_args.animation.is_none());
+
+    let should_randomize_fx = scene.effect.trim().eq_ignore_ascii_case("random")
+        || scene
+            .animation_type
+            .as_deref()
+            .map_or(false, |s| s.trim().eq_ignore_ascii_case("random"))
+        || (random_setting.as_ref().map_or(false, |r| r.randomizes_fx())
+            && explicit_args.effect.is_none()
+            && explicit_args.animation_type.is_none());
+
+    if should_randomize_anim {
+        // Randomly pick between static (stationary mascot) and dynamic (motion)
+        let is_static: bool = rand::random();
+        if is_static {
+            scene.animation = Some("static".to_string());
+            if should_randomize_fx || scene.effect == "default" {
+                scene.effect = "static".to_string();
+                scene.animation_type = Some("static".to_string());
+            }
+        } else {
+            scene.animation = Some("dynamic".to_string());
+            if should_randomize_fx || scene.effect == "default" || scene.effect == "static" {
+                let dyn_anim = crate::effects::random_dynamic_animation();
+                scene.effect = dyn_anim.to_string();
+                scene.animation_type = Some(dyn_anim.to_string());
+            }
+        }
+    } else if should_randomize_fx {
+        let picked_effect = crate::effects::random_effect_name();
+        scene.effect = picked_effect.to_string();
+        scene.animation_type = Some(picked_effect.to_string());
+        if picked_effect == "static" {
+            scene.animation = Some("static".to_string());
+        } else {
+            scene.animation = Some("dynamic".to_string());
+        }
+    }
+
+    // ── 4. THOUGHT / TEXT ────────────────────────────────────────────────
+    let should_randomize_thought = scene.text.trim().is_empty()
+        || scene.text.trim().eq_ignore_ascii_case("random")
+        || (random_setting.as_ref().map_or(false, |r| r.randomizes_thought())
+            && explicit_args.text.is_none());
+
+    if should_randomize_thought {
+        if let Some(f) = fortune::random_fortune(data_dir) {
+            scene.text = f;
+        }
+    }
 }
 
 fn render_subcommand_with_scene(
@@ -1663,6 +2389,101 @@ fn render_subcommand_with_scene(
         || scene.split_ratio.is_some()
         || scene.shell_attach_mode == "split";
 
+    // ── SINGLE-INSTANCE PANE GUARD ───────────────────────────────────────
+    // If an instance of forgum is already running on this pane/session,
+    // another instance on the same pane must NOT render. Instead:
+    // 1. If args.daemon or is_split_mode: report existing PID and return 0.
+    // 2. If new text / mascot / effect / color args were supplied: forward to
+    //    the active instance via IPC control socket and exit 0 without competing output.
+    // 3. If no specific text/args: update active mascot with a fresh fortune via IPC.
+    // 4. If the active instance is an uncommunicative foreground instance: exit 0.
+    let session_id = forgum_platform::detect_session_id();
+    let state_path = forgum_platform::daemon_state_path(&session_id);
+    let mut active_state: Option<daemon::DaemonState> = None;
+
+    if state_path.exists() {
+        if let Ok(st) = daemon::DaemonState::read(&state_path) {
+            if st.is_alive() && st.pid != std::process::id() {
+                active_state = Some(st);
+            }
+        }
+    }
+    if active_state.is_none() {
+        if let Ok(rt) = forgum_platform::runtime_dir() {
+            let generic = rt.join("daemon.json");
+            if generic.exists() {
+                if let Ok(st) = daemon::DaemonState::read(&generic) {
+                    if st.is_alive() && st.pid != std::process::id() {
+                        active_state = Some(st);
+                    }
+                }
+            }
+        }
+    }
+
+    if let Some(st) = active_state {
+        // If split/daemon was requested and one already exists: report PID and return.
+        if args.daemon || is_split_mode {
+            println!("{}", st.pid);
+            return ExitCode::SUCCESS;
+        }
+
+        // Forward updates to the running instance via control socket if responsive.
+        let mut forwarded = false;
+        if !st.socket_path.is_empty() {
+            if let Some(ref cow) = args.cow {
+                let payload = serde_json::json!({"cmd": "COW", "arg": cow}).to_string();
+                let _ = crate::herd::send_command(&st.socket_path, &payload);
+                forwarded = true;
+            }
+            if let Some(ref effect) = args.effect {
+                let payload = serde_json::json!({"cmd": "EFFECT", "arg": effect}).to_string();
+                let _ = crate::herd::send_command(&st.socket_path, &payload);
+                forwarded = true;
+            }
+            if let Some(ref color) = args.color_mode {
+                let payload = serde_json::json!({"cmd": "COLOR", "arg": color}).to_string();
+                let _ = crate::herd::send_command(&st.socket_path, &payload);
+                forwarded = true;
+            }
+
+            let text_to_send = if let Some(ref t) = args.text {
+                Some(t.clone())
+            } else if !scene.text.trim().is_empty() {
+                Some(scene.text.clone())
+            } else {
+                None
+            };
+
+            if let Some(ref msg) = text_to_send {
+                let cmd_name = if scene.think || args.think || args.command == cli::Command::Think {
+                    "THINK"
+                } else {
+                    "TEXT"
+                };
+                let payload = serde_json::json!({"cmd": cmd_name, "arg": msg}).to_string();
+                if crate::herd::send_command(&st.socket_path, &payload).is_ok() {
+                    forwarded = true;
+                }
+            } else if !forwarded {
+                if let Ok(data) = data_dir() {
+                    if let Some(f) = fortune::random_fortune(&data) {
+                        let payload = serde_json::json!({"cmd": "TEXT", "arg": f}).to_string();
+                        let _ = crate::herd::send_command(&st.socket_path, &payload);
+                        forwarded = true;
+                    }
+                }
+            }
+        }
+
+        if forwarded || st.is_alive() {
+            return ExitCode::SUCCESS;
+        }
+
+        // Stale state: clean up and proceed
+        daemon::cleanup_daemon_state(&session_id);
+    }
+
     if args.daemon || is_split_mode {
         // ── DAEMON / SPLIT MODE — PARENT PATH ────────────────────────
         //
@@ -1704,6 +2525,8 @@ fn render_subcommand_with_scene(
             return ExitCode::from(78);
         }
     };
+
+    resolve_scene_randomness(&mut scene, &data, &args);
 
     let is_thought = scene.think
         || args.command == cli::Command::Think
@@ -1787,6 +2610,10 @@ fn render_subcommand_with_scene(
         }
     }
     let instance_id = std::process::id();
+    // Acquire pane lock: writes our PID to the daemon state file and opens control socket
+    // so any second `forgum` invocation on the same pane forwards commands or exits without
+    // competing rendering. Cleaned up via Drop when we exit.
+    let (_pane_guard, cmd_rx) = PaneGuard::acquire(&session_id, instance_id);
 
     let result = if scene.background || scene.split_scroll || args.split_scroll {
         render::render_loop_background(
@@ -1797,7 +2624,7 @@ fn render_subcommand_with_scene(
             cow_dna,
             instance_id,
             data,
-            &None,
+            &cmd_rx,
         )
     } else if args.banner {
         render::render_loop_banner(
@@ -1808,7 +2635,7 @@ fn render_subcommand_with_scene(
             cow_dna,
             instance_id,
             data,
-            &None,
+            &cmd_rx,
         )
     } else {
         render::render_loop_foreground(
@@ -1819,7 +2646,7 @@ fn render_subcommand_with_scene(
             cow_dna,
             instance_id,
             data,
-            &None,
+            &cmd_rx,
         )
     };
 
@@ -1940,6 +2767,9 @@ fn run_daemon_child(args: cli::Args) -> ExitCode {
             return ExitCode::from(78);
         }
     };
+
+    resolve_scene_randomness(&mut scene, &data, &args);
+
     let is_thought = scene.think
         || args.command == cli::Command::Think
         || (args.text.is_none() && scene.text.trim().is_empty());
@@ -2020,6 +2850,7 @@ fn run_daemon_child(args: cli::Args) -> ExitCode {
     };
 
     drop(server);
+    daemon::cleanup_daemon_state(&session_id);
 
     match result {
         Ok(()) => ExitCode::SUCCESS,

@@ -102,6 +102,33 @@ pub fn find_cow_foot_y(text: &str) -> usize {
     lines.len().saturating_sub(1)
 }
 
+/// Anatomically detect creature mouth/snout or head origin row and column for particle emission.
+pub fn detect_creature_mouth(
+    cow_text: &str,
+    cow_start_line: usize,
+    eye_landmarks: &[(usize, usize)],
+) -> (usize, usize) {
+    let lines: Vec<&str> = cow_text.lines().collect();
+    for (i, line) in lines.iter().enumerate().skip(cow_start_line) {
+        if let Some(open) = line.find("(__)") {
+            return (i, open + 1);
+        } else if let Some(idx) = line.find("\\@") {
+            return (i, idx);
+        }
+    }
+    if let Some(&(er, ec)) = eye_landmarks.first() {
+        return (er + 1, ec);
+    }
+    if lines.len() > cow_start_line {
+        for (i, line) in lines.iter().enumerate().skip(cow_start_line) {
+            if let Some(pos) = line.find(|c: char| !c.is_whitespace()) {
+                return (i, pos);
+            }
+        }
+    }
+    (cow_start_line.saturating_add(2), 14)
+}
+
 /// Natural Wildlife Instinct Archetype for creatures.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AnimalInstinct {
@@ -361,34 +388,7 @@ impl BreatheEffect {
 
         let instinct = detect_animal_instinct(&cow_text, dna);
         let eye_landmarks = crate::cow::detect_cow_eyes(&cow_text, cow_start_line);
-
-        // Find mouth/snout position for breathing fire/bubbles/particles
-        let mut mouth_pos = None;
-        let lines: Vec<&str> = cow_text.lines().collect();
-        for (i, line) in lines.iter().enumerate().skip(cow_start_line) {
-            if mouth_pos.is_some() {
-                break;
-            }
-            if let Some(open) = line.find("(__)") {
-                mouth_pos = Some((i, open + 1));
-            } else if let Some(idx) = line.find("\\@") {
-                mouth_pos = Some((i, idx));
-            }
-        }
-        if mouth_pos.is_none() {
-            if let Some(&(er, ec)) = eye_landmarks.first() {
-                mouth_pos = Some((er + 1, ec));
-            }
-        }
-        if mouth_pos.is_none() && lines.len() > cow_start_line {
-            // Fallback: use first non-space char of top creature row
-            for (i, line) in lines.iter().enumerate().skip(cow_start_line) {
-                if let Some(pos) = line.find(|c: char| !c.is_whitespace()) {
-                    mouth_pos = Some((i, pos));
-                    break;
-                }
-            }
-        }
+        let mouth_pos = Some(detect_creature_mouth(&cow_text, cow_start_line, &eye_landmarks));
 
         Self {
             cow_text,
@@ -431,7 +431,7 @@ impl Effect for BreatheEffect {
             if y < self.cow_start_line {
                 for (x, ch) in line.chars().enumerate() {
                     if x < fb.width {
-                        let cell_fg = resolve_bubble_cell_fg(ch);
+                        let cell_fg = resolve_bubble_line_char_fg(line, x, ch);
                         draw_char_with_hull(fb, x, y, x, hull, ch, cell_fg);
                     }
                 }
@@ -564,21 +564,23 @@ impl Effect for BreatheEffect {
                                     } else {
                                         (my + 1).min(fb.height.saturating_sub(1))
                                     };
-                                    let _ = fb.set(
-                                        fx,
-                                        plume_y,
-                                        Cell::new(
-                                            '~',
-                                            fire_colors[(c_idx + 1) % fire_colors.len()],
-                                        ),
-                                    );
+                                    if plume_y >= self.cow_start_line {
+                                        let _ = fb.set(
+                                            fx,
+                                            plume_y,
+                                            Cell::new(
+                                                '~',
+                                                fire_colors[(c_idx + 1) % fire_colors.len()],
+                                            ),
+                                        );
+                                    }
                                 }
                             }
                         }
                     } else if is_inhale && my < fb.height {
                         // Small smoke/ember wisps drifting up
                         let ember_x = if mx > 2 { mx - 1 } else { mx + 1 };
-                        if ember_x < fb.width && my > 0 {
+                        if ember_x < fb.width && my > self.cow_start_line {
                             let _ =
                                 fb.set(ember_x, my - 1, Cell::new('.', Color::rgb(255, 170, 0)));
                         }
@@ -774,6 +776,16 @@ impl FloatEffect {
 impl Effect for FloatEffect {
     fn update(&mut self, dt: f32, cols: usize, rows: usize) {
         self.elapsed += dt;
+        // Drive the Lissajous body with vertical-only bobbing so that
+        // CompoundSignatureEffect and external callers get a valid body position.
+        self.body.bounds_mode = crate::kinematics::BoundsMode::Lissajous {
+            amp_x: 0.0,
+            amp_y: self.amp.float * (rows.max(1) as f32) * 0.08,
+            freq_x: 0.0,
+            freq_y: self.speed * 0.5,
+            phase_x: self.phase,
+            phase_y: self.phase,
+        };
         self.body.update(dt, self.elapsed, cols, rows);
     }
 
@@ -781,6 +793,13 @@ impl Effect for FloatEffect {
         let t = (time * self.speed + self.phase) % 1.0;
         let hover_intensity = (self.easing_fn)(t);
         let hover_pulse = hover_intensity > 0.5;
+
+        // Compute continuous vertical bob offset in terminal rows.
+        // Amplitude is amp.float * 2 rows (max ±1 row by default with amp.float=0.3).
+        let bob_raw = (time * self.speed * std::f32::consts::TAU + self.phase).sin()
+            * self.amp.float
+            * 2.0;
+        let bob_offset: i32 = bob_raw.round() as i32;
 
         // Periodic eye-blink:
         let blink_cycle = (time * 0.24 + self.phase) % 1.0;
@@ -795,11 +814,11 @@ impl Effect for FloatEffect {
 
             let hull = find_line_hull(line);
 
-            // Speech/thought bubble: strictly anchored at (0, 0), zero shift
+            // Speech/thought bubble: strictly anchored at (0, y) — no bob shift.
             if y < self.cow_start_line {
                 for (x, ch) in line.chars().enumerate() {
                     if x < fb.width {
-                        let cell_fg = resolve_bubble_cell_fg(ch);
+                        let cell_fg = resolve_bubble_line_char_fg(line, x, ch);
                         draw_char_with_hull(fb, x, y, x, hull, ch, cell_fg);
                     }
                 }
@@ -807,8 +826,14 @@ impl Effect for FloatEffect {
                 return;
             }
 
-            // Creature lines: anchored at stagnant position (y)
-            let draw_y = y;
+            // Creature lines: apply vertical bob offset.
+            let draw_yi = y as i32 + bob_offset;
+            if draw_yi < 0 || draw_yi as usize >= fb.height {
+                y += 1;
+                return;
+            }
+            let draw_y = draw_yi as usize;
+            let rel_y = y.saturating_sub(self.cow_start_line);
 
             let mut chars_iter = line.chars().peekable();
             let mut x = 0usize;
@@ -817,9 +842,8 @@ impl Effect for FloatEffect {
                 if xi >= 0 && (xi as usize) < fb.width {
                     let uxi = xi as usize;
 
-                    // Periodic eye-blink across all eye landmarks:
-                    let is_landmark = self.eye_landmarks.contains(&(draw_y, uxi));
-                    let rel_y = draw_y.saturating_sub(self.cow_start_line);
+                    // Periodic eye-blink across all eye landmarks (use original y for lookup):
+                    let is_landmark = self.eye_landmarks.contains(&(y, uxi));
                     if is_blinking && (is_landmark || (is_eye_glyph(ch) && chars_iter.peek().copied() == Some(ch))) {
                         let cell_fg = resolve_fg_palette_char(
                             &self.color_mode,
@@ -993,6 +1017,7 @@ pub struct WalkEffect {
     pub body: crate::kinematics::KinematicBody,
     elapsed: f32,
     eye_landmarks: Vec<(usize, usize)>,
+    cow_start_line: usize,
 }
 
 impl WalkEffect {
@@ -1115,6 +1140,7 @@ impl WalkEffect {
             body,
             elapsed: 0.0,
             eye_landmarks,
+            cow_start_line: cow_start,
         }
     }
 }
@@ -1170,6 +1196,28 @@ impl Effect for WalkEffect {
             let hull_start = first_non_ws;
             let hull_end = last_non_ws;
 
+            if y < self.cow_start_line {
+                let hull_tuple = match (hull_start, hull_end) {
+                    (Some(s), Some(e)) => Some((s, e)),
+                    _ => None,
+                };
+                for (x, ch) in line.chars().enumerate() {
+                    let xi = x as i32 + x_off;
+                    let yi = y as i32 + y_off;
+                    if yi >= 0 && xi >= 0 {
+                        let uxi = xi as usize;
+                        let uyi = yi as usize;
+                        if uyi < fb.height && uxi < fb.width {
+                            let cell_fg = resolve_bubble_line_char_fg(line, x, ch);
+                            draw_char_with_hull(fb, uxi, uyi, x, hull_tuple, ch, cell_fg);
+                        }
+                    }
+                }
+                y += 1;
+                return;
+            }
+
+            let animal_rel_y = y.saturating_sub(self.cow_start_line);
             let mut skip_until = 0usize;
 
             for (x, mut display_ch) in line.chars().enumerate() {
@@ -1216,7 +1264,7 @@ impl Effect for WalkEffect {
                                         &self.color_mode,
                                         &self.palette,
                                         x + k,
-                                        y,
+                                        animal_rel_y,
                                         time,
                                         Color::WHITE,
                                         sc,
@@ -1241,7 +1289,7 @@ impl Effect for WalkEffect {
                                 &self.color_mode,
                                 &self.palette,
                                 x,
-                                y,
+                                animal_rel_y,
                                 time,
                                 Color::WHITE,
                                 display_ch,
@@ -1357,11 +1405,17 @@ pub struct ParticlesEffect {
     phase: f32,
     instance_id: u32,
     color_mode: String,
+    cow_start_line: usize,
+    mouth_pos: (usize, usize),
+    frame_count: u32,
 }
 
 impl ParticlesEffect {
     pub fn new(cow_text: String, dna: CowDna, instance_id: u32, color_mode: String) -> Self {
         let phase = instance_phase(dna.phase_seed, instance_id);
+        let cow_start_line = find_cow_start_line(&cow_text);
+        let eye_landmarks = crate::cow::detect_cow_eyes(&cow_text, cow_start_line);
+        let mouth_pos = detect_creature_mouth(&cow_text, cow_start_line, &eye_landmarks);
         Self {
             cow_text,
             dna,
@@ -1370,13 +1424,21 @@ impl ParticlesEffect {
             phase,
             instance_id,
             color_mode,
+            cow_start_line,
+            mouth_pos,
+            frame_count: 0,
         }
     }
 }
 
 impl Effect for ParticlesEffect {
     fn update(&mut self, dt: f32, cols: usize, rows: usize) {
-        seed_frame_rng(self.dna.phase_seed.wrapping_add(self.instance_id));
+        self.frame_count = self.frame_count.wrapping_add(1);
+        let frame_seed = self.dna.phase_seed
+            .wrapping_add(self.instance_id)
+            .wrapping_add(self.frame_count.wrapping_mul(7919))
+            .wrapping_add((self.spawn_timer * 10000.0) as u32);
+        seed_frame_rng(frame_seed);
         self.spawn_timer += dt;
         let rate = if self.dna.particles.rate > 0 {
             self.dna.particles.rate
@@ -1387,16 +1449,15 @@ impl Effect for ParticlesEffect {
         if self.spawn_timer >= interval {
             self.spawn_timer -= interval;
             let palette = color::parse_palette(&self.dna.particles.palette);
-            let cow_start = find_cow_start_line(&self.cow_text);
-            let spawn_x = 14.0f32.min(cols.saturating_sub(1) as f32);
-            let spawn_y = ((cow_start + 2) as f32).min(rows.saturating_sub(1) as f32);
+            let spawn_x = (self.mouth_pos.1 as f32).min(cols.saturating_sub(1) as f32);
+            let spawn_y = (self.mouth_pos.0 as f32).min(rows.saturating_sub(1) as f32);
             spawn_for_type(
                 &mut self.pool,
                 self.dna.particles.r#type,
                 spawn_x,
                 spawn_y,
                 &palette,
-                self.phase + dt,
+                self.phase + dt + (self.frame_count as f32 * 0.01),
                 cols,
                 rows,
             );
@@ -1407,7 +1468,7 @@ impl Effect for ParticlesEffect {
     fn render(&self, fb: &mut FrameBuffer, time: f32) {
         let palette = color::parse_palette(&self.dna.palette);
         render_text_palette(fb, &self.cow_text, Color::WHITE, &self.color_mode, &palette, time);
-        self.pool.render(fb, time, easing::expo_out);
+        self.pool.render_with_cutoff(fb, time, easing::expo_out, self.cow_start_line);
     }
 }
 
@@ -1694,12 +1755,14 @@ impl FlyEffect {
                 return;
             }
 
+            let hull = find_line_hull(line);
+
             // Speech/thought bubble: strictly anchored at (0, 0), completely untouched
             if y < self.cow_start_line {
                 for (x, ch) in line.chars().enumerate() {
                     if x < fb.width {
-                        let cell_fg = resolve_bubble_cell_fg(ch);
-                        let _ = fb.set(x, y, Cell::new(ch, cell_fg));
+                        let cell_fg = resolve_bubble_line_char_fg(line, x, ch);
+                        draw_char_with_hull(fb, x, y, x, hull, ch, cell_fg);
                     }
                 }
                 y += 1;
@@ -2066,7 +2129,7 @@ impl Effect for TalkEffect {
             if y < self.cow_start_line {
                 for (x, ch) in line.chars().enumerate() {
                     if x < fb.width {
-                        let cell_fg = resolve_bubble_cell_fg(ch);
+                        let cell_fg = resolve_bubble_line_char_fg(line, x, ch);
                         draw_char_with_hull(fb, x, y, x, hull, ch, cell_fg);
                     }
                 }
@@ -2241,20 +2304,27 @@ impl Effect for SwayEffect {
                 base_skew as i32 + wave_skew
             };
 
+            let is_bubble_line = i < self.cow_start_line;
             let mut x = 0usize;
             for ch in line.chars() {
                 let xi = x as i32 + x_off;
                 if xi >= 0 {
                     let uxi = xi as usize;
                     if uxi < fb.width {
-                        let cell_fg = resolve_fg_palette(
-                            &self.color_mode,
-                            &self.palette,
-                            uxi,
-                            i,
-                            time,
-                            Color::WHITE,
-                        );
+                        let cell_fg = if is_bubble_line {
+                            resolve_bubble_line_char_fg(line, x, ch)
+                        } else {
+                            let animal_rel_y = i.saturating_sub(self.cow_start_line);
+                            resolve_fg_palette_char(
+                                &self.color_mode,
+                                &self.palette,
+                                uxi,
+                                animal_rel_y,
+                                time,
+                                Color::WHITE,
+                                ch,
+                            )
+                        };
                         draw_char_with_hull(fb, uxi, i, x, hull, ch, cell_fg);
                     }
                 }
@@ -2341,7 +2411,7 @@ impl Effect for DissolveEffect {
                 offset_idx += 1;
                 if dx_base == f32::MAX && dy_base == f32::MAX {
                     if y < self.cow_start_line && ch != ' ' && y < fb.height && x < fb.width {
-                        let cell_fg = resolve_bubble_cell_fg(ch);
+                        let cell_fg = resolve_bubble_line_char_fg(line, x, ch);
                         let _ = fb.set(x, y, Cell::new(ch, cell_fg));
                     }
                     continue;
@@ -2548,14 +2618,53 @@ pub(crate) fn resolve_fg_char(
     resolve_fg_palette_char(color_mode, &[], x, y, time, base, ch)
 }
 
-/// Resolve foreground color for speech/thought bubble borders, connector rings, and message text.
+/// Resolve foreground color for a character on a speech or thought bubble line.
+/// Distinguishes connector rings / pointers, enclosing borders, and inner dialogue text.
+/// Guarantees that dialogue words (including letters like 'o', 'w', etc.) are 100% crystal-clear,
+/// uniform pure white, and borders/connectors have distinct crisp luminous styling.
+#[inline]
+pub(crate) fn resolve_bubble_line_char_fg(line: &str, x: usize, ch: char) -> Color {
+    let trimmed = line.trim();
+    let is_connector = trimmed == "o"
+        || trimmed == "\\"
+        || trimmed == "/"
+        || trimmed == "o o"
+        || trimmed == "\\ \\";
+    if is_connector {
+        return Color::rgb(180, 230, 255);
+    }
+
+    let is_border = (trimmed.starts_with('_') && trimmed.chars().all(|c| c == '_'))
+        || (trimmed.starts_with('-') && trimmed.chars().all(|c| c == '-'))
+        || (trimmed.starts_with('(') && trimmed.ends_with(')') && trimmed.chars().all(|c| c == '(' || c == ')' || c == '_'))
+        || (trimmed.starts_with('|') && trimmed.ends_with('|') && trimmed.chars().all(|c| c == '|' || c == '_'));
+
+    let first_non_space = line.chars().position(|c| !c.is_whitespace());
+    let last_non_space = line
+        .chars()
+        .enumerate()
+        .filter(|(_, c)| !c.is_whitespace())
+        .last()
+        .map(|(idx, _)| idx);
+
+    if is_border || Some(x) == first_non_space || Some(x) == last_non_space {
+        Color::rgb(215, 225, 240)
+    } else if ch == ' ' {
+        Color::WHITE
+    } else {
+        // Dialogue message text inside speech or thought bubble: pure bright readable white
+        Color::rgb(255, 255, 255)
+    }
+}
+
+/// Resolve foreground color for speech/thought bubble borders and message text.
 /// Ensures 100% maximum contrast and crystal-clear readability against any terminal background.
 #[inline]
 pub(crate) fn resolve_bubble_cell_fg(ch: char) -> Color {
-    if ch == 'o' || ch == 'O' || ch == '\\' || ch == '/' {
-        Color::rgb(180, 230, 255)
-    } else if ch == '_' || ch == '-' || ch == '=' || ch == '(' || ch == ')' || ch == '|' || ch == '<' || ch == '>' || ch == '+' {
+    if ch == '_' || ch == '-' || ch == '=' || ch == '(' || ch == ')' || ch == '|' || ch == '<' || ch == '>' || ch == '+' {
         Color::rgb(215, 225, 240)
+    } else if ch == '\\' || ch == '/' {
+        Color::rgb(180, 230, 255)
     } else if ch == ' ' {
         Color::WHITE
     } else {
@@ -2640,17 +2749,7 @@ fn render_text_offset_palette(
             }
 
             let cell_fg = if is_bubble_line {
-                // Speech / thought bubble styling: maximum visibility, crisp and legible
-                if ch == 'o' || ch == 'O' || ch == '\\' || ch == '/' {
-                    Color::rgb(180, 230, 255)
-                } else if ch == '_' || ch == '-' || ch == '=' || ch == '(' || ch == ')' || ch == '|' || ch == '<' || ch == '>' || ch == '+' {
-                    Color::rgb(215, 225, 240)
-                } else if ch == ' ' {
-                    Color::WHITE
-                } else {
-                    // Message text inside the bubble: pure bright readable white
-                    Color::rgb(255, 255, 255)
-                }
+                resolve_bubble_line_char_fg(line, x, ch)
             } else {
                 resolve_fg_palette_char(color_mode, palette, x, animal_rel_y, time, fg, ch)
             };
@@ -2710,7 +2809,7 @@ fn apply_glow(fb: &mut FrameBuffer, cx: f32, cy: f32, radius: f32, color: Color,
 /// Compound signature animation: combines body kinematics, particle emitters,
 /// localized glow, and keep-alive eye-blinks tailored to the animal's DNA.
 pub struct CompoundSignatureEffect {
-    cow_text: String,
+    _cow_text: String,
     dna: CowDna,
     pool: ParticlePool,
     spawn_timer: f32,
@@ -2718,6 +2817,9 @@ pub struct CompoundSignatureEffect {
     speed: f32,
     instance_id: u32,
     base_effect: Box<dyn Effect>,
+    cow_start_line: usize,
+    mouth_pos: (usize, usize),
+    frame_count: u32,
 }
 
 impl std::fmt::Debug for CompoundSignatureEffect {
@@ -2734,10 +2836,12 @@ impl CompoundSignatureEffect {
     pub fn new(cow_text: String, dna: CowDna, instance_id: u32, color_mode: String) -> Self {
         let phase = instance_phase(dna.phase_seed, instance_id);
         let speed = dna.speed;
-        let cow_text_clone = cow_text.clone();
-        let base_effect = create_effect(dna.base, cow_text, dna.clone(), instance_id, &color_mode);
+        let cow_start_line = find_cow_start_line(&cow_text);
+        let eye_landmarks = crate::cow::detect_cow_eyes(&cow_text, cow_start_line);
+        let mouth_pos = detect_creature_mouth(&cow_text, cow_start_line, &eye_landmarks);
+        let base_effect = create_effect(dna.base, cow_text.clone(), dna.clone(), instance_id, &color_mode);
         Self {
-            cow_text: cow_text_clone,
+            _cow_text: cow_text,
             dna,
             pool: ParticlePool::new(),
             spawn_timer: 0.0,
@@ -2745,6 +2849,9 @@ impl CompoundSignatureEffect {
             speed,
             instance_id,
             base_effect,
+            cow_start_line,
+            mouth_pos,
+            frame_count: 0,
         }
     }
 
@@ -2757,8 +2864,11 @@ impl CompoundSignatureEffect {
     ) -> Self {
         let phase = instance_phase(dna.phase_seed, instance_id);
         let speed = dna.speed;
+        let cow_start_line = find_cow_start_line(&cow_text);
+        let eye_landmarks = crate::cow::detect_cow_eyes(&cow_text, cow_start_line);
+        let mouth_pos = detect_creature_mouth(&cow_text, cow_start_line, &eye_landmarks);
         Self {
-            cow_text,
+            _cow_text: cow_text,
             dna,
             pool: ParticlePool::new(),
             spawn_timer: 0.0,
@@ -2766,6 +2876,9 @@ impl CompoundSignatureEffect {
             speed,
             instance_id,
             base_effect,
+            cow_start_line,
+            mouth_pos,
+            frame_count: 0,
         }
     }
 }
@@ -2775,23 +2888,27 @@ impl Effect for CompoundSignatureEffect {
         self.base_effect.update(dt, cols, rows);
 
         if self.dna.particles.rate > 0 {
-            seed_frame_rng(self.dna.phase_seed.wrapping_add(self.instance_id));
+            self.frame_count = self.frame_count.wrapping_add(1);
+            let frame_seed = self.dna.phase_seed
+                .wrapping_add(self.instance_id)
+                .wrapping_add(self.frame_count.wrapping_mul(7919))
+                .wrapping_add((self.spawn_timer * 10000.0) as u32);
+            seed_frame_rng(frame_seed);
             self.spawn_timer += dt * self.speed;
             let interval = 1.0 / self.dna.particles.rate.max(1) as f32;
             if self.spawn_timer >= interval {
                 self.spawn_timer -= interval;
                 let palette = color::parse_palette(&self.dna.particles.palette);
                 // Compute emitter position: origin around creature mouth/head
-                let cow_start = find_cow_start_line(&self.cow_text);
-                let spawn_x = 14.0f32.min(cols.saturating_sub(1) as f32);
-                let spawn_y = ((cow_start + 2) as f32).min(rows.saturating_sub(1) as f32);
+                let spawn_x = (self.mouth_pos.1 as f32).min(cols.saturating_sub(1) as f32);
+                let spawn_y = (self.mouth_pos.0 as f32).min(rows.saturating_sub(1) as f32);
                 spawn_for_type(
                     &mut self.pool,
                     self.dna.particles.r#type,
                     spawn_x,
                     spawn_y,
                     &palette,
-                    self.phase + dt,
+                    self.phase + dt + (self.frame_count as f32 * 0.01),
                     cols,
                     rows,
                 );
@@ -2804,7 +2921,7 @@ impl Effect for CompoundSignatureEffect {
         self.base_effect.render(fb, time);
 
         if self.dna.particles.rate > 0 {
-            self.pool.render(fb, time, easing::expo_out);
+            self.pool.render_with_cutoff(fb, time, easing::expo_out, self.cow_start_line);
         }
 
         // Apply DNA glow if configured
@@ -2828,8 +2945,29 @@ impl Effect for CompoundSignatureEffect {
     }
 }
 
+pub const DYNAMIC_ANIMATION_TYPES: &'static [&'static str] = &[
+    "breathe", "float", "walk", "particles", "pulse", "glitch", "fly", "talk", "sway", "dissolve",
+];
+
+pub const ALL_EFFECTS: &'static [&'static str] = &[
+    "static", "breathe", "float", "walk", "particles", "pulse", "glitch", "fly", "talk", "sway", "dissolve", "matrix", "squish", "abduction",
+];
+
+pub fn random_dynamic_animation() -> &'static str {
+    use rand::seq::SliceRandom;
+    let mut rng = rand::thread_rng();
+    *DYNAMIC_ANIMATION_TYPES.choose(&mut rng).unwrap_or(&"breathe")
+}
+
+pub fn random_effect_name() -> &'static str {
+    use rand::seq::SliceRandom;
+    let mut rng = rand::thread_rng();
+    *ALL_EFFECTS.choose(&mut rng).unwrap_or(&"breathe")
+}
+
 /// Create an effect for a scene configuration and DNA.
 /// - If `effect_name` is `"static"`, returns `StaticEffect`.
+/// - If `effect_name` is `"random"`, picks a random effect from all supported effects.
 /// - If `effect_name` is `"default"`, uses the animal's signature base animation.
 /// - If the animal's DNA defines particles or radial glow, they are ALWAYS preserved
 ///   by wrapping the base effect in `CompoundSignatureEffect`.
@@ -2841,6 +2979,11 @@ pub fn create_scene_effect(
     color_mode: &str,
 ) -> Box<dyn Effect> {
     let eff = effect_name.trim().to_ascii_lowercase();
+    let eff = if eff == "random" {
+        random_effect_name().to_string()
+    } else {
+        eff
+    };
     let palette = crate::color::parse_palette(&dna.palette);
     if eff == "static" {
         return Box::new(StaticEffect::with_palette(
@@ -4312,5 +4455,24 @@ mod tests {
                 "{effect_name}: bubble text at (2,1) must be 'F' at t=0.5"
             );
         }
+    }
+
+    #[test]
+    fn test_random_effects_generation() {
+        let eff1 = random_effect_name();
+        assert!(ALL_EFFECTS.contains(&eff1));
+
+        let dyn_anim = random_dynamic_animation();
+        assert!(DYNAMIC_ANIMATION_TYPES.contains(&dyn_anim));
+
+        let dna = CowDna::default();
+        let mut fb = FrameBuffer::new(40, 10);
+        let mut scene_box = create_scene_effect("random", "  ^__^\n  (oo)\n".to_string(), dna.clone(), 0, "natural");
+        scene_box.update(0.1, 40, 10);
+        scene_box.render(&mut fb, 0.1);
+
+        let mut scene_box_upper = create_scene_effect("RANDOM", "  ^__^\n  (oo)\n".to_string(), dna, 0, "natural");
+        scene_box_upper.update(0.1, 40, 10);
+        scene_box_upper.render(&mut fb, 0.1);
     }
 }

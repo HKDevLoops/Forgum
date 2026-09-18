@@ -3,7 +3,7 @@ pub mod celestial_art;
 pub mod wizard;
 
 use std::fs;
-use std::io;
+use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
@@ -67,6 +67,31 @@ pub fn run_tui(
         }
     };
 
+    // Stop any active daemon in the current session and remove stale daemon state
+    // so it does not compete for terminal output or reserve space during TUI execution.
+    let session_id = forgum_platform::detect_session_id();
+    let daemon_state_path = forgum_platform::daemon_state_path(&session_id);
+    if daemon_state_path.exists() {
+        if let Ok(data) = std::fs::read_to_string(&daemon_state_path) {
+            if let Ok(val) = serde_json::from_str::<serde_json::Value>(&data) {
+                if let (Some(pid), Some(socket_path)) = (
+                    val.get("pid").and_then(|v| v.as_u64()).map(|v| v as u32),
+                    val.get("socket_path").and_then(|v| v.as_str()),
+                ) {
+                    if forgum_platform::process_is_alive(pid) {
+                        if let Ok(mut sock) =
+                            forgum_platform::DaemonSocket::connect(Path::new(socket_path))
+                        {
+                            let _ = sock.write_response("{\"cmd\":\"STOP\"}\n");
+                            std::thread::sleep(Duration::from_millis(50));
+                        }
+                    }
+                }
+            }
+        }
+        let _ = std::fs::remove_file(&daemon_state_path);
+    }
+
     // Terminal setup
     crossterm::terminal::enable_raw_mode().context("enable raw mode")?;
     let mut stdout = io::stdout();
@@ -76,6 +101,11 @@ pub fn run_tui(
         crossterm::event::EnableMouseCapture
     )
     .context("enter alternate screen and enable mouse")?;
+
+    // Unconditionally reset DECSTBM scroll margins (\x1b[r), clear entire screen (\x1b[2J),
+    // and reposition cursor at (1, 1) so Ratatui has 100% full unconstrained screen access.
+    let _ = stdout.write_all(b"\x1b[r\x1b[2J\x1b[1;1H");
+    let _ = stdout.flush();
 
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend).context("build terminal")?;
@@ -197,7 +227,7 @@ pub fn run_tui(
                                 }
                             }
 
-                            if let Some(editor) = detect_terminal_editor() {
+                            if let Some(editor) = detect_terminal_editor(app.config().editor.as_deref()) {
                                 paused_for_closure.store(true, std::sync::atomic::Ordering::SeqCst);
 
                                 // Suspend TUI
@@ -208,10 +238,14 @@ pub fn run_tui(
                                 );
                                 let _ = crossterm::terminal::disable_raw_mode();
 
-                                // Launch terminal code editor synchronously
-                                let _ = std::process::Command::new(&editor)
-                                    .arg(&target_path)
-                                    .status();
+                                // Launch terminal/configured code editor synchronously
+                                let parts: Vec<&str> = editor.split_whitespace().collect();
+                                let bin = parts.first().copied().unwrap_or(&editor);
+                                let extra_args = if parts.len() > 1 { &parts[1..] } else { &[][..] };
+                                let mut cmd = std::process::Command::new(bin);
+                                cmd.args(extra_args);
+                                cmd.arg(&target_path);
+                                let _ = cmd.status();
 
                                 // Resume TUI
                                 let _ = crossterm::terminal::enable_raw_mode();
@@ -318,6 +352,8 @@ pub fn run_tui(
         crossterm::event::DisableMouseCapture,
         crossterm::terminal::LeaveAlternateScreen
     );
+    let _ = io::stdout().write_all(b"\x1b[r\x1b[0m\x1b[?25h");
+    let _ = io::stdout().flush();
     let _ = crossterm::terminal::disable_raw_mode();
 
     result?;
@@ -336,8 +372,43 @@ fn read_config_file(
         .map_err(|e| anyhow::anyhow!("parse config: {e}"))
 }
 
-/// Detect available terminal code editor in preference order: neovim/vim, nano, emacs, micro, helix.
-fn detect_terminal_editor() -> Option<String> {
+/// Detect available terminal or preferred code editor in order:
+/// 1. Configured custom editor in settings (if not empty / "auto")
+/// 2. $VISUAL environment variable
+/// 3. $EDITOR environment variable
+/// 4. Available terminal editors (neovim/nvim, vim, nano, emacs, micro, helix/hx)
+/// 5. System/GUI fallback editors (code, notepad on Windows; vi, ed on Unix)
+fn detect_terminal_editor(configured: Option<&str>) -> Option<String> {
+    if let Some(custom) = configured {
+        let trimmed = custom.trim();
+        if !trimmed.is_empty() && !trimmed.eq_ignore_ascii_case("auto") {
+            let prog = trimmed.split_whitespace().next().unwrap_or(trimmed);
+            if command_exists(prog) {
+                return Some(trimmed.to_string());
+            }
+        }
+    }
+
+    if let Ok(vis) = std::env::var("VISUAL") {
+        let trimmed = vis.trim();
+        if !trimmed.is_empty() {
+            let prog = trimmed.split_whitespace().next().unwrap_or(trimmed);
+            if command_exists(prog) {
+                return Some(trimmed.to_string());
+            }
+        }
+    }
+
+    if let Ok(ed) = std::env::var("EDITOR") {
+        let trimmed = ed.trim();
+        if !trimmed.is_empty() {
+            let prog = trimmed.split_whitespace().next().unwrap_or(trimmed);
+            if command_exists(prog) {
+                return Some(trimmed.to_string());
+            }
+        }
+    }
+
     #[cfg(windows)]
     {
         // 1. Neovim (check explicit install paths then PATH)
@@ -401,12 +472,20 @@ fn detect_terminal_editor() -> Option<String> {
             return Some("hx".to_string());
         }
 
+        // 7. System / GUI editors fallback
+        if command_exists("code.cmd") || command_exists("code") {
+            return Some("code".to_string());
+        }
+        if command_exists("notepad.exe") || command_exists("notepad") {
+            return Some("notepad".to_string());
+        }
+
         None
     }
 
     #[cfg(not(windows))]
     {
-        let candidates = ["nvim", "vim", "nano", "emacs", "micro", "helix", "hx"];
+        let candidates = ["nvim", "vim", "nano", "emacs", "micro", "helix", "hx", "code", "vi", "ed"];
         for name in candidates {
             if command_exists(name) {
                 return Some(name.to_string());

@@ -492,19 +492,26 @@ forgum config list
 | `think` | `ponder` | `[OPTIONS] [TEXT]...` | Generates a classic thought bubble `( ... )` connected with circular `o` thought glyphs. Random fortune if text omitted. | `forgum think --help` |
 | `say` | `speak` | `[OPTIONS] [TEXT]...` | Classic cowsay speech bubble `\| ... \|` with diagonal `\` pointer stems and full kinetic animation effects. | `forgum say --help` |
 | `fortune` | `quote` | *(none)* | Fetches and prints a random philosophical, witty, or humorous fortune quote from the pasture catalog. | `forgum fortune --help` |
+| `tui` | `menu`, `ui`, `studio` | `[TAB]` | Fullscreen interactive terminal studio and dashboard for live mascot auditioning, scenery selection, theme tuning, package management, and system configuration. | `forgum tui` |
+| `install` | `setup`, `wizard`, `installer` | `[--headless] [--telemetry <CONSENT>]` | Interactive celestial setup wizard and shell installer with host diagnostics and transparent consent controls. | `forgum install` |
+| `uninstall` | `remove`, `deorbit`, `uninstaller` | `[-m soft\|purge] [-y] [--tui]` | Cleanly uninstalls Forgum with user-directed choice (Soft keeps config, Purge wipes completely, or interactive TUI). | `forgum uninstall --help` |
+| `update` | `upgrade` | `[--check]` | Checks for updates or upgrades Forgum using the detected package manager. | `forgum update --check` |
 | `list` | `options`, `ls`, `show` | `[CATEGORY]` | Displays a responsive, word-wrapped Unicode table of available options (`animals`, `effects`, `mountains`, `roads`, `environments`, `colors`, `shells`, `config`, `muxes`, `eyes`, `tongue`, `all`). | `forgum list all` |
 | `completions` | `complete` | `[SHELL]` | Emits or auto-installs syntax autocompletion scripts for `bash`, `zsh`, `fish`, `pwsh`, `cmd`, `carapace`, `nu`, `elvish`. Defaults to listing shells if omitted. | `forgum completions list` |
 | `init` | `hook` | `[SHELL] [--install] [--append]` | Generates or auto-injects shell prompt integration hooks so Forgum animates seamlessly on prompt display. Defaults to listing shells if omitted. | `forgum init list` |
 | `config` | `cfg` | `[KEY] [VALUE] [--tui] [--list] [--migrate <FMT>]` | Reads, writes, migrates (JSON/YAML/TOML), lists all keys in a table, or opens the interactive TUI configuration editor. | `forgum config list` |
 | `theme` | `themes` | `[list \| apply <NAME> \| save <NAME>]` | Manages pasture themes. Lists 15 built-in themes with preview vibes or applies a theme to your active configuration. | `forgum theme list` |
 | `checkhealth` | `doctor` | `[--json]` | Runs 12 comprehensive diagnostic probes across System, Terminal, TrueColor, DNA profiles, Shell hooks, and Loggers. | `forgum checkhealth` |
-| `logs` | `log` | `[-f] [-n <COUNT>] [-l <LEVEL>]` | Displays recent structured engine events in a clean tabular view, filters by severity (`trace`, `debug`, `info`, `warn`, `error`), or follows in real time. | `forgum logs -l warn` |
+| `logs` | `log`, `view-logs`, `show-logs` | `[-f] [-n <COUNT>] [-l <LEVEL>] [-s <GREP>]` | Displays recent structured engine events in a clean tabular view, filters by severity (`trace`, `debug`, `info`, `warn`, `error`), or follows in real time. | `forgum logs -l warn` |
+| `diagnose` | `triage`, `bugradar` | `[-n <LINES>] [--json]` | Automated diagnostic triage engine analyzing logs and environment to detect issues, root causes, and developer hints. | `forgum diagnose` |
 | `demo` | *(none)* | `[--duration <SECS>]` | Cinematic showcase iterating through the animal mascots, procedural terrains, and visual animation modes. | `forgum demo` |
 | `showcase` | *(none)* | `[--animal <NAME>]` | Interactive preview of any critter mascot with animated expression cycling and color palettes. | `forgum showcase` |
 | `tmux` | `mux` | `[install \| remove \| status \| list]` | Configures tmux, zellij, or wezterm status lines with responsive cow telemetry and mini-status animations. | `forgum tmux list` |
 | `herd` | `cluster` | `[list \| spawn \| kill]` | Coordinates multiple concurrent animals grazing across split panes and multi-window terminal layouts. | `forgum herd list` |
 | `remote` | `peers` | `[list \| who \| ping]` | Discovers active Forgum pasture peers over local network / SSH clusters and synchronizes session state. | `forgum remote list` |
-| `battle` | `arena` | `[FIGHTER1] [FIGHTER2]` | Turn-based ASCII battle simulation between two mascots with health bars, critical hits, and combat log. | `forgum battle "Sir Moo" "Dragon"` |
+| `battle` | `arena` | `[FIGHTER1] [FIGHTER2]` | Turn-based ASCII battle simulation between two mascots with health bars, randomized travel distance kinematics, and combat log. | `forgum battle "Alice" "Bob"` |
+| `rps-battle` | `rps` | `[--player <NAME>] [--cpu <NAME>] [-c <WEAPON>]` | Interactive Rock-Paper-Scissors mascot battle (User vs Computer) featuring cryptographic zero-bias PRNG, full-color ASCII hand showdown, and physical jousting clash! | `forgum rps-battle` |
+| `image` | *(none)* | `<PATH> [-w <WIDTH>] [--save-cow]` | Converts any image (PNG, JPEG, GIF, WebP) to high-fidelity ASCII art with edge detection and color quantization, or converts into custom `.cow` mascot files. | `forgum image logo.png` |
 | `timer` | `stopwatch` | `<DURATION> [COMMAND]...` | Animated countdown timer and command execution benchmark with elapsed microsecond progress box. | `forgum timer 10s cargo build` |
 | `status-line` | *(none)* | `[--max-len <LEN>]` | Single-line compact ANSI status reporter engineered specifically for shell prompt `$RPROMPT` and tmux status bars. | `forgum status-line --max-len 80` |
 | `control` | `ctl` | `<status \| stop \| pause \| resume>` | Sends IPC commands to a running background pasture daemon via local domain socket or Windows named pipe. | `forgum control status` |
@@ -872,23 +879,59 @@ forgum logs -f
 
 ---
 
-## 🎛️ Interactive Config TUI
+## ✨ Forgum Configurator (Interactive TUI & Full Scripting Parity)
 
-Prefer a funky terminal menu with dark humour to hand-editing files?
+Forgum features a rich, responsive terminal configuration studio with **Tailwind CSS-inspired design tokens** (Slate-800 dark pill badges, vibrant Indigo/Violet/Emerald/Sky/Amber accents, rounded borders, and dynamic text wrapping):
 
 ```bash
+# Launch the interactive Forgum Configurator:
 forgum config --tui
+# Or shortcut:
+forgum tui
 ```
 
-Walk through the pasture options, toggle animal attachments, preview cow DNA signatures, and save directly to your chosen format.
+```text
+ ✨ FORGUM CONFIGURATOR   [CONFIG]  1 Mascots  2 Scenery  3 Effects  4 Installer  5 [Config]   v0.0.1-alpha.1
+┌──────────────────────────── ⚙️ Forgum Engine Settings ──────────────────────────────┬───────────────────────────────┐
+│ > 01. cow                   [ moojira                      ]                       │ ⚙️ Parameter Details          │
+│   02. text                  [                              ]                       │ Parameter: split_mode         │
+│   03. effect                [ animal_natural               ]                       │ Value:     [seamless]         │
+│   04. split_mode            [ seamless                     ]                       │ Mode:      Single-pane        │
+│   05. editor                [ nvim                         ]                       │                               │
+│   06. fps                   [ 60                           ]                       │ Shortcuts:                    │
+│   07. duration              [ 0                            ]                       │ [e/Enter] Edit  [+/-] Step    │
+│   08. background            [ ON                           ]                       │ [o] Editor      [s] Save      │
+└────────────────────────────────────────────────────────────────────────────────────┴───────────────────────────────┘
+ <Tab> Tabs   <j/k> Select   <e/Enter> Edit   <+/-> Step   <o> Open Editor   <s> Save   <q> Quit  │ Forgum Configurator Ready
+```
 
-Headless or scripting? Set individual keys directly:
+### 🌟 Key Studio Capabilities:
+- **100% Config & Scripting Parity**: Every single setting that can be defined in a configuration file or passed via CLI flags (all 26 parameters: `cow`, `text`, `effect`, `background`, `duration`, `fps`, `eyes`, `tongue`, `default_shell`, `auto_render_on_prompt`, `think`, `color_mode`, `shell_attach_mode`, `environment`, `road`, `mountain`, `palette`, `thought_interval`, `split_scroll`, `reserve_rows`, `reserve_cols`, `split_ratio`, `animation`, `animation_type`, `image`, `split_mode`, `editor`) can be inspected, toggled, stepped, or modified in the Configurator.
+- **Seamless Split Mode**: Set `split_mode` to `seamless` (via `forgum config set split_mode seamless` or `--split-mode seamless`) to run inline above your active prompt without terminal margin flickering or pane boundary disruption.
+- **External Text Editor Keybinding (`o` / `Ctrl+O` / `Ctrl+E`)**: Press `o`, `Ctrl+O`, or `Ctrl+E` in the TUI to open the active configuration file in your system's detected or chosen editor (`nvim`, `vim`, `emacs`, `nano`, `code`, or `notepad`). Forgum cleanly suspends the terminal raw mode, spawns your editor, and reactively reloads the updated configuration when you exit.
+- **Live Preview Canvas & HUD Timeline**: Preview animal motion, speech/thought bubbles, eye blinks, and procedural terrain changes in real-time at your configured target FPS.
+
+### 📜 Headless CLI Scripting:
+Need to script or query configuration values in CI/CD or shell scripts? All 26 keys support fast headless querying and updating:
 
 ```bash
-forgum config set <key> <value>
-```
+# Query any setting:
+forgum config get cow
+forgum config split_mode
+forgum config editor
 
-For example: `forgum config set color_mode rainbow`.
+# Set any setting (both 'config set' and 'config <key> <val>' supported):
+forgum config set cow tux
+forgum config split_mode seamless
+forgum config editor nvim
+forgum config set fps 60
+forgum config set color_mode natural
+
+# List all 26 parameters, data types, and accepted options:
+forgum list config
+# or:
+forgum config --list
+```
 
 ---
 

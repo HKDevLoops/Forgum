@@ -512,37 +512,41 @@ pub fn diagnose_logs(entries: &[LogEntry]) -> DiagnosticReport {
             _ => debug_count += 1,
         }
 
+        let is_anomaly_candidate = entry.level == "ERROR" || entry.level == "WARN";
         let msg_lower = entry.message.to_ascii_lowercase();
 
-        if msg_lower.contains("missing cow")
-            || msg_lower.contains("cannot find cow")
-            || msg_lower.contains("fallback cow")
-        {
-            cow_missing_count += 1;
-        }
-        if msg_lower.contains("dna")
-            || msg_lower.contains("deserializ")
-            || msg_lower.contains("animations.json")
-        {
-            dna_err_count += 1;
-        }
-        if msg_lower.contains("decstbm")
-            || msg_lower.contains("resize")
-            || msg_lower.contains("margin")
-        {
-            terminal_err_count += 1;
-        }
-        if msg_lower.contains("conflict")
-            || msg_lower.contains("config format")
-            || msg_lower.contains("configuration")
-        {
-            config_err_count += 1;
-        }
-        if msg_lower.contains("frame drop")
-            || msg_lower.contains("stall")
-            || msg_lower.contains("deadline")
-        {
-            render_lag_count += 1;
+        if is_anomaly_candidate {
+            if msg_lower.contains("missing cow")
+                || msg_lower.contains("cannot find cow")
+                || msg_lower.contains("fallback cow")
+            {
+                cow_missing_count += 1;
+            }
+            if msg_lower.contains("deserializ")
+                || msg_lower.contains("invalid dna")
+                || msg_lower.contains("schema error")
+                || msg_lower.contains("corrupt animation")
+            {
+                dna_err_count += 1;
+            }
+            if msg_lower.contains("margin clamp")
+                || msg_lower.contains("decstbm clamp")
+                || msg_lower.contains("margin overflow")
+            {
+                terminal_err_count += 1;
+            }
+            if msg_lower.contains("conflict")
+                || msg_lower.contains("config format conflict")
+                || msg_lower.contains("invalid configuration")
+            {
+                config_err_count += 1;
+            }
+            if msg_lower.contains("frame drop")
+                || msg_lower.contains("deadline miss")
+                || msg_lower.contains("render stall")
+            {
+                render_lag_count += 1;
+            }
         }
 
         // Collect custom diagnostic hints directly from entries

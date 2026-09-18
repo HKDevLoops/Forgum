@@ -78,7 +78,7 @@ pub use paths::{
 pub use platform_unix::parent_pid;
 #[cfg(windows)]
 pub use platform_windows::parent_pid;
-pub use protocol::{ConfigFormat, SceneConfig};
+pub use protocol::{ConfigFormat, RandomSetting, SceneConfig};
 pub use shell::{
     remove_all_forgum_blocks, remove_delimited_block, uninstall_all_shell_integrations,
     uninstall_shell_integration, update_delimited_block, write_file_if_changed, Shell,
@@ -93,8 +93,8 @@ pub use sixel::{
 #[cfg(unix)]
 pub use spawn::fork_then_exec_self;
 pub use spawn::{
-    daemon_bootstrap, daemonize, execute_command_with_shell_fallback, prefer_fork_exec,
-    process_is_alive, spawn_detached, DetachedChild,
+    daemon_bootstrap, daemonize, execute_command_with_shell_fallback, find_forgum_pids,
+    kill_process, prefer_fork_exec, process_is_alive, spawn_detached, DetachedChild,
 };
 pub use telemetry::{
     is_telemetry_allowed, record_active_pulse, record_installed, record_tried,

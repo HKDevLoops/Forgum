@@ -126,7 +126,7 @@ mkdir -p "$__FORGUM_RUNTIME" 2>/dev/null
 
 forgum() {{
   case "$1" in
-    init|install|setup|wizard|installer|uninstall|remove|deorbit|uninstaller|update|upgrade|logs|log|view-logs|show-logs|diagnose|triage|bugradar|checkhealth|health|doctor|completions|list|options|ls|show|config|status|status-line|fortune|control|remote|profile|render|clean|preset|herd|theme|demo|showcase|say|timer|battle|tmux|zellij|wezterm|screen|sweep|help|-*)
+    init|install|setup|wizard|installer|uninstall|remove|deorbit|uninstaller|update|upgrade|tui|menu|ui|studio|logs|log|view-logs|show-logs|diagnose|triage|bugradar|checkhealth|health|doctor|completions|list|options|ls|show|config|status|status-line|fortune|control|remote|profile|render|think|clean|preset|herd|theme|demo|showcase|say|timer|battle|arena|rps-battle|rps|image|tmux|zellij|wezterm|screen|sweep|stop|kill|halt|reset|unreserve|clear-margins|clear_margins|help|-*)
       "$__FORGUM_ENGINE" "$@"
       return
       ;;
@@ -165,7 +165,27 @@ __forgum_clear() {{
 }}
 alias clear='__forgum_clear'
 
+__forgum_in_prompt=1
+__forgum_preexec() {{
+  [ -z "$__forgum_in_prompt" ] && return
+  case "$BASH_COMMAND" in
+    *__forgum_precmd*|*PROMPT_COMMAND*) return ;;
+  esac
+  __forgum_in_prompt=
+  local state="$__FORGUM_RUNTIME/daemon.json"
+  if [ -f "$state" ]; then
+    local pid; pid=$(awk -F'"' '/pid/{{print $4}}' "$state" 2>/dev/null)
+    if [ -n "$pid" ]; then
+      kill "$pid" 2>/dev/null
+    fi
+    rm -f "$state"
+    printf '\x1b[r'
+  fi
+}}
+trap '__forgum_preexec' DEBUG 2>/dev/null
+
 __forgum_precmd() {{
+  __forgum_in_prompt=1
   [ -z "$__FORGUM_ENGINE" ] && return
   local state="$__FORGUM_RUNTIME/daemon.json"
   if [ -f "$state" ]; then
@@ -223,7 +243,7 @@ mkdir -p "$__FORGUM_RUNTIME" 2>/dev/null
 
 forgum() {{
   case "$1" in
-    init|install|setup|wizard|installer|uninstall|remove|deorbit|uninstaller|update|upgrade|logs|log|view-logs|show-logs|diagnose|triage|bugradar|checkhealth|health|doctor|completions|list|options|ls|show|config|status|status-line|fortune|control|remote|profile|render|clean|preset|herd|theme|demo|showcase|say|timer|battle|tmux|zellij|wezterm|screen|sweep|help|-*)
+    init|install|setup|wizard|installer|uninstall|remove|deorbit|uninstaller|update|upgrade|tui|menu|ui|studio|logs|log|view-logs|show-logs|diagnose|triage|bugradar|checkhealth|health|doctor|completions|list|options|ls|show|config|status|status-line|fortune|control|remote|profile|render|think|clean|preset|herd|theme|demo|showcase|say|timer|battle|arena|rps-battle|rps|image|tmux|zellij|wezterm|screen|sweep|stop|kill|halt|reset|unreserve|clear-margins|clear_margins|help|-*)
       "$__FORGUM_ENGINE" "$@"
       return
       ;;
@@ -300,6 +320,23 @@ __forgum_precmd() {{
 }}
 typeset -a precmd_functions 2>/dev/null
 precmd_functions+=(__forgum_precmd)
+
+__forgum_preexec() {{
+  local state="$__FORGUM_RUNTIME/daemon.json"
+  if [ -f "$state" ]; then
+    local pid; pid=$(awk -F'"' '/pid/{{print $4}}' "$state" 2>/dev/null)
+    if [ -n "$pid" ]; then
+      kill "$pid" 2>/dev/null
+    fi
+    rm -f "$state"
+    printf '\x1b[r'
+  fi
+}}
+autoload -Uz add-zsh-hook 2>/dev/null
+add-zsh-hook preexec __forgum_preexec 2>/dev/null || {{
+  typeset -a preexec_functions 2>/dev/null
+  preexec_functions+=(__forgum_preexec)
+}}
 # <<< forgum <<<
 "#
     )
@@ -316,7 +353,7 @@ mkdir -p $__forgum_runtime 2>/dev/null
 
 function forgum
     switch "$argv[1]"
-        case init install setup wizard installer uninstall remove deorbit uninstaller update upgrade logs log view-logs show-logs diagnose triage bugradar checkhealth health doctor completions list options ls show config status status-line fortune control remote profile render clean preset herd theme demo showcase say timer battle tmux zellij wezterm screen sweep help "-*"
+        case init install setup wizard installer uninstall remove deorbit uninstaller update upgrade tui menu ui studio logs log view-logs show-logs diagnose triage bugradar checkhealth health doctor completions list options ls show config status status-line fortune control remote profile render think clean preset herd theme demo showcase say timer battle arena rps-battle rps image tmux zellij wezterm screen sweep stop kill halt reset unreserve clear-margins clear_margins help "-*"
             $__forgum_engine $argv
             return
     end
@@ -349,6 +386,18 @@ function clear
     command clear
 end
 
+function __forgum_preexec --on-event fish_preexec
+    set -l state $__forgum_runtime/daemon.json
+    if test -f $state
+        set -l pid (awk -F'"' '/pid/{{print $4}}' $state 2>/dev/null)
+        if test -n "$pid"
+            kill $pid 2>/dev/null
+        end
+        rm -f $state
+        printf '\x1b[r'
+    end
+end
+
 function __forgum_sweep --on-event fish_prompt
     set -q __forgum_engine; or return
     set state $__forgum_runtime/daemon.json
@@ -366,7 +415,7 @@ function __forgum_sweep --on-event fish_prompt
     end
     if test -f "$__forgum_config"
         set -l auto (grep -o '"auto_render_on_prompt":\s*[^,}}]*' "$__forgum_config" 2>/dev/null | awk '{{print $2}}')
-        set -l mode (grep -o '"shell_attach_mode":\s*"[^"]*"' "$__FORGUM_CONFIG" 2>/dev/null | cut -d'"' -f4)
+        set -l mode (grep -o '"shell_attach_mode":\s*"[^"]*"' "$__forgum_config" 2>/dev/null | cut -d'"' -f4)
         if test "$auto" != "false"
             switch "$mode"
                 case banner
@@ -399,7 +448,7 @@ function forgum {{
     param([Parameter(ValueFromRemainingArguments)][string[]]$Args)
     if ($Args -and $Args.Count -gt 0) {{
         $first = $Args[0]
-        if ($first.StartsWith('-') -or $first -in @('init','install','setup','wizard','installer','uninstall','remove','deorbit','uninstaller','update','upgrade','logs','log','view-logs','show-logs','diagnose','triage','bugradar','checkhealth','health','doctor','completions','list','options','ls','show','config','status','status-line','fortune','control','remote','profile','render','clean','preset','herd','theme','demo','showcase','say','timer','battle','tmux','zellij','wezterm','screen','sweep','help')) {{
+        if ($first.StartsWith('-') -or $first -in @('init','install','setup','wizard','installer','uninstall','remove','deorbit','uninstaller','update','upgrade','tui','menu','ui','studio','logs','log','view-logs','show-logs','diagnose','triage','bugradar','checkhealth','health','doctor','completions','list','options','ls','show','config','status','status-line','fortune','control','remote','profile','render','think','clean','preset','herd','theme','demo','showcase','say','timer','battle','arena','rps-battle','rps','image','tmux','zellij','wezterm','screen','sweep','stop','kill','halt','reset','unreserve','clear-margins','clear_margins','help')) {{
             & $__ForgumEngine @Args
             return
         }}
@@ -433,6 +482,28 @@ function global:Clear-Host {{
         }} catch {{ }}
     }}
     [Console]::Clear()
+}}
+
+if (Get-Command Set-PSReadLineKeyHandler -EA SilentlyContinue) {{
+    Set-PSReadLineKeyHandler -Key Enter -ScriptBlock {{
+        $line = $null
+        [Microsoft.PowerShell.PSConsoleReadLine]::GetBufferState([ref]$line, [ref]$null)
+        if ($line -and $line.Trim().Length -gt 0) {{
+            $esc = if ($PSVersionTable.PSVersion.Major -ge 7) {{ '`e' }} else {{ [char]27 }}
+            $state = Join-Path $env:TEMP 'Forgum\daemon.json'
+            if (Test-Path $state) {{
+                try {{
+                    $info = Get-Content $state -Raw | ConvertFrom-Json
+                    if ($info.pid) {{
+                        Stop-Process -Id $info.pid -Force -EA SilentlyContinue
+                    }}
+                    Remove-Item $state -Force -EA SilentlyContinue
+                }} catch {{ }}
+                [Console]::Write("$esc[r")
+            }}
+        }}
+        [Microsoft.PowerShell.PSConsoleReadLine]::AcceptLine()
+    }}
 }}
 
 $global:__ForgumPromptBackup = $function:prompt
@@ -525,7 +596,7 @@ function forgum {{
     param([Parameter(ValueFromRemainingArguments)][string[]]$Args)
     if ($Args -and $Args.Count -gt 0) {{
         $first = $Args[0]
-        if ($first.StartsWith('-') -or $first -in @('init','install','setup','wizard','installer','uninstall','remove','deorbit','uninstaller','update','upgrade','logs','log','view-logs','show-logs','diagnose','triage','bugradar','checkhealth','health','doctor','completions','list','options','ls','show','config','status','status-line','fortune','control','remote','profile','render','clean','preset','herd','theme','demo','showcase','say','timer','battle','tmux','zellij','wezterm','screen','sweep','help')) {{
+        if ($first.StartsWith('-') -or $first -in @('init','install','setup','wizard','installer','uninstall','remove','deorbit','uninstaller','update','upgrade','tui','menu','ui','studio','logs','log','view-logs','show-logs','diagnose','triage','bugradar','checkhealth','health','doctor','completions','list','options','ls','show','config','status','status-line','fortune','control','remote','profile','render','think','clean','preset','herd','theme','demo','showcase','say','timer','battle','arena','rps-battle','rps','image','tmux','zellij','wezterm','screen','sweep','stop','kill','halt','reset','unreserve','clear-margins','clear_margins','help')) {{
             & $__ForgumEngine @Args
             return
         }}
@@ -559,6 +630,28 @@ function global:Clear-Host {{
         }} catch {{ }}
     }}
     [Console]::Clear()
+}}
+
+if (Get-Command Set-PSReadLineKeyHandler -EA SilentlyContinue) {{
+    Set-PSReadLineKeyHandler -Key Enter -ScriptBlock {{
+        $line = $null
+        [Microsoft.PowerShell.PSConsoleReadLine]::GetBufferState([ref]$line, [ref]$null)
+        if ($line -and $line.Trim().Length -gt 0) {{
+            $esc = if ($PSVersionTable.PSVersion.Major -ge 7) {{ '`e' }} else {{ [char]27 }}
+            $state = Join-Path $env:TEMP 'Forgum\daemon.json'
+            if (Test-Path $state) {{
+                try {{
+                    $info = Get-Content $state -Raw | ConvertFrom-Json
+                    if ($info.pid) {{
+                        Stop-Process -Id $info.pid -Force -EA SilentlyContinue
+                    }}
+                    Remove-Item $state -Force -EA SilentlyContinue
+                }} catch {{ }}
+                [Console]::Write("$esc[r")
+            }}
+        }}
+        [Microsoft.PowerShell.PSConsoleReadLine]::AcceptLine()
+    }}
 }}
 
 $global:__ForgumPromptBackup = $function:prompt
@@ -826,7 +919,7 @@ forgum --animal <animal> --effect <effect>
 forgum --background --duration 0
 
 # Interactive TUI dashboard (5 tabs: Mascots, Scenery, Effects, Installer, Config)
-forgum-tui
+forgum tui
 
 # Inspect all built-in animals, effects, environments, and road styles
 forgum list all

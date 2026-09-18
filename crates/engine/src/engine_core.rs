@@ -73,6 +73,7 @@ pub enum ControlMsg {
     Speed(f32),
     Cow(String),
     Text(String),
+    Think(String),
     Eyes(String),
     Tongue(String),
     ColorMode(String),
@@ -258,7 +259,7 @@ impl SimState {
             }
             _ => {
                 // Walking and ground creatures walk directly on the road surface
-                (self.cow_foot_y + 1).min(self.fb.height.saturating_sub(2))
+                self.cow_foot_y + 1
             }
         };
         let animal_h = self.cow_foot_y.max(1);
@@ -443,6 +444,36 @@ impl SimState {
                 );
                 self.need_full_redraw = true;
             }
+            ControlMsg::Think(text) => {
+                // Switch bubble style to thought bubble (o) and recompose scene with new thought text.
+                self.config.think = true;
+                self.config.text = text.clone();
+                let thoughts_glyph = "o";
+                let cow_text = crate::cow::load_cow(
+                    &self.config.cow,
+                    &self.data_dir,
+                    &self.config.eyes,
+                    &self.config.tongue,
+                    thoughts_glyph,
+                );
+                let composed = crate::cow::compose_scene_with_mode(
+                    &cow_text,
+                    &self.config.text,
+                    true,
+                );
+                if let Ok(mut lock) = self.active_composed.write() {
+                    *lock = composed.clone();
+                }
+                self.cow_foot_y = effects::find_cow_foot_y(&composed);
+                self.effect = effects::create_scene_effect(
+                    &self.config.effect,
+                    composed,
+                    self.cow_dna.clone(),
+                    self.instance_id,
+                    &self.config.color_mode,
+                );
+                self.need_full_redraw = true;
+            }
             ControlMsg::Eyes(eyes) => {
                 self.config.eyes = eyes.clone();
                 let thoughts_glyph = if self.config.think { "o" } else { "\\" };
@@ -612,6 +643,7 @@ fn sim_thread(
                 ref msg @ (ControlMsg::Effect(_)
                 | ControlMsg::Cow(_)
                 | ControlMsg::Text(_)
+                | ControlMsg::Think(_)
                 | ControlMsg::Eyes(_)
                 | ControlMsg::Tongue(_)
                 | ControlMsg::ColorMode(_)) => {
@@ -824,13 +856,12 @@ fn render_thread(mut state: RenderState, frame_rx: Receiver<Arc<Frame>>, shutdow
         for y in 1..=state.overlay_rows {
             clean_buf.extend_from_slice(format!("\x1b[{y};1H\x1b[2K").as_bytes());
         }
-        if state.split_scroll {
-            clean_buf.extend_from_slice(b"\x1b[r");
-        }
-        clean_buf.extend_from_slice(b"\x1b8\x1b[0m\x1b[?25h");
+        // Unconditionally reset DECSTBM scroll margins, origin mode, and DECSLRM
+        // so reserved terminal rows are completely restored for subsequent applications.
+        clean_buf.extend_from_slice(b"\x1b[r\x1b[?6l\x1b[?69l\x1b8\x1b[0m\x1b[?25h");
         let _ = state.out.write_all(&clean_buf);
     } else {
-        let _ = state.out.write_all(b"\x1b[0m\x1b[?25h\n");
+        let _ = state.out.write_all(b"\x1b[r\x1b[?6l\x1b[?69l\x1b[0m\x1b[?25h\n");
     }
     let _ = state.out.flush();
 }
@@ -912,6 +943,7 @@ pub fn run_engine(
                         ControlCmd::Speed(s) => ControlMsg::Speed(s),
                         ControlCmd::Cow(name) => ControlMsg::Cow(name),
                         ControlCmd::Text(text) => ControlMsg::Text(text),
+                        ControlCmd::Think(text) => ControlMsg::Think(text),
                         ControlCmd::Eyes(eyes) => ControlMsg::Eyes(eyes),
                         ControlCmd::Tongue(tongue) => ControlMsg::Tongue(tongue),
                         ControlCmd::Color(color) => ControlMsg::ColorMode(color),
@@ -1080,6 +1112,7 @@ pub fn run_engine_banner(
                         ControlCmd::Speed(s) => ControlMsg::Speed(s),
                         ControlCmd::Cow(name) => ControlMsg::Cow(name),
                         ControlCmd::Text(text) => ControlMsg::Text(text),
+                        ControlCmd::Think(text) => ControlMsg::Think(text),
                         ControlCmd::Eyes(eyes) => ControlMsg::Eyes(eyes),
                         ControlCmd::Tongue(tongue) => ControlMsg::Tongue(tongue),
                         ControlCmd::Color(color) => ControlMsg::ColorMode(color),
@@ -1206,6 +1239,7 @@ pub fn run_engine_overlay(
                         ControlCmd::Speed(s) => ControlMsg::Speed(s),
                         ControlCmd::Cow(name) => ControlMsg::Cow(name),
                         ControlCmd::Text(text) => ControlMsg::Text(text),
+                        ControlCmd::Think(text) => ControlMsg::Think(text),
                         ControlCmd::Eyes(eyes) => ControlMsg::Eyes(eyes),
                         ControlCmd::Tongue(tongue) => ControlMsg::Tongue(tongue),
                         ControlCmd::Color(color) => ControlMsg::ColorMode(color),

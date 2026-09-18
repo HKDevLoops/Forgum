@@ -26,6 +26,7 @@ fn cli_commands_include_documented_set() {
         "say",
         "timer",
         "battle",
+        "rps-battle",
         "sweep",
         "image",
     ];
@@ -72,6 +73,7 @@ fn all_command_variants() -> Vec<&'static str> {
         "say",
         "timer",
         "battle",
+        "rps-battle",
         "sweep",
         "image",
     ]

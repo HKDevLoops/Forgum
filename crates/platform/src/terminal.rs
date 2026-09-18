@@ -193,6 +193,25 @@ impl TerminalEmulator {
         }
     }
 
+    /// Whether this terminal natively supports 24-bit TrueColor RGB.
+    #[must_use]
+    pub const fn supports_truecolor(self) -> bool {
+        match self {
+            Self::WindowsTerminal
+            | Self::WezTerm
+            | Self::Kitty
+            | Self::Ghostty
+            | Self::Alacritty
+            | Self::Foot
+            | Self::ITerm2
+            | Self::Mintty
+            | Self::Vte
+            | Self::Konsole => true,
+            Self::ConHost | Self::LinuxConsole | Self::SerialConsole | Self::Dumb => false,
+            Self::AppleTerminal | Self::Urxvt | Self::XTerm | Self::GenericVt => false,
+        }
+    }
+
     /// Known hardware, virtualization, or firmware limitation notes.
     #[must_use]
     pub const fn limitation_notes(self) -> Option<&'static str> {
@@ -232,6 +251,8 @@ impl TerminalEmulator {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum SplitMode {
+    /// Seamless single-pane simultaneous execution (DECSTBM hardware margin scroll region).
+    Seamless,
     /// Mode 1: Pure DECSTBM margin split (Standard for Alacritty, Ghostty, Foot, VTE, Konsole, XTerm, Mintty, macOS Terminal, modern Windows Terminal).
     Decstbm,
     /// Mode 2: Native Multiplexer / Terminal API split (tmux, zellij, wezterm cli, kitty remote, wt.exe).
@@ -246,10 +267,23 @@ impl SplitMode {
     #[must_use]
     pub const fn as_str(self) -> &'static str {
         match self {
+            Self::Seamless => "seamless",
             Self::Decstbm => "decstbm",
             Self::NativeApi => "native_api",
             Self::PrecmdFallback => "precmd_fallback",
             Self::Disabled => "disabled",
+        }
+    }
+
+    #[must_use]
+    pub fn parse(s: &str) -> Option<Self> {
+        match s.to_ascii_lowercase().as_str() {
+            "seamless" => Some(Self::Seamless),
+            "decstbm" => Some(Self::Decstbm),
+            "native" | "native_api" => Some(Self::NativeApi),
+            "precmd" | "precmd_fallback" => Some(Self::PrecmdFallback),
+            "disabled" | "none" => Some(Self::Disabled),
+            _ => None,
         }
     }
 }
@@ -689,8 +723,21 @@ pub fn detect_color_level() -> ColorLevel {
             return ColorLevel::TrueColor;
         }
     }
+    // Check known emulator capabilities (Windows Terminal, WezTerm, Ghostty, Alacritty, Kitty, Foot, iTerm2, etc.)
+    if detect_terminal_emulator().supports_truecolor() {
+        return ColorLevel::TrueColor;
+    }
+    if let Ok(tp) = std::env::var("TERM_PROGRAM") {
+        match tp.to_ascii_lowercase().as_str() {
+            "vscode" | "tabby" | "warp" | "hyper" => return ColorLevel::TrueColor,
+            _ => {}
+        }
+    }
     if let Ok(term) = std::env::var("TERM") {
         let term = term.to_ascii_lowercase();
+        if term.contains("truecolor") || term.contains("24bit") {
+            return ColorLevel::TrueColor;
+        }
         if term.contains("256color") || term.contains("256-color") {
             return ColorLevel::Ansi256;
         }

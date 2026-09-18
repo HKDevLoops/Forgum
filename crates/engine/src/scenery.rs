@@ -25,7 +25,30 @@ pub enum MountainStyle {
 }
 
 impl MountainStyle {
+    pub const ALL_NON_NONE: &'static [MountainStyle] = &[
+        Self::Hills,
+        Self::Peaks,
+        Self::Volcano,
+        Self::Iceberg,
+        Self::Skyline,
+        Self::Seamount,
+        Self::Plateau,
+        Self::Crater,
+        Self::Gothic,
+        Self::Castle,
+        Self::Garden,
+    ];
+
+    pub fn random() -> Self {
+        use rand::seq::SliceRandom;
+        let mut rng = rand::thread_rng();
+        *Self::ALL_NON_NONE.choose(&mut rng).unwrap_or(&Self::Hills)
+    }
+
     pub fn parse(s: &str) -> Self {
+        if s.trim().eq_ignore_ascii_case("random") {
+            return Self::random();
+        }
         match s.trim().to_ascii_lowercase().as_str() {
             "hills" | "hill" => Self::Hills,
             "peaks" | "peak" | "mountain" | "mountains" => Self::Peaks,
@@ -82,7 +105,32 @@ pub enum RoadStyle {
 }
 
 impl RoadStyle {
+    pub const ALL_NON_NONE: &'static [RoadStyle] = &[
+        Self::Dirt,
+        Self::Cobblestone,
+        Self::Magma,
+        Self::Ice,
+        Self::Seabed,
+        Self::Sidewalk,
+        Self::Roof,
+        Self::Grid,
+        Self::Crypt,
+        Self::Savanna,
+        Self::Mud,
+        Self::Tracks,
+        Self::Checkerboard,
+    ];
+
+    pub fn random() -> Self {
+        use rand::seq::SliceRandom;
+        let mut rng = rand::thread_rng();
+        *Self::ALL_NON_NONE.choose(&mut rng).unwrap_or(&Self::Dirt)
+    }
+
     pub fn parse(s: &str) -> Self {
+        if s.trim().eq_ignore_ascii_case("random") {
+            return Self::random();
+        }
         match s.trim().to_ascii_lowercase().as_str() {
             "dirt" | "trail" | "earth" | "ground" => Self::Dirt,
             "cobblestone" | "cobble" | "stone" => Self::Cobblestone,
@@ -144,7 +192,33 @@ pub enum EnvironmentStyle {
 }
 
 impl EnvironmentStyle {
+    pub const ALL_NON_NONE: &'static [EnvironmentStyle] = &[
+        Self::Pasture,
+        Self::Inferno,
+        Self::Ocean,
+        Self::Arctic,
+        Self::City,
+        Self::Forest,
+        Self::Savanna,
+        Self::Swamp,
+        Self::Space,
+        Self::Cyber,
+        Self::Graveyard,
+        Self::Jurassic,
+        Self::Hive,
+        Self::Throne,
+    ];
+
+    pub fn random() -> Self {
+        use rand::seq::SliceRandom;
+        let mut rng = rand::thread_rng();
+        *Self::ALL_NON_NONE.choose(&mut rng).unwrap_or(&Self::Pasture)
+    }
+
     pub fn parse(s: &str) -> Self {
+        if s.trim().eq_ignore_ascii_case("random") {
+            return Self::random();
+        }
         match s.trim().to_ascii_lowercase().as_str() {
             "pasture" | "meadow" | "grass" | "field" => Self::Pasture,
             "inferno" | "fire" | "flame" | "embers" | "lava" => Self::Inferno,
@@ -1886,6 +1960,22 @@ mod tests {
             EnvironmentStyle::Inferno
         );
         assert_eq!(EnvironmentStyle::parse("arctic"), EnvironmentStyle::Arctic);
+
+        // Test random styles produce valid non-none styles
+        let rand_mtn = MountainStyle::parse("random");
+        assert_ne!(rand_mtn, MountainStyle::None);
+        let rand_mtn_upper = MountainStyle::parse("RANDOM");
+        assert_ne!(rand_mtn_upper, MountainStyle::None);
+
+        let rand_road = RoadStyle::parse("random");
+        assert_ne!(rand_road, RoadStyle::None);
+        let rand_road_upper = RoadStyle::parse("RANDOM");
+        assert_ne!(rand_road_upper, RoadStyle::None);
+
+        let rand_env = EnvironmentStyle::parse("random");
+        assert_ne!(rand_env, EnvironmentStyle::None);
+        let rand_env_upper = EnvironmentStyle::parse("RANDOM");
+        assert_ne!(rand_env_upper, EnvironmentStyle::None);
     }
 
     #[test]

@@ -39,6 +39,7 @@ pub mod remote;
 pub mod render;
 pub mod renderer;
 pub mod runner;
+pub mod rps;
 pub mod say;
 pub mod scenery;
 pub mod scheduler;

@@ -192,6 +192,8 @@ pub fn merge(base: SceneConfig, overlay: SceneConfig) -> SceneConfig {
         animation_type: overlay.animation_type.or(base.animation_type),
         image: overlay.image.or(base.image),
         split_mode: overlay.split_mode.or(base.split_mode),
+        editor: overlay.editor.or(base.editor),
+        random: overlay.random.or(base.random),
     }
 }
 
@@ -266,5 +268,20 @@ mod tests {
         write_config_file(&toml_path, &cfg, ConfigFormat::Toml).unwrap();
         let toml_read = read_config_file(&toml_path).unwrap();
         assert_eq!(cfg, toml_read);
+    }
+
+    #[test]
+    fn merge_random_setting() {
+        use forgum_platform::protocol::RandomSetting;
+        let base = SceneConfig {
+            random: Some(RandomSetting::Bool(false)),
+            ..SceneConfig::default()
+        };
+        let overlay = SceneConfig {
+            random: Some(RandomSetting::Bool(true)),
+            ..SceneConfig::default()
+        };
+        let m = merge(base, overlay);
+        assert_eq!(m.random, Some(RandomSetting::Bool(true)));
     }
 }
