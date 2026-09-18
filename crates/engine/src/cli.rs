@@ -358,7 +358,11 @@ pub struct Cli {
 #[derive(Debug, Subcommand)]
 pub enum Commands {
     /// Render a cow (default command).
-    Render,
+    Render {
+        /// Optional speech text to display inside the speech bubble.
+        #[arg(num_args = 0..)]
+        message: Vec<String>,
+    },
     /// Render a thought bubble (cowthink mode).
     Think {
         /// Optional thought text (defaults to random fortune if omitted).
@@ -413,6 +417,9 @@ pub enum Commands {
         /// normal `init` but explicit about the use-case.
         #[arg(long)]
         check: bool,
+        /// Automatically install / attach the hook into the shell's RC profile.
+        #[arg(short = 'i', long)]
+        install: bool,
         /// Additional render arguments forwarded to the background engine.
         #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
         render_args: Vec<String>,
@@ -1011,7 +1018,19 @@ pub fn parse_args(argv: Vec<String>) -> Result<(Args, Option<Commands>), CliErro
     }
 
     let (command, extra_text, is_think) = match &cli.command {
-        Some(Commands::Render) | None => {
+        Some(Commands::Render { message }) => {
+            let extra = if message.is_empty() {
+                None
+            } else {
+                Some(message.join(" "))
+            };
+            if cli.list.is_some() {
+                (Command::List, extra, false)
+            } else {
+                (Command::Render, extra, false)
+            }
+        }
+        None => {
             if cli.list.is_some() {
                 (Command::List, None, false)
             } else {

@@ -194,6 +194,7 @@ pub fn run() -> ExitCode {
         Some(cli::Commands::Init {
             shell,
             check: _check,
+            install,
             render_args,
         }) => {
             if matches!(shell, cli::ShellArg::List) {
@@ -263,15 +264,66 @@ pub fn run() -> ExitCode {
                 &engine_path,
                 &combined_render_args,
             );
-            print!("{hook}");
-            if cfg!(feature = "tui") {
-                if matches!(shell, Shell::Cmd) {
-                    println!("rem run `forgum config --tui` to customize your cow");
-                } else {
-                    println!("# run `forgum config --tui` to customize your cow");
+
+            if install {
+                match shell.shell_rc_path() {
+                    Some(rc_path) => {
+                        let existing = std::fs::read_to_string(&rc_path).unwrap_or_default();
+                        let begin_marker = if matches!(shell, Shell::Cmd) {
+                            "rem >>> forgum (cmd) >>>"
+                        } else {
+                            &format!("# >>> forgum ({shell}) >>>")
+                        };
+                        let end_marker = if matches!(shell, Shell::Cmd) {
+                            "rem <<< forgum <<<"
+                        } else {
+                            "# <<< forgum <<<"
+                        };
+                        let updated = forgum_platform::shell::update_delimited_block(
+                            &existing,
+                            begin_marker,
+                            end_marker,
+                            &hook,
+                        );
+                        if let Some(parent) = rc_path.parent() {
+                            let _ = std::fs::create_dir_all(parent);
+                        }
+                        match std::fs::write(&rc_path, updated) {
+                            Ok(_) => {
+                                println!("\x1b[1;32m✓\x1b[0m Forgum shell integration successfully installed into {}", rc_path.display());
+                                match shell {
+                                    Shell::Pwsh | Shell::PowerShell => {
+                                        println!("\x1b[36m💡 Run `. $PROFILE` or restart your shell to activate.\x1b[0m");
+                                    }
+                                    _ => {
+                                        println!("\x1b[36m💡 Run `source {}` or restart your shell to activate.\x1b[0m", rc_path.display());
+                                    }
+                                }
+                                ExitCode::SUCCESS
+                            }
+                            Err(e) => {
+                                eprintln!("{PROGRAM}: failed to write shell RC file {}: {e}", rc_path.display());
+                                ExitCode::from(1)
+                            }
+                        }
+                    }
+                    None => {
+                        eprintln!("{PROGRAM}: automatic installation is not supported for shell '{shell}'. Please copy the hook manually:");
+                        print!("{hook}");
+                        ExitCode::from(1)
+                    }
                 }
+            } else {
+                print!("{hook}");
+                if cfg!(feature = "tui") {
+                    if matches!(shell, Shell::Cmd) {
+                        println!("rem run `forgum config --tui` to customize your cow");
+                    } else {
+                        println!("# run `forgum config --tui` to customize your cow");
+                    }
+                }
+                ExitCode::SUCCESS
             }
-            ExitCode::SUCCESS
         }
 
         // ── tui ─────────────────────────────────────────────────────
@@ -2171,12 +2223,33 @@ fn render_subcommand(args: cli::Args) -> ExitCode {
 
 /// Universally resolve all `RANDOM` parameters: mascot, scenery (environment/road/mountain),
 /// fx and animation (including static vs dynamic animations), and fortune thoughts.
+///
+/// Uses Fibonacci phyllotaxis low-discrepancy mathematics (matching procedural tree spawning in
+/// `scenery.rs`) to mathematically guarantee zero repetition and maximum dispersion across consecutive runs.
 pub fn resolve_scene_randomness(
     scene: &mut forgum_engine::protocol::SceneConfig,
     data_dir: &std::path::Path,
     explicit_args: &cli::Args,
 ) {
     let random_setting = scene.random.clone();
+    let is_random_enabled = scene.cow.trim().eq_ignore_ascii_case("random")
+        || scene.environment.as_deref().map_or(false, |s| s.trim().eq_ignore_ascii_case("random"))
+        || scene.road.as_deref().map_or(false, |s| s.trim().eq_ignore_ascii_case("random"))
+        || scene.mountain.as_deref().map_or(false, |s| s.trim().eq_ignore_ascii_case("random"))
+        || scene.animation.as_deref().map_or(false, |s| s.trim().eq_ignore_ascii_case("random"))
+        || scene.effect.trim().eq_ignore_ascii_case("random")
+        || scene.animation_type.as_deref().map_or(false, |s| s.trim().eq_ignore_ascii_case("random"))
+        || scene.text.trim().is_empty()
+        || scene.text.trim().eq_ignore_ascii_case("random")
+        || random_setting.is_some();
+
+    if !is_random_enabled {
+        scene.cow = cow::resolve_cow_name(&scene.cow, data_dir);
+        return;
+    }
+
+    // Sample Fibonacci phyllotaxis low-discrepancy coordinates
+    let coords = crate::random_engine::advance_and_sample();
 
     // ── 1. MASCOT (COW) ──────────────────────────────────────────────────
     let should_randomize_cow = scene.cow.trim().eq_ignore_ascii_case("random")
@@ -2184,7 +2257,40 @@ pub fn resolve_scene_randomness(
             && explicit_args.cow.is_none());
 
     if should_randomize_cow {
-        scene.cow = cow::resolve_cow_name("random", data_dir);
+        let mut cow_names: Vec<String> = Vec::new();
+        let cows_dir = data_dir.join("Cows");
+        if let Ok(rd) = std::fs::read_dir(&cows_dir) {
+            cow_names.extend(rd.flatten().filter_map(|e| {
+                let p = e.path();
+                if p.extension().is_some_and(|ext| ext.eq_ignore_ascii_case("cow")) {
+                    p.file_stem().map(|s| s.to_string_lossy().into_owned())
+                } else {
+                    None
+                }
+            }));
+        }
+        if let Ok(cfg_path) = forgum_platform::config_path() {
+            if let Some(custom_dir) = cfg_path.parent().map(|p| p.join("cows")) {
+                if let Ok(rd) = std::fs::read_dir(&custom_dir) {
+                    cow_names.extend(rd.flatten().filter_map(|e| {
+                        let p = e.path();
+                        if p.extension().is_some_and(|ext| ext.eq_ignore_ascii_case("cow")) {
+                            p.file_stem().map(|s| s.to_string_lossy().into_owned())
+                        } else {
+                            None
+                        }
+                    }));
+                }
+            }
+        }
+        cow_names.sort();
+        cow_names.dedup();
+        if let Some(picked) = coords.pick_from_slice(&cow_names, coords.u_mascot) {
+            scene.cow = picked.clone();
+        } else {
+            scene.cow = cow::resolve_cow_name("random", data_dir);
+        }
+
         // Auto-adapt animal profile defaults if user didn't explicitly override them
         let profile = crate::scenery::get_animal_profile(&scene.cow);
         if explicit_args.eyes.is_none() && (scene.eyes.is_empty() || scene.eyes == "oo") {
@@ -2235,7 +2341,10 @@ pub fn resolve_scene_randomness(
             && explicit_args.mountain.is_none());
 
     if should_randomize_env {
-        let picked_env = crate::scenery::EnvironmentStyle::random();
+        let env_slice = crate::scenery::EnvironmentStyle::ALL_NON_NONE;
+        let picked_env = *coords
+            .pick_from_slice(env_slice, coords.u_env)
+            .unwrap_or(&crate::scenery::EnvironmentStyle::Pasture);
         scene.environment = Some(picked_env.as_str().to_string());
 
         // Harmonize road and mountain to the random biome if not explicitly locked or separately randomized
@@ -2249,11 +2358,19 @@ pub fn resolve_scene_randomness(
     }
 
     if should_randomize_road {
-        scene.road = Some(crate::scenery::RoadStyle::random().as_str().to_string());
+        let road_slice = crate::scenery::RoadStyle::ALL_NON_NONE;
+        let picked_road = *coords
+            .pick_from_slice(road_slice, coords.u_road)
+            .unwrap_or(&crate::scenery::RoadStyle::Dirt);
+        scene.road = Some(picked_road.as_str().to_string());
     }
 
     if should_randomize_mountain {
-        scene.mountain = Some(crate::scenery::MountainStyle::random().as_str().to_string());
+        let mtn_slice = crate::scenery::MountainStyle::ALL_NON_NONE;
+        let picked_mtn = *coords
+            .pick_from_slice(mtn_slice, coords.u_mountain)
+            .unwrap_or(&crate::scenery::MountainStyle::Hills);
+        scene.mountain = Some(picked_mtn.as_str().to_string());
     }
 
     // ── 3. FX AND ANIMATIONS (STATIC & DYNAMIC) ─────────────────────────
@@ -2274,8 +2391,8 @@ pub fn resolve_scene_randomness(
             && explicit_args.animation_type.is_none());
 
     if should_randomize_anim {
-        // Randomly pick between static (stationary mascot) and dynamic (motion)
-        let is_static: bool = rand::random();
+        // Deterministic Fibonacci phyllotaxis static vs dynamic selection
+        let is_static = coords.is_static_animation();
         if is_static {
             scene.animation = Some("static".to_string());
             if should_randomize_fx || scene.effect == "default" {
@@ -2285,13 +2402,19 @@ pub fn resolve_scene_randomness(
         } else {
             scene.animation = Some("dynamic".to_string());
             if should_randomize_fx || scene.effect == "default" || scene.effect == "static" {
-                let dyn_anim = crate::effects::random_dynamic_animation();
-                scene.effect = dyn_anim.to_string();
-                scene.animation_type = Some(dyn_anim.to_string());
+                let dyn_list = crate::effects::DYNAMIC_ANIMATION_TYPES;
+                let picked_dyn = *coords
+                    .pick_from_slice(dyn_list, coords.u_effect)
+                    .unwrap_or(&"walk");
+                scene.effect = picked_dyn.to_string();
+                scene.animation_type = Some(picked_dyn.to_string());
             }
         }
     } else if should_randomize_fx {
-        let picked_effect = crate::effects::random_effect_name();
+        let effect_names = crate::effects::ALL_EFFECTS;
+        let picked_effect = *coords
+            .pick_from_slice(effect_names, coords.u_effect)
+            .unwrap_or(&"breathe");
         scene.effect = picked_effect.to_string();
         scene.animation_type = Some(picked_effect.to_string());
         if picked_effect == "static" {
@@ -2308,7 +2431,12 @@ pub fn resolve_scene_randomness(
             && explicit_args.text.is_none());
 
     if should_randomize_thought {
-        if let Some(f) = fortune::random_fortune(data_dir) {
+        let fortunes = fortune::load_fortunes(data_dir);
+        if !fortunes.is_empty() {
+            if let Some(picked) = coords.pick_from_slice(&fortunes, coords.u_thought) {
+                scene.text = picked.clone();
+            }
+        } else if let Some(f) = fortune::random_fortune(data_dir) {
             scene.text = f;
         }
     }
