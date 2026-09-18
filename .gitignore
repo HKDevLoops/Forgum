@@ -35,12 +35,17 @@ test-renders/
 # Local render dumps (ad-hoc test output)
 graphify-out/
 
-# AI Agent & Planning Artifacts (LLM transcripts, specs, brain docs, agent harnesses)
+# AI Agent & Planning Artifacts (LLM transcripts, specs, brain docs, agent harnesses, instruction markdowns)
 brain/
 docs/superpowers/
 .kilo/
 kilo.json
 .claude/
+.agents/
+.gemini/
+.system_generated/
+AGENTS.md
+agent.md
 testsprite_tests/
 PR1_*.md
 PR2_*.md

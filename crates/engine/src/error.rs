@@ -1,4 +1,4 @@
-//! Strongly-typed error definitions for `forgum-engine`.
+//! Strongly-typed error definitions for `forgum`.
 //!
 //! Provides granular, contextual error variants mapping to standard POSIX/BSD sysexits codes.
 
