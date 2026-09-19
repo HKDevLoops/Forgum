@@ -25,7 +25,7 @@ mkdir -p "${PKG_DIR}/src"
 VERSION="$(grep -m1 '^version' "${REPO_ROOT}/Cargo.toml" | sed -E 's/.*"([^"]+)".*/\1/')"
 cat > "${PKG_DIR}/PKGBUILD" <<EOF
 # Auto-generated for CI. Builds from the local checkout.
-# Maintainer: HKDEVS <hkdevs@example.com>
+# Maintainer: harish2222 (HKDevLoops) <harish2222@users.noreply.github.com>
 pkgname=forgum
 pkgver=${VERSION}
 pkgrel=1

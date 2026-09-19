@@ -23,9 +23,9 @@ ln -sf forgum %{buildroot}%{_bindir}/forgum-engine
 %{_bindir}/forgum-engine
 
 %changelog
-* Sat Sep 19 2026 HKDevLoops <hkdevloops@example.com> - 0.4.0-1
+* Sat Sep 19 2026 harish2222 <harish2222@users.noreply.github.com> - 0.4.0-1
 - Release 0.4.0: Unified keyword mandate, sandbox container support, nature biomes, and split shell integration
-* Sat Sep 05 2026 HKDevLoops <hkdevloops@example.com> - 0.3.0-1
+* Sat Sep 05 2026 harish2222 <harish2222@users.noreply.github.com> - 0.3.0-1
 - Responsive tables, procedural scenery, universal options discovery, and dual binary support
-* Mon Jun 30 2026 HKDEVS <hkdevs@example.com> - 0.1.0-1
+* Mon Jun 30 2026 harish2222 <harish2222@users.noreply.github.com> - 0.1.0-1
 - Initial RPM package release

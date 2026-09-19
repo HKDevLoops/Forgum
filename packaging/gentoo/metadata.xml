@@ -2,8 +2,8 @@
 <!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
 <pkgmetadata>
   <maintainer type="person">
-    <email>hkdevs@example.com</email>
-    <name>HKDevLoops</name>
+    <email>harish2222@users.noreply.github.com</email>
+    <name>harish2222</name>
   </maintainer>
   <longdescription>Cross-platform cowsay+fortune+lolcat with a Rust ANSI animation engine.</longdescription>
 </pkgmetadata>

@@ -625,4 +625,4 @@ Whenever a new terminal window or shell session opens, Forgum automatically lock
 
 Forgum is free, open-source software licensed under the **[MIT License](../LICENSE)**.
 
-*Maintained with ❤️ by the Forgum Contributors.*
+*Created and maintained with ❤️ by [harish2222](https://github.com/harish2222) (HKDevLoops).*

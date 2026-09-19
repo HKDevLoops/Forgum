@@ -2,7 +2,7 @@
 # Base: NanoServer with PowerShell LTS
 FROM mcr.microsoft.com/powershell:lts-nanoserver-ltsc2022
 
-LABEL maintainer="Forgum Contributors"
+LABEL maintainer="harish2222 <harish2222@users.noreply.github.com>"
 LABEL description="Forgum ANSI animation and cowsay engine in Windows Container fully initialized"
 LABEL license="MIT"
 

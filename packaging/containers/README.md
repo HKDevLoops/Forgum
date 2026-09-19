@@ -117,4 +117,4 @@ podman run -it --rm -v "$PWD/custom-config.toml:/home/forgum/.config/forgum/conf
 ---
 
 ## 📜 License
-MIT License - Copyright (c) Forgum Contributors.
+MIT License - Copyright (c) 2024-2026 harish2222 (HKDevLoops).

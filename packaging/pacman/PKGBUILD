@@ -1,7 +1,7 @@
 # Build in CI via makepkg (archlinux action / container). AUR submission is a
 # maintainer tokenless PR — documented.
 
-# Maintainer: HKDEVS <hkdevs@example.com>
+# Maintainer: harish2222 (HKDevLoops) <harish2222@users.noreply.github.com>
 pkgname=forgum
 pkgver=0.4.0
 pkgrel=1

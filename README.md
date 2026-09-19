@@ -1042,6 +1042,6 @@ MIT. See `LICENSE`.
             ||     ||
 ```
 
-*Made with ❤️ and Rust · For the terminal cow in all of us*
+*Made with ❤️ and Rust by [harish2222](https://github.com/harish2222) (HKDevLoops) · For the terminal cow in all of us*
 
 </div>

@@ -19,7 +19,7 @@ RUN cargo build --release --locked -p forgum-engine --bin forgum
 
 FROM debian:bookworm-slim AS base
 
-LABEL maintainer="Forgum Contributors"
+LABEL maintainer="harish2222 <harish2222@users.noreply.github.com>"
 LABEL description="POSIX Linux & macOS-compatible interactive terminal container with Forgum fully initialized"
 LABEL license="MIT"
 

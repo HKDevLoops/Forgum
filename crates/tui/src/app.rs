@@ -3808,7 +3808,7 @@ export extern "forgum" [
                         .add_modifier(Modifier::BOLD),
                 )));
                 lines.push(Line::from(Span::styled(
-                    "  Copyright (c) 2026 Forgum Authors & Contributors",
+                    "  Copyright (c) 2024-2026 harish2222 (HKDevLoops)",
                     Style::default().fg(Color::DarkGray),
                 )));
                 lines.push(Line::from(""));

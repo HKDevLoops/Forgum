@@ -29,7 +29,7 @@ RUN cargo build --release --locked -p forgum-engine --bin forgum
 # --- Stage 2: Runtime Sandbox ---
 FROM debian:bookworm-slim AS runtime
 
-LABEL maintainer="HKDevLoops <hkdevloops@example.com>"
+LABEL maintainer="harish2222 <harish2222@users.noreply.github.com>"
 LABEL description="Zero-modification interactive sandbox container for Forgum"
 LABEL license="MIT"
 
