@@ -47,7 +47,7 @@ forgum herd <SUBCOMMAND> [OPTIONS]
 | `effect` | `<NAME> [--session <ID>] [--all]` | Dynamically hot-swaps active animation effect (`walk`, `breathe`, `float`, `fly`, `glitch`, etc.). |
 | `cow` | `<NAME> [--session <ID>] [--all]` | Dynamically hot-swaps animal mascot model (`dragon`, `tux`, `vader`, `corgi`, etc.). |
 | `eyes` | `<GLYPHS> [--session <ID>] [--all]` | Updates eye characters in real time (e.g. `oo`, `$$`, `@@`, `xx`, `^^`). |
-| `tongue` | `<GLYPH> [--session <ID>] [--all]` | Updates tongue glyph in real time (e.g. `U `, `||`, `  `). |
+| `tongue` | `<GLYPH> [--session <ID>] [--all]` | Updates tongue glyph in real time (e.g. `U `, `\|\|`, `  `). |
 | `color` | `<MODE> [--session <ID>] [--all]` | Hot-swaps color palette mode (`natural`, `rainbow`, `aurora`, `matrix`, `fire`, `pastel`). |
 | `speed` | `<VALUE> [--session <ID>] [--all]` | Adjusts physics update rate multiplier (e.g. `0.5` for half-speed, `2.0` for double-speed). |
 | `pause` | `[--session <ID>] [--all]` | Suspends simulation clock and animation updates (drops CPU usage to 0.0%). |

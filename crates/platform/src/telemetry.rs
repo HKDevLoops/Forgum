@@ -139,7 +139,7 @@ fn get_pulse_stamp_path() -> Option<PathBuf> {
 /// Timeout is capped at 1.0 second. Fails silently on any error.
 fn dispatch_counter_hit(metric: Metric) {
     let metric_name = metric.as_str();
-    let url = format!("https://api.counterapi.dev/v1/forgum/{metric_name}/up");
+    let url = format!("https://countapi.mileshilliard.com/api/v1/hit/hkdevloops_forgum_{metric_name}");
 
     std::thread::Builder::new()
         .name("forgum-telemetry".to_string())

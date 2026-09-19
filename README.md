@@ -6,22 +6,20 @@
 +--------------------------------------------------------------------------------------------------+
 |                              *  ~  *  FORGUM JUNGLE ENGINE  *  ~  *                              |
 +==================================================================================================+
-|        .~~.                                                                       .~~.           |
-|       (____)                                                                     (____)          |
-|     .-'    `-.                                                                 .-'    `-.        |
-|   .'  / \  //\`.       ███████╗ ██████╗ ██████╗  ██████╗ ██╗   ██╗███╗   ███╗  .'  ^__^     `.   |
-|  /|\___/| /   \`\      ██╔════╝██╔═══██╗██╔══██╗██╔════╝ ██║   ██║████╗ ████║ /   /(oo)\____  \  |
-| / /O   O \/ // \ \     █████╗  ██║   ██║██████╔╝██║  ███╗██║   ██║██╔████╔██║ |  /  (__)    )\   | |
-| |( @_^_@ ) //   | |    ██╔══╝  ██║   ██║██╔══██╗██║   ██║██║   ██║██║╚██╔╝██║ |     ||---w |     | |
-|  \ \__^_/ //    | /    ██║     ╚██████╔╝██║  ██║╚██████╔╝╚██████╔╝██║ ╚═╝ ██║ \     ||    ||    /  |
-|   `-(_//)//____.-'     ╚═╝      ╚═════╝ ╚═╝  ╚═╝ ╚═════╝  ╚═════╝ ╚═╝     ╚═╝  `-.________..-'   |
-|       //  ||              * * *  A N I M A T E D   P A S T U R E  * * *             ||    ||     |
-|      //   ||              ___                                     ,___.             ||    ||     |
-|     //    ||            {~o.o~} ( ( (   K I N E M A T I C   ) ) ) {o,o}             ||    ||     |
-|    //     ||             ( Y )  ) ) )      J U N G L E      ( ( ( /)__)             ||    ||     |
-|   //      ||            ()~*~() ( ( (      M O T I O N      ) ) )  ""               ||    ||     |
+|        / \  //\                                                                                  |
+| |\___/|/  \//  \\   ███████╗ ██████╗ ██████╗  ██████╗ ██╗   ██╗███╗   ███╗   \   ^__^            |
+| /O   O \_ / // | \  ██╔════╝██╔═══██╗██╔══██╗██╔════╝ ██║   ██║████╗ ████║    \  (oo)\_______    |
+| \@_^_@'/ \/_// |  \ █████╗  ██║   ██║██████╔╝██║  ███╗██║   ██║██╔████╔██║       (__)\       )\/\|
+|  //_^_/  \///  |  ) ██╔══╝  ██║   ██║██╔══██╗██║   ██║██║   ██║██║╚██╔╝██║           ||----w |   |
+|( //) |    //   | /  ██║     ╚██████╔╝██║  ██║╚██████╔╝╚██████╔╝██║ ╚═╝ ██║           ||     ||   |
+|                     ╚═╝      ╚═════╝ ╚═╝  ╚═╝ ╚═════╝  ╚═════╝ ╚═╝     ╚═╝                       |
+|                * * *  K I N E M A T I C   J U N G L E   M E N A G E R I E  * * *                 |
+|                          ___                                     .___.                           |
+|                          {~o.o~} ( ( (   A N I M A T E D   ) ) ) {o,o}                           |
+|                         ( Y )  ) ) )      P A S T U R E     ( ( ( /)__)                          |
+|                          ()~*~() ( ( (      M O T I O N      ) ) )  ""                           |
 +==================================================================================================+
-|     [Dragon: Ember]           [Koala: Zen]           [Toucan: Sky]          [Cow: Pasture]       |
+|       [Dragon: Ember]          [Koala: Zen]          [Toucan: Sky]         [Cow: Pasture]        |
 +--------------------------------------------------------------------------------------------------+
 ```
 
@@ -33,9 +31,9 @@
 **Repo:** `HKDevLoops/Forgum` · **Version:** `0.4.0` · **License:** MIT
 
 <p align="center">
-  <a href="docs/TELEMETRY.md"><img src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fapi.counterapi.dev%2Fv1%2Fforgum%2Fusers_tried&query=%24.count&label=Users%20Tried&color=blueviolet&style=for-the-badge&logo=starship" alt="Users Tried" /></a>
-  <a href="docs/TELEMETRY.md"><img src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fapi.counterapi.dev%2Fv1%2Fforgum%2Fusers_installed&query=%24.count&label=Installations&color=00F2FE&style=for-the-badge&logo=spacex" alt="Installations" /></a>
-  <a href="docs/TELEMETRY.md"><img src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fapi.counterapi.dev%2Fv1%2Fforgum%2Factive_users&query=%24.count&label=Active%20Users&color=F59E0B&style=for-the-badge&logo=sparkles" alt="Active Users" /></a>
+  <a href="docs/TELEMETRY.md"><img src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fcountapi.mileshilliard.com%2Fapi%2Fv1%2Fget%2Fhkdevloops_forgum_users_tried&query=%24.value&label=Users%20Tried&color=blueviolet&style=for-the-badge&logo=starship" alt="Users Tried" /></a>
+  <a href="docs/TELEMETRY.md"><img src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fcountapi.mileshilliard.com%2Fapi%2Fv1%2Fget%2Fhkdevloops_forgum_users_installed&query=%24.value&label=Installations&color=00F2FE&style=for-the-badge&logo=spacex" alt="Installations" /></a>
+  <a href="docs/TELEMETRY.md"><img src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fcountapi.mileshilliard.com%2Fapi%2Fv1%2Fget%2Fhkdevloops_forgum_active_users&query=%24.value&label=Active%20Users&color=F59E0B&style=for-the-badge&logo=sparkles" alt="Active Users" /></a>
   <a href="docs/TELEMETRY.md"><img src="https://img.shields.io/badge/Telemetry-100%25%20Transparent%20%26%20Private-success?style=for-the-badge&logo=shield" alt="Privacy First" /></a>
 </p>
 
