@@ -853,6 +853,7 @@ pub enum ShellArg {
     Fish,
     Pwsh,
     Cmd,
+    #[value(name = "powershell", alias = "power-shell", alias = "posh")]
     PowerShell,
     Elvish,
     Nushell,

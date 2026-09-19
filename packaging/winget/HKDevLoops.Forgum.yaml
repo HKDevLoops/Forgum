@@ -1,33 +1,33 @@
 # yaml-language-server: $schema=https://aka.ms/winget-manifest.version.1.6.0.schema.json
 PackageIdentifier: HKDevLoops.Forgum
-PackageVersion: 0.0.1-alpha.1
+PackageVersion: 0.4.0
 DefaultLocale: en-US
 ManifestType: version
 ManifestVersion: 1.6.0
 ---
 # yaml-language-server: $schema=https://aka.ms/winget-manifest.installer.1.6.0.schema.json
 PackageIdentifier: HKDevLoops.Forgum
-PackageVersion: 0.0.1-alpha.1
+PackageVersion: 0.4.0
 Platform:
   - Windows.Desktop
 MinimumOSVersion: 10.0.17763.0
 InstallerType: zip
 Installers:
   - Architecture: x64
-    InstallerUrl: https://github.com/HKDevLoops/Forgum/releases/download/alpha-0.0.1/forgum-0.0.1-alpha.1-windows-x64.zip
+    InstallerUrl: https://github.com/HKDevLoops/Forgum/releases/download/v0.4.0/forgum-0.4.0-windows-x64.zip
     InstallerSha256: PLACEHOLDER_HASH_X64
   - Architecture: arm64
-    InstallerUrl: https://github.com/HKDevLoops/Forgum/releases/download/alpha-0.0.1/forgum-0.0.1-alpha.1-windows-arm64.zip
+    InstallerUrl: https://github.com/HKDevLoops/Forgum/releases/download/v0.4.0/forgum-0.4.0-windows-arm64.zip
     InstallerSha256: PLACEHOLDER_HASH_ARM64
 Commands:
-  - forgum-engine
   - forgum
+  - forgum-engine
 ManifestType: installer
 ManifestVersion: 1.6.0
 ---
 # yaml-language-server: $schema=https://aka.ms/winget-manifest.defaultLocale.1.6.0.schema.json
 PackageIdentifier: HKDevLoops.Forgum
-PackageVersion: 0.0.1-alpha.1
+PackageVersion: 0.4.0
 PackageLocale: en-US
 Publisher: HKDevLoops
 PublisherUrl: https://github.com/HKDevLoops

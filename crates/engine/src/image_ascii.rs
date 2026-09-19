@@ -28,6 +28,10 @@ pub enum ImageAsciiError {
     Platform(#[from] forgum_platform::PlatformError),
     #[error("invalid dimension: {0}")]
     InvalidDimension(String),
+    #[error("invalid mascot name: {0}")]
+    InvalidMascotName(String),
+    #[error("{0}")]
+    Custom(String),
 }
 
 /// Color rendering mode for ASCII conversion.
@@ -408,7 +412,14 @@ pub fn save_custom_cow(cow_name: &str, cow_content: &str) -> Result<PathBuf, Ima
     let dir = custom_cows_dir()?;
     std::fs::create_dir_all(&dir)?;
     let clean_name = cow_name.trim().trim_end_matches(".cow");
-    let target = dir.join(format!("{clean_name}.cow"));
+    let safe_name = Path::new(clean_name)
+        .file_name()
+        .and_then(|s| s.to_str())
+        .unwrap_or("custom");
+    if safe_name.is_empty() || safe_name.contains("..") {
+        return Err(ImageAsciiError::Custom("Invalid mascot name".to_string()));
+    }
+    let target = dir.join(format!("{safe_name}.cow"));
     std::fs::write(&target, cow_content)?;
     Ok(target)
 }

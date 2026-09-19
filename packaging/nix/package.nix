@@ -2,24 +2,29 @@
 
 pkgs: pkgs.rustPlatform.buildRustPackage {
   pname = "forgum";
-  version = "0.0.1-alpha.1";
+  version = "0.4.0";
 
   src = ../..;
 
   cargoLock.lockFile = ../../Cargo.lock;
 
-  # Build only the engine binary; the workspace has multiple crates
-  # (some with platform-specific deps), so scope build/test to the engine.
-  cargoBuildFlags = [ "-p" "forgum-engine" ];
-  cargoTestFlags = [ "-p" "forgum-engine" ];
+  # Build the forgum binary
+  cargoBuildFlags = [ "-p" "forgum-engine" "--bin" "forgum" ];
+  cargoTestFlags = [ "-p" "forgum-engine" "--bin" "forgum" ];
 
   nativeBuildInputs = [ pkgs.pkg-config ];
   buildInputs = [ ];
 
+  postInstall = ''
+    # Provide backward compatibility symlink
+    ln -sf forgum $out/bin/forgum-engine
+  '';
+
   meta = {
-    description = "forgum - cross-platform cowsay+fortune+lolcat";
+    description = "Forgum - cross-platform ANSI animation mascot and shell integration engine";
     homepage = "https://github.com/HKDevLoops/Forgum";
     license = pkgs.lib.licenses.mit;
+    mainProgram = "forgum";
     maintainers = [ ];
   };
 }

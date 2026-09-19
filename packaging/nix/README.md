@@ -1,11 +1,30 @@
 # ╔══════════════════════════════════════════════════════════════════════════╗
-# ║                   🐧  N I X   P A C K A G I N G  🐧                    ║
-# ║                                                                        ║
-# ║   Build and distribute Forgum from the Nix universe.                   ║
-# ╚══════════════════════════════════════════════════════════════════════════╝
+║                   🐧  N I X   P A C K A G I N G  🐧                    ║
+║                                                                        ║
+║   Build, distribute, and sandbox Forgum with Nix and NixOS.            ║
+╚══════════════════════════════════════════════════════════════════════════╝
 
-This directory contains Nix expressions to build and distribute `forgum`
-(cross-platform cowsay+fortune+lolcat) from the repository.
+This directory contains production Nix expressions and NixOS modules to build, run, and distribute `forgum` without modifying host configurations.
+
+---
+
+## ⚡ Zero-Host-Modification Instant Sandbox Run
+
+You can run and test Forgum instantly in an isolated ephemeral environment without installing anything to your machine:
+
+```sh
+# Run interactive mascot say in sandbox
+nix run github:HKDevLoops/Forgum -- say "Zero-config Nix sandbox test!" --cow tux
+
+# Run mascot animation showcase
+nix run github:HKDevLoops/Forgum -- showcase
+
+# Run battle arena
+nix run github:HKDevLoops/Forgum -- battle --player Knight --cpu Dragon
+
+# Run doctor diagnostics
+nix run github:HKDevLoops/Forgum -- doctor
+```
 
 ---
 
@@ -13,46 +32,48 @@ This directory contains Nix expressions to build and distribute `forgum`
 
 | File | Purpose |
 |------|---------|
-| `flake.nix` | Standard Nix flake (nixpkgs + flake-utils) |
-| `package.nix` | Callable package expression for non-flake use |
-| `module.nix` | NixOS/home-manager module (`programs.forgum`) |
-| `README.md` | This file |
+| `flake.nix` | Standard Nix flake with package, apps, devShell, and NixOS module |
+| `package.nix` | Callable standalone package expression (`pkgs.callPackage`) |
+| `module.nix` | NixOS / home-manager module (`programs.forgum`) |
+| `README.md` | This documentation |
 
 ---
 
-## 🏗️ Building with the flake (Linux CI)
+## 🏗️ Building with Flakes
 
 ```sh
-nix build .#default
-# or just:
+# Build the default forgum package
 nix build
-```
 
-This builds the `forgum-engine` crate via `cargo build -p forgum-engine`
-against the workspace `Cargo.lock` at the repo root.
+# Run the newly built binary
+./result/bin/forgum --version
+```
 
 ---
 
-## 🔧 Building without flakes
+## 🔧 Building without Flakes
 
 ```sh
 nix-build -E 'with import <nixpkgs> {}; import ./packaging/nix/package.nix {}'
+./result/bin/forgum doctor
 ```
 
 ---
 
-## 🐚 NixOS / home-manager module
+## 🐚 NixOS / home-manager Module
 
-Enable the shell hook for bash/zsh/fish:
+Enable the automatic shell hooks for Bash, Zsh, Fish, and Nushell:
 
 ```nix
-imports = [ (import ./packaging/nix/flake.nix).nixosModules.forgum ];
-programs.forgum.enable = true;
-# programs.forgum.package = pkgs.forgum; # optional override
-```
+{
+  imports = [ (import ./packaging/nix/flake.nix).nixosModules.forgum ];
 
-> Note: the module is best-effort and untested in CI (Nix CI runs on
-> Linux only). It assumes `forgum init <shell>` prints shell init code.
+  programs.forgum = {
+    enable = true;
+    # package = pkgs.forgum; # Optional package override
+  };
+}
+```
 
 ---
 

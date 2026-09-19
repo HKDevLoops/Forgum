@@ -527,7 +527,13 @@ pub fn execute_command_with_shell_fallback(cmd: &[String]) -> io::Result<std::pr
 
     #[cfg(not(windows))]
     {
-        Command::new("sh").arg("-c").arg(cmd.join(" ")).output()
+        // Safe execution without vulnerable string concatenation
+        Command::new("sh")
+            .arg("-c")
+            .arg(r#"exec "$@""#)
+            .arg("--")
+            .args(cmd)
+            .output()
     }
 }
 

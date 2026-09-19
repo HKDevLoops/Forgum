@@ -1,4 +1,22 @@
 # Podman / Dockerfile for Forgum: Hybrid Linux + macOS (Darwin-style) Terminal Environment
+# Multi-stage build enabling reproducible compilation and zero-host-modification testing
+FROM rust:1.80-slim-bookworm AS builder
+
+WORKDIR /build
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    pkg-config \
+    libssl-dev \
+    git \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY Cargo.toml Cargo.lock ./
+COPY crates/ crates/
+COPY data/ data/
+
+RUN cargo build --release --locked -p forgum-engine --bin forgum
+
 FROM debian:bookworm-slim AS base
 
 LABEL maintainer="Forgum Contributors"
@@ -46,31 +64,42 @@ RUN mkdir -p /home/forgum/.config/forgum \
              /home/forgum/.local/state/forgum \
              /tmp/forgum
 
-COPY data/ /opt/homebrew/share/forgum/
-COPY data/ /home/forgum/.local/share/forgum/
+COPY --from=builder /build/data/ /opt/homebrew/share/forgum/
+COPY --from=builder /build/data/ /home/forgum/.local/share/forgum/
 COPY packaging/containers/configs/unix-darwin-config.toml /home/forgum/.config/forgum/config.toml
 
-# Copy the forgum-engine binary
-COPY target/release/forgum-engine /opt/homebrew/bin/forgum-engine
-RUN chmod +x /opt/homebrew/bin/forgum-engine && \
-    ln -sf /opt/homebrew/bin/forgum-engine /usr/local/bin/forgum && \
-    ln -sf /opt/homebrew/bin/forgum-engine /usr/local/bin/forgum-engine
+# Copy the compiled forgum binary
+COPY --from=builder /build/target/release/forgum /opt/homebrew/bin/forgum
+RUN chmod +x /opt/homebrew/bin/forgum && \
+    ln -sf /opt/homebrew/bin/forgum /usr/local/bin/forgum && \
+    ln -sf /opt/homebrew/bin/forgum /opt/homebrew/bin/forgum-engine && \
+    ln -sf /opt/homebrew/bin/forgum /usr/local/bin/forgum-engine
+
+# In-container update script for fetching repo updates
+RUN cat << 'EOF' > /opt/homebrew/bin/forgum-update
+#!/bin/bash
+set -e
+echo "==> Checking for Forgum updates..."
+forgum update --check
+EOF
+RUN chmod +x /opt/homebrew/bin/forgum-update && \
+    ln -sf /opt/homebrew/bin/forgum-update /usr/local/bin/forgum-update
 
 # Configure thorough shell initialization for Zsh, Bash, Fish, and Tmux
 RUN echo '# Forgum macOS/Zsh hook' >> /home/forgum/.zshrc && \
-    echo 'eval "$(/opt/homebrew/bin/forgum-engine init zsh)"' >> /home/forgum/.zshrc && \
-    echo 'alias cowsay="forgum-engine say"' >> /home/forgum/.zshrc && \
-    echo 'alias lolcat="forgum-engine render"' >> /home/forgum/.zshrc && \
+    echo 'eval "$(/opt/homebrew/bin/forgum init zsh)"' >> /home/forgum/.zshrc && \
+    echo 'alias cowsay="forgum say"' >> /home/forgum/.zshrc && \
+    echo 'alias lolcat="forgum render"' >> /home/forgum/.zshrc && \
     \
     echo '# Forgum Linux/Bash hook' >> /home/forgum/.bashrc && \
-    echo 'eval "$(/opt/homebrew/bin/forgum-engine init bash)"' >> /home/forgum/.bashrc && \
-    echo 'alias cowsay="forgum-engine say"' >> /home/forgum/.bashrc && \
-    echo 'alias lolcat="forgum-engine render"' >> /home/forgum/.bashrc && \
+    echo 'eval "$(/opt/homebrew/bin/forgum init bash)"' >> /home/forgum/.bashrc && \
+    echo 'alias cowsay="forgum say"' >> /home/forgum/.bashrc && \
+    echo 'alias lolcat="forgum render"' >> /home/forgum/.bashrc && \
     \
     echo '# Forgum Fish hook' >> /home/forgum/.config/fish/config.fish && \
-    echo '/opt/homebrew/bin/forgum-engine init fish | source' >> /home/forgum/.config/fish/config.fish && \
+    echo '/opt/homebrew/bin/forgum init fish | source' >> /home/forgum/.config/fish/config.fish && \
     \
-    /opt/homebrew/bin/forgum-engine tmux install > /home/forgum/.tmux.conf 2>/dev/null || true
+    /opt/homebrew/bin/forgum tmux install > /home/forgum/.tmux.conf 2>/dev/null || true
 
 # Copy shell verification test suite
 COPY packaging/containers/scripts/test-all-shells.sh /home/forgum/test-all-shells.sh

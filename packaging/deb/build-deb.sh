@@ -24,11 +24,12 @@ cd "${REPO_ROOT}"
 mkdir -p "${DEB_DIR}/DEBIAN"
 mkdir -p "${DEB_DIR}/usr/bin"
 
-# Build the engine binary from source (self-contained; no release download needed).
-echo "Building forgum-engine for version ${VERSION}..."
-cargo build --release --locked -p forgum-engine
-cp "target/release/forgum-engine" "${DEB_DIR}/usr/bin/forgum-engine"
-chmod 755 "${DEB_DIR}/usr/bin/forgum-engine"
+# Build the engine binary from source
+echo "Building forgum for version ${VERSION}..."
+cargo build --release --locked -p forgum-engine --bin forgum
+cp "target/release/forgum" "${DEB_DIR}/usr/bin/forgum"
+chmod 755 "${DEB_DIR}/usr/bin/forgum"
+ln -sf "forgum" "${DEB_DIR}/usr/bin/forgum-engine"
 
 # Copy control and postinst
 cp "${SCRIPT_DIR}/DEBIAN/control" "${DEB_DIR}/DEBIAN/"

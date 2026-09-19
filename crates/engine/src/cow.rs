@@ -42,7 +42,16 @@ pub fn load_cow_with_landmarks(
     thoughts: &str,
 ) -> (String, Vec<(usize, usize)>) {
     let clean = cow_name.trim().to_ascii_lowercase();
-    let resolved = match clean.as_str() {
+    let sanitized = Path::new(&clean)
+        .file_name()
+        .and_then(|s| s.to_str())
+        .unwrap_or("default");
+    let safe_clean = if sanitized.is_empty() || sanitized.contains("..") {
+        "default"
+    } else {
+        sanitized
+    };
+    let resolved = match safe_clean {
         "cow" | "cowsay" | "the-cow" => "default",
         "kittens" => "kitten",
         "nyan-cat" | "nyancat" | "nyan_cat" => "nyan",
@@ -106,7 +115,16 @@ pub fn load_cow_with_landmarks(
 pub fn resolve_cow_name(cow_name: &str, data_dir: &Path) -> String {
     if !cow_name.trim().eq_ignore_ascii_case("random") {
         let clean = cow_name.trim().to_ascii_lowercase();
-        let cow_name = match clean.as_str() {
+        let sanitized = Path::new(&clean)
+            .file_name()
+            .and_then(|s| s.to_str())
+            .unwrap_or("default");
+        let safe_clean = if sanitized.is_empty() || sanitized.contains("..") {
+            "default"
+        } else {
+            sanitized
+        };
+        let cow_name = match safe_clean {
             "cow" | "cowsay" | "the-cow" => "default",
             "kittens" => "kitten",
             "nyan-cat" | "nyancat" | "nyan_cat" => "nyan",

@@ -1,0 +1,60 @@
+services:
+  # Interactive zero-modification sandbox terminal
+  forgum:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: forgum:latest
+    container_name: forgum-sandbox
+    stdin_open: true
+    tty: true
+    environment:
+      - COLORTERM=truecolor
+      - TERM=xterm-256color
+      - LANG=C.UTF-8
+    command: ["/bin/zsh", "-l"]
+
+  # Run mascot showcase in container
+  showcase:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: forgum:latest
+    stdin_open: true
+    tty: true
+    environment:
+      - COLORTERM=truecolor
+      - TERM=xterm-256color
+    command: ["forgum", "showcase"]
+
+  # Run interactive Battle Arena in container
+  battle:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: forgum:latest
+    stdin_open: true
+    tty: true
+    environment:
+      - COLORTERM=truecolor
+      - TERM=xterm-256color
+    command: ["forgum", "battle", "--player", "Knight", "--cpu", "Dragon"]
+
+  # Run diagnostic doctor
+  doctor:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: forgum:latest
+    environment:
+      - COLORTERM=truecolor
+      - TERM=xterm-256color
+    command: ["forgum", "doctor"]
+
+  # Run cross-shell verification suite
+  test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: forgum:latest
+    command: ["/usr/local/bin/test-all-shells.sh"]

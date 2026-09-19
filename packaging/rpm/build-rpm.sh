@@ -20,15 +20,13 @@ cd "${REPO_ROOT}"
 RPM_DIR="$(pwd)/rpmbuild"
 mkdir -p "${RPM_DIR}"/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
 
-# Build the engine binary from source (self-contained; no release download needed).
-echo "Building forgum-engine for version ${VERSION}..."
-cargo build --release --locked -p forgum-engine
-cp "target/release/forgum-engine" "${RPM_DIR}/SOURCES/forgum-engine"
-chmod 755 "${RPM_DIR}/SOURCES/forgum-engine"
-# rpmbuild runs %install with cwd set to the BUILD dir, where the spec
-# expects a relative `forgum-engine`. Stage a copy there too.
-cp "target/release/forgum-engine" "${RPM_DIR}/BUILD/forgum-engine"
-chmod 755 "${RPM_DIR}/BUILD/forgum-engine"
+# Build the forgum binary from source
+echo "Building forgum for version ${VERSION}..."
+cargo build --release --locked -p forgum-engine --bin forgum
+cp "target/release/forgum" "${RPM_DIR}/SOURCES/forgum"
+chmod 755 "${RPM_DIR}/SOURCES/forgum"
+cp "target/release/forgum" "${RPM_DIR}/BUILD/forgum"
+chmod 755 "${RPM_DIR}/BUILD/forgum"
 
 rpmbuild -bb --define "_topdir ${RPM_DIR}" --define "version ${VERSION}" "${SCRIPT_DIR}/forgum.spec"
 

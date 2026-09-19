@@ -1,2 +1,7 @@
 #!/bin/bash
-chmod +x /usr/bin/forgum-engine
+set -e
+
+if [ -f /usr/bin/forgum ]; then
+    chmod +x /usr/bin/forgum
+    ln -sf /usr/bin/forgum /usr/bin/forgum-engine
+fi
