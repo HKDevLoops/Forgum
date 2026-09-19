@@ -11,9 +11,9 @@
 |     .-'    `-.                                                                 .-'    `-.        |
 |   .'  / \  //\`.       ███████╗ ██████╗ ██████╗  ██████╗ ██╗   ██╗███╗   ███╗  .'  ^__^     `.   |
 |  /|\___/| /   \`\      ██╔════╝██╔═══██╗██╔══██╗██╔════╝ ██║   ██║████╗ ████║ /   /(oo)\____  \  |
-| / /O   O \/ // \ \     █████╗  ██║   ██║██████╔╝██║  ███╗██║   ██║██╔████╔██║ |  /  (__)    )\ | |
-| |( @_^_@ ) //   | |    ██╔══╝  ██║   ██║██╔══██╗██║   ██║██║   ██║██║╚██╔╝██║ |     ||---w | | | |
-|  \ \__^_/ //    | /    ██║     ╚██████╔╝██║  ██║╚██████╔╝╚██████╔╝██║ ╚═╝ ██║ \     ||    || / / |
+| / /O   O \/ // \ \     █████╗  ██║   ██║██████╔╝██║  ███╗██║   ██║██╔████╔██║ |  /  (__)    )\   | |
+| |( @_^_@ ) //   | |    ██╔══╝  ██║   ██║██╔══██╗██║   ██║██║   ██║██║╚██╔╝██║ |     ||---w |     | |
+|  \ \__^_/ //    | /    ██║     ╚██████╔╝██║  ██║╚██████╔╝╚██████╔╝██║ ╚═╝ ██║ \     ||    ||    /  |
 |   `-(_//)//____.-'     ╚═╝      ╚═════╝ ╚═╝  ╚═╝ ╚═════╝  ╚═════╝ ╚═╝     ╚═╝  `-.________..-'   |
 |       //  ||              * * *  A N I M A T E D   P A S T U R E  * * *             ||    ||     |
 |      //   ||              ___                                     ,___.             ||    ||     |
@@ -30,7 +30,7 @@
 > zero-alloc dirty-damage rasterization, fail-safe signal/input handling, shell hooks, daemons, and capability probes.
 > Cross-platform on Windows, macOS, and Linux.
 
-**Repo:** `HKDevLoops/Forgum` · **Version:** `alpha-0.0.1` · **License:** MIT
+**Repo:** `HKDevLoops/Forgum` · **Version:** `0.4.0` · **License:** MIT
 
 <p align="center">
   <a href="docs/TELEMETRY.md"><img src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fapi.counterapi.dev%2Fv1%2Fforgum%2Fusers_tried&query=%24.count&label=Users%20Tried&color=blueviolet&style=for-the-badge&logo=starship" alt="Users Tried" /></a>
@@ -57,7 +57,7 @@ Forgum features a celestial, **Omarchy and Celestial Shell-inspired Terminal UI 
 #### Windows (PowerShell 5.1 / PowerShell 7+):
 ```powershell
 # Interactive Celestial TUI Wizard:
-irm https://raw.githubusercontent.com/HKDevLoops/Forgum/main/install.ps1 | iex
+irm https://raw.githubusercontent.com/HKDevLoops/Forgum/dev/install.ps1 | iex
 
 # Or run locally from clone:
 ./install.ps1
@@ -66,7 +66,7 @@ irm https://raw.githubusercontent.com/HKDevLoops/Forgum/main/install.ps1 | iex
 #### macOS & Linux (Bash / Zsh / Fish):
 ```bash
 # Interactive Celestial TUI Wizard:
-curl -fsSL https://raw.githubusercontent.com/HKDevLoops/Forgum/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/HKDevLoops/Forgum/dev/install.sh | bash
 
 # Or run locally from clone:
 ./install.sh
@@ -114,17 +114,17 @@ Forgum natively supports all 15 major terminal shells. Add the one-line hook or 
 
 | Shell | Shell Prompt Hook (`forgum init <shell>`) | Completions Generator (`forgum completions <shell>`) |
 | :--- | :--- | :--- |
-| **PowerShell 7+ (`pwsh`)** | `forgum init pwsh \| Out-String \| Invoke-Expression` | `forgum completions pwsh` |
-| **Windows PowerShell 5.1** | `forgum init powershell \| Out-String \| Invoke-Expression` | `forgum completions powershell` |
+| **PowerShell 7+ (`pwsh`)** | `forgum init pwsh &#124; Out-String &#124; Invoke-Expression` | `forgum completions pwsh` |
+| **Windows PowerShell 5.1** | `forgum init powershell &#124; Out-String &#124; Invoke-Expression` | `forgum completions powershell` |
 | **Bash** | `eval "$(forgum init bash)"` | `forgum completions bash` |
 | **Zsh** | `eval "$(forgum init zsh)"` | `forgum completions zsh` |
-| **Fish** | `forgum init fish \| source` | `forgum completions fish` |
-| **Nushell** | `forgum init nushell \| save -f ~/.config/nushell/forgum.nu; use ~/.config/nushell/forgum.nu *` | `forgum completions nu` |
-| **Elvish** | `eval (forgum init elvish \| slurp)` | `forgum completions elvish` |
+| **Fish** | `forgum init fish &#124; source` | `forgum completions fish` |
+| **Nushell** | `forgum init nushell &#124; save -f ~/.config/nushell/forgum.nu; use ~/.config/nushell/forgum.nu *` | `forgum completions nu` |
+| **Elvish** | `eval (forgum init elvish &#124; slurp)` | `forgum completions elvish` |
 | **Cmd (`cmd.exe`)** | `forgum init cmd > %TEMP%\forgum_cmd.cmd && call %TEMP%\forgum_cmd.cmd` | N/A (doskey alias) |
 | **Carapace** | Sourced via Carapace engine | `forgum completions carapace` |
 | **Xonsh** | `exec($(forgum init xonsh))` | `forgum completions xonsh` |
-| **Tcsh (`csh`)** | `eval \`forgum init tcsh\`` | `forgum completions tcsh` |
+| **Tcsh (`csh`)** | <code>eval &#96;forgum init tcsh&#96;</code> | `forgum completions tcsh` |
 | **Ksh (`ksh93/mksh`)** | `eval "$(forgum init ksh)"` | `forgum completions ksh` |
 | **Ion** | `eval (forgum init ion)` | `forgum completions ion` |
 | **Oil (`osh/ysh`)** | `eval "$(forgum init oil)"` | `forgum completions oil` |
@@ -490,32 +490,32 @@ forgum config list
 | :--- | :--- | :--- | :--- | :--- |
 | `render` | *(default)* | `[OPTIONS] [TEXT]...` | Renders an animated or static scene with procedural scenery, particles, and speech/thought bubbles above the prompt. | `forgum render --help` |
 | `think` | `ponder` | `[OPTIONS] [TEXT]...` | Generates a classic thought bubble `( ... )` connected with circular `o` thought glyphs. Random fortune if text omitted. | `forgum think --help` |
-| `say` | `speak` | `[OPTIONS] [TEXT]...` | Classic cowsay speech bubble `\| ... \|` with diagonal `\` pointer stems and full kinetic animation effects. | `forgum say --help` |
+| `say` | `speak` | `[OPTIONS] [TEXT]...` | Classic cowsay speech bubble &#124; ... &#124; with diagonal `\` pointer stems and full kinetic animation effects. | `forgum say --help` |
 | `fortune` | `quote` | *(none)* | Fetches and prints a random philosophical, witty, or humorous fortune quote from the pasture catalog. | `forgum fortune --help` |
 | `tui` | `menu`, `ui`, `studio` | `[TAB]` | Fullscreen interactive terminal studio and dashboard for live mascot auditioning, scenery selection, theme tuning, package management, and system configuration. | `forgum tui` |
 | `install` | `setup`, `wizard`, `installer` | `[--headless] [--telemetry <CONSENT>]` | Interactive celestial setup wizard and shell installer with host diagnostics and transparent consent controls. | `forgum install` |
-| `uninstall` | `remove`, `deorbit`, `uninstaller` | `[-m soft\|purge] [-y] [--tui]` | Cleanly uninstalls Forgum with user-directed choice (Soft keeps config, Purge wipes completely, or interactive TUI). | `forgum uninstall --help` |
+| `uninstall` | `remove`, `deorbit`, `uninstaller` | `[-m soft&#124;purge] [-y] [--tui]` | Cleanly uninstalls Forgum with user-directed choice (Soft keeps config, Purge wipes completely, or interactive TUI). | `forgum uninstall --help` |
 | `update` | `upgrade` | `[--check]` | Checks for updates or upgrades Forgum using the detected package manager. | `forgum update --check` |
 | `list` | `options`, `ls`, `show` | `[CATEGORY]` | Displays a responsive, word-wrapped Unicode table of available options (`animals`, `effects`, `mountains`, `roads`, `environments`, `colors`, `shells`, `config`, `muxes`, `eyes`, `tongue`, `all`). | `forgum list all` |
 | `completions` | `complete` | `[SHELL]` | Emits or auto-installs syntax autocompletion scripts for `bash`, `zsh`, `fish`, `pwsh`, `cmd`, `carapace`, `nu`, `elvish`. Defaults to listing shells if omitted. | `forgum completions list` |
 | `init` | `hook` | `[SHELL] [--install] [--append]` | Generates or auto-injects shell prompt integration hooks so Forgum animates seamlessly on prompt display. Defaults to listing shells if omitted. | `forgum init list` |
 | `config` | `cfg` | `[KEY] [VALUE] [--tui] [--list] [--migrate <FMT>]` | Reads, writes, migrates (JSON/YAML/TOML), lists all keys in a table, or opens the interactive TUI configuration editor. | `forgum config list` |
-| `theme` | `themes` | `[list \| apply <NAME> \| save <NAME>]` | Manages pasture themes. Lists 15 built-in themes with preview vibes or applies a theme to your active configuration. | `forgum theme list` |
+| `theme` | `themes` | `[list &#124; apply <NAME> &#124; save <NAME>]` | Manages pasture themes. Lists 15 built-in themes with preview vibes or applies a theme to your active configuration. | `forgum theme list` |
 | `checkhealth` | `doctor` | `[--json]` | Runs 12 comprehensive diagnostic probes across System, Terminal, TrueColor, DNA profiles, Shell hooks, and Loggers. | `forgum checkhealth` |
 | `logs` | `log`, `view-logs`, `show-logs` | `[-f] [-n <COUNT>] [-l <LEVEL>] [-s <GREP>]` | Displays recent structured engine events in a clean tabular view, filters by severity (`trace`, `debug`, `info`, `warn`, `error`), or follows in real time. | `forgum logs -l warn` |
 | `diagnose` | `triage`, `bugradar` | `[-n <LINES>] [--json]` | Automated diagnostic triage engine analyzing logs and environment to detect issues, root causes, and developer hints. | `forgum diagnose` |
 | `demo` | *(none)* | `[--duration <SECS>]` | Cinematic showcase iterating through the animal mascots, procedural terrains, and visual animation modes. | `forgum demo` |
 | `showcase` | *(none)* | `[--animal <NAME>]` | Interactive preview of any critter mascot with animated expression cycling and color palettes. | `forgum showcase` |
-| `tmux` | `mux` | `[install \| remove \| status \| list]` | Configures tmux, zellij, or wezterm status lines with responsive cow telemetry and mini-status animations. | `forgum tmux list` |
-| `herd` | `cluster` | `[list \| spawn \| kill]` | Coordinates multiple concurrent animals grazing across split panes and multi-window terminal layouts. | `forgum herd list` |
-| `remote` | `peers` | `[list \| who \| ping]` | Discovers active Forgum pasture peers over local network / SSH clusters and synchronizes session state. | `forgum remote list` |
+| `tmux` | `mux` | `[install &#124; remove &#124; status &#124; list]` | Configures tmux, zellij, or wezterm status lines with responsive cow telemetry and mini-status animations. | `forgum tmux list` |
+| `herd` | `cluster` | `[list &#124; spawn &#124; kill]` | Coordinates multiple concurrent animals grazing across split panes and multi-window terminal layouts. | `forgum herd list` |
+| `remote` | `peers` | `[list &#124; who &#124; ping]` | Discovers active Forgum pasture peers over local network / SSH clusters and synchronizes session state. | `forgum remote list` |
 | `battle` | `arena` | `[FIGHTER1] [FIGHTER2]` | Turn-based ASCII battle simulation between two mascots with health bars, randomized travel distance kinematics, and combat log. | `forgum battle "Alice" "Bob"` |
 | `rps-battle` | `rps` | `[--player <NAME>] [--cpu <NAME>] [-c <WEAPON>]` | Interactive Rock-Paper-Scissors mascot battle (User vs Computer) featuring cryptographic zero-bias PRNG, full-color ASCII hand showdown, and physical jousting clash! | `forgum rps-battle` |
 | `image` | *(none)* | `<PATH> [-w <WIDTH>] [--save-cow]` | Converts any image (PNG, JPEG, GIF, WebP) to high-fidelity ASCII art with edge detection and color quantization, or converts into custom `.cow` mascot files. | `forgum image logo.png` |
 | `timer` | `stopwatch` | `<DURATION> [COMMAND]...` | Animated countdown timer and command execution benchmark with elapsed microsecond progress box. | `forgum timer 10s cargo build` |
 | `status-line` | *(none)* | `[--max-len <LEN>]` | Single-line compact ANSI status reporter engineered specifically for shell prompt `$RPROMPT` and tmux status bars. | `forgum status-line --max-len 80` |
-| `control` | `ctl` | `<status \| stop \| pause \| resume>` | Sends IPC commands to a running background pasture daemon via local domain socket or Windows named pipe. | `forgum control status` |
-| `daemon` | *(none)* | `<start \| stop \| status>` | Manages the background engine daemon that continuously feeds frames to prompt overlays without blocking shells. | `forgum daemon status` |
+| `control` | `ctl` | `<status &#124; stop &#124; pause &#124; resume>` | Sends IPC commands to a running background pasture daemon via local domain socket or Windows named pipe. | `forgum control status` |
+| `daemon` | *(none)* | `<start &#124; stop &#124; status>` | Manages the background engine daemon that continuously feeds frames to prompt overlays without blocking shells. | `forgum daemon status` |
 | `sweep` | `clean` | *(none)* | Emergency recovery command to restore terminal cursor, disable raw mode, clear temporary pipes, and exit cleanly. | `forgum sweep` |
 
 ---
@@ -556,17 +556,17 @@ forgum config list
 | Scenery Component | Style / Option | Generator Formula / Algorithm | Visual Characteristics | Responsive Flexbox Adaptation |
 | :--- | :--- | :--- | :--- | :--- |
 | **Mountains** | `smooth` | $h(x) = A_1 \sin(\frac{2\pi x}{\lambda_1}) + A_2 \cos(\frac{2\pi x}{\lambda_2})$ | Soft rolling mountain hills with gentle continuous curvature. | Auto-scales amplitude $\propto \sqrt{W_{\text{term}}}$. |
-| **Mountains** | `jagged` | $h(x) = \sum_{k=1}^3 \frac{1}{k} \| \text{sawtooth}(k x) \|$ | Sharp angular ridges with craggy peaks and steep slope gradients. | Octaves recomputed on terminal resize. |
+| **Mountains** | `jagged` | $h(x) = \sum_{k=1}^3 \frac{1}{k} \Vert \text{sawtooth}(k x) \Vert$ | Sharp angular ridges with craggy peaks and steep slope gradients. | Octaves recomputed on terminal resize. |
 | **Mountains** | `peaks` | $h(x) = A \cdot \max(0, \cos(\omega x))^3$ | Tall isolated alpine summits piercing the upper cloud layer. | Clamped to upper 40% of terminal height. |
 | **Mountains** | `alpine` | $h(x) = \text{PerlinOctaves}(x, 4) \times \text{SnowCap}(y)$ | Snow-dusted high-altitude peaks with variable tree lines. | Dynamically redistributes snow line with seasons. |
-| **Mountains** | `dunes` | $h(x) = A \cdot \sin(\omega x) \cdot \|\cos(\frac{\omega x}{2})\|$ | Sweeping desert sand waves with windward and leeward shadow slopes. | Animates subtle sand drift when `--wind` > 0. |
+| **Mountains** | `dunes` | $h(x) = A \cdot \sin(\omega x) \cdot \Vert \cos(\frac{\omega x}{2}) \Vert$ | Sweeping desert sand waves with windward and leeward shadow slopes. | Animates subtle sand drift when `--wind` > 0. |
 | **Mountains** | `volcanic` | $h(x) = \text{Caldera}(x) + \text{EmberParticleEmitters}$ | Massive stratovolcano cone with active smoke plume summit. | Emits rising ember ASCII particles (`*`, `^`, `.`). |
 | **Mountains** | `sierra` | $h(x) = \sum_{i=1}^5 A_i \sin(\omega_i x + \phi_i)$ | Multi-layered rugged mountain chain spanning the entire backdrop. | Layered parallax scrolling at $0.2\times$ cow speed. |
 | **Roads** | `highway` | $\text{Surface} = \text{DoubleSolidWhite} + \text{DashedYellow}$ | Modern asphalt roadway with lane markers and road shoulder borders. | Aligned precisely with animal bounding box hooves. |
 | **Roads** | `cobblestone` | $\text{Glyphs} = [\, \text{"(O)(o)"}, \text{"(o)(O)"} \,]$ | Old European rustic paved stone street with alternating stone seams. | Stride-coupled texture offset $\Delta x = \lfloor P_x \rfloor$. |
 | **Roads** | `neon` | $\text{Shader} = \text{HSL}(\text{Hue}(t), 1.0, 0.5) \otimes \text{"═══"}$ | Cyberpunk glowing light rail pulsing with chromatic energy. | Synchronized with `--palette` cycle speed. |
 | **Roads** | `dirt` | $\text{Noise} = \text{Hash1D}(x) \pmod 3 \to [\, \text{".  ."}, \text{".. ."}, \text{" . ."} \,]$ | Country trail with scattered pebbles and procedural ruts. | Dust particles emit behind running/walking hooves. |
-| **Roads** | `railway` | $\text{Track} = \text{"\|===|===|===|"}$ with gauge spacing | Industrial train tracks with wooden ties and steel rails. | Rhythmic click-clack motion timing indicator. |
+| **Roads** | `railway` | $\text{Track} = \text{"[===&#124;===&#124;===]"}$ with gauge spacing | Industrial train tracks with wooden ties and steel rails. | Rhythmic click-clack motion timing indicator. |
 | **Roads** | `stream` | $y_{\text{water}}(x, t) = \sin(\omega x - v t) \to [\, \text{"~"}, \text{"≈"}, \text{"∼"} \,]$ | Babbling brook / flowing river water surface with ripple reflections. | Flow direction vectors coupled with scenery wind. |
 | **Environments**| `pasture` | Daytime blue sky, green grass baseline, procedural daisies. | Serene open countryside; the quintessential home of the cow. | Default balanced contrast biome for all terminals. |
 | **Environments**| `sunset` | $C_{\text{sky}}(y) = \text{Lerp}(\text{Purple}, \text{Orange}, \frac{y}{H})$ | Dusk twilight with warm ambient glow and lengthening shadows. | Rich 24-bit truecolor vertical gradient transitions. |
@@ -648,14 +648,14 @@ forgum config list
 | :--- | :--- | :--- | :--- | :--- |
 | **Bash** | `eval "$(forgum init bash)"` | `forgum completions bash > ~/.bash_completion` | `~/.config/forgum/completions/forgum.bash` | Tab completion, flag descriptions, subcommand listing. |
 | **Zsh** | `eval "$(forgum init zsh)"` | `forgum completions zsh > ~/.zsh/completion/_forgum` | `~/.zsh/completions/_forgum` | Full `compdef`, `zsh-autosuggestions` support, colored menus. |
-| **Fish** | `forgum init fish \| source` | `forgum completions fish > ~/.config/fish/completions/forgum.fish` | `~/.config/fish/completions/forgum.fish` | Real-time inline autosuggestions, argument descriptions. |
-| **PowerShell 7+** | `forgum init pwsh \| Out-String \| Invoke-Expression` | `forgum completions pwsh \| Out-File $PROFILE` | `$env:LOCALAPPDATA/forgum/completions/forgum.ps1` | `Register-ArgumentCompleter`, parameter validation, fzf-compatible. |
-| **Windows PowerShell**| `forgum init powershell \| Out-String \| Invoke-Expression`| Same as pwsh | `$env:LOCALAPPDATA/forgum/completions/forgum.ps1` | Backward-compatible with PS 5.1 on Windows 10/11. |
+| **Fish** | `forgum init fish &#124; source` | `forgum completions fish > ~/.config/fish/completions/forgum.fish` | `~/.config/fish/completions/forgum.fish` | Real-time inline autosuggestions, argument descriptions. |
+| **PowerShell 7+** | `forgum init pwsh &#124; Out-String &#124; Invoke-Expression` | `forgum completions pwsh &#124; Out-File $PROFILE` | `$env:LOCALAPPDATA/forgum/completions/forgum.ps1` | `Register-ArgumentCompleter`, parameter validation, fzf-compatible. |
+| **Windows PowerShell**| `forgum init powershell &#124; Out-String &#124; Invoke-Expression`| Same as pwsh | `$env:LOCALAPPDATA/forgum/completions/forgum.ps1` | Backward-compatible with PS 5.1 on Windows 10/11. |
 | **Carapace** | `carapace forgum` | `forgum completions carapace` | `~/.config/carapace/specs/forgum.yaml` | Cross-shell multi-terminal completion provider specification. |
 | **Nushell** | `use forgum.nu *` | `forgum completions nu > ~/.config/nushell/forgum.nu` | `~/.config/nushell/completions/forgum.nu` | Structured records, typed argument flags, modern Nu engine. |
 | **Elvish** | `eval (forgum init elvish)` | `forgum completions elvish > ~/.config/elvish/lib/forgum.elv` | `~/.config/elvish/lib/forgum.elv` | Functional shell completions and namespace isolation. |
 | **Xonsh** | `exec($(forgum init xonsh))` | `forgum completions xonsh > ~/.xonshrc` | `~/.config/xonsh/completions/forgum.py` | Pythonic shell integration, dynamic docstrings and argument parsing. |
-| **Tcsh** | `eval \`forgum init tcsh\`` | `forgum completions tcsh > ~/.cshrc` | `~/.tcshrc` | C-shell history and auto-logout hook integration. |
+| **Tcsh** | <code>eval &#96;forgum init tcsh&#96;</code> | `forgum completions tcsh > ~/.cshrc` | `~/.tcshrc` | C-shell history and auto-logout hook integration. |
 | **Ksh** | `eval "$(forgum init ksh)"` | `forgum completions ksh > ~/.kshrc` | `~/.kshrc` | KornShell 93 alias and keybinding completions. |
 | **Ion** | `eval $(forgum init ion)` | `forgum completions ion > ~/.config/ion/initrc` | `~/.config/ion/initrc` | Redox OS native shell integration with type safety. |
 | **Oil / YSH** | `eval "$(forgum init oil)"` | `forgum completions oil > ~/.config/oil/yshrc` | `~/.config/oil/yshrc` | Modern oil-shell / YSH expression evaluator integration. |
@@ -673,8 +673,8 @@ Forgum is engineered for seamless native interoperability with the top terminal 
 | **tmux** | Terminal Multiplexer | `forgum status-line`, `forgum tmux popup` | Zero-flicker DCS pass-through (`\x1bPtmux;\x1b...`), real-time status-right daemon updates. |
 | **zellij** | Modern Multiplexer | `forgum init zellij` | Native plugin pane rendering, floating terminal mascot keeping tabs on workspace status. |
 | **starship** | Cross-Shell Prompt | `forgum init starship` | Custom starship prompt module emitting ANSI mascots and fortune cookies above your prompt. |
-| **fzf** | Fuzzy Finder | `forgum list animals \| fzf --preview 'forgum -c {} --text "Preview"'` | Interactive instant mascot selection with high-speed ANSI previewing. |
-| **bat** | Syntax Highlighter | Piped output `forgum --text-only \| bat` | Color-aware pager formatting with automated background ANSI strip detection. |
+| **fzf** | Fuzzy Finder | `forgum list animals &#124; fzf --preview 'forgum -c {} --text "Preview"'` | Interactive instant mascot selection with high-speed ANSI previewing. |
+| **bat** | Syntax Highlighter | Piped output `forgum --text-only &#124; bat` | Color-aware pager formatting with automated background ANSI strip detection. |
 | **thefuck** | Command Corrector | Custom rule `forgum-rules.py` | Automatically repairs mistyped mascots or unknown CLI flags to the closest match. |
 | **navi** | Interactive Cheatsheet| `forgum init navi` | Pre-built cheatsheets for every CLI command, effect, and environment combo. |
 | **byobu** | Multiplexer Wrapper | `forgum init byobu` | Background status monitor notifying when long-running compiler tasks complete. |
@@ -794,11 +794,11 @@ forgum init <shell>
 | :------------------- | :------------------------------------------------------------------------- |
 | bash                 | Add `eval "$(forgum init bash)"` to `~/.bashrc`                            |
 | zsh                  | Add `eval "$(forgum init zsh)"` to `~/.zshrc`                              |
-| fish                 | `forgum init fish \| source` in `~/.config/fish/config.fish`               |
-| pwsh (PowerShell 7+) | `forgum init pwsh \| Out-String \| Invoke-Expression` in `$PROFILE`        |
+| fish                 | `forgum init fish &#124; source` in `~/.config/fish/config.fish`               |
+| pwsh (PowerShell 7+) | `forgum init pwsh &#124; Out-String &#124; Invoke-Expression` in `$PROFILE`        |
 | powershell (5.1)     | Same as pwsh, in Windows PowerShell's `$PROFILE`                           |
 | xonsh                | `exec($(forgum init xonsh))` in `~/.xonshrc`                               |
-| tcsh                 | `eval \`forgum init tcsh\`` in `~/.cshrc`                                  |
+| tcsh                 | <code>eval &#96;forgum init tcsh&#96;</code> in `~/.cshrc`                                  |
 | ksh                  | `eval "$(forgum init ksh)"` in `~/.kshrc`                                  |
 | ion                  | `eval $(forgum init ion)` in `~/.config/ion/initrc`                        |
 | oil / YSH            | `eval "$(forgum init oil)"` in `~/.config/oil/yshrc`                       |
@@ -891,7 +891,7 @@ forgum tui
 ```
 
 ```text
- ✨ FORGUM CONFIGURATOR   [CONFIG]  1 Mascots  2 Scenery  3 Effects  4 Installer  5 [Config]   v0.0.1-alpha.1
+ ✨ FORGUM CONFIGURATOR   [CONFIG]  1 Mascots  2 Scenery  3 Effects  4 Installer  5 [Config]           v0.4.0
 ┌──────────────────────────── ⚙️ Forgum Engine Settings ──────────────────────────────┬───────────────────────────────┐
 │ > 01. cow                   [ moojira                      ]                       │ ⚙️ Parameter Details          │
 │   02. text                  [                              ]                       │ Parameter: split_mode         │

@@ -119,7 +119,7 @@ forgum --effect rainbow --color-mode rainbow --duration 3
 | :--- | :--- | :--- | :--- | :--- |
 | **`render`** | *(default)* | `[OPTIONS] [TEXT]...` | Renders 2D animated scenes with physical kinematics & scenery | `forgum render -E walk -c dragon --mountain alpine` |
 | **`think`** | `ponder` | `[OPTIONS] [TEXT]...` | Thought bubble `( ... )` with circular `o` connectors | `forgum think "Deep thoughts"` |
-| **`say`** | `speak` | `[OPTIONS] [TEXT]...` | Classic cowsay speech bubble `\| ... \|` with `\` stems | `forgum say git status` |
+| **`say`** | `speak` | `[OPTIONS] [TEXT]...` | Classic cowsay speech bubble &#124; ... &#124; with `\` stems | `forgum say git status` |
 | **`fortune`** | `quote` | *(none)* | Prints a humorous terminal fortune quote | `forgum fortune` |
 | **`list`** | `options`, `ls`, `show` | `[category]` | Displays formatted table of options for any parameter | `forgum list effects` |
 | **`theme list`** | *(none)* | *(none)* | Lists all 15 preloaded and user themes | `forgum theme list` |
@@ -130,15 +130,15 @@ forgum --effect rainbow --color-mode rainbow --duration 3
 | **`checkhealth`** | `doctor`, `health` | `[--json]` | Runs diagnostic audit across 12 probes | `forgum checkhealth` |
 | **`config`** | `cfg` | `[key] [val] [--list]` | Inspects, sets, or lists configuration options | `forgum config list` |
 | **`config --tui`** | *(none)* | *(none)* | Opens the interactive configuration TUI | `forgum config --tui` |
-| **`config --migrate <fmt>`** | *(none)* | `<json\|yaml\|toml>` | Migrates active config to `json`, `yaml`, or `toml` | `forgum config --migrate toml` |
+| **`config --migrate <fmt>`** | *(none)* | `<json&#124;yaml&#124;toml>` | Migrates active config to `json`, `yaml`, or `toml` | `forgum config --migrate toml` |
 | **`logs`** | `log` | `[-f] [-l <level\>]` | Displays structured system and execution logs | `forgum logs -f` |
-| **`herd`** | `cluster` | `[list\|spawn\|kill]` | Lists or manages cows and background animation daemons | `forgum herd list` |
-| **`tmux`** | `mux` | `[list\|install\|status]`| Configures tmux, zellij, or wezterm status lines | `forgum tmux list` |
-| **`remote`** | `peers` | `[list\|who\|ping]` | Discovers pasture peers over network clusters | `forgum remote list` |
+| **`herd`** | `cluster` | `[list&#124;spawn&#124;kill]` | Lists or manages cows and background animation daemons | `forgum herd list` |
+| **`tmux`** | `mux` | `[list&#124;install&#124;status]`| Configures tmux, zellij, or wezterm status lines | `forgum tmux list` |
+| **`remote`** | `peers` | `[list&#124;who&#124;ping]` | Discovers pasture peers over network clusters | `forgum remote list` |
 | **`battle`** | `arena` | `[f1] [f2]` | Turn-based ASCII battle between two critters | `forgum battle "Tux" "Dragon"` |
 | **`status-line`** | *(none)* | `[--max-len <len\>]` | Compact ANSI status bar reporter for `$RPROMPT` | `forgum status-line --max-len 80` |
-| **`control`** | `ctl` | `<status\|stop>` | Sends IPC commands to active daemon sessions | `forgum control status` |
-| **`daemon`** | *(none)* | `<start\|stop>` | Manages background animation daemon | `forgum daemon start` |
+| **`control`** | `ctl` | `<status&#124;stop>` | Sends IPC commands to active daemon sessions | `forgum control status` |
+| **`daemon`** | *(none)* | `<start&#124;stop>` | Manages background animation daemon | `forgum daemon start` |
 | **`init <shell>`** | `hook` | `[shell]` | Generates shell hook integration scripts | `forgum init pwsh` |
 | **`completions <shell>`** | `complete` | `[shell]` | Generates shell auto-completion scripts | `forgum completions zsh` |
 | **`sweep`** | `clean` | *(none)* | Terminal emergency state recovery and cleanup | `forgum sweep` |
