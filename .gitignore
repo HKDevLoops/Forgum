@@ -1,68 +1,78 @@
-# Rust
+# =============================================================================
+# Forgum .gitignore — Strict Project Files Only
+# =============================================================================
+
+# --- Rust Build Outputs & Artifacts ---
 /target/
 **/*.rs.bk
 Cargo.lock.bak
 *.pdb
 
-# PowerShell
+# --- Executables, Shared Libraries & Binaries ---
+*.exe
+*.dll
+*.so
+*.dylib
+*.lib
+*.a
+*.out
+*.app
+
+# --- Temporary & Backup Files ---
 *.tmp
 *.err
+*.bak
+*.backup
+*.orig
+*~
+*.swp
+*.swo
+*.scratch.*
+scratch/
+tmp/
+temp/
 
-# OS
+# --- Operating System Artifacts ---
 .DS_Store
 Thumbs.db
+desktop.ini
+$RECYCLE.BIN/
 
-# Editors
+# --- IDEs & Text Editors ---
 .vscode/
 .idea/
-*.swp
-*~
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
 
-# Secrets / local
+# --- Local Secrets & Credentials ---
 .env
-.env.local
+.env.*
 *.pem
 *.key
 secrets/
 
-# Build artifacts
-*.exe
-*.dll
-*.dylib
-*.so
-test-renders/
-
-# Local render dumps (ad-hoc test output)
-graphify-out/
-
-# AI Agent & Planning Artifacts (LLM transcripts, specs, brain docs, agent harnesses, instruction markdowns)
+# --- AI Agents, Instruction Files, Brain Harnesses & Scratch Markdowns ---
 brain/
 docs/superpowers/
+.agents/
+.claude/
+.gemini/
 .kilo/
 kilo.json
-.claude/
-.agents/
-.gemini/
 .system_generated/
 AGENTS.md
 agent.md
+*.agent.md
 testsprite_tests/
-PR1_*.md
-PR2_*.md
+graphify-out/
 session*.md
-commit_msg.txt
-
-# Out-of-project Works, Scripts, and Prep Helpers
-/scripts/
-/workflows/
-commit_push.ps1
-raise_prs.ps1
-
-# Preps, Ideas, Notes, Worklogs, and Audits
-worklog.md
 worklog*.md
-NOTES.md
-notes.md
+NOTES*.md
+notes*.md
+PR*.md
+commit_msg*.txt
 *.prep
 *.prep.*
 prep/
@@ -82,18 +92,18 @@ reports/
 todos/
 TODO.md
 TODOs.md
-scratch/
-tmp/
-temp/
-*.scratch.*
-*.bak
-*.orig
-*.backup
 
-# Scratch and Node
+# --- Out-of-Project Helper Scripts & Workflows ---
+/scripts/
+/workflows/
+commit_push.ps1
+raise_prs.ps1
+
+# --- Node / Web Scratch (if any) ---
 package.json
 package-lock.json
+node_modules/
 
-# Tests scratch files (local CI run logs)
-Tests/last_clippy_run.txt
-Tests/last_test_run.txt
+# --- Test Scratch & Render Dumps ---
+Tests/last_*.txt
+test-renders/
