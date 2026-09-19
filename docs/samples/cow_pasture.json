@@ -1,0 +1,15 @@
+{
+  "$schema": "https://raw.githubusercontent.com/HKDevLoops/Forgum/main/crates/platform/schema/scene_config.json",
+  "cow": "default",
+  "animation_type": "walk",
+  "environment": "pasture",
+  "road": "dirt",
+  "mountain": "hills",
+  "color_mode": "natural",
+  "palette": "#10b981,#06b6d4,#f59e0b",
+  "banner": true,
+  "fps": 30,
+  "duration": 5,
+  "text": "Moo! Exploring the infinite mathematical pasture with Fibonacci phyllotaxis trees.",
+  "think": false
+}

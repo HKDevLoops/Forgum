@@ -69,7 +69,6 @@ pub struct Cli {
         long,
         short = 'c',
         visible_alias = "animal",
-        global = true,
         value_name = "NAME",
         help = "Animal mascot name (default, tux, dragon...). Run 'forgum list animals'",
         long_help = "Animal mascot name to render (e.g. default, tux, dragon, stegosaurus, bunny, corgi, ghost, elephant, octopus, random). Run 'forgum list animals' to inspect all 106 available mascots."
@@ -407,6 +406,19 @@ pub enum Commands {
         /// Only check for updates without modifying the system.
         #[arg(long)]
         check: bool,
+        /// Target release channel to update or switch to (stable, nightly, dev).
+        #[arg(long, value_name = "CHANNEL")]
+        channel: Option<String>,
+    },
+    /// View, switch, or manage release channels (stable, nightly, dev).
+    #[command(alias = "channels")]
+    Channel {
+        /// Action: 'get', 'set', 'list', 'switch', or target channel name directly.
+        #[arg(value_name = "ACTION")]
+        action: Option<String>,
+        /// Channel name when action is 'set' or 'switch' (stable, nightly, dev).
+        #[arg(value_name = "NAME")]
+        name: Option<String>,
     },
     /// Generate shell integration hooks.
     Init {
@@ -605,7 +617,7 @@ pub enum Commands {
         cpu: String,
 
         /// Pre-selected player weapon: rock (r), paper (p), or scissors (s).
-        #[arg(short, long, value_name = "WEAPON")]
+        #[arg(short = 'c', long, value_name = "WEAPON")]
         choice: Option<String>,
 
         /// Headless / non-interactive mode (dumps battle log without live prompt).
@@ -656,7 +668,7 @@ pub enum Commands {
         color: String,
 
         /// Luminance ramp: standard, detailed, blocks.
-        #[arg(short = 'r', long, value_name = "RAMP", default_value = "standard")]
+        #[arg(long, value_name = "RAMP", default_value = "standard")]
         ramp: String,
 
         /// Save generated ASCII art as a custom cow mascot (~/.config/forgum/cows/<NAME>.cow).
@@ -909,6 +921,7 @@ pub enum Command {
     Install,
     Uninstall,
     Update,
+    Channel,
     Sweep,
     Stop,
     Image,
@@ -1087,6 +1100,7 @@ pub fn parse_args(argv: Vec<String>) -> Result<(Args, Option<Commands>), CliErro
         Some(Commands::Install { .. }) => (Command::Install, None, false),
         Some(Commands::Uninstall { .. }) => (Command::Uninstall, None, false),
         Some(Commands::Update { .. }) => (Command::Update, None, false),
+        Some(Commands::Channel { .. }) => (Command::Channel, None, false),
         Some(Commands::Sweep) => (Command::Sweep, None, false),
         Some(Commands::Stop { .. }) => (Command::Stop, None, false),
         Some(Commands::Image { .. }) => (Command::Image, None, false),
@@ -1269,8 +1283,8 @@ pub fn build_scene_config(args: &Args) -> Result<SceneConfig, String> {
         cfg.color_mode = "natural".to_string();
     }
 
-    // If color_mode is natural and no explicit CLI palette was provided, delegate to mascot's natural palette
-    if cfg.color_mode == "natural" && args.palette.is_none() {
+    // If color_mode is natural and no explicit CLI palette was provided, delegate to mascot's natural palette (unless text_only is active)
+    if !args.text_only && cfg.color_mode == "natural" && args.palette.is_none() {
         let animal_name = args.cow.as_deref().unwrap_or(&cfg.cow);
         let natural_hexes = crate::color::get_natural_hex_palette(animal_name);
         if !natural_hexes.is_empty() {

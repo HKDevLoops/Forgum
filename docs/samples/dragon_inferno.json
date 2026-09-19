@@ -1,0 +1,15 @@
+{
+  "$schema": "https://raw.githubusercontent.com/HKDevLoops/Forgum/main/crates/platform/schema/scene_config.json",
+  "cow": "dragon",
+  "animation_type": "breathe",
+  "environment": "inferno",
+  "road": "magma",
+  "mountain": "volcano",
+  "color_mode": "animal_natural",
+  "palette": "#ef4444,#f59e0b,#7c3aed",
+  "banner": true,
+  "fps": 30,
+  "duration": 6,
+  "text": "Roaaar! From the fiery depths of Mount Volcanica, I breathe ANSI plasma flames!",
+  "think": false
+}

@@ -1,0 +1,70 @@
+name: "📦 Packaging & Installation Issue"
+description: "Report issues with Scoop, Homebrew, Winget, Chocolatey, APT, DNF, Pacman, Nix, or install scripts."
+title: "packaging: "
+labels: ["area:packaging", "type:bug", "status:needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Forgum supports 16 package managers and multi-channel installation across Linux, macOS, Windows, and BSD.
+        Use this template if you encountered an installation error, path shadowing, or update failure.
+
+  - type: dropdown
+    id: package-manager
+    attributes:
+      label: Package Manager / Installer
+      options:
+        - "Standalone install.ps1 (Windows)"
+        - "Standalone install.sh (Linux/macOS/BSD)"
+        - "Scoop (Windows)"
+        - "Homebrew (macOS/Linux)"
+        - "WinGet (Windows)"
+        - "Chocolatey (Windows)"
+        - "Arch AUR / Pacman"
+        - "Debian / Ubuntu APT (.deb)"
+        - "Fedora / RHEL DNF (.rpm)"
+        - "Nix / Flake"
+        - "Alpine Linux APK"
+        - "Gentoo Portage"
+        - "Void Linux XBPS"
+        - "FreeBSD pkg"
+        - "Cargo install"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: release-channel
+    attributes:
+      label: Release Channel
+      options:
+        - "main (Stable)"
+        - "nightly (Early access)"
+        - "dev (Branch build)"
+    validations:
+      required: true
+
+  - type: textarea
+    id: shadow-detection
+    attributes:
+      label: Output of `forgum doctor` or `where forgum` / `which -a forgum`
+      description: This helps detect dual installations (e.g. Scoop shim vs Standalone %LOCALAPPDATA%).
+      render: text
+    validations:
+      required: true
+
+  - type: textarea
+    id: error-log
+    attributes:
+      label: Complete Terminal Error Output
+      description: Paste the full error message received during install or update.
+      render: text
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: Expected Behavior
+      description: What should have happened instead?
+    validations:
+      required: true

@@ -1,0 +1,167 @@
+name: Nightly Early-Access Release
+
+on:
+  schedule:
+    - cron: '0 2 * * *' # Daily at 02:00 UTC
+  workflow_dispatch:
+    inputs:
+      force_build:
+        description: 'Force build even if no new commits in dev'
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  group: nightly-release
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  check-new-commits:
+    name: Check for Dev Commits
+    runs-on: ubuntu-latest
+    outputs:
+      should_run: ${{ steps.check.outputs.should_run }}
+      sha: ${{ steps.check.outputs.sha }}
+      date: ${{ steps.check.outputs.date }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev
+          fetch-depth: 0
+      - id: check
+        run: |
+          SHA=$(git rev-parse --short HEAD)
+          DATE=$(date +'%Y%m%d')
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+          echo "date=$DATE" >> "$GITHUB_OUTPUT"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+          else
+            # Check if there were commits in the last 24h on dev
+            COMMITS=$(git log --since="24 hours ago" --oneline)
+            if [ -n "$COMMITS" ]; then
+              echo "should_run=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "should_run=false" >> "$GITHUB_OUTPUT"
+              echo "No new commits on dev in the last 24 hours. Skipping nightly release."
+            fi
+          fi
+
+  build-nightly:
+    name: Build Nightly (${{ matrix.target }})
+    needs: check-new-commits
+    if: needs.check-new-commits.outputs.should_run == 'true'
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+          - target: aarch64-unknown-linux-gnu
+            os: ubuntu-latest
+            cross: true
+          - target: x86_64-apple-darwin
+            os: macos-latest
+          - target: aarch64-apple-darwin
+            os: macos-latest
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+          - target: aarch64-pc-windows-msvc
+            os: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: nightly-${{ matrix.target }}
+      - name: Install cross
+        if: matrix.cross
+        uses: taiki-e/install-action@cross
+
+      - name: Build (cross)
+        if: matrix.cross
+        run: cross build --release --locked --target ${{ matrix.target }} -p forgum-engine --bin forgum
+
+      - name: Build (native)
+        if: ${{ !matrix.cross }}
+        run: cargo build --release --locked --target ${{ matrix.target }} -p forgum-engine --bin forgum
+
+      - name: Package Unix Binary
+        if: runner.os != 'Windows'
+        run: |
+          BIN="target/${{ matrix.target }}/release/forgum"
+          ARCHIVE="forgum-nightly-${{ matrix.target }}.tar.gz"
+          tar -czvf "$ARCHIVE" -C "$(dirname "$BIN")" forgum
+          sha256sum "$ARCHIVE" > "${ARCHIVE}.sha256"
+
+      - name: Package Windows Binary
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $bin = "target/${{ matrix.target }}/release/forgum.exe"
+          $archive = "forgum-nightly-${{ matrix.target }}.zip"
+          Compress-Archive -Path $bin -DestinationPath $archive -Force
+          (Get-FileHash -Algorithm SHA256 $archive).Hash.ToLower() + "  $archive" | Out-File "${archive}.sha256" -Encoding ascii
+
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-${{ matrix.target }}
+          path: |
+            forgum-nightly-${{ matrix.target }}.tar.gz
+            forgum-nightly-${{ matrix.target }}.tar.gz.sha256
+            forgum-nightly-${{ matrix.target }}.zip
+            forgum-nightly-${{ matrix.target }}.zip.sha256
+          if-no-files-found: ignore
+
+  publish-nightly:
+    name: Publish Rolling Nightly Pre-Release
+    needs: [check-new-commits, build-nightly]
+    if: needs.check-new-commits.outputs.should_run == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: nightly-*
+          merge-multiple: true
+          path: dist/
+      - name: Publish GitHub Pre-Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SHA: ${{ needs.check-new-commits.outputs.sha }}
+          DATE: ${{ needs.check-new-commits.outputs.date }}
+        run: |
+          cd dist
+          ls -la
+          TAG="nightly"
+          TITLE="Forgum Nightly Early-Access ($DATE - $SHA)"
+          BODY="### 🌙 Forgum Nightly Build ($DATE)
+          Commit: \`$SHA\` on branch \`dev\`
+
+          **Installation & Channel Switching**:
+          \`\`\`bash
+          # Switch channel via Forgum CLI
+          forgum update --channel nightly
+          # Or via installer
+          ./install.sh --channel nightly
+          \`\`\`
+
+          *Warning: Nightly builds are built from active development and may contain experimental features.*"
+
+          gh release delete "$TAG" --yes || true
+          git tag -d "$TAG" 2>/dev/null || true
+          git push origin ":refs/tags/$TAG" 2>/dev/null || true
+
+          gh release create "$TAG" * \
+            --title "$TITLE" \
+            --notes "$BODY" \
+            --prerelease

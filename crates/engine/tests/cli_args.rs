@@ -549,7 +549,7 @@ fn animal_signature_defaults_apply_automatically() {
     assert_eq!(cfg.road.as_deref(), Some("grid"));
     assert_eq!(cfg.mountain.as_deref(), Some("crater"));
     assert_eq!(cfg.effect, "fly");
-    assert!(cfg.palette.as_ref().unwrap().contains("#ff0033"));
+    assert!(cfg.palette.as_ref().unwrap().contains("#ff69b4"));
 }
 
 #[test]
@@ -629,14 +629,33 @@ fn uninstall_subcommand_parses_cleanly() {
 fn update_subcommand_parses_cleanly() {
     let (a, cmd) = parse_args(argv(&["forgum", "update"])).unwrap();
     assert_eq!(a.command, Command::Update);
-    assert!(matches!(cmd, Some(Commands::Update { check: false })));
+    assert!(matches!(cmd, Some(Commands::Update { check: false, channel: None })));
 
     let (a_check, cmd_check) = parse_args(argv(&["forgum", "update", "--check"])).unwrap();
     assert_eq!(a_check.command, Command::Update);
-    assert!(matches!(cmd_check, Some(Commands::Update { check: true })));
+    assert!(matches!(cmd_check, Some(Commands::Update { check: true, channel: None })));
+
+    let (a_chan, cmd_chan) = parse_args(argv(&["forgum", "update", "--channel", "nightly"])).unwrap();
+    assert_eq!(a_chan.command, Command::Update);
+    assert!(matches!(cmd_chan, Some(Commands::Update { check: false, channel: Some(ref ch) }) if ch == "nightly"));
 
     let (a_upgrade, _) = parse_args(argv(&["forgum", "upgrade"])).unwrap();
     assert_eq!(a_upgrade.command, Command::Update);
+}
+
+#[test]
+fn channel_subcommand_parses_cleanly() {
+    let (a, cmd) = parse_args(argv(&["forgum", "channel"])).unwrap();
+    assert_eq!(a.command, Command::Channel);
+    assert!(matches!(cmd, Some(Commands::Channel { action: None, name: None })));
+
+    let (a_switch, cmd_switch) = parse_args(argv(&["forgum", "channel", "switch", "nightly"])).unwrap();
+    assert_eq!(a_switch.command, Command::Channel);
+    assert!(matches!(cmd_switch, Some(Commands::Channel { action: Some(ref a), name: Some(ref n) }) if a == "switch" && n == "nightly"));
+
+    let (a_direct, cmd_direct) = parse_args(argv(&["forgum", "channel", "dev"])).unwrap();
+    assert_eq!(a_direct.command, Command::Channel);
+    assert!(matches!(cmd_direct, Some(Commands::Channel { action: Some(ref a), name: None }) if a == "dev"));
 }
 
 #[test]

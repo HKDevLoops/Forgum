@@ -689,6 +689,59 @@ pub fn has_controlling_terminal() -> bool {
     }
 }
 
+/// Probes whether the current terminal and environment support UTF-8 encoding.
+#[must_use]
+pub fn detect_utf8_support() -> bool {
+    #[cfg(windows)]
+    {
+        if std::env::var("WT_SESSION").is_ok()
+            || std::env::var("WEZTERM_PANE").is_ok()
+            || std::env::var("ALACRITTY_LOG").is_ok()
+            || std::env::var("GHOSTTY_RESOURCES_DIR").is_ok()
+            || std::env::var("ConEmuPID").is_ok()
+        {
+            return true;
+        }
+        for var in &["LC_ALL", "LC_CTYPE", "LANG"] {
+            if let Ok(val) = std::env::var(var) {
+                let lower = val.to_ascii_lowercase();
+                if lower.contains("utf-8") || lower.contains("utf8") {
+                    return true;
+                }
+            }
+        }
+        #[allow(unsafe_code)]
+        let cp = unsafe { windows_sys::Win32::System::Console::GetConsoleOutputCP() };
+        if cp == 65001 {
+            return true;
+        }
+        false
+    }
+    #[cfg(unix)]
+    {
+        for var in &["LC_ALL", "LC_CTYPE", "LANG"] {
+            if let Ok(val) = std::env::var(var) {
+                let lower = val.to_ascii_lowercase();
+                if lower.contains("utf-8") || lower.contains("utf8") {
+                    return true;
+                }
+            }
+        }
+        if std::env::var("TERM_PROGRAM").is_ok()
+            || std::env::var("COLORTERM").is_ok()
+            || std::env::var("KITTY_WINDOW_ID").is_ok()
+        {
+            return true;
+        }
+        // Modern Unix environments default to UTF-8
+        true
+    }
+    #[cfg(not(any(windows, unix)))]
+    {
+        true
+    }
+}
+
 /// Read terminal size from stdout or controlling terminal. Falls back to (80, 24) on error.
 #[must_use]
 pub fn terminal_size() -> (u16, u16) {

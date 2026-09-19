@@ -401,38 +401,13 @@ pub fn run() -> ExitCode {
         }
 
         // ── update ─────────────────────────────────────────────────
-        Some(cli::Commands::Update { check }) => {
-            let source = forgum_platform::detect_installation_source();
-            let action_str = if check {
-                "Checking for available updates"
-            } else {
-                "Updating Forgum"
-            };
-            println!("\x1b[1;36m━━━ Forgum Auto-Update ━━━\x1b[0m");
-            println!("Installed via: \x1b[1;32m{}\x1b[0m", source.name());
-            println!(
-                "Action:        \x1b[1;33m{}\x1b[0m (Command: `{}`)\n",
-                action_str,
-                if check {
-                    source.check_command()
-                } else {
-                    source.update_command()
-                }
-            );
+        Some(cli::Commands::Update { check, channel }) => {
+            handle_update_command(check, channel.as_deref())
+        }
 
-            match forgum_platform::execute_package_manager_action(source, check) {
-                Ok(output) => {
-                    if !output.is_empty() {
-                        println!("{output}");
-                    }
-                    println!("\n\x1b[1;32m✓ Action completed.\x1b[0m");
-                    ExitCode::SUCCESS
-                }
-                Err(err) => {
-                    eprintln!("\x1b[1;31m✗ Update action failed:\x1b[0m {err}");
-                    ExitCode::from(1)
-                }
-            }
+        // ── channel ────────────────────────────────────────────────
+        Some(cli::Commands::Channel { action, name }) => {
+            handle_channel_command(action.as_deref(), name.as_deref())
         }
 
         // ── config ─────────────────────────────────────────────────
@@ -1044,6 +1019,25 @@ pub fn run() -> ExitCode {
             println!("Native Split: {}", native_status);
             println!("Graphics:   {:?}", caps.graphics);
             println!("Mux:        {}", mux.name());
+            let source = forgum_platform::detect_installation_source();
+            let receipt = forgum_platform::read_receipt().unwrap_or(None);
+            let channel = receipt
+                .as_ref()
+                .map(|r| r.channel)
+                .unwrap_or(forgum_platform::ReleaseChannel::Stable);
+            let shadows = forgum_platform::detect_shadow_installations();
+
+            println!("Source:     {}", source.name());
+            println!("Channel:    {}", channel.display_name());
+            let inactive_shadows: Vec<_> = shadows.iter().filter(|s| !s.is_active).collect();
+            if inactive_shadows.is_empty() {
+                println!("Shadows:    none (clean single-source installation)");
+            } else {
+                println!("Shadows:    ⚠️ {} detected", inactive_shadows.len());
+                for s in &shadows {
+                    println!("            {}", s.display_line());
+                }
+            }
             println!("Cows:       {} loaded", cow_count);
             if let Some(limitation) = caps.emulator.limitation_notes() {
                 println!("Limitation: \x1b[1;33m{}\x1b[0m", limitation);
@@ -1799,14 +1793,41 @@ fn handle_status_command(args: &cli::Args) -> ExitCode {
     println!("{c_bold}forgum status — Engine v{version}{c_reset}");
     println!("{c_cyan}=============================================================================={c_reset}\n");
 
-    // 1. Release & Update Subsystem (Scoop-style Status)
-    println!("{c_cyan}## Updates & Release Subsystem (Scoop Status){c_reset}");
+    let receipt = forgum_platform::read_receipt().unwrap_or(None);
+    let channel = receipt
+        .as_ref()
+        .map(|r| r.channel)
+        .unwrap_or(forgum_platform::ReleaseChannel::Stable);
+    let shadows = forgum_platform::detect_shadow_installations();
+
+    // 1. Release & Update Subsystem (Channel & Status)
+    println!("{c_cyan}## Updates & Release Subsystem (Channel & Status){c_reset}");
     println!("  • Current Version:  {c_green}v{version}{c_reset} (installed)");
-    println!("  • Install Channel:  {c_bold}{}{c_reset}", source.name());
-    println!("  • Update Channel:   GitHub Releases (https://github.com/HKDevLoops/Forgum/releases/latest)");
+    println!("  • Install Source:   {c_bold}{}{c_reset}", source.name());
+    println!("  • Release Channel:  {c_green}{c_bold}{}{c_reset}", channel.display_name());
+    let channel_url = match channel {
+        forgum_platform::ReleaseChannel::Stable => {
+            "GitHub Releases (https://github.com/HKDevLoops/Forgum/releases/latest)"
+        }
+        forgum_platform::ReleaseChannel::Nightly => {
+            "GitHub Nightly (https://github.com/HKDevLoops/Forgum/releases/tag/nightly)"
+        }
+        forgum_platform::ReleaseChannel::Dev => "Local Development Build",
+    };
+    println!("  • Update Stream:    {channel_url}");
     println!("  • Update Check:     `forgum update --check` (or `{}`)", source.check_command());
     println!("  • Upgrade Command:  `forgum update` (or `{}`)", source.update_command());
-    println!("  • Status:           {c_green}✓ Up to date{c_reset} (v{version} is the latest release build)\n");
+
+    let inactive_shadows: Vec<_> = shadows.iter().filter(|s| !s.is_active).collect();
+    if inactive_shadows.is_empty() {
+        println!("  • Shadow Binaries:  {c_green}✓ Clean (0 shadow installations detected){c_reset}\n");
+    } else {
+        println!("  • Shadow Binaries:  {c_yellow}⚠️ Detected {} shadow installation(s):{c_reset}", inactive_shadows.len());
+        for s in &shadows {
+            println!("      {}", s.display_line());
+        }
+        println!();
+    }
 
     // 2. Active User Configurations
     println!("{c_cyan}## Active User Configurations{c_reset}");
@@ -1862,6 +1883,191 @@ fn handle_status_command(args: &cli::Args) -> ExitCode {
     println!("{c_cyan}=============================================================================={c_reset}");
 
     ExitCode::SUCCESS
+}
+
+fn handle_channel_command(action: Option<&str>, name: Option<&str>) -> ExitCode {
+    let receipt = forgum_platform::read_receipt().unwrap_or(None);
+    let current_channel = receipt
+        .as_ref()
+        .map(|r| r.channel)
+        .unwrap_or(forgum_platform::ReleaseChannel::Stable);
+    let source = forgum_platform::detect_installation_source();
+
+    let target_str = match action {
+        None | Some("list") | Some("status") => {
+            println!("\x1b[1;36m━━━ Forgum Release Channels ━━━\x1b[0m");
+            println!("Active Channel:   \x1b[1;32m{}\x1b[0m", current_channel.display_name());
+            println!("Install Source:   \x1b[1m{}\x1b[0m", source.name());
+            println!("Active Version:   v{}", env!("CARGO_PKG_VERSION"));
+            if let Some(r) = receipt {
+                println!(
+                    "Receipt Location: {}",
+                    forgum_platform::Receipt::file_path()
+                        .map(|p| p.display().to_string())
+                        .unwrap_or_else(|_| "unknown".to_string())
+                );
+                println!("Receipt Binary:   {}", r.bin_path.display());
+            }
+            println!("\nAvailable Channels:");
+            for ch in forgum_platform::ReleaseChannel::ALL {
+                let marker = if *ch == current_channel {
+                    " \x1b[1;32m●\x1b[0m"
+                } else {
+                    "  "
+                };
+                println!("{marker} \x1b[1m{:<8}\x1b[0m — {}", ch.as_str(), ch.description());
+            }
+            println!("\nUsage:");
+            println!("  forgum channel switch <stable|nightly|dev>");
+            println!("  forgum update --channel <stable|nightly|dev>");
+
+            let shadows = forgum_platform::detect_shadow_installations();
+            let inactive: Vec<_> = shadows.iter().filter(|s| !s.is_active).collect();
+            if !inactive.is_empty() {
+                println!("\n\x1b[1;33m⚠️  Shadow Installations Detected:\x1b[0m");
+                for s in &shadows {
+                    println!("  {}", s.display_line());
+                }
+            }
+
+            return ExitCode::SUCCESS;
+        }
+        Some("get") => {
+            println!("{}", current_channel.as_str());
+            return ExitCode::SUCCESS;
+        }
+        Some("set") | Some("switch") => name,
+        other => other,
+    };
+
+    let Some(target) = target_str else {
+        eprintln!("usage: forgum channel switch <stable|nightly|dev>");
+        return ExitCode::from(1);
+    };
+
+    let target_channel = match target.parse::<forgum_platform::ReleaseChannel>() {
+        Ok(c) => c,
+        Err(e) => {
+            eprintln!("{PROGRAM}: {e}");
+            return ExitCode::from(1);
+        }
+    };
+
+    match forgum_platform::record_receipt(target_channel, Some(source)) {
+        Ok(_) => {
+            println!(
+                "\x1b[1;32m✓\x1b[0m Successfully switched release channel to: \x1b[1m{}\x1b[0m",
+                target_channel.display_name()
+            );
+            println!(
+                "  Updated receipt at: {}",
+                forgum_platform::Receipt::file_path()
+                    .map(|p| p.display().to_string())
+                    .unwrap_or_default()
+            );
+            println!("  Future `forgum update` calls will synchronize against this stream.");
+            ExitCode::SUCCESS
+        }
+        Err(e) => {
+            eprintln!("{PROGRAM}: failed to save receipt: {e}");
+            ExitCode::from(1)
+        }
+    }
+}
+
+fn handle_update_command(check: bool, channel_flag: Option<&str>) -> ExitCode {
+    if let Some(ch_str) = channel_flag {
+        match ch_str.parse::<forgum_platform::ReleaseChannel>() {
+            Ok(c) => {
+                let _ = forgum_platform::record_receipt(c, None);
+                println!("Active channel switched to: \x1b[1;32m{}\x1b[0m", c.display_name());
+            }
+            Err(e) => {
+                eprintln!("{PROGRAM}: {e}");
+                return ExitCode::from(1);
+            }
+        }
+    }
+
+    let receipt = forgum_platform::read_receipt().unwrap_or(None);
+    let channel = receipt
+        .as_ref()
+        .map(|r| r.channel)
+        .unwrap_or(forgum_platform::ReleaseChannel::Stable);
+    let source = forgum_platform::detect_installation_source();
+
+    let shadows = forgum_platform::detect_shadow_installations();
+    let conflicts: Vec<_> = shadows.iter().filter(|s| !s.is_active).collect();
+    if !conflicts.is_empty() {
+        println!(
+            "\x1b[1;33m⚠️  Warning: Multiple Forgum installations detected across package managers:\x1b[0m"
+        );
+        for s in &shadows {
+            println!("    {}", s.display_line());
+        }
+        println!("  \x1b[90m(Suggestion: Remove duplicate versions to avoid PATH ambiguity)\x1b[0m\n");
+    }
+
+    let action_str = if check {
+        "Checking for available updates"
+    } else {
+        "Updating Forgum"
+    };
+
+    println!("\x1b[1;36m━━━ Forgum Auto-Update ━━━\x1b[0m");
+    println!("Installed via:   \x1b[1;32m{}\x1b[0m", source.name());
+    println!("Release Channel: \x1b[1;33m{}\x1b[0m", channel.display_name());
+    println!(
+        "Action:          \x1b[1;33m{}\x1b[0m (Command: `{}`)\n",
+        action_str,
+        if check {
+            source.check_command()
+        } else {
+            source.update_command()
+        }
+    );
+
+    match source {
+        forgum_platform::PackageManager::DirectBinary => {
+            let version = env!("CARGO_PKG_VERSION");
+            let channel_stream = match channel {
+                forgum_platform::ReleaseChannel::Stable => {
+                    "https://github.com/HKDevLoops/Forgum/releases/latest"
+                }
+                forgum_platform::ReleaseChannel::Nightly => {
+                    "https://github.com/HKDevLoops/Forgum/releases/tag/nightly"
+                }
+                forgum_platform::ReleaseChannel::Dev => {
+                    "Local git repository (compile with `cargo build --release`)"
+                }
+            };
+            println!(
+                "Forgum v{version} is running as a Standalone Binary.\n\
+                 Target stream for channel {channel}:\n\
+                 {channel_stream}\n\n\
+                 To install or update via an official package manager:\n\
+                   Scoop:  scoop update forgum\n\
+                   WinGet: winget upgrade HKDevLoops.Forgum\n\
+                   Brew:   brew upgrade forgum"
+            );
+            ExitCode::SUCCESS
+        }
+        _ => {
+            match forgum_platform::execute_package_manager_action(source, check) {
+                Ok(output) => {
+                    if !output.is_empty() {
+                        println!("{output}");
+                    }
+                    println!("\n\x1b[1;32m✓ Action completed.\x1b[0m");
+                    ExitCode::SUCCESS
+                }
+                Err(err) => {
+                    eprintln!("\x1b[1;31m✗ Update action failed:\x1b[0m {err}");
+                    ExitCode::from(1)
+                }
+            }
+        }
+    }
 }
 
 fn handle_stop_command(all: bool, force: bool) -> ExitCode {

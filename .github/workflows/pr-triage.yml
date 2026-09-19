@@ -1,0 +1,119 @@
+name: PR Triage & Branch Gate
+
+on:
+  pull_request_target:
+    types: [opened, edited, synchronized, reopened]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  pull-requests: write
+  contents: read
+  issues: write
+
+jobs:
+  branch-gate:
+    name: Verify Target Branch is 'dev'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Base Branch
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Evaluating target base branch: $BASE_REF"
+          if [ "$BASE_REF" != "dev" ]; then
+            MESSAGE="### ❌ Invalid Base Branch Detected
+
+Forgum enforces a strict 3-branch release architecture:
+1. **\`dev\`**: Active development & PR integration (**all contributor PRs must target here**).
+2. **\`nightly\`**: Early-access builds rolled daily from \`dev\`.
+3. **\`main\`**: Production stable releases.
+
+This pull request was opened against \`$BASE_REF\`. Please change the base branch to \`dev\` in the PR settings at the top of this page.
+
+*Once retargeted to \`dev\`, this check will automatically pass.*"
+
+            gh pr comment "$PR_NUMBER" --body "$MESSAGE" || true
+            echo "::error::PR targets '$BASE_REF' instead of 'dev'. Failing gate."
+            exit 1
+          fi
+          echo "Target branch is 'dev' ✓"
+
+  auto-label:
+    name: Auto-Label & Kanban Triage
+    runs-on: ubuntu-latest
+    needs: branch-gate
+    steps:
+      - uses: actions/checkout@v4
+      - name: Label based on file paths and PR title
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const labelsToAdd = new Set();
+
+            // Default triage labels
+            labelsToAdd.add('channel:dev');
+            labelsToAdd.add('status:needs-review');
+
+            // Parse title for semantic prefix
+            const title = pr.title.toLowerCase();
+            if (title.startsWith('fix:') || title.startsWith('fix(')) {
+              labelsToAdd.add('type:bug');
+            } else if (title.startsWith('feat:') || title.startsWith('feat(')) {
+              labelsToAdd.add('type:feature');
+            } else if (title.startsWith('perf:') || title.startsWith('perf(')) {
+              labelsToAdd.add('type:performance');
+            } else if (title.startsWith('docs:') || title.startsWith('docs(')) {
+              labelsToAdd.add('type:docs');
+            } else if (title.startsWith('refactor:') || title.startsWith('refactor(')) {
+              labelsToAdd.add('type:refactor');
+            }
+
+            // Fetch changed files
+            const files = await github.paginate(github.rest.pulls.listFiles, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr.number,
+            });
+
+            for (const file of files) {
+              const filename = file.filename;
+              if (filename.startsWith('crates/engine/')) {
+                labelsToAdd.add('area:engine');
+              }
+              if (filename.startsWith('crates/tui/')) {
+                labelsToAdd.add('area:tui');
+              }
+              if (filename.startsWith('crates/platform/')) {
+                labelsToAdd.add('area:platform');
+              }
+              if (filename.startsWith('packaging/') || filename.startsWith('install.') || filename.startsWith('uninstall.')) {
+                labelsToAdd.add('area:packaging');
+              }
+              if (filename.startsWith('data/Cows/')) {
+                labelsToAdd.add('area:mascots');
+              }
+              if (filename.startsWith('docs/') || filename.endsWith('.md')) {
+                labelsToAdd.add('area:docs');
+              }
+              if (filename.startsWith('.github/')) {
+                labelsToAdd.add('area:ci');
+              }
+            }
+
+            const labelArray = Array.from(labelsToAdd);
+            console.log('Applying Kanban labels:', labelArray);
+
+            if (labelArray.length > 0) {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr.number,
+                labels: labelArray,
+              });
+            }

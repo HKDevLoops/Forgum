@@ -1,0 +1,61 @@
+name: "✨ Feature Request / Architectural Proposal"
+description: "Suggest a new capability, natural biome, creature mechanic, or architectural enhancement."
+title: "feat: "
+labels: ["type:feature", "status:needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        We welcome well-reasoned feature proposals that align with Forgum's vision of lightweight, high-performance terminal animations and celestial aesthetics.
+        Please review the architectural mandates in `AGENTS.md` before submitting.
+
+  - type: textarea
+    id: problem-or-motivation
+    attributes:
+      label: Problem or Motivation
+      description: Is your feature request related to a problem? What is the user experience you want to improve?
+      placeholder: "A clear and concise description of what the problem or desire is."
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed-solution
+    attributes:
+      label: Proposed Solution & Architectural Design
+      description: How should this work? Detail the CLI interface, TUI interaction, or animation physics.
+      placeholder: "Describe how you envision this working from both the user and implementation perspective."
+    validations:
+      required: true
+
+  - type: textarea
+    id: nature-math-memory
+    attributes:
+      label: Memory & Performance Impact (<100MB RAM Mandate)
+      description: How does this proposal ensure strict adherence to the <100MB RAM budget and zero-allocation render loop?
+      placeholder: "Explain stack allocation, pre-allocated framebuffers, or mathematical formulations."
+    validations:
+      required: true
+
+  - type: dropdown
+    id: target-channel
+    attributes:
+      label: Target Delivery Channel
+      description: Where should this feature land initially?
+      options:
+        - "dev branch (Maintainer / developer evaluation)"
+        - "nightly branch (Early access rollout)"
+        - "main branch (Directly to stable after full RFC)"
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: standards-check
+    attributes:
+      label: Mandates & Design Principles
+      options:
+        - label: "Conforms strictly to the 'forgum' keyword (no user-facing binary fragmentation)."
+          required: true
+        - label: "Does not require heavyweight dependencies or background daemons that violate battery/RAM budgets."
+          required: true
+        - label: "Maintains cross-platform parity across Windows, macOS, and Linux."
+          required: true

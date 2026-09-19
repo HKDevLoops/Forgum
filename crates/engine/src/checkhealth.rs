@@ -8,8 +8,8 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use forgum_platform::{
-    detect_available_package_managers, detect_installation_source, is_telemetry_allowed,
-    ALL_FORGUM_MARKER_PAIRS,
+    detect_available_package_managers, detect_installation_source, detect_shadow_installations,
+    is_telemetry_allowed, read_receipt, ALL_FORGUM_MARKER_PAIRS,
 };
 use serde::{Deserialize, Serialize};
 
@@ -175,6 +175,57 @@ pub fn run_health_check(explicit_config: Option<&Path>) -> HealthReport {
         ],
         suggestion: None,
     });
+
+    let receipt = read_receipt().unwrap_or(None);
+    let channel = receipt
+        .as_ref()
+        .map(|r| r.channel)
+        .unwrap_or(forgum_platform::ReleaseChannel::Stable);
+
+    sys_items.push(HealthItem {
+        status: HealthStatus::Ok,
+        title: format!("Release Channel: {}", channel.display_name()),
+        details: vec![
+            format!("Channel: {}", channel.as_str()),
+            format!("Description: {}", channel.description()),
+            format!(
+                "Receipt Status: {}",
+                if receipt.is_some() {
+                    "Recorded on disk"
+                } else {
+                    "Default fallback"
+                }
+            ),
+        ],
+        suggestion: None,
+    });
+
+    let shadows = detect_shadow_installations();
+    let inactive_shadows: Vec<_> = shadows.iter().filter(|s| !s.is_active).collect();
+    if inactive_shadows.is_empty() {
+        sys_items.push(HealthItem {
+            status: HealthStatus::Ok,
+            title: "Binary Reconciliation: Single clean installation".to_string(),
+            details: vec![
+                format!("Active binary: {}", engine_exe.display()),
+                "Zero conflicting shadow installations detected on PATH.".to_string(),
+            ],
+            suggestion: None,
+        });
+    } else {
+        sys_items.push(HealthItem {
+            status: HealthStatus::Warn,
+            title: format!(
+                "Shadow Installations: {} conflicting binaries detected",
+                inactive_shadows.len()
+            ),
+            details: shadows.iter().map(|s| s.display_line()).collect(),
+            suggestion: Some(
+                "Remove or uninstall shadowed versions to prevent PATH conflicts across package managers."
+                    .to_string(),
+            ),
+        });
+    }
 
     sys_items.push(HealthItem {
         status: if active_pms.is_empty() {

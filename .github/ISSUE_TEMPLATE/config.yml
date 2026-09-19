@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: "💬 Forgum Discussions & Q&A"
+    url: https://github.com/HKDevLoops/Forgum/discussions
+    about: "Ask questions, share custom animal profiles, discuss ideas, and show off your shell setups."
+  - name: "📖 Official Documentation & Guides"
+    url: https://github.com/HKDevLoops/Forgum/tree/main/docs
+    about: "Read comprehensive setup, shell integration, telemetry, and architecture manuals."
+  - name: "🛫 Flight Checklist & Governance"
+    url: https://github.com/HKDevLoops/Forgum/blob/main/AGENTS.md
+    about: "Review the mandatory operating guidelines, architecture mandates, and testing rules."

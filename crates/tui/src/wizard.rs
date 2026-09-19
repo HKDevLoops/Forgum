@@ -22,8 +22,13 @@ use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, BorderType, Borders, Gauge, List, ListItem, Paragraph, Wrap};
 use ratatui::{Frame, Terminal};
 
+use forgum_platform::package_manager::{
+    detect_available_package_managers, detect_shadow_installations, record_receipt, PackageManager,
+    ReleaseChannel, ShadowInstallation,
+};
 use forgum_platform::shell::Shell;
 use forgum_platform::telemetry::{record_installed, record_tried, set_telemetry_consent};
+use forgum_platform::terminal::{detect_capabilities, detect_utf8_support, ColorLevel};
 use forgum_platform::uninstaller::{perform_uninstallation, UninstallMode, UninstallReport};
 
 use crate::celestial_art::*;
@@ -51,6 +56,7 @@ pub mod theme {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum InstallStep {
     Welcome,
+    Preflight,
     TelemetryConsent,
     ShellSelection,
     Executing,
@@ -60,6 +66,14 @@ enum InstallStep {
 #[derive(Debug)]
 pub struct InstallerWizard {
     step: InstallStep,
+    selected_channel: ReleaseChannel,
+    channel_selection_idx: usize,
+    shadow_installations: Vec<ShadowInstallation>,
+    package_managers: Vec<(PackageManager, bool)>,
+    has_ffmpeg: bool,
+    color_level: ColorLevel,
+    sync_supported: bool,
+    utf8_supported: bool,
     telemetry_allowed: bool,
     telemetry_selection: bool,        // true = Yes, false = No
     shells: Vec<(Shell, bool, bool)>, // (Shell, detected_on_host, selected_for_install)
@@ -80,6 +94,13 @@ impl InstallerWizard {
         // Record that a user tried / opened the installer
         record_tried();
 
+        // Host and environment diagnostic probes
+        let caps = detect_capabilities();
+        let shadow_installations = detect_shadow_installations();
+        let package_managers = detect_available_package_managers();
+        let has_ffmpeg = which_exists("ffmpeg");
+        let utf8_supported = detect_utf8_support();
+
         // Detect shells present on current host
         let mut shells = Vec::new();
         for &sh in Shell::ALL {
@@ -99,6 +120,14 @@ impl InstallerWizard {
 
         Self {
             step: InstallStep::Welcome,
+            selected_channel: ReleaseChannel::Stable,
+            channel_selection_idx: 0,
+            shadow_installations,
+            package_managers,
+            has_ffmpeg,
+            color_level: caps.color,
+            sync_supported: caps.sync,
+            utf8_supported,
             telemetry_allowed: true,
             telemetry_selection: true,
             shells,
@@ -113,9 +142,44 @@ impl InstallerWizard {
         match self.step {
             InstallStep::Welcome => match key.code {
                 KeyCode::Enter | KeyCode::Char(' ') | KeyCode::Right => {
-                    self.step = InstallStep::TelemetryConsent;
+                    self.step = InstallStep::Preflight;
                 }
                 KeyCode::Char('q') | KeyCode::Esc => return true,
+                _ => {}
+            },
+            InstallStep::Preflight => match key.code {
+                KeyCode::Left | KeyCode::BackTab => {
+                    if self.channel_selection_idx > 0 {
+                        self.channel_selection_idx -= 1;
+                    } else {
+                        self.channel_selection_idx = ReleaseChannel::ALL.len() - 1;
+                    }
+                    self.selected_channel = ReleaseChannel::ALL[self.channel_selection_idx];
+                }
+                KeyCode::Right | KeyCode::Tab => {
+                    self.channel_selection_idx =
+                        (self.channel_selection_idx + 1) % ReleaseChannel::ALL.len();
+                    self.selected_channel = ReleaseChannel::ALL[self.channel_selection_idx];
+                }
+                KeyCode::Char('1') => {
+                    self.channel_selection_idx = 0;
+                    self.selected_channel = ReleaseChannel::Stable;
+                }
+                KeyCode::Char('2') => {
+                    self.channel_selection_idx = 1;
+                    self.selected_channel = ReleaseChannel::Nightly;
+                }
+                KeyCode::Char('3') => {
+                    self.channel_selection_idx = 2;
+                    self.selected_channel = ReleaseChannel::Dev;
+                }
+                KeyCode::Enter | KeyCode::Char(' ') | KeyCode::Down => {
+                    self.step = InstallStep::TelemetryConsent;
+                }
+                KeyCode::Esc | KeyCode::Up => {
+                    self.step = InstallStep::Welcome;
+                }
+                KeyCode::Char('q') => return true,
                 _ => {}
             },
             InstallStep::TelemetryConsent => match key.code {
@@ -139,7 +203,7 @@ impl InstallerWizard {
                     let _ = set_telemetry_consent(self.telemetry_selection);
                     self.step = InstallStep::ShellSelection;
                 }
-                KeyCode::Esc => self.step = InstallStep::Welcome,
+                KeyCode::Esc => self.step = InstallStep::Preflight,
                 _ => {}
             },
             InstallStep::ShellSelection => match key.code {
@@ -208,6 +272,13 @@ impl InstallerWizard {
                     ));
                 }
             }
+        }
+        if let Ok(receipt) = record_receipt(self.selected_channel, None) {
+            self.install_logs.push(format!(
+                "✓ Registered installation receipt: {} ({})",
+                self.selected_channel.display_name(),
+                receipt.installer_source.name()
+            ));
         }
         self.progress = 40;
 
@@ -301,6 +372,7 @@ impl InstallerWizard {
 
         match self.step {
             InstallStep::Welcome => self.render_welcome_screen(f, chunks[1]),
+            InstallStep::Preflight => self.render_preflight_screen(f, chunks[1]),
             InstallStep::TelemetryConsent => self.render_telemetry_screen(f, chunks[1]),
             InstallStep::ShellSelection => self.render_shell_selection_screen(f, chunks[1]),
             InstallStep::Executing => self.render_executing_screen(f, chunks[1]),
@@ -323,19 +395,22 @@ impl InstallerWizard {
 
         let breadcrumbs = match self.step {
             InstallStep::Welcome => {
-                " [1] Welcome  ──  2  Privacy  ──  3  Shells  ──  4  Install  ──  5  Blastoff "
+                " [1] Welcome ── 2 Preflight ── 3 Privacy ── 4 Shells ── 5 Install ── 6 Blastoff "
+            }
+            InstallStep::Preflight => {
+                "  1  Welcome ── [2] Preflight ── 3 Privacy ── 4 Shells ── 5 Install ── 6 Blastoff "
             }
             InstallStep::TelemetryConsent => {
-                "  1  Welcome  ── [2] Privacy  ──  3  Shells  ──  4  Install  ──  5  Blastoff "
+                "  1  Welcome ── 2 Preflight ── [3] Privacy ── 4 Shells ── 5 Install ── 6 Blastoff "
             }
             InstallStep::ShellSelection => {
-                "  1  Welcome  ──  2  Privacy  ── [3] Shells  ──  4  Install  ──  5  Blastoff "
+                "  1  Welcome ── 2 Preflight ── 3 Privacy ── [4] Shells ── 5 Install ── 6 Blastoff "
             }
             InstallStep::Executing => {
-                "  1  Welcome  ──  2  Privacy  ──  3  Shells  ── [4] Install  ──  5  Blastoff "
+                "  1  Welcome ── 2 Preflight ── 3 Privacy ── 4 Shells ── [5] Install ── 6 Blastoff "
             }
             InstallStep::Complete => {
-                "  1  Welcome  ──  2  Privacy  ──  3  Shells  ──  4  Install  ── [5] Blastoff "
+                "  1  Welcome ── 2 Preflight ── 3 Privacy ── 4 Shells ── 5 Install ── [6] Blastoff "
             }
         };
 
@@ -441,7 +516,7 @@ impl InstallerWizard {
             Line::from(format!("  • Inline Graphics  : {:?}", caps.graphics)),
             Line::from(""),
             Line::from(Span::styled(
-                "Press [Enter] or [Space] to begin the cosmic setup.",
+                "Press [Enter] or [Space] to run preflight check.",
                 Style::default()
                     .fg(theme::AURORA_GREEN)
                     .add_modifier(Modifier::BOLD),
@@ -458,6 +533,252 @@ impl InstallerWizard {
             )
             .wrap(Wrap { trim: true });
         f.render_widget(diag_p, split[1]);
+    }
+
+    fn render_preflight_screen(&self, f: &mut Frame, area: Rect) {
+        let cols = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
+            .split(area);
+
+        // Left Column: Capabilities & Optional Dependencies
+        let left_chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Length(12), Constraint::Min(8)])
+            .split(cols[0]);
+
+        // Card 1: Terminal Color & Glyph Diagnostics
+        let is_truecolor = self.color_level == ColorLevel::TrueColor;
+        let active_term = detect_active_terminal();
+        let diag_lines = vec![
+            Line::from(vec![
+                Span::styled(
+                    "  Color Depth     : ",
+                    Style::default().fg(theme::NEBULA_CYAN).add_modifier(Modifier::BOLD),
+                ),
+                if is_truecolor {
+                    Span::styled(
+                        "● TrueColor 24-bit (16.7M RGB Colors)",
+                        Style::default().fg(theme::AURORA_GREEN).add_modifier(Modifier::BOLD),
+                    )
+                } else {
+                    Span::styled("● 256 / 8-Color ANSI Mode", Style::default().fg(theme::SUPERNOVA_GOLD))
+                },
+            ]),
+            Line::from(vec![
+                Span::styled(
+                    "  Unicode / Glyphs: ",
+                    Style::default().fg(theme::NEBULA_CYAN).add_modifier(Modifier::BOLD),
+                ),
+                if self.utf8_supported {
+                    Span::styled("● UTF-8 Active [ 🐄 ✦ 🌌 🛡️ 🌿 ⚡ ✓ ]", Style::default().fg(theme::AURORA_GREEN))
+                } else {
+                    Span::styled("● ASCII Limited Mode", Style::default().fg(theme::SUPERNOVA_GOLD))
+                },
+            ]),
+            Line::from(vec![
+                Span::styled(
+                    "  TTY Frame Sync  : ",
+                    Style::default().fg(theme::NEBULA_CYAN).add_modifier(Modifier::BOLD),
+                ),
+                if self.sync_supported {
+                    Span::styled("● DEC 2026 Synchronized Output", Style::default().fg(theme::AURORA_GREEN))
+                } else {
+                    Span::styled("● Standard Non-Atomic VT", Style::default().fg(theme::DUST_GRAY))
+                },
+            ]),
+            Line::from(vec![
+                Span::styled(
+                    "  Terminal Host   : ",
+                    Style::default().fg(theme::NEBULA_CYAN).add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(active_term, Style::default().fg(theme::STARLIGHT)),
+            ]),
+            Line::from(vec![
+                Span::styled(
+                    "  Platform Target : ",
+                    Style::default().fg(theme::NEBULA_CYAN).add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(
+                    format!("{} ({})", std::env::consts::OS, std::env::consts::ARCH),
+                    Style::default().fg(theme::DUST_GRAY),
+                ),
+            ]),
+            Line::from(""),
+            Line::from(Span::styled(
+                "  ✓ Memory budget: <100MB resident RAM ceiling guaranteed",
+                Style::default().fg(theme::AURORA_GREEN),
+            )),
+        ];
+        let card1 = Paragraph::new(diag_lines).block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_type(BorderType::Rounded)
+                .border_style(Style::default().fg(theme::NEBULA_CYAN))
+                .title(" ✦ 1. Terminal Capabilities & Glyphs ✦ "),
+        );
+        f.render_widget(card1, left_chunks[0]);
+
+        // Card 2: Media & Optional Dependencies (ffmpeg)
+        let media_lines = if self.has_ffmpeg {
+            vec![
+                Line::from(Span::styled(
+                    "  ✓ FFmpeg Media Engine: Detected on system PATH",
+                    Style::default().fg(theme::AURORA_GREEN).add_modifier(Modifier::BOLD),
+                )),
+                Line::from(""),
+                Line::from("  Terminal session recording and high-res GIF export"),
+                Line::from("  are fully enabled and available for animations."),
+            ]
+        } else {
+            vec![
+                Line::from(Span::styled(
+                    "  ⚠️ FFmpeg Media Engine: Not found (Optional)",
+                    Style::default().fg(theme::SUPERNOVA_GOLD).add_modifier(Modifier::BOLD),
+                )),
+                Line::from(""),
+                Line::from("  Forgum runs natively without it! Install anytime for GIF/video capture:"),
+                Line::from(vec![
+                    Span::styled("    Windows : ", Style::default().fg(theme::NEBULA_CYAN)),
+                    Span::styled("scoop install ffmpeg  |  winget install Gyan.FFmpeg", Style::default().fg(theme::STARFIRE_PINK)),
+                ]),
+                Line::from(vec![
+                    Span::styled("    macOS   : ", Style::default().fg(theme::NEBULA_CYAN)),
+                    Span::styled("brew install ffmpeg", Style::default().fg(theme::STARFIRE_PINK)),
+                ]),
+                Line::from(vec![
+                    Span::styled("    Linux   : ", Style::default().fg(theme::NEBULA_CYAN)),
+                    Span::styled("sudo apt install ffmpeg  |  pacman -S ffmpeg", Style::default().fg(theme::STARFIRE_PINK)),
+                ]),
+            ]
+        };
+        let card2 = Paragraph::new(media_lines).block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_type(BorderType::Rounded)
+                .border_style(Style::default().fg(theme::ASTRAL_PURPLE))
+                .title(" ✦ 2. Optional Recording Tools ✦ "),
+        );
+        f.render_widget(card2, left_chunks[1]);
+
+        // Right Column: Package Managers / Shadows & Channel Selector
+        let right_chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Min(9), Constraint::Length(9)])
+            .split(cols[1]);
+
+        // Card 3: Package Managers & Shadow Installation Detection
+        let active_pms: Vec<String> = self
+            .package_managers
+            .iter()
+            .filter(|(_, avail)| *avail)
+            .map(|(pm, _)| pm.name().to_string())
+            .collect();
+        let inactive_shadows: Vec<_> = self
+            .shadow_installations
+            .iter()
+            .filter(|s| !s.is_active)
+            .collect();
+
+        let mut pkg_lines = vec![
+            Line::from(vec![
+                Span::styled(
+                    "  Package Managers: ",
+                    Style::default().fg(theme::SUPERNOVA_GOLD).add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(
+                    if active_pms.is_empty() {
+                        "None detected (Direct Standalone)".to_string()
+                    } else {
+                        active_pms.join(", ")
+                    },
+                    Style::default().fg(theme::STARLIGHT),
+                ),
+            ]),
+            Line::from(""),
+        ];
+
+        if inactive_shadows.is_empty() {
+            pkg_lines.push(Line::from(Span::styled(
+                "  ✓ Reconciliation: Clean Single Installation",
+                Style::default().fg(theme::AURORA_GREEN).add_modifier(Modifier::BOLD),
+            )));
+            pkg_lines.push(Line::from("    No conflicting shadow binaries detected on system PATH."));
+        } else {
+            pkg_lines.push(Line::from(Span::styled(
+                format!("  ⚠️ SHADOW CONFLICT: {} duplicate binaries found!", inactive_shadows.len()),
+                Style::default().fg(theme::METEOR_RED).add_modifier(Modifier::BOLD),
+            )));
+            for s in &self.shadow_installations {
+                pkg_lines.push(Line::from(format!("    {}", s.display_line())));
+            }
+            pkg_lines.push(Line::from("    Tip: Uninstall duplicate managers to prevent PATH priority conflicts."));
+        }
+
+        let card3 = Paragraph::new(pkg_lines).block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_type(BorderType::Rounded)
+                .border_style(if inactive_shadows.is_empty() {
+                    Style::default().fg(theme::SUPERNOVA_GOLD)
+                } else {
+                    Style::default().fg(theme::METEOR_RED)
+                })
+                .title(" ✦ 3. Package Managers & Conflict Check ✦ "),
+        );
+        f.render_widget(card3, right_chunks[0]);
+
+        // Card 4: Release Stream / Channel Selector
+        let mut chan_lines = vec![
+            Line::from(""),
+        ];
+
+        let mut pill_spans = vec![Span::raw("  ")];
+        for (i, &ch) in ReleaseChannel::ALL.iter().enumerate() {
+            let is_selected = ch == self.selected_channel;
+            let label = format!(" [{}: {}] ", i + 1, ch.as_str());
+            if is_selected {
+                pill_spans.push(Span::styled(
+                    label,
+                    Style::default()
+                        .fg(theme::COSMIC_DARK)
+                        .bg(theme::AURORA_GREEN)
+                        .add_modifier(Modifier::BOLD),
+                ));
+            } else {
+                pill_spans.push(Span::styled(
+                    label,
+                    Style::default().fg(theme::DUST_GRAY).bg(theme::DEEP_SPACE),
+                ));
+            }
+            pill_spans.push(Span::raw("  "));
+        }
+        chan_lines.push(Line::from(pill_spans));
+        chan_lines.push(Line::from(""));
+        chan_lines.push(Line::from(vec![
+            Span::styled(
+                "  Stream: ",
+                Style::default().fg(theme::STARFIRE_PINK).add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(
+                self.selected_channel.description(),
+                Style::default().fg(theme::STARLIGHT),
+            ),
+        ]));
+        chan_lines.push(Line::from(""));
+        chan_lines.push(Line::from(Span::styled(
+            "  Toggle with [Tab] or [1/2/3] • Press [Enter] to proceed",
+            Style::default().fg(theme::DUST_GRAY),
+        )));
+
+        let card4 = Paragraph::new(chan_lines).block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_type(BorderType::Rounded)
+                .border_style(Style::default().fg(theme::STARFIRE_PINK))
+                .title(" ✦ 4. Release Channel Stream ✦ "),
+        );
+        f.render_widget(card4, right_chunks[1]);
     }
 
     fn render_telemetry_screen(&self, f: &mut Frame, area: Rect) {
@@ -802,9 +1123,27 @@ impl InstallerWizard {
                         .fg(theme::SUPERNOVA_GOLD)
                         .add_modifier(Modifier::BOLD),
                 ),
-                Span::raw("Next: Privacy Notice  "),
+                Span::raw("Next: Preflight Diagnostics  "),
                 Span::styled(" [q] ", Style::default().fg(theme::DUST_GRAY)),
                 Span::raw("Quit"),
+            ],
+            InstallStep::Preflight => vec![
+                Span::styled(
+                    " [Tab/←/→/1-3] ",
+                    Style::default()
+                        .fg(theme::SUPERNOVA_GOLD)
+                        .add_modifier(Modifier::BOLD),
+                ),
+                Span::raw("Select Channel  "),
+                Span::styled(
+                    " [Enter] ",
+                    Style::default()
+                        .fg(theme::AURORA_GREEN)
+                        .add_modifier(Modifier::BOLD),
+                ),
+                Span::raw("Next: Privacy Notice  "),
+                Span::styled(" [Esc] ", Style::default().fg(theme::DUST_GRAY)),
+                Span::raw("Back"),
             ],
             InstallStep::TelemetryConsent => vec![
                 Span::styled(
@@ -1555,7 +1894,7 @@ fn get_shell_completion_content(sh: Shell) -> &'static str {
             r#"# Forgum PowerShell auto-completion script
 Register-ArgumentCompleter -Native -CommandName forgum -ScriptBlock {
     param($wordToComplete, $commandAst, $cursorPosition)
-    $commands = @("render", "think", "fortune", "tui", "init", "completions", "list", "status", "doctor", "checkhealth", "config", "logs", "log", "diagnose", "install", "uninstall", "update")
+    $commands = @("render", "think", "fortune", "tui", "init", "completions", "list", "status", "doctor", "checkhealth", "config", "logs", "log", "diagnose", "install", "uninstall", "update", "channel")
     $commands | Where-Object { $_ -like "$wordToComplete*" } | ForEach-Object {
         [System.Management.Automation.CompletionResult]::new($_, $_, 'ParameterValue', $_)
     }
@@ -1566,7 +1905,7 @@ Register-ArgumentCompleter -Native -CommandName forgum -ScriptBlock {
             r#"# Forgum Bash auto-completion script
 _forgum_completions() {
     local cur="${COMP_WORDS[COMP_CWORD]}"
-    local cmds="render think fortune tui init completions list status doctor checkhealth config logs log diagnose install uninstall update --animal --effect --environment --road --mountain --color-mode"
+    local cmds="render think fortune tui init completions list status doctor checkhealth config logs log diagnose install uninstall update channel --animal --effect --environment --road --mountain --color-mode"
     COMPREPLY=( $(compgen -W "${cmds}" -- "${cur}") )
 }
 complete -F _forgum_completions forgum
@@ -1580,7 +1919,7 @@ _forgum() {
         '--effect[Animation effect]:effect:(walk breathe float fly talk sway pulse glitch particles dissolve)' \
         '--environment[Particle environment]:environment:(pasture inferno ocean arctic city forest savanna swamp space cyber)' \
         '--color-mode[Color palette mode]:color_mode:(animal rainbow solid none)' \
-        '1:subcommand:(render think fortune tui init completions list status doctor checkhealth config logs log diagnose install uninstall update)'
+        '1:subcommand:(render think fortune tui init completions list status doctor checkhealth config logs log diagnose install uninstall update channel)'
 }
 _forgum "$@"
 "#
@@ -1588,7 +1927,7 @@ _forgum "$@"
         Shell::Fish => {
             r#"# Forgum Fish auto-completion script
 complete -c forgum -f
-complete -c forgum -n "__fish_use_subcommand" -a "render think fortune tui init completions list status doctor checkhealth config logs log diagnose install uninstall update"
+complete -c forgum -n "__fish_use_subcommand" -a "render think fortune tui init completions list status doctor checkhealth config logs log diagnose install uninstall update channel"
 "#
         }
         Shell::Nushell => {

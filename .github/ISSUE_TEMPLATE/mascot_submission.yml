@@ -1,0 +1,68 @@
+name: "🐮 Mascot & DNA Submission"
+description: "Submit a new ASCII creature, animal, or mascot with its custom animation DNA profile."
+title: "mascot: Add "
+labels: ["area:mascots", "type:feature", "status:needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Forgum welcomes new creatures to the pasture!
+        All mascots require:
+        1. A valid `.cow` file format in `data/Cows/<name>.cow`
+        2. A corresponding DNA animation profile in `data/Cows/animations.json`
+        3. Convex bounding-hull occlusion verification so scenery doesn't bleed through.
+
+  - type: input
+    id: mascot-name
+    attributes:
+      label: Mascot Name
+      description: The filename identifier (lowercase alphanumeric, e.g., 'phoenix', 'axolotl').
+      placeholder: "phoenix"
+    validations:
+      required: true
+
+  - type: textarea
+    id: ascii-art
+    attributes:
+      label: ASCII Art (.cow content)
+      description: Paste the ASCII art using $the_cow syntax or standard cowsay structure.
+      render: text
+    validations:
+      required: true
+
+  - type: textarea
+    id: dna-profile
+    attributes:
+      label: DNA Animation Profile JSON snippet
+      description: The JSON entry to be appended to `data/Cows/animations.json`.
+      placeholder: |
+        {
+          "base": "fly",
+          "speed": 1.2,
+          "particles": "fire",
+          "glow": "#ff5500",
+          "stride_length": 4
+        }
+      render: json
+    validations:
+      required: true
+
+  - type: input
+    id: art-source
+    attributes:
+      label: Original Artist & License
+      description: Provide attribution for the ASCII artwork (e.g., Public Domain, CC-BY, Original Creation).
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Pre-submission Checklist
+      options:
+        - label: "I tested the mascot with `forgum --animal <name>`."
+          required: true
+        - label: "I tested convex hull occlusion with mountains and roads (`forgum --animal <name> --road dirt --mountain peaks`)."
+          required: true
+        - label: "I verified `cargo test -p forgum-engine --test dna_completeness` passes."
+          required: true
