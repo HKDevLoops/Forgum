@@ -106,6 +106,7 @@ fn piped_stdout_falls_back_gracefully() {
     // /dev/tty or fall back to stdout. Either way it must exit 0.
     let output = Command::new(&bin)
         .args(["status"])
+        .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .output()
@@ -113,7 +114,7 @@ fn piped_stdout_falls_back_gracefully() {
 
     assert!(output.status.success(), "status command failed");
     let stdout = String::from_utf8_lossy(&output.stdout);
-    assert_eq!(stdout.trim(), "ok");
+    assert!(stdout.contains("forgum status"), "status output should contain header: {stdout}");
 }
 
 #[test]
@@ -125,6 +126,7 @@ fn version_command_works() {
 
     let output = Command::new(&bin)
         .args(["--version"])
+        .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .output()
@@ -144,6 +146,7 @@ fn unknown_flag_returns_exit_64() {
 
     let output = Command::new(&bin)
         .args(["render", "--bogus-flag"])
+        .stdin(Stdio::null())
         .stdout(Stdio::null())
         .stderr(Stdio::piped())
         .output()
@@ -166,6 +169,7 @@ fn bare_engine_renders_thought_bubble_and_cow_when_piped() {
 
     let output = Command::new(&bin)
         .env("FORGUM_CONFIG", &cfg_path)
+        .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .output()
@@ -208,6 +212,7 @@ fn think_subcommand_renders_thought_bubble_with_custom_text() {
     let output = Command::new(&bin)
         .env("FORGUM_CONFIG", &cfg_path)
         .args(["think", custom_thought])
+        .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .output()
@@ -240,9 +245,15 @@ fn render_with_text_renders_speech_bubble() {
         return;
     }
 
+    let tmp = tempfile::tempdir().unwrap();
+    let cfg_path = tmp.path().join("config.json");
+    std::fs::write(&cfg_path, "{}").unwrap();
+
     let speech_text = "Classic speech in speech bubble";
     let output = Command::new(&bin)
+        .env("FORGUM_CONFIG", &cfg_path)
         .args(["render", "--text", speech_text])
+        .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .output()

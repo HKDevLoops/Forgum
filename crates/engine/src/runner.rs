@@ -2860,11 +2860,11 @@ fn render_subcommand_with_scene(
         }
     };
 
-    resolve_scene_randomness(&mut scene, &data, &args);
-
     let is_thought = scene.think
         || args.command == cli::Command::Think
         || (args.text.is_none() && scene.text.trim().is_empty());
+
+    resolve_scene_randomness(&mut scene, &data, &args);
 
     if scene.text.trim().is_empty() {
         scene.text = fortune::random_fortune(&data)
@@ -3102,11 +3102,11 @@ fn run_daemon_child(args: cli::Args) -> ExitCode {
         }
     };
 
-    resolve_scene_randomness(&mut scene, &data, &args);
-
     let is_thought = scene.think
         || args.command == cli::Command::Think
         || (args.text.is_none() && scene.text.trim().is_empty());
+
+    resolve_scene_randomness(&mut scene, &data, &args);
 
     if scene.text.trim().is_empty() {
         scene.text = fortune::random_fortune(&data)
