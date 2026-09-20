@@ -1181,27 +1181,27 @@ impl ConfigApp {
                         self.open_config_directory();
                         return Ok(None);
                     }
-                    KeyCode::Char('1') => {
+                    KeyCode::Char('1') if self.current_tab != Tab::Config => {
                         self.current_tab = Tab::Mascots;
                         self.status_message = format!("Switched to {}", self.current_tab.mode_label());
                         return Ok(None);
                     }
-                    KeyCode::Char('2') => {
+                    KeyCode::Char('2') if self.current_tab != Tab::Config => {
                         self.current_tab = Tab::Scenery;
                         self.status_message = format!("Switched to {}", self.current_tab.mode_label());
                         return Ok(None);
                     }
-                    KeyCode::Char('3') => {
+                    KeyCode::Char('3') if self.current_tab != Tab::Config => {
                         self.current_tab = Tab::Effects;
                         self.status_message = format!("Switched to {}", self.current_tab.mode_label());
                         return Ok(None);
                     }
-                    KeyCode::Char('4') => {
+                    KeyCode::Char('4') if self.current_tab != Tab::Config => {
                         self.current_tab = Tab::Installer;
                         self.status_message = format!("Switched to {}", self.current_tab.mode_label());
                         return Ok(None);
                     }
-                    KeyCode::Char('5') => {
+                    KeyCode::Char('5') if self.current_tab != Tab::Config => {
                         self.current_tab = Tab::Config;
                         self.status_message = format!("Switched to {}", self.current_tab.mode_label());
                         return Ok(None);
@@ -2013,8 +2013,9 @@ export extern "forgum" [
             }
             KeyCode::Enter => {
                 let field = ConfigField::ALL[self.config_field_idx];
-                if field == ConfigField::Duration
-                    || field == ConfigField::Fps
+                if field == ConfigField::Fps {
+                    self.cycle_config_field(true);
+                } else if field == ConfigField::Duration
                     || field == ConfigField::Text
                     || field == ConfigField::ThoughtInterval
                     || field == ConfigField::Eyes
@@ -2035,11 +2036,30 @@ export extern "forgum" [
             KeyCode::Char('e') | KeyCode::Char('E') | KeyCode::Char('i') | KeyCode::Char('I') => {
                 self.enter_config_edit();
             }
+            KeyCode::Char(c @ '0'..='9') => {
+                let field = ConfigField::ALL[self.config_field_idx];
+                if field == ConfigField::Duration
+                    || field == ConfigField::Fps
+                    || field == ConfigField::ThoughtInterval
+                    || field == ConfigField::SplitRatio
+                    || field == ConfigField::ReserveRows
+                    || field == ConfigField::ReserveCols
+                {
+                    self.config_edit_buffer = c.to_string();
+                    self.editing_config = true;
+                    self.edit_initial = false;
+                    self.status_message = format!(
+                        "Editing {}: typing '{}' (Enter to confirm, Esc to cancel)",
+                        field.label(),
+                        c
+                    );
+                }
+            }
             KeyCode::Char('t')
             | KeyCode::Char('T')
             | KeyCode::Char(' ') => {
                 let field = ConfigField::ALL[self.config_field_idx];
-                if field == ConfigField::Duration || field == ConfigField::Text {
+                if field == ConfigField::Text {
                     self.enter_config_edit();
                 } else {
                     self.cycle_config_field(true);
