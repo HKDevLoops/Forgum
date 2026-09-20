@@ -187,7 +187,7 @@ By contributing to Forgum, you agree that your contributions will be licensed un
 
 <div align="center">
 
-```
+``` text
     \   ^__^
      \  (oo)\_______
         (__)\       )\/\
