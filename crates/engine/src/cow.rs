@@ -579,37 +579,29 @@ pub fn compose_scene_with_mode(cow_text: &str, bubble_text: &str, is_thought: bo
     result.push('\n');
 
     if is_thought {
-        // The thought bubble must strictly have exactly THREE circles below it
-        let head_indent = cow_lines
-            .iter()
-            .find(|l| !l.trim().is_empty() && l.trim() != "o" && l.trim() != "o ")
-            .map(|l| l.chars().take_while(|c| c.is_whitespace()).count())
-            .unwrap_or(6);
-        let p1 = head_indent.saturating_sub(4).max(2);
-        let p2 = head_indent.saturating_sub(2).max(3);
-        let p3 = head_indent.saturating_sub(1).max(4);
+        let has_pointer = cow_lines.iter().take(4).any(|line| {
+            let trimmed = line.trim_start();
+            trimmed.starts_with('o') || trimmed.starts_with('O')
+        });
 
-        for indent in [p1, p2, p3] {
-            for _ in 0..indent {
+        if !has_pointer && !cow_lines.is_empty() {
+            let head_indent = cow_lines
+                .iter()
+                .find(|l| !l.trim().is_empty())
+                .map(|l| l.chars().take_while(|c| c.is_whitespace()).count())
+                .unwrap_or(4);
+            let p1_indent = head_indent.saturating_sub(2).max(1);
+            let p2_indent = head_indent.saturating_sub(1).max(2);
+
+            for _ in 0..p1_indent {
                 result.push(' ');
             }
-            result.push_str("o \n");
-        }
+            result.push_str("o\n");
 
-        // Skip leading standalone thought pointer lines so total circles are strictly three
-        let leading_blanks = cow_lines
-            .iter()
-            .take(3)
-            .take_while(|l| l.trim().is_empty())
-            .count();
-        let standalone_lines = cow_lines[leading_blanks..]
-            .iter()
-            .take_while(|l| l.trim() == "o" || l.trim() == "o ")
-            .count();
-        if standalone_lines > 0 {
-            let remaining = cow_lines[leading_blanks + standalone_lines..].join("\n");
-            result.push_str(&remaining);
-            return result;
+            for _ in 0..p2_indent {
+                result.push(' ');
+            }
+            result.push_str("o\n");
         }
     } else {
         let has_pointer = cow_lines.iter().take(4).any(|line| {

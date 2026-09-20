@@ -1999,6 +1999,10 @@ mod tests {
         assert_eq!(e, EnvironmentStyle::Swamp);
 
         let (m, _r, e) = resolve_archetype("cat");
+        assert_eq!(m, MountainStyle::Hills);
+        assert_eq!(e, EnvironmentStyle::Pasture);
+
+        let (m, _r, e) = resolve_archetype("cat2");
         assert_eq!(m, MountainStyle::Skyline);
         assert_eq!(e, EnvironmentStyle::City);
 

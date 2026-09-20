@@ -33,11 +33,11 @@ Describe 'Stop-ForgumDaemon with stale PID (G-StopDaemon)' {
     }
 
     It 'does not throw when the PID process is not running' {
-        { Stop-ForgumDaemon -ErrorAction Stop } | Should Not Throw
+        { Stop-ForgumDaemon -ErrorAction Stop } | Should -Not -Throw
     }
 
     It 'removes the stale state file after cleanup' {
         Stop-ForgumDaemon -ErrorAction SilentlyContinue
-        (Test-Path -LiteralPath $script:daemonPath) | Should Be $false
+        (Test-Path -LiteralPath $script:daemonPath) | Should -Be $false
     }
 }

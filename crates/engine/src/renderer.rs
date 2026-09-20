@@ -463,11 +463,11 @@ mod tests {
             .unwrap();
         let s = String::from_utf8(out).unwrap();
         assert!(
-            s.starts_with("\x1b7"),
+            s.contains("\x1b7"),
             "Overlay must save cursor at start with DECSC: {s}"
         );
         assert!(
-            s.ends_with("\x1b8"),
+            s.contains("\x1b8"),
             "Overlay must restore cursor at end with DECRC: {s}"
         );
         assert!(

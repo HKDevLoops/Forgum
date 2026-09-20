@@ -188,7 +188,7 @@ pub fn run() -> ExitCode {
         }
 
         // ── think ───────────────────────────────────────────────────
-        Some(cli::Commands::Think { thought }) => handle_think_command(args, thought),
+        Some(cli::Commands::Think { thought, .. }) => handle_think_command(args, thought),
 
         // ── init <shell> ────────────────────────────────────────────
         Some(cli::Commands::Init {

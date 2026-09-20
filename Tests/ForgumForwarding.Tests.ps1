@@ -22,11 +22,11 @@ Describe 'forgum wrapper forwards parameters (G-ForgumForwarding)' {
     }
 
     It 'forgum -Cow tux invokes the engine without error' {
-        { forgum -Cow tux -Text 'hello' } | Should Not Throw
+        { forgum -Cow tux -Text 'hello' } | Should -Not -Throw
     }
 
     It 'accepts -Effect, -Eyes, -Tongue, -Background, -Duration, -Fps' {
-        { forgum -Cow tux -Text 'x' -Effect 'rain' -Eyes 'oo' -Tongue 'U' -Background -Duration 0 -Fps 24 } | Should Not Throw
+        { forgum -Cow tux -Text 'x' -Effect 'rain' -Eyes 'oo' -Tongue 'U' -Background -Duration 0 -Fps 24 } | Should -Not -Throw
     }
 
     It 'leaves no temp JSON files behind' {
@@ -34,6 +34,6 @@ Describe 'forgum wrapper forwards parameters (G-ForgumForwarding)' {
         $before = Get-ChildItem -LiteralPath $tempDir -Filter 'tmp*.json' -ErrorAction SilentlyContinue
         forgum -Cow tux -Text 'cleanup check' | Out-Null
         $after = Get-ChildItem -LiteralPath $tempDir -Filter 'tmp*.json' -ErrorAction SilentlyContinue
-        $after.Count | Should Be $before.Count
+        $after.Count | Should -Be $before.Count
     }
 }

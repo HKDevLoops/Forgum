@@ -683,13 +683,13 @@ mod tests {
         assert!(cat_p.contains(&(255, 255, 255))); // white
         assert!(cat_p.contains(&(211, 84, 0)));    // ginger
         assert!(cat_p.contains(&(121, 85, 72)));   // brown
-        assert!(cat_p.contains(&(255, 152, 0)));   // orange
+        assert!(cat_p.contains(&(255, 182, 193))); // pink nose
         assert!(cat_p.contains(&(33, 33, 33)));    // black
 
-        // Bunny: white only in nature (no pink!)
+        // Bunny: white in nature with soft pink inner ears/nose
         let bunny_p = get_natural_palette("bunny");
         for &(r, g, b) in bunny_p {
-            assert!(r >= 200 && g >= 200 && b >= 200, "bunny must be white only: ({r},{g},{b})");
+            assert!(r >= 200 && g >= 180 && b >= 180, "bunny must be white with soft pink: ({r},{g},{b})");
         }
 
         // Doge: Shiba golden orange

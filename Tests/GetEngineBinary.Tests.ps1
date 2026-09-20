@@ -15,7 +15,7 @@ Describe 'Get-ForgumEngineBinary (G11)' {
         'fake-binary' | Set-Content -LiteralPath $custom -Encoding ascii
         try {
             $env:FORGUM_ENGINE = $custom
-            (Get-ForgumEngineBinary) | Should Be (Resolve-Path $custom).Path
+            (Get-ForgumEngineBinary) | Should -Be (Resolve-Path $custom).Path
         } finally {
             Remove-Item Env:FORGUM_ENGINE -ErrorAction SilentlyContinue
             Remove-Item -LiteralPath $custom -Force -ErrorAction SilentlyContinue
@@ -33,7 +33,7 @@ Describe 'Get-ForgumEngineBinary (G11)' {
             Copy-Item -LiteralPath (Get-ForgumEnginePath) -Destination $dest
         }
         try {
-            Get-ForgumEngineBinary | Should Be (Resolve-Path $dest).Path
+            Get-ForgumEngineBinary | Should -Be (Resolve-Path $dest).Path
         } finally {
             Remove-Item -LiteralPath $dest -Force -ErrorAction SilentlyContinue
         }
@@ -58,7 +58,7 @@ Describe 'Get-ForgumEngineBinary (G11)' {
             } finally {
                 $env:PATH = $origPath
             }
-            $threw | Should Be $true
+            $threw | Should -Be $true
         } finally {
             if ($preserved) {
                 New-Item -ItemType Directory -Path $binDir -Force | Out-Null
@@ -87,7 +87,7 @@ Describe 'Get-ForgumEngineBinary (G11)' {
             Remove-Item Env:FORGUM_ENGINE -ErrorAction SilentlyContinue
             Remove-Item Env:FORGUM_BUILD_MARKER -ErrorAction SilentlyContinue
         }
-        $threw | Should Be $true
-        (Test-Path -LiteralPath $marker) | Should Be $false
+        $threw | Should -Be $true
+        (Test-Path -LiteralPath $marker) | Should -Be $false
     }
 }

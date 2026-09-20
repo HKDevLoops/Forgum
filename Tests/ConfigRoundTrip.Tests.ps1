@@ -28,9 +28,9 @@ Describe 'Config round-trip (G-ConfigRoundTrip)' {
     It 'writes and reads back consistent values' {
         Set-ForgumConfig -Values @{ cow = 'tux'; effect = 'rain'; fps = 24 }
         $cfg = Get-ForgumConfig
-        $cfg.cow    | Should Be 'tux'
-        $cfg.effect | Should Be 'rain'
-        $cfg.fps    | Should Be 24
+        $cfg.cow    | Should -Be 'tux'
+        $cfg.effect | Should -Be 'rain'
+        $cfg.fps    | Should -Be 24
     }
 
     It 'engine rejects a config with an unknown key (exit 65)' {
@@ -39,7 +39,7 @@ Describe 'Config round-trip (G-ConfigRoundTrip)' {
         $code = Invoke-ForgumEngine -EnginePath (Get-ForgumEnginePath) `
                                      -JsonFile $stray `
                                      -TimeoutSeconds 5
-        $code | Should Be 65
+        $code | Should -Be 65
     }
 
     It 'engine accepts a config with only allowed keys (exit 0)' {
@@ -59,6 +59,6 @@ Describe 'Config round-trip (G-ConfigRoundTrip)' {
                                      -JsonFile $allowed `
                                      -Command status `
                                      -TimeoutSeconds 5
-        $code | Should Be 0
+        $code | Should -Be 0
     }
 }

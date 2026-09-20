@@ -30,23 +30,14 @@ use std::time::{SystemTime, UNIX_EPOCH};
 /// Reciprocal Golden Ratio constant $\Phi^{-1} = \frac{\sqrt{5} - 1}{2}$, identical to `scenery.rs` tree phyllotaxis.
 pub const PHI_INV: f64 = 0.618_033_988_749_895;
 
-/// $\Phi^{-2} = 1 - \Phi^{-1} \approx 0.381966011250105$.
-pub const PHI_INV_SQ: f64 = 0.381_966_011_250_105;
-
-/// $\Phi^{-3} = 2\Phi^{-1} - 1 \approx 0.236067977499790$.
-pub const PHI_INV_CUBE: f64 = 0.236_067_977_499_790;
-
-/// $\Phi^{-4} = 2 - 3\Phi^{-1} \approx 0.145898033750315$.
-pub const PHI_INV_QUAD: f64 = 0.145_898_033_750_315;
-
-/// $\Phi^{-5} = 5\Phi^{-1} - 3 \approx 0.090169943749474$.
-pub const PHI_INV_QUINT: f64 = 0.090_169_943_749_474;
-
-/// $\Phi^{-1} + \Phi^{-3} \approx 0.854101966249685$.
-pub const PHI_INV_EFFECT: f64 = 0.854_101_966_249_685;
-
-/// $\Phi^{-2} + \Phi^{-4} \approx 0.527864045000420$.
-pub const PHI_INV_THOUGHT: f64 = 0.527_864_045_000_420;
+/// Multi-dimensional low-discrepancy constants (Kronecker-Weyl sequence theorem).
+/// Linearly independent algebraic irrationalities over $\mathbb{Q}$ ensure optimal multi-dimensional dispersion.
+pub const PHI_INV_SQ: f64 = 0.414_213_562_373_095; // $\sqrt{2} - 1$ (Silver ratio)
+pub const PHI_INV_CUBE: f64 = 0.732_050_807_568_877; // $\sqrt{3} - 1$
+pub const PHI_INV_QUAD: f64 = 0.645_751_311_064_591; // $\sqrt{7} - 2$
+pub const PHI_INV_QUINT: f64 = 0.316_624_790_355_400; // $\sqrt{11} - 3$
+pub const PHI_INV_EFFECT: f64 = 0.605_551_275_463_989; // $\sqrt{13} - 3$
+pub const PHI_INV_THOUGHT: f64 = 0.123_105_625_617_661; // $\sqrt{17} - 4$
 
 /// 7-dimensional phyllotaxis coordinates for deterministic non-repeating mascot/scenery/fx/thought generation.
 #[derive(Debug, Clone, PartialEq)]

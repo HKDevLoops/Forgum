@@ -92,8 +92,13 @@ const FALLBACK_FORTUNES: &[&str] = &[
     "Simplicity is prerequisite for reliability. — Edsger W. Dijkstra",
     "To iterate is human, to recurse divine. — L. Peter Deutsch",
     "Don't panic! The six-legged cow is always with you in the terminal.",
-    "There are only 10 types of people: those who understand binary and those who don't.",
+    "There are 10 types of people in the world: those who understand binary, and those who don't.",
     "Computers are fast, but memory leaks are eternal.",
+    "Talk is cheap. Show me the code. — Linus Torvalds",
+    "The best error message is the one that never shows up. — Thomas Fuchs",
+    "Code is like humor. When you have to explain it, it's bad. — Cory House",
+    "Make it work, make it right, make it fast. — Kent Beck",
+    "Programs must be written for people to read, and only incidentally for machines to execute. — Harold Abelson",
 ];
 
 /// Pick a random fortune from the list (legacy independent sampling).
@@ -157,7 +162,15 @@ pub fn pick_fortune_distributed(fortunes: &[String], data_dir: &Path) -> Option<
     state.last_drawn = Some(chosen.clone());
 
     if let Ok(json) = serde_json::to_string(&state) {
-        let _ = std::fs::write(&state_file, json);
+        if let Some(parent) = state_file.parent() {
+            let _ = std::fs::create_dir_all(parent);
+        }
+        let tmp_file = state_file.with_extension(format!("tmp.{}", std::process::id()));
+        if std::fs::write(&tmp_file, &json).is_ok() {
+            let _ = std::fs::rename(&tmp_file, &state_file);
+        } else {
+            let _ = std::fs::write(&state_file, json);
+        }
     }
 
     Some(chosen)

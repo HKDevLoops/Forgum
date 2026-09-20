@@ -14,7 +14,7 @@ Describe 'Get-ForgumConfigPath (G12)' {
         $custom = '/tmp/forgum-test-explicit-config.json'
         $env:FORGUM_CONFIG = $custom
         try {
-            (Get-ForgumConfigPath) | Should Be $custom
+            (Get-ForgumConfigPath) | Should -Be $custom
         } finally {
             Remove-Item Env:FORGUM_CONFIG -ErrorAction SilentlyContinue
         }
@@ -23,8 +23,8 @@ Describe 'Get-ForgumConfigPath (G12)' {
     It 'falls back to a platform-appropriate default' {
         Remove-Item Env:FORGUM_CONFIG -ErrorAction SilentlyContinue
         $path = Get-ForgumConfigPath
-        $path | Should Not BeNullOrEmpty
-        $path | Should Match '(\.config[\\/]forgum|forgum)'
+        $path | Should -Not -BeNullOrEmpty
+        $path | Should -Match '(\.config[\\/]forgum|forgum)'
     }
 }
 
@@ -40,19 +40,19 @@ Describe 'Initialize/Set/Get-ForgumConfig' {
     }
 
     It 'creates a default config when none exists' {
-        Test-Path -LiteralPath $script:configPath | Should Be $false
+        Test-Path -LiteralPath $script:configPath | Should -Be $false
         Initialize-ForgumConfig | Out-Null
-        Test-Path -LiteralPath $script:configPath | Should Be $true
+        Test-Path -LiteralPath $script:configPath | Should -Be $true
         $cfg = Get-Content -LiteralPath $script:configPath -Raw | ConvertFrom-Json
-        $cfg.cow | Should Be 'default'
-        $cfg.effect | Should Be 'static'
-        $cfg.fps   | Should Be 30
+        $cfg.cow | Should -Be 'default'
+        $cfg.effect | Should -Be 'static'
+        $cfg.fps   | Should -Be 30
     }
 
     It 'round-trips user preferences via Set-ForgumConfig' {
         Set-ForgumConfig -Values @{ cow = 'tux'; fps = 60 } | Out-Null
         $cfg = Get-ForgumConfig
-        $cfg.cow | Should Be 'tux'
-        $cfg.fps | Should Be 60
+        $cfg.cow | Should -Be 'tux'
+        $cfg.fps | Should -Be 60
     }
 }

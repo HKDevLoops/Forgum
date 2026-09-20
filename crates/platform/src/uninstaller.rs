@@ -11,6 +11,7 @@
 //!   configuration, cache, logs, data, runtime sockets, and daemon states.
 
 use std::path::{Path, PathBuf};
+#[cfg(windows)]
 use std::process::Command;
 
 use crate::shell::{uninstall_all_shell_integrations, Shell};

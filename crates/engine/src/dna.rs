@@ -554,16 +554,27 @@ mod tests {
                 ..CowDna::default()
             },
         );
-        // "dragon.cow.cow" → strip_suffix strips ".cow" → "dragon.cow" → not in map → default
+        // "dragon.cow.cow" → strip_suffix strips ".cow" → "dragon.cow" → not in map → derives profile defaults
         let dna = get_dna(&map, "dragon.cow.cow");
-        assert_eq!(dna, CowDna::default());
+        let mut expected = CowDna::default();
+        expected.base = BaseAnim::Breathe;
+        expected.palette = crate::color::get_natural_hex_palette("dragon")
+            .iter()
+            .map(|&s| s.to_string())
+            .collect();
+        assert_eq!(dna, expected);
     }
 
     #[test]
     fn get_dna_falls_back_to_default() {
         let map = HashMap::new();
         let dna = get_dna(&map, "nonexistent.cow");
-        assert_eq!(dna, CowDna::default());
+        let mut expected = CowDna::default();
+        expected.palette = crate::color::get_natural_hex_palette("default")
+            .iter()
+            .map(|&s| s.to_string())
+            .collect();
+        assert_eq!(dna, expected);
     }
 
     /// Schema-drift guard: parse a full DNA doc, re-serialize it through the

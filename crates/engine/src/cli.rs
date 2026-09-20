@@ -358,12 +358,18 @@ pub struct Cli {
 pub enum Commands {
     /// Render a cow (default command).
     Render {
+        /// Animal mascot name.
+        #[arg(long, short = 'c', visible_alias = "animal", value_name = "NAME")]
+        cow: Option<String>,
         /// Optional speech text to display inside the speech bubble.
         #[arg(num_args = 0..)]
         message: Vec<String>,
     },
     /// Render a thought bubble (cowthink mode).
     Think {
+        /// Animal mascot name.
+        #[arg(long, short = 'c', visible_alias = "animal", value_name = "NAME")]
+        cow: Option<String>,
         /// Optional thought text (defaults to random fortune if omitted).
         #[arg(num_args = 0..)]
         thought: Vec<String>,
@@ -1031,8 +1037,12 @@ pub fn parse_args(argv: Vec<String>) -> Result<(Args, Option<Commands>), CliErro
         }
     }
 
+    let mut sub_cow = None;
     let (command, extra_text, is_think) = match &cli.command {
-        Some(Commands::Render { message }) => {
+        Some(Commands::Render { message, cow }) => {
+            if let Some(c) = cow {
+                sub_cow = Some(c.clone());
+            }
             let extra = if message.is_empty() {
                 None
             } else {
@@ -1051,7 +1061,10 @@ pub fn parse_args(argv: Vec<String>) -> Result<(Args, Option<Commands>), CliErro
                 (Command::Render, None, false)
             }
         }
-        Some(Commands::Think { thought }) => {
+        Some(Commands::Think { thought, cow }) => {
+            if let Some(c) = cow {
+                sub_cow = Some(c.clone());
+            }
             let t = if thought.is_empty() {
                 None
             } else {
@@ -1063,32 +1076,13 @@ pub fn parse_args(argv: Vec<String>) -> Result<(Args, Option<Commands>), CliErro
         Some(Commands::Tui { .. }) => (Command::Tui, None, false),
         Some(Commands::Init { .. }) => (Command::Init, None, false),
         Some(Commands::Completions { .. }) => (Command::Completions, None, false),
-        Some(Commands::Status) => (Command::Status, None, false),
-        Some(Commands::Config { .. }) => (Command::Config, None, false),
-        Some(Commands::Tmux { sub }) => (
-            match sub {
-                TmuxSub::Install => Command::Tmux,
-                TmuxSub::Zellij => Command::Tmux,
-                TmuxSub::WezTerm => Command::Tmux,
-                TmuxSub::Screen => Command::Tmux,
-                TmuxSub::List => Command::Tmux,
-            },
-            None,
-            false,
-        ),
-        Some(Commands::StatusLine { .. }) => (Command::StatusLine, None, false),
-        Some(Commands::Herd { sub }) => (
-            match sub {
-                HerdSub::Census => Command::Herd,
-                _ => Command::Herd,
-            },
-            None,
-            false,
-        ),
+        Some(Commands::Herd { .. }) => (Command::Herd, None, false),
         Some(Commands::Theme { .. }) => (Command::Theme, None, false),
-        Some(Commands::Demo) => (Command::Demo, None, false),
-        Some(Commands::Showcase) => (Command::Showcase, None, false),
+        Some(Commands::Showcase { .. }) => (Command::Showcase, None, false),
+        Some(Commands::Demo { .. }) => (Command::Demo, None, false),
         Some(Commands::Remote { .. }) => (Command::Remote, None, false),
+        Some(Commands::StatusLine { .. }) => (Command::StatusLine, None, false),
+        Some(Commands::Status) => (Command::Status, None, false),
         Some(Commands::Say { .. }) => (Command::Say, None, false),
         Some(Commands::Timer { .. }) => (Command::Timer, None, false),
         Some(Commands::Battle { .. }) => (Command::Battle, None, false),
@@ -1105,6 +1099,8 @@ pub fn parse_args(argv: Vec<String>) -> Result<(Args, Option<Commands>), CliErro
         Some(Commands::Sweep) => (Command::Sweep, None, false),
         Some(Commands::Stop { .. }) => (Command::Stop, None, false),
         Some(Commands::Image { .. }) => (Command::Image, None, false),
+        Some(Commands::Config { .. }) => (Command::Config, None, false),
+        Some(Commands::Tmux { .. }) => (Command::Tmux, None, false),
     };
 
     let max_len = match &cli.command {
@@ -1114,6 +1110,7 @@ pub fn parse_args(argv: Vec<String>) -> Result<(Args, Option<Commands>), CliErro
 
     let text = cli.text.or(extra_text);
     let think = cli.think || is_think;
+    let cow = cli.cow.or(sub_cow);
 
     let args = Args {
         command,
@@ -1123,7 +1120,7 @@ pub fn parse_args(argv: Vec<String>) -> Result<(Args, Option<Commands>), CliErro
         banner: cli.banner,
         duration: cli.duration,
         fps: cli.fps,
-        cow: cli.cow,
+        cow,
         image: cli.image,
         animation: cli.animation,
         animation_type: cli.animation_type,
@@ -1632,7 +1629,7 @@ mod tests {
         assert_eq!(cfg.environment, Some("inferno".to_string()));
         assert_eq!(cfg.road, Some("magma".to_string()));
         assert_eq!(cfg.mountain, Some("volcano".to_string()));
-        assert_eq!(cfg.color_mode, "animal");
+        assert_eq!(cfg.color_mode, "natural");
         assert_eq!(cfg.palette, Some("#ff0000,#00ff00".to_string()));
         assert_eq!(cfg.thought_interval, 45);
         assert!(cfg.split_scroll);
@@ -1712,7 +1709,7 @@ mod tests {
         let (a2, _) = parse(&["forgum", "--color-mode", "animal_natural"]);
         assert_eq!(a2.color_mode, Some("animal_natural".to_string()));
         let cfg2 = build_scene_config(&a2).unwrap();
-        assert_eq!(cfg2.color_mode, "animal_natural");
+        assert_eq!(cfg2.color_mode, "natural");
     }
 
     #[test]

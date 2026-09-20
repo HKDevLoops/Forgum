@@ -25,7 +25,7 @@ Describe 'Invoke-ForgumEngine (G10)' {
                             -JsonFile $script:tmp `
                             -TimeoutSeconds 5 `
         | Out-Null
-        (Test-Path -LiteralPath $script:tmp) | Should Be $false
+        (Test-Path -LiteralPath $script:tmp) | Should -Be $false
     }
 
     It 'returns 0 for the engine status command' {
@@ -33,7 +33,7 @@ Describe 'Invoke-ForgumEngine (G10)' {
                                      -Command status `
                                      -JsonFile $script:tmp `
                                      -TimeoutSeconds 5
-        $code | Should Be 0
+        $code | Should -Be 0
     }
 
     It 'returns exit code 65 (EX_DATAERR) for invalid JSON' {
@@ -41,7 +41,7 @@ Describe 'Invoke-ForgumEngine (G10)' {
         $code = Invoke-ForgumEngine -EnginePath $env:FORGUM_ENGINE `
                                      -JsonFile $script:tmp `
                                      -TimeoutSeconds 5
-        $code | Should Be 65
+        $code | Should -Be 65
     }
 
     It 'rejects missing binary with a typed error' {
@@ -52,7 +52,7 @@ Describe 'Invoke-ForgumEngine (G10)' {
         } catch {
             $threw = $true
         }
-        $threw | Should Be $true
+        $threw | Should -Be $true
     }
 
     It 'gracefully sends SIGTERM/CloseMainWindow before Kill()' -Skip:($IsLinux -or $IsMacOS) {
@@ -75,7 +75,7 @@ Describe 'Invoke-ForgumEngine (G10)' {
                             -DurationSeconds 0 `
         | Out-Null
         $elapsed = (Get-Date) - $start
-        $elapsed.TotalSeconds | Should BeLessThan 8
-        (Test-Path -LiteralPath $script:tmp) | Should Be $false
+        $elapsed.TotalSeconds | Should -BeLessThan 8
+        (Test-Path -LiteralPath $script:tmp) | Should -Be $false
     }
 }

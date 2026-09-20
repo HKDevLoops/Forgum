@@ -3434,10 +3434,11 @@ mod tests {
     #[test]
     fn float_remains_anchored_at_stagnant_position() {
         let mut dna = CowDna::default();
-        dna.amplitude.sway = 3.0;
-        dna.amplitude.float = 3.0;
+        dna.amplitude.sway = 1.0;
+        dna.amplitude.float = 1.0;
         dna.speed = 1.0;
-        let effect = FloatEffect::new(COW.to_string(), &dna, 0, "static".to_string());
+        let scene = crate::cow::compose_scene_with_mode(COW, "Hello", false);
+        let effect = FloatEffect::new(scene, &dna, 0, "natural".to_string());
 
         let mut fb0 = FrameBuffer::new(80, 24);
         let mut fb1 = FrameBuffer::new(80, 24);
@@ -3459,9 +3460,9 @@ mod tests {
 
         let p0 = find_first(&fb0).expect("float t=0 must render");
         let p1 = find_first(&fb1).expect("float t=0.75 must render");
-        // Position must remain firmly anchored at stagnant position (2, 0)
-        assert_eq!(p0, (2, 0), "float t=0 must be anchored at (2, 0)");
-        assert_eq!(p1, (2, 0), "float t=0.75 must be anchored at (2, 0)");
+        // Speech bubble top border must remain firmly anchored at (1, 0)
+        assert_eq!(p0, (1, 0), "float bubble t=0 must be anchored at (1, 0)");
+        assert_eq!(p1, (1, 0), "float bubble t=0.75 must be anchored at (1, 0)");
     }
 
     // ── WalkEffect ────────────────────────────────────────────────

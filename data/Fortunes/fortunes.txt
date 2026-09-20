@@ -1,39 +1,77 @@
 The cow is the embodiment of the earth.
 %
-To be is to do — Socrates
+To be is to do. — Socrates
 %
-In the beginning was the command line.
+In the beginning was the command line. — Neal Stephenson
 %
-All that glitters is not gold — Shakespeare
+All that glitters is not gold. — William Shakespeare
 %
-A journey of a thousand miles begins with a single step — Lao Tzu
+A journey of a thousand miles begins with a single step. — Lao Tzu
 %
-The only way to do great work is to love what you do — Steve Jobs
+The only way to do great work is to love what you do. — Steve Jobs
 %
-Stay hungry, stay foolish — Stewart Brand
+Stay hungry, stay foolish. — Stewart Brand
 %
-Talk is cheap. Show me the code — Linus Torvalds
+Talk is cheap. Show me the code. — Linus Torvalds
 %
-First, solve the problem. Then, write the code — John Johnson
+First, solve the problem. Then, write the code. — John Johnson
 %
-The best error message is the one that never shows up — Thomas Fuchs
+The best error message is the one that never shows up. — Thomas Fuchs
 %
-Code is like humor. When you have to explain it, it's bad — Cory House
+Code is like humor. When you have to explain it, it's bad. — Cory House
 %
-Simplicity is the soul of efficiency — Austin Freeman
+Simplicity is the soul of efficiency. — Austin Freeman
 %
-Fix the cause, not the symptom.
+Fix the cause, not the symptom. — Steve Maguire
 %
-Optimism is an occupational hazard of programming: feedback is the treatment.
+Optimism is an occupational hazard of programming; feedback is the treatment. — Kent Beck
 %
-It works on my machine.
+It works on my machine. Then we'll ship your machine!
 %
-There are only two hard things in Computer Science: cache invalidation and naming things — Phil Karlton
+There are only two hard things in Computer Science: cache invalidation and naming things. — Phil Karlton
 %
 It's not a bug — it's an undocumented feature.
 %
 99 little bugs in the code, 99 little bugs. Take one down, patch it around, 127 little bugs in the code.
 %
-A computer lets you make more mistakes faster than any other invention in human history — Mitch Ratcliffe
+A computer lets you make more mistakes faster than any other invention in human history. — Mitch Ratcliffe
 %
 The most dangerous phrase in the English language is: "We've always done it this way." — Grace Hopper
+%
+To iterate is human, to recurse divine. — L. Peter Deutsch
+%
+Simplicity is prerequisite for reliability. — Edsger W. Dijkstra
+%
+Don't panic! The six-legged cow is always with you in the terminal.
+%
+There are 10 types of people in the world: those who understand binary, and those who don't.
+%
+Before software can be reusable it first has to be usable. — Ralph Johnson
+%
+Deleted code is debugged code. — Jeff Sickel
+%
+Make it work, make it right, make it fast. — Kent Beck
+%
+Walking on water and developing software from a specification are easy if both are frozen. — Edward V. Berard
+%
+Any fool can write code that a computer can understand. Good programmers write code that humans can understand. — Martin Fowler
+%
+Programs must be written for people to read, and only incidentally for machines to execute. — Harold Abelson
+%
+The function of good software is to make the complex appear simple. — Grady Booch
+%
+Without requirements or design, programming is the art of adding bugs to an empty text file. — Louis Srygley
+%
+Perfection is achieved not when there is nothing more to add, but when there is nothing left to take away. — Antoine de Saint-Exupéry
+%
+The best thing about a boolean is even if you are wrong, you are only off by a bit.
+%
+Always code as if the person who ends up maintaining your code will be a violent psychopath who knows where you live. — John Woods
+%
+Computers are fast, but memory leaks are eternal.
+%
+The cow that never moos has the most to say.
+%
+Your pasture is currently green; beware of memory leaks.
+%
+TrueColor terminal vibes make even compilation errors look artistic.

@@ -308,6 +308,7 @@ fn xdg_config_home() -> Option<PathBuf> {
 }
 
 #[cfg(unix)]
+#[allow(dead_code)]
 fn xdg_data_home() -> Option<PathBuf> {
     if let Some(xdg) = std::env::var_os("XDG_DATA_HOME") {
         return Some(PathBuf::from(xdg));

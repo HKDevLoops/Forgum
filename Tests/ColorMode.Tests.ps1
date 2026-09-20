@@ -42,7 +42,7 @@ Describe 'color_mode end-to-end (B4)' {
             if (Test-Path -LiteralPath $tmpOut) {
                 $output = [System.IO.File]::ReadAllText($tmpOut)
                 # \x1b[38;2;R;G;B m is truecolor rainbow sequence
-                $output | Should Not Match '\x1b\[38;2;'
+                $output | Should -Not -Match '\x1b\[38;2;'
             }
         } finally {
             foreach ($f in @($tmpJson, $tmpOut, $tmpErr)) {
