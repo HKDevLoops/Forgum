@@ -52,7 +52,12 @@ fn duration_zero_runs_indefinitely_until_killed() {
         return;
     }
 
+    let tmp = tempfile::tempdir().unwrap();
+    let empty_cfg = tmp.path().join("config.json");
+    std::fs::write(&empty_cfg, "{}").unwrap();
+
     let mut child = Command::new(&bin)
+        .env("FORGUM_CONFIG", &empty_cfg)
         .args([
             "render",
             "--background",
@@ -110,8 +115,13 @@ fn duration_n_seconds_exits_in_time() {
         return;
     }
 
+    let tmp = tempfile::tempdir().unwrap();
+    let empty_cfg = tmp.path().join("config.json");
+    std::fs::write(&empty_cfg, "{}").unwrap();
+
     let start = Instant::now();
     let status = Command::new(&bin)
+        .env("FORGUM_CONFIG", &empty_cfg)
         .args(["render", "--text", "hello", "--duration", "1"])
         .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::null())

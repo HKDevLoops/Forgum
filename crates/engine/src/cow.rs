@@ -376,7 +376,7 @@ pub fn expand_cow_with_landmarks(
                     break;
                 };
 
-                let glyph = if eye_idx % 2 == 0 {
+                let glyph = if eye_idx.is_multiple_of(2) {
                     &left_eye
                 } else {
                     &right_eye

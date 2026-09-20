@@ -511,7 +511,7 @@ impl Effect for BreatheEffect {
                     }
                     AnimalInstinct::Feline => {
                         // Cat whisker subtle twitch
-                        if ch == '=' && ((time * 3.0) as usize) % 2 == 0 {
+                        if ch == '=' && ((time * 3.0) as usize).is_multiple_of(2) {
                             ch = '-';
                         }
                     }
@@ -625,7 +625,7 @@ impl Effect for BreatheEffect {
                         let bubble_x =
                             (mx + ((time * 2.0) as usize) % 2).min(fb.width.saturating_sub(1));
                         if bubble_y < fb.height {
-                            let b_ch = if ((time * 3.0) as usize) % 2 == 0 {
+                            let b_ch = if ((time * 3.0) as usize).is_multiple_of(2) {
                                 'o'
                             } else {
                                 '°'
@@ -1316,7 +1316,7 @@ impl Effect for WalkEffect {
                     for &col in &self.leg_cols {
                         let foot_x = (col as i32 + x_off) as usize;
                         if foot_x < fb.width && foot_y < fb.height {
-                            let ember_ch = if (time * 10.0) as usize % 2 == 0 {
+                            let ember_ch = if ((time * 10.0) as usize).is_multiple_of(2) {
                                 '*'
                             } else {
                                 '.'
@@ -1350,7 +1350,7 @@ impl Effect for WalkEffect {
                     for &col in &self.leg_cols {
                         let foot_x = ((col as i32 + x_off).saturating_sub(1)) as usize;
                         if foot_x < fb.width && foot_y < fb.height {
-                            let dust_ch = if (time * 8.0) as usize % 2 == 0 {
+                            let dust_ch = if ((time * 8.0) as usize).is_multiple_of(2) {
                                 '.'
                             } else {
                                 '°'
@@ -1684,7 +1684,7 @@ impl Effect for GlitchEffect {
             let (x, y) = self.body_coords[coord_idx];
             if x < fb.width && y < fb.height {
                 let ch = glitch_chars[(seed as usize) % glitch_chars.len()];
-                let c = if seed % 2 == 0 { c1 } else { c2 };
+                let c = if seed.is_multiple_of(2) { c1 } else { c2 };
                 let _ = fb.set(x, y, Cell::new(ch, c));
             }
         }
@@ -2945,24 +2945,24 @@ impl Effect for CompoundSignatureEffect {
     }
 }
 
-pub const DYNAMIC_ANIMATION_TYPES: &'static [&'static str] = &[
+pub const DYNAMIC_ANIMATION_TYPES: &[&str] = &[
     "breathe", "float", "walk", "particles", "pulse", "glitch", "fly", "talk", "sway", "dissolve",
 ];
 
-pub const ALL_EFFECTS: &'static [&'static str] = &[
+pub const ALL_EFFECTS: &[&str] = &[
     "static", "breathe", "float", "walk", "particles", "pulse", "glitch", "fly", "talk", "sway", "dissolve", "matrix", "squish", "abduction",
 ];
 
 pub fn random_dynamic_animation() -> &'static str {
     use rand::seq::SliceRandom;
     let mut rng = rand::thread_rng();
-    *DYNAMIC_ANIMATION_TYPES.choose(&mut rng).unwrap_or(&"breathe")
+    DYNAMIC_ANIMATION_TYPES.choose(&mut rng).copied().unwrap_or("breathe")
 }
 
 pub fn random_effect_name() -> &'static str {
     use rand::seq::SliceRandom;
     let mut rng = rand::thread_rng();
-    *ALL_EFFECTS.choose(&mut rng).unwrap_or(&"breathe")
+    ALL_EFFECTS.choose(&mut rng).copied().unwrap_or("breathe")
 }
 
 /// Create an effect for a scene configuration and DNA.

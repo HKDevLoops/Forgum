@@ -1757,10 +1757,7 @@ fn handle_status_command(args: &cli::Args) -> ExitCode {
         Err(e) => (format!("None ({e})"), "None".to_string()),
     };
 
-    let cfg = match build_scene_config(args) {
-        Ok(s) => s,
-        Err(_) => forgum_engine::protocol::SceneConfig::default(),
-    };
+    let cfg = build_scene_config(args).unwrap_or_default();
 
     let session_id = forgum_platform::detect_session_id();
     let state_path = forgum_platform::daemon_state_path(&session_id);
@@ -2133,10 +2130,8 @@ fn handle_stop_command(all: bool, force: bool) -> ExitCode {
     // 2. Scan OS process table for any unlisted / orphaned forgum processes
     let unlisted = forgum_platform::find_forgum_pids();
     for pid in unlisted {
-        if all || !known_pids.contains(&pid) {
-            if forgum_platform::kill_process(pid) {
-                stopped_count += 1;
-            }
+        if (all || !known_pids.contains(&pid)) && forgum_platform::kill_process(pid) {
+            stopped_count += 1;
         }
     }
 
@@ -2324,10 +2319,7 @@ fn handle_think_command(mut args: cli::Args, thought: Vec<String>) -> ExitCode {
     }
 
     // 5. Standalone cowthink mode: print static composed thought cow cleanly to stdout.
-    let mut scene = match build_scene_config(&args) {
-        Ok(s) => s,
-        Err(_) => forgum_engine::protocol::SceneConfig::default(),
-    };
+    let mut scene = build_scene_config(&args).unwrap_or_default();
     scene.think = true;
     scene.text = thought_text;
     resolve_scene_randomness(&mut scene, &data, &args);
@@ -2439,12 +2431,12 @@ pub fn resolve_scene_randomness(
 ) {
     let random_setting = scene.random.clone();
     let is_random_enabled = scene.cow.trim().eq_ignore_ascii_case("random")
-        || scene.environment.as_deref().map_or(false, |s| s.trim().eq_ignore_ascii_case("random"))
-        || scene.road.as_deref().map_or(false, |s| s.trim().eq_ignore_ascii_case("random"))
-        || scene.mountain.as_deref().map_or(false, |s| s.trim().eq_ignore_ascii_case("random"))
-        || scene.animation.as_deref().map_or(false, |s| s.trim().eq_ignore_ascii_case("random"))
+        || scene.environment.as_deref().is_some_and(|s| s.trim().eq_ignore_ascii_case("random"))
+        || scene.road.as_deref().is_some_and(|s| s.trim().eq_ignore_ascii_case("random"))
+        || scene.mountain.as_deref().is_some_and(|s| s.trim().eq_ignore_ascii_case("random"))
+        || scene.animation.as_deref().is_some_and(|s| s.trim().eq_ignore_ascii_case("random"))
         || scene.effect.trim().eq_ignore_ascii_case("random")
-        || scene.animation_type.as_deref().map_or(false, |s| s.trim().eq_ignore_ascii_case("random"))
+        || scene.animation_type.as_deref().is_some_and(|s| s.trim().eq_ignore_ascii_case("random"))
         || scene.text.trim().is_empty()
         || scene.text.trim().eq_ignore_ascii_case("random")
         || random_setting.is_some();
@@ -2459,7 +2451,7 @@ pub fn resolve_scene_randomness(
 
     // ── 1. MASCOT (COW) ──────────────────────────────────────────────────
     let should_randomize_cow = scene.cow.trim().eq_ignore_ascii_case("random")
-        || (random_setting.as_ref().map_or(false, |r| r.randomizes_mascot())
+        || (random_setting.as_ref().is_some_and(|r| r.randomizes_mascot())
             && explicit_args.cow.is_none());
 
     if should_randomize_cow {
@@ -2513,8 +2505,8 @@ pub fn resolve_scene_randomness(
         }
         // If scenery was NOT explicitly pinned and NOT separately randomized, default to animal's native biome
         if explicit_args.environment.is_none()
-            && scene.environment.as_deref().map_or(true, |e| e == "default" || e.is_empty())
-            && !random_setting.as_ref().map_or(false, |r| r.randomizes_scenery())
+            && scene.environment.as_deref().is_none_or(|e| e == "default" || e.is_empty())
+            && !random_setting.as_ref().is_some_and(|r| r.randomizes_scenery())
         {
             scene.environment = Some(profile.environment.as_str().to_string());
             scene.road = Some(profile.road.as_str().to_string());
@@ -2528,22 +2520,22 @@ pub fn resolve_scene_randomness(
     let should_randomize_env = scene
         .environment
         .as_deref()
-        .map_or(false, |s| s.trim().eq_ignore_ascii_case("random"))
-        || (random_setting.as_ref().map_or(false, |r| r.randomizes_scenery())
+        .is_some_and(|s| s.trim().eq_ignore_ascii_case("random"))
+        || (random_setting.as_ref().is_some_and(|r| r.randomizes_scenery())
             && explicit_args.environment.is_none());
 
     let should_randomize_road = scene
         .road
         .as_deref()
-        .map_or(false, |s| s.trim().eq_ignore_ascii_case("random"))
-        || (random_setting.as_ref().map_or(false, |r| r.randomizes_scenery())
+        .is_some_and(|s| s.trim().eq_ignore_ascii_case("random"))
+        || (random_setting.as_ref().is_some_and(|r| r.randomizes_scenery())
             && explicit_args.road.is_none());
 
     let should_randomize_mountain = scene
         .mountain
         .as_deref()
-        .map_or(false, |s| s.trim().eq_ignore_ascii_case("random"))
-        || (random_setting.as_ref().map_or(false, |r| r.randomizes_scenery())
+        .is_some_and(|s| s.trim().eq_ignore_ascii_case("random"))
+        || (random_setting.as_ref().is_some_and(|r| r.randomizes_scenery())
             && explicit_args.mountain.is_none());
 
     if should_randomize_env {
@@ -2583,16 +2575,16 @@ pub fn resolve_scene_randomness(
     let should_randomize_anim = scene
         .animation
         .as_deref()
-        .map_or(false, |s| s.trim().eq_ignore_ascii_case("random"))
-        || (random_setting.as_ref().map_or(false, |r| r.randomizes_fx())
+        .is_some_and(|s| s.trim().eq_ignore_ascii_case("random"))
+        || (random_setting.as_ref().is_some_and(|r| r.randomizes_fx())
             && explicit_args.animation.is_none());
 
     let should_randomize_fx = scene.effect.trim().eq_ignore_ascii_case("random")
         || scene
             .animation_type
             .as_deref()
-            .map_or(false, |s| s.trim().eq_ignore_ascii_case("random"))
-        || (random_setting.as_ref().map_or(false, |r| r.randomizes_fx())
+            .is_some_and(|s| s.trim().eq_ignore_ascii_case("random"))
+        || (random_setting.as_ref().is_some_and(|r| r.randomizes_fx())
             && explicit_args.effect.is_none()
             && explicit_args.animation_type.is_none());
 
@@ -2633,7 +2625,7 @@ pub fn resolve_scene_randomness(
     // ── 4. THOUGHT / TEXT ────────────────────────────────────────────────
     let should_randomize_thought = scene.text.trim().is_empty()
         || scene.text.trim().eq_ignore_ascii_case("random")
-        || (random_setting.as_ref().map_or(false, |r| r.randomizes_thought())
+        || (random_setting.as_ref().is_some_and(|r| r.randomizes_thought())
             && explicit_args.text.is_none());
 
     if should_randomize_thought {

@@ -859,9 +859,9 @@ pub fn run_battle(name1: &str, name2: &str) -> String {
 
     while !battle.is_done() {
         battle.tick();
-        if (battle.phase == BattlePhase::Charging && battle.phase_frames % 15 == 0)
-            || (battle.phase == BattlePhase::Collision && battle.phase_frames % 10 == 0)
-            || (battle.phase == BattlePhase::Aftermath && battle.phase_frames % 15 == 0)
+        if (battle.phase == BattlePhase::Charging && battle.phase_frames.is_multiple_of(15))
+            || (battle.phase == BattlePhase::Collision && battle.phase_frames.is_multiple_of(10))
+            || (battle.phase == BattlePhase::Aftermath && battle.phase_frames.is_multiple_of(15))
         {
             output.push_str(&battle.render_frame());
             output.push('\n');

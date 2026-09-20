@@ -735,10 +735,12 @@ fn split_mode_seamless_flag_parses_cleanly() {
 #[test]
 fn scene_config_roundtrips_all_27_fields_with_split_mode_editor_and_random() {
     use forgum_platform::protocol::RandomSetting;
-    let mut cfg = SceneConfig::default();
-    cfg.split_mode = Some("seamless".into());
-    cfg.editor = Some("nvim".into());
-    cfg.random = Some(RandomSetting::Bool(true));
+    let cfg = SceneConfig {
+        split_mode: Some("seamless".into()),
+        editor: Some("nvim".into()),
+        random: Some(RandomSetting::Bool(true)),
+        ..Default::default()
+    };
 
     let json = serde_json::to_string(&cfg).unwrap();
     let loaded: SceneConfig = serde_json::from_str(&json).unwrap();

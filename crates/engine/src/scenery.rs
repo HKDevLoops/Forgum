@@ -851,28 +851,28 @@ pub fn calculate_tree_species(n: usize, env: EnvironmentStyle, animal_seed: u32)
 
     match env {
         EnvironmentStyle::Arctic => {
-            if sequence_val % 3 == 0 {
+            if sequence_val.is_multiple_of(3) {
                 TreeSpecies::Pine
             } else {
                 TreeSpecies::SnowFir
             }
         }
         EnvironmentStyle::Savanna => {
-            if sequence_val % 4 == 0 {
+            if sequence_val.is_multiple_of(4) {
                 TreeSpecies::DeadTree
             } else {
                 TreeSpecies::Acacia
             }
         }
         EnvironmentStyle::Graveyard => {
-            if sequence_val % 3 == 0 {
+            if sequence_val.is_multiple_of(3) {
                 TreeSpecies::Oak
             } else {
                 TreeSpecies::DeadTree
             }
         }
         EnvironmentStyle::Jurassic => {
-            if sequence_val % 2 == 0 {
+            if sequence_val.is_multiple_of(2) {
                 TreeSpecies::Palm
             } else {
                 TreeSpecies::Pine
@@ -1339,7 +1339,7 @@ pub fn calculate_road_texture(x: usize, style: RoadStyle, time: f32) -> (char, C
         }
         RoadStyle::Ice => {
             let fg = Color::rgb(224, 247, 250);
-            let ch = if (x + ((time * 1.5) as usize)) % 9 == 0 {
+            let ch = if (x + ((time * 1.5) as usize)).is_multiple_of(9) {
                 '/' // glacial fissure / crevasse
             } else if roughness > 0.5 {
                 '=' // glazed ice sheet
@@ -1482,7 +1482,7 @@ pub fn calculate_road_subsurface(x: usize, style: RoadStyle, time: f32) -> (char
         }
         RoadStyle::Ice => {
             let fg = Color::rgb(128, 222, 234);
-            let ch = if (x + ((time * 1.5) as usize)) % 7 == 0 {
+            let ch = if (x + ((time * 1.5) as usize)).is_multiple_of(7) {
                 '|' // deep ice fracture
             } else if roughness > 0.45 {
                 '≡' // compressed glacial shelf
@@ -1752,7 +1752,7 @@ pub fn render_environment(
         EnvironmentStyle::Swamp => {
             // Fireflies flickering over the muddy ground
             let fly_fg = Color::rgb(205, 220, 57);
-            if ((time * 3.0) as usize) % 2 == 0 {
+            if ((time * 3.0) as usize).is_multiple_of(2) {
                 for i in 0..4 {
                     let x = (i * 23 + 7) % width;
                     let y = ground_y.saturating_sub(1 + (i % 3));
@@ -1766,7 +1766,7 @@ pub fn render_environment(
             for i in 0..6 {
                 let x = (i * 19 + 5) % width;
                 let y = (((time * 4.0) as usize) + i * 2) % (ground_y.max(1) + 1);
-                let ch = if i % 2 == 0 { '0' } else { '1' };
+                let ch = if i.is_multiple_of(2) { '0' } else { '1' };
                 let _ = fb.set(x, y, Cell::new(ch, matrix_fg));
             }
         }
@@ -1789,7 +1789,7 @@ pub fn render_environment(
         EnvironmentStyle::Throne => {
             // Torch spark flicker beside the royal carpet
             let torch_fg = Color::rgb(255, 112, 67);
-            if ((time * 4.0) as usize) % 2 == 0 && width > 4 {
+            if ((time * 4.0) as usize).is_multiple_of(2) && width > 4 {
                 let ty = ground_y.saturating_sub(1);
                 let _ = fb.set(2, ty, Cell::new('*', torch_fg));
                 let _ = fb.set(width - 3, ty, Cell::new('*', torch_fg));

@@ -436,18 +436,13 @@ pub fn execute_package_manager_action(
 // ═══════════════════════════════════════════════════════════════════════════
 
 /// Release channel stream for Forgum installations and updates.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum ReleaseChannel {
+    #[default]
     Stable,
     Nightly,
     Dev,
-}
-
-impl Default for ReleaseChannel {
-    fn default() -> Self {
-        Self::Stable
-    }
 }
 
 impl ReleaseChannel {

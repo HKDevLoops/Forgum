@@ -262,8 +262,13 @@ fn render_with_text_renders_speech_bubble() {
     assert!(output.status.success());
     let stdout = String::from_utf8_lossy(&output.stdout);
 
-    // Verify text appears
-    assert!(stdout.contains(speech_text));
+    // Verify text appears across bubble lines
+    for word in speech_text.split_whitespace() {
+        assert!(
+            stdout.contains(word),
+            "Output missing word '{word}': {stdout}"
+        );
+    }
 
     // Verify speech bubble pipe borders |
     assert!(

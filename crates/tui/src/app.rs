@@ -1282,23 +1282,21 @@ impl ConfigApp {
                         }
                         cur += w + 1;
                     }
-                    let tab = clicked_tab.or_else(|| {
-                        if mouse.column < 26 {
-                            Some(Tab::Mascots)
-                        } else if mouse.column < 46 {
-                            Some(Tab::Scenery)
-                        } else if mouse.column < 62 {
-                            Some(Tab::Effects)
-                        } else if mouse.column < 82 {
-                            Some(Tab::Installer)
-                        } else {
-                            Some(Tab::Config)
-                        }
-                    });
-                    if let Some(t) = tab {
-                        self.current_tab = t;
-                        self.status_message = format!("Switched to {}", t.mode_label());
-                    }
+                    let tab = if let Some(t) = clicked_tab {
+                        t
+                    } else if mouse.column < 26 {
+                        Tab::Mascots
+                    } else if mouse.column < 46 {
+                        Tab::Scenery
+                    } else if mouse.column < 62 {
+                        Tab::Effects
+                    } else if mouse.column < 82 {
+                        Tab::Installer
+                    } else {
+                        Tab::Config
+                    };
+                    self.current_tab = tab;
+                    self.status_message = format!("Switched to {}", tab.mode_label());
                     return Ok(None);
                 }
 
@@ -1326,7 +1324,7 @@ impl ConfigApp {
                                 .constraints([Constraint::Percentage(60), Constraint::Percentage(40)])
                                 .split(Rect::new(0, 3, left_width, area_h));
 
-                            if mouse.row >= chunks[0].y + 1 && mouse.row < chunks[0].y + chunks[0].height {
+                            if mouse.row > chunks[0].y && mouse.row < chunks[0].y + chunks[0].height {
                                 let idx = (mouse.row - (chunks[0].y + 1)) as usize;
                                 if idx < SCENERY_OPTIONS.len() {
                                     self.scenery_idx = idx;
@@ -1336,7 +1334,7 @@ impl ConfigApp {
                                     self.environment_dropdown = Dropdown::new(ENVIRONMENT_OPTIONS.to_vec(), &env);
                                     self.saved = false;
                                 }
-                            } else if mouse.row >= chunks[1].y + 1 && mouse.row < chunks[1].y + chunks[1].height {
+                            } else if mouse.row > chunks[1].y && mouse.row < chunks[1].y + chunks[1].height {
                                 let idx = (mouse.row - (chunks[1].y + 1)) as usize;
                                 if idx < ROAD_OPTIONS.len() {
                                     self.road_idx = idx;
@@ -1354,7 +1352,7 @@ impl ConfigApp {
                                 .constraints([Constraint::Percentage(60), Constraint::Percentage(40)])
                                 .split(Rect::new(0, 3, left_width, area_h));
 
-                            if mouse.row >= chunks[0].y + 1 && mouse.row < chunks[0].y + chunks[0].height {
+                            if mouse.row > chunks[0].y && mouse.row < chunks[0].y + chunks[0].height {
                                 let idx = (mouse.row - (chunks[0].y + 1)) as usize;
                                 if idx < EFFECT_OPTIONS.len() {
                                     self.effect_idx = idx;
@@ -1365,7 +1363,7 @@ impl ConfigApp {
                                     self.animation_type_dropdown = Dropdown::new(ANIMATION_TYPE_OPTIONS.to_vec(), &eff);
                                     self.saved = false;
                                 }
-                            } else if mouse.row >= chunks[1].y + 1 && mouse.row < chunks[1].y + chunks[1].height {
+                            } else if mouse.row > chunks[1].y && mouse.row < chunks[1].y + chunks[1].height {
                                 let idx = (mouse.row - (chunks[1].y + 1)) as usize;
                                 if idx < COLOR_OPTIONS.len() {
                                     self.color_idx = idx;
@@ -1383,7 +1381,7 @@ impl ConfigApp {
                                 .constraints([Constraint::Percentage(55), Constraint::Percentage(45)])
                                 .split(Rect::new(0, 3, left_width, area_h));
 
-                            if mouse.row >= chunks[0].y + 1 && mouse.row < chunks[0].y + chunks[0].height {
+                            if mouse.row > chunks[0].y && mouse.row < chunks[0].y + chunks[0].height {
                                 let idx = (mouse.row - (chunks[0].y + 1)) as usize;
                                 if idx < self.shells.len() {
                                     self.selected_shell_idx = idx;
@@ -3319,7 +3317,7 @@ export extern "forgum" [
                         break;
                     };
 
-                    let glyph = if eye_idx % 2 == 0 {
+                    let glyph = if eye_idx.is_multiple_of(2) {
                         &left_eye
                     } else {
                         &right_eye
@@ -3545,9 +3543,9 @@ export extern "forgum" [
         let left_width = if width < 76 {
             (width * 36 / 100).max(22).min(width.saturating_sub(20))
         } else if width <= 120 {
-            (width * 28 / 100).max(26).min(38)
+            (width * 28 / 100).clamp(26, 38)
         } else {
-            (width * 24 / 100).max(28).min(46)
+            (width * 24 / 100).clamp(28, 46)
         };
         let right_width = width.saturating_sub(left_width);
 
@@ -3607,9 +3605,9 @@ export extern "forgum" [
         let left_width = if width < 80 {
             (width * 38 / 100).max(28).min(width.saturating_sub(30))
         } else if width <= 130 {
-            (width * 30 / 100).max(32).min(44)
+            (width * 30 / 100).clamp(32, 44)
         } else {
-            (width * 25 / 100).max(34).min(50)
+            (width * 25 / 100).clamp(34, 50)
         };
         let right_width = width.saturating_sub(left_width);
 
@@ -4665,10 +4663,8 @@ export extern "forgum" [
         }
 
         // 4. Feet, paws, hooves, trotters, bottom row flippers
-        if ch == '_' || ch == '-' || ch == '|' || ch == ')' || ch == '(' {
-            if rel_y >= 3 && (ch == '_' || ch == '-' || ch == '|' || ch == ')') {
-                return c2;
-            }
+        if rel_y >= 3 && (ch == '_' || ch == '-' || ch == '|' || ch == ')') {
+            return c2;
         }
 
         // 5. Body markings, spots, stripes, and coat pattern (stable spatial hash)
@@ -4866,7 +4862,7 @@ export extern "forgum" [
         let chew_cycle = (t * 0.36) % 1.0;
         let is_chewing = chew_cycle > 0.40 && chew_cycle < 0.65;
         let is_inhale = (t * 2.2).sin() > 0.1;
-        let is_wing_up = ((t * 8.0) as usize % 2) == 0;
+        let is_wing_up = ((t * 8.0) as usize).is_multiple_of(2);
         let walk_phase = ((t * 6.0) as usize) % 4;
 
         let cow_lines: Vec<&str> = cow_art.lines().collect();
@@ -5033,7 +5029,7 @@ export extern "forgum" [
                         let pad = (sway_amt + 3).max(0) as usize;
                         l = format!("{}{l}", " ".repeat(pad));
                     }
-                    "glitch" if ((t * 15.0) as usize + i) % 7 == 0 => {
+                    "glitch" if ((t * 15.0) as usize + i).is_multiple_of(7) => {
                         let mut chars: Vec<char> = l.chars().collect();
                         if let Some(pos) = chars.iter().position(|c| !c.is_whitespace()) {
                             chars[pos] = match ((t * 10.0) as usize) % 4 {
@@ -5103,7 +5099,7 @@ export extern "forgum" [
             let sparkle = if (self.config.effect == "particles" || self.config.effect == "default")
                 && (i == 1 || i == 2)
             {
-                if ((t * 8.0) as usize + i) % 3 == 0 {
+                if ((t * 8.0) as usize + i).is_multiple_of(3) {
                     " ✨"
                 } else {
                     "   "

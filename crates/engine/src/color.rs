@@ -281,10 +281,8 @@ pub fn natural_creature_color(
     }
 
     // 4. Feet, paws, hooves, trotters, bottom row flippers
-    if ch == '_' || ch == '-' || ch == '|' || ch == ')' || ch == '(' {
-        if rel_y >= 3 && (ch == '_' || ch == '-' || ch == '|' || ch == ')') {
-            return c2;
-        }
+    if rel_y >= 3 && (ch == '_' || ch == '-' || ch == '|' || ch == ')') {
+        return c2;
     }
 
     // 5. Body markings, spots, stripes, and coat pattern (stable spatial hash)

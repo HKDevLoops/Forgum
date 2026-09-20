@@ -18,16 +18,25 @@ pub enum RpsMove {
     Scissors,
 }
 
-impl RpsMove {
-    /// Parse user input leniently from strings like "r", "rock", "p", "paper", "s", "scissors".
-    pub fn from_str(s: &str) -> Option<Self> {
+impl std::str::FromStr for RpsMove {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
         let trimmed = s.trim().to_ascii_lowercase();
         match trimmed.as_str() {
-            "r" | "rock" | "1" => Some(Self::Rock),
-            "p" | "paper" | "2" => Some(Self::Paper),
-            "s" | "scissors" | "scissor" | "3" => Some(Self::Scissors),
-            _ => None,
+            "r" | "rock" | "1" => Ok(Self::Rock),
+            "p" | "paper" | "2" => Ok(Self::Paper),
+            "s" | "scissors" | "scissor" | "3" => Ok(Self::Scissors),
+            _ => Err(()),
         }
+    }
+}
+
+impl RpsMove {
+    /// Parse user input leniently from strings like "r", "rock", "p", "paper", "s", "scissors".
+    #[allow(clippy::should_implement_trait)]
+    pub fn from_str(s: &str) -> Option<Self> {
+        s.parse().ok()
     }
 
     /// Primary display name.

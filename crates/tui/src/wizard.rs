@@ -437,7 +437,7 @@ impl InstallerWizard {
         // Left Pane: Celestial Cow Constellation ASCII Art
         let mut cow_lines = Vec::new();
         for (i, &art_line) in CELESTIAL_COW_CONSTELLATION.iter().enumerate() {
-            let color = if (i + self.animation_tick / 4) % 3 == 0 {
+            let color = if (i + self.animation_tick / 4).is_multiple_of(3) {
                 theme::STARFIRE_PINK
             } else if (i + self.animation_tick / 4) % 3 == 1 {
                 theme::NEBULA_CYAN

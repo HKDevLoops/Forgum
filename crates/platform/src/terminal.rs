@@ -158,39 +158,39 @@ impl TerminalEmulator {
     /// Whether this terminal supports DEC Set Left and Right Margins (`\x1b[?69h` + `\x1b[left;right s`).
     #[must_use]
     pub const fn supports_decslrm(self) -> bool {
-        match self {
+        matches!(
+            self,
             Self::WezTerm
-            | Self::Alacritty
-            | Self::Ghostty
-            | Self::ITerm2
-            | Self::Foot
-            | Self::XTerm => true,
-            _ => false,
-        }
+                | Self::Alacritty
+                | Self::Ghostty
+                | Self::ITerm2
+                | Self::Foot
+                | Self::XTerm
+        )
     }
 
     /// Whether this terminal honors DEC 2026 synchronized updates (`\x1b[?2026h`).
     #[must_use]
     pub const fn supports_sync_updates(self) -> bool {
-        match self {
+        matches!(
+            self,
             Self::WindowsTerminal
-            | Self::WezTerm
-            | Self::Kitty
-            | Self::Ghostty
-            | Self::ITerm2
-            | Self::Foot
-            | Self::Alacritty => true,
-            _ => false,
-        }
+                | Self::WezTerm
+                | Self::Kitty
+                | Self::Ghostty
+                | Self::ITerm2
+                | Self::Foot
+                | Self::Alacritty
+        )
     }
 
     /// Whether an external native split-pane API or CLI command exists for this emulator.
     #[must_use]
     pub const fn native_split_available(self) -> bool {
-        match self {
-            Self::WindowsTerminal | Self::WezTerm | Self::Kitty | Self::ITerm2 => true,
-            _ => false,
-        }
+        matches!(
+            self,
+            Self::WindowsTerminal | Self::WezTerm | Self::Kitty | Self::ITerm2
+        )
     }
 
     /// Whether this terminal natively supports 24-bit TrueColor RGB.
@@ -658,10 +658,11 @@ pub fn query_controlling_terminal_size() -> Option<(u16, u16)> {
     let file = std::fs::File::open("/dev/tty").ok()?;
     unsafe {
         let mut ws: libc::winsize = std::mem::zeroed();
-        if libc::ioctl(file.as_raw_fd(), libc::TIOCGWINSZ, &mut ws) == 0 {
-            if ws.ws_col > 0 && ws.ws_row > 0 {
-                return Some((ws.ws_col, ws.ws_row));
-            }
+        if libc::ioctl(file.as_raw_fd(), libc::TIOCGWINSZ, &mut ws) == 0
+            && ws.ws_col > 0
+            && ws.ws_row > 0
+        {
+            return Some((ws.ws_col, ws.ws_row));
         }
     }
     None
@@ -929,22 +930,47 @@ mod tests {
     #[test]
     fn detect_sync_support_conservative_fallback() {
         let _guard = ENV_LOCK.lock().unwrap_or_else(|p| p.into_inner());
+        let saved_wt_session = std::env::var_os("WT_SESSION");
+        let saved_wt_profile = std::env::var_os("WT_PROFILE_ID");
+        let saved_tp = std::env::var_os("TERM_PROGRAM");
+        let saved_term = std::env::var_os("TERM");
+
         // No allowlisted program and no tty-ish env → conservative false.
         std::env::remove_var("TERM_PROGRAM");
         std::env::remove_var("WT_SESSION");
-        // With no known program, the allowlist yields false (assuming not a tty
-        // or no matching TERMs). Even if stdout is a tty, none of the listed
-        // programs are set, so this must be false.
+        std::env::remove_var("WT_PROFILE_ID");
+        std::env::set_var("TERM", "dumb");
+
+        // With dumb terminal and no known program, detect_sync_support must be false.
         assert!(!detect_sync_support());
 
-        // An allowlisted program returns true (when stdout is a tty). On a CI
-        // non-tty this still exercises the allowlist branch via the tty guard:
-        // if we are not a tty it stays false, which is the conservative path.
+        // An allowlisted program returns true (when stdout is a tty).
         std::env::set_var("TERM_PROGRAM", "WezTerm");
         if is_stdout_tty() {
             assert!(detect_sync_support());
         }
-        std::env::remove_var("TERM_PROGRAM");
+
+        // Restore environment
+        if let Some(v) = saved_wt_session {
+            std::env::set_var("WT_SESSION", v);
+        } else {
+            std::env::remove_var("WT_SESSION");
+        }
+        if let Some(v) = saved_wt_profile {
+            std::env::set_var("WT_PROFILE_ID", v);
+        } else {
+            std::env::remove_var("WT_PROFILE_ID");
+        }
+        if let Some(v) = saved_tp {
+            std::env::set_var("TERM_PROGRAM", v);
+        } else {
+            std::env::remove_var("TERM_PROGRAM");
+        }
+        if let Some(v) = saved_term {
+            std::env::set_var("TERM", v);
+        } else {
+            std::env::remove_var("TERM");
+        }
     }
 
     #[test]
