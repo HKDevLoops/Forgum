@@ -444,7 +444,7 @@ fi
 
 # --- interactive conflict reconciliation menu -------------------------------
 if [ -n "$EXISTING_PM" ] && [ "$HEADLESS" -eq 0 ] && [ "$ASSUME_YES" -eq 0 ]; then
-  if [ -t 0 ] || [ -r /dev/tty ]; then
+  if [ -t 0 ]; then
     echo ""
     echo -e "\033[33m⚠ Package Manager Conflict Detected!\033[0m"
     echo -e "  • Found existing Forgum via \033[36m${EXISTING_PM}\033[0m: ${EXISTING_PATH}"
@@ -455,19 +455,17 @@ if [ -n "$EXISTING_PM" ] && [ "$HEADLESS" -eq 0 ] && [ "$ASSUME_YES" -eq 0 ]; th
     echo -e "  \033[33m[3] Clean reinstall / overwrite\033[0m"
     echo ""
     CHOICE="2"
-    if [ -t 0 ]; then
-      read -r -p "Select option [1/2/3] (default: 2): " USER_CHOICE || true
-      CHOICE="${USER_CHOICE:-2}"
-    elif [ -r /dev/tty ]; then
-      read -r -p "Select option [1/2/3] (default: 2): " USER_CHOICE < /dev/tty || true
-      CHOICE="${USER_CHOICE:-2}"
-    fi
-
+    read -t 10 -r -p "Select option [1/2/3] (default: 2 in 10s): " USER_CHOICE || true
+    CHOICE="${USER_CHOICE:-2}"
     if [ "$CHOICE" = "1" ]; then
       echo -e "\033[32m>> Delegating update to ${EXISTING_PM}...\033[0m"
       eval "$EXISTING_UPDATE_CMD"
       exit 0
     fi
+  else
+    # Non-interactive / piped execution (curl ... | bash): automatically proceed with standalone upgrade
+    echo -e "\033[36m>> Found existing Forgum via ${EXISTING_PM} (${EXISTING_PATH}). Proceeding with standalone update...\033[0m"
+    CHOICE="2"
   fi
 fi
 
@@ -549,31 +547,51 @@ elif [ "$BUILD_FROM_SOURCE" -eq 0 ] && [ -f "target/debug/forgum" ]; then
   ln -sf "$BIN_PATH" "$LEGACY_PATH"
   echo -e "\033[32m>> Installed from local debug build: $BIN_PATH\033[0m"
 else
-  ASSET="forgum-${VERSION}-${TARGET_ARCH}-${TARGET_OS}.tar.gz"
-  URL="https://github.com/${REPO}/releases/download/${TAG}/${ASSET}"
-
   TMP="$(mktemp -d 2>/dev/null || mktemp -d -t 'forgum')"
   trap 'rm -rf "$TMP"' EXIT
 
   DOWNLOAD_OK=0
   if [ "$BUILD_FROM_SOURCE" -eq 0 ]; then
-    echo -e "\033[36m>> Checking prebuilt release archive: ${ASSET}\033[0m"
-    if command -v curl >/dev/null 2>&1; then
-      if curl -fsSL -H "User-Agent: forgum-install" "$URL" -o "$TMP/$ASSET" 2>/dev/null; then
-        DOWNLOAD_OK=1
-      fi
-    elif command -v wget >/dev/null 2>&1; then
-      if wget -q "$URL" -O "$TMP/$ASSET" 2>/dev/null; then
-        DOWNLOAD_OK=1
-      fi
-    fi
+    CANDIDATE_URLS=(
+      "https://github.com/${REPO}/releases/download/${TAG}/forgum-${VERSION}-${TARGET_ARCH}-${TARGET_OS}.tar.gz"
+      "https://github.com/${REPO}/releases/download/${TAG}/forgum-${TAG}-${TARGET_ARCH}-${TARGET_OS}.tar.gz"
+      "https://github.com/${REPO}/releases/download/nightly/forgum-nightly-${TARGET_ARCH}-${TARGET_OS}.tar.gz"
+      "https://github.com/${REPO}/releases/latest/download/forgum-${TARGET_ARCH}-${TARGET_OS}.tar.gz"
+    )
 
-    if [ "$DOWNLOAD_OK" -eq 1 ] && [ -s "$TMP/$ASSET" ]; then
-      tar xzf "$TMP/$ASSET" -C "$TMP" 2>/dev/null || true
+    ARCHIVE=""
+    for CANDIDATE in "${CANDIDATE_URLS[@]}"; do
+      ASSET_NAME="$(basename "$CANDIDATE")"
+      echo -e "\033[36m>> Checking prebuilt release archive: ${ASSET_NAME}...\033[0m"
+      if command -v curl >/dev/null 2>&1; then
+        if curl -fsSL -4 --connect-timeout 10 -H "User-Agent: forgum-install" "$CANDIDATE" -o "$TMP/$ASSET_NAME" 2>/dev/null; then
+          if [ -s "$TMP/$ASSET_NAME" ]; then
+            ARCHIVE="$TMP/$ASSET_NAME"
+            DOWNLOAD_OK=1
+            break
+          fi
+        fi
+      elif command -v wget >/dev/null 2>&1; then
+        if wget -q -4 --timeout=10 "$CANDIDATE" -O "$TMP/$ASSET_NAME" 2>/dev/null; then
+          if [ -s "$TMP/$ASSET_NAME" ]; then
+            ARCHIVE="$TMP/$ASSET_NAME"
+            DOWNLOAD_OK=1
+            break
+          fi
+        fi
+      fi
+    done
+
+    if [ "$DOWNLOAD_OK" -eq 1 ] && [ -n "$ARCHIVE" ]; then
+      tar xzf "$ARCHIVE" -C "$TMP" 2>/dev/null || true
       EXTRACTED="$(find "$TMP" -maxdepth 2 -type f \( -name 'forgum' -o -name 'forgum-engine' \) | head -n1 || true)"
       if [ -n "$EXTRACTED" ]; then
-        install -m 0755 "$EXTRACTED" "$BIN_PATH"
-        ln -sf "$BIN_PATH" "$LEGACY_PATH"
+        if [ -w "$INSTALL_DIR" ]; then
+          install -m 0755 "$EXTRACTED" "$BIN_PATH"
+        else
+          run_elevated install -m 0755 "$EXTRACTED" "$BIN_PATH"
+        fi
+        ln -sf "$BIN_PATH" "$LEGACY_PATH" 2>/dev/null || true
         echo -e "\033[32m>> Successfully installed prebuilt binary: $BIN_PATH\033[0m"
       else
         DOWNLOAD_OK=0
@@ -651,15 +669,19 @@ if [ -n "$TELEMETRY" ]; then
   TELEM_ARG="--telemetry $TELEMETRY"
 fi
 
-if [ "$HEADLESS" -eq 1 ]; then
+if [ "$HEADLESS" -eq 1 ] || [ ! -t 0 ]; then
+  # Headless execution or piped curl invocation (e.g. curl ... | bash)
   "$BIN_PATH" install --headless $TELEM_ARG
+  echo ""
+  echo -e "\033[32m✦ FORGUM CELESTIAL INSTALLATION COMPLETE ✦\033[0m"
+  echo -e "  • Installed binary: \033[36m${BIN_PATH}\033[0m"
+  echo -e "  • Channel: \033[35m${CHANNEL}\033[0m | Release: \033[33m${TAG}\033[0m"
+  echo -e "  • Run '\033[32mforgum\033[0m' to launch, or '\033[36mforgum tui\033[0m' for the configuration studio."
+  echo ""
 elif [ -t 0 ] && [ -t 1 ]; then
   # Standard interactive terminal execution
   "$BIN_PATH" install
-elif [ -r /dev/tty ] && [ -t 1 ]; then
-  # Executed via curl ... | bash in an interactive terminal
-  "$BIN_PATH" install < /dev/tty
 else
-  # Headless fallback when no TTY is attached
+  # Fallback headless execution
   "$BIN_PATH" install --headless $TELEM_ARG
 fi

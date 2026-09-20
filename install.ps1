@@ -166,7 +166,8 @@ if ($activeCmd -and $activeCmd.Source) {
 }
 
 # --- interactive conflict reconciliation menu -------------------------------
-if ($existingInstallations.Count -gt 0 -and -not $Headless) {
+$isInteractive = [Environment]::UserInteractive -and -not [Console]::IsInputRedirected
+if ($existingInstallations.Count -gt 0 -and -not $Headless -and -not $AssumeYes -and $isInteractive) {
     Write-Host ""
     Write-Host "⚠ Package Manager Conflict Detected!" -ForegroundColor Yellow
     foreach ($inst in $existingInstallations) {
@@ -266,35 +267,62 @@ if (Test-Path -LiteralPath $localRelease) {
     Copy-Item -LiteralPath $localDebug -Destination $legacyPath -Force
     Write-Host ">> Installed from local debug build: $binPath" -ForegroundColor Green
 } else {
-    $url = "https://github.com/$Repo/releases/download/$Tag/$asset"
-    Write-Host ">> Downloading $asset" -ForegroundColor Cyan
+    $targetArch = switch ($arch) {
+        'x64'   { 'x86_64' }
+        'arm64' { 'aarch64' }
+        'x86'   { 'i686' }
+        default { $arch }
+    }
+
+    $candidateUrls = @(
+        "https://github.com/$Repo/releases/download/$Tag/$asset",
+        "https://github.com/$Repo/releases/download/$Tag/forgum-$Version-$targetArch-pc-windows-msvc.zip",
+        "https://github.com/$Repo/releases/download/$Tag/forgum-$Tag-$targetArch-pc-windows-msvc.zip",
+        "https://github.com/$Repo/releases/download/nightly/forgum-nightly-$targetArch-pc-windows-msvc.zip",
+        "https://github.com/$Repo/releases/latest/download/forgum-$targetArch-pc-windows-msvc.zip"
+    )
 
     $tmp = Join-Path ([System.IO.Path]::GetTempPath()) ("forgum-" + [guid]::NewGuid().ToString('N'))
     New-Item -ItemType Directory -Path $tmp -Force | Out-Null
-    $zipPath = Join-Path $tmp $asset
+    $zipPath = Join-Path $tmp 'archive.zip'
 
+    $downloadOk = $false
     try {
-        Invoke-WebRequest -Uri $url -OutFile $zipPath -UseBasicParsing -Headers @{ 'User-Agent' = 'forgum-install' }
-        if (-not (Test-Path -LiteralPath $zipPath)) {
-            throw "Download failed: $url"
+        foreach ($candidate in $candidateUrls) {
+            $candidateName = [System.IO.Path]::GetFileName($candidate)
+            Write-Host ">> Checking prebuilt release archive: $candidateName..." -ForegroundColor Cyan
+            try {
+                Invoke-WebRequest -Uri $candidate -OutFile $zipPath -UseBasicParsing -Headers @{ 'User-Agent' = 'forgum-install' } -TimeoutSec 15 -ErrorAction Stop
+                if ((Test-Path -LiteralPath $zipPath) -and (Get-Item -LiteralPath $zipPath).Length -gt 0) {
+                    $downloadOk = $true
+                    break
+                }
+            } catch {}
         }
 
-        $shell = New-Object -ComObject Shell.Application
-        $zipNs = $shell.NameSpace($zipPath)
-        $destNs = $shell.NameSpace($tmp)
-        $destNs.CopyHere($zipNs.Items(), 0x10)
+        if (-not $downloadOk) {
+            throw "No prebuilt release archive could be downloaded."
+        }
+
+        Expand-Archive -LiteralPath $zipPath -DestinationPath $tmp -Force -ErrorAction SilentlyContinue
+        if (-not (Test-Path -LiteralPath (Join-Path $tmp 'forgum.exe'))) {
+            $shell = New-Object -ComObject Shell.Application
+            $zipNs = $shell.NameSpace($zipPath)
+            $destNs = $shell.NameSpace($tmp)
+            $destNs.CopyHere($zipNs.Items(), 0x10)
+        }
 
         $extracted = Join-Path $tmp 'forgum.exe'
         if (-not (Test-Path -LiteralPath $extracted)) {
             $extracted = Join-Path $tmp 'forgum-engine.exe'
         }
         if (-not (Test-Path -LiteralPath $extracted)) {
-            throw "forgum binary not found inside $asset"
+            throw "forgum binary not found inside archive"
         }
 
         Copy-Item -LiteralPath $extracted -Destination $binPath -Force
         Copy-Item -LiteralPath $extracted -Destination $legacyPath -Force
-        Write-Host ">> Installed: $binPath" -ForegroundColor Green
+        Write-Host ">> Successfully installed prebuilt binary: $binPath" -ForegroundColor Green
     } catch {
         if (Get-Command cargo -ErrorAction SilentlyContinue) {
             Write-Host ">> Release archive download unavailable. Compiling via Cargo..." -ForegroundColor Yellow
@@ -363,9 +391,15 @@ try {
 } catch {}
 
 # --- launch wizard or headless setup ---------------------------------------
-if ($Headless) {
+if ($Headless -or -not $isInteractive) {
     $telemetryArg = if ($Telemetry) { @("--telemetry", $Telemetry) } else { @() }
     & "$binPath" install --headless @telemetryArg
+    Write-Host ""
+    Write-Host "✦ FORGUM CELESTIAL INSTALLATION COMPLETE ✦" -ForegroundColor Green
+    Write-Host "  • Installed binary: $binPath" -ForegroundColor Cyan
+    Write-Host "  • Channel: $Channel | Release: $Tag" -ForegroundColor Magenta
+    Write-Host "  • Run 'forgum' to launch, or 'forgum tui' for the configuration studio." -ForegroundColor Green
+    Write-Host ""
 } else {
     # Launch celestial Terminal UI wizard
     & "$binPath" install
