@@ -114,7 +114,10 @@ fn piped_stdout_falls_back_gracefully() {
 
     assert!(output.status.success(), "status command failed");
     let stdout = String::from_utf8_lossy(&output.stdout);
-    assert!(stdout.contains("forgum status"), "status output should contain header: {stdout}");
+    assert!(
+        stdout.contains("forgum status"),
+        "status output should contain header: {stdout}"
+    );
 }
 
 #[test]

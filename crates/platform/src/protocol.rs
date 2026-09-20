@@ -200,9 +200,7 @@ impl RandomSetting {
                             || item_lower == "anim"
                             || item_lower == "effect"))
                     || (category == "animation"
-                        && (item_lower == "fx"
-                            || item_lower == "anim"
-                            || item_lower == "effect"))
+                        && (item_lower == "fx" || item_lower == "anim" || item_lower == "effect"))
                     || (category == "mascot" && (item_lower == "cow" || item_lower == "animal"))
                     || (category == "scenery"
                         && (item_lower == "environment"
@@ -513,8 +511,11 @@ mod tests {
         };
 
         for format in [ConfigFormat::Json, ConfigFormat::Yaml, ConfigFormat::Toml] {
-            let serialized = full.serialize_with_format(format).expect("serialization succeeds");
-            let deserialized = SceneConfig::parse_with_format(&serialized, format).expect("deserialization succeeds");
+            let serialized = full
+                .serialize_with_format(format)
+                .expect("serialization succeeds");
+            let deserialized = SceneConfig::parse_with_format(&serialized, format)
+                .expect("deserialization succeeds");
             assert_eq!(full, deserialized, "Mismatch for format {:?}", format);
         }
     }
@@ -579,7 +580,10 @@ mod tests {
 
         let yaml_str = "random: all\n";
         let parsed_yaml = SceneConfig::parse_with_format(yaml_str, ConfigFormat::Yaml).unwrap();
-        assert_eq!(parsed_yaml.random, Some(RandomSetting::String("all".into())));
+        assert_eq!(
+            parsed_yaml.random,
+            Some(RandomSetting::String("all".into()))
+        );
         assert!(parsed_yaml.random.unwrap().randomizes_mascot());
     }
 }

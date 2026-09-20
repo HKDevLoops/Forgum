@@ -247,7 +247,8 @@ fn rps_battle_subcommand_and_alias() {
         matches!(cmd, Some(Commands::RpsBattle { player, cpu, choice, .. }) if player == "Knight" && cpu == "Dragon" && choice == Some("rock".to_string()))
     );
 
-    let (a_alias, cmd_alias) = parse_args(argv(&["forgum-engine", "rps", "-c", "scissors"])).unwrap();
+    let (a_alias, cmd_alias) =
+        parse_args(argv(&["forgum-engine", "rps", "-c", "scissors"])).unwrap();
     assert_eq!(a_alias.command, Command::RpsBattle);
     assert!(
         matches!(cmd_alias, Some(Commands::RpsBattle { choice, .. }) if choice == Some("scissors".to_string()))
@@ -629,15 +630,30 @@ fn uninstall_subcommand_parses_cleanly() {
 fn update_subcommand_parses_cleanly() {
     let (a, cmd) = parse_args(argv(&["forgum", "update"])).unwrap();
     assert_eq!(a.command, Command::Update);
-    assert!(matches!(cmd, Some(Commands::Update { check: false, channel: None })));
+    assert!(matches!(
+        cmd,
+        Some(Commands::Update {
+            check: false,
+            channel: None
+        })
+    ));
 
     let (a_check, cmd_check) = parse_args(argv(&["forgum", "update", "--check"])).unwrap();
     assert_eq!(a_check.command, Command::Update);
-    assert!(matches!(cmd_check, Some(Commands::Update { check: true, channel: None })));
+    assert!(matches!(
+        cmd_check,
+        Some(Commands::Update {
+            check: true,
+            channel: None
+        })
+    ));
 
-    let (a_chan, cmd_chan) = parse_args(argv(&["forgum", "update", "--channel", "nightly"])).unwrap();
+    let (a_chan, cmd_chan) =
+        parse_args(argv(&["forgum", "update", "--channel", "nightly"])).unwrap();
     assert_eq!(a_chan.command, Command::Update);
-    assert!(matches!(cmd_chan, Some(Commands::Update { check: false, channel: Some(ref ch) }) if ch == "nightly"));
+    assert!(
+        matches!(cmd_chan, Some(Commands::Update { check: false, channel: Some(ref ch) }) if ch == "nightly")
+    );
 
     let (a_upgrade, _) = parse_args(argv(&["forgum", "upgrade"])).unwrap();
     assert_eq!(a_upgrade.command, Command::Update);
@@ -647,15 +663,26 @@ fn update_subcommand_parses_cleanly() {
 fn channel_subcommand_parses_cleanly() {
     let (a, cmd) = parse_args(argv(&["forgum", "channel"])).unwrap();
     assert_eq!(a.command, Command::Channel);
-    assert!(matches!(cmd, Some(Commands::Channel { action: None, name: None })));
+    assert!(matches!(
+        cmd,
+        Some(Commands::Channel {
+            action: None,
+            name: None
+        })
+    ));
 
-    let (a_switch, cmd_switch) = parse_args(argv(&["forgum", "channel", "switch", "nightly"])).unwrap();
+    let (a_switch, cmd_switch) =
+        parse_args(argv(&["forgum", "channel", "switch", "nightly"])).unwrap();
     assert_eq!(a_switch.command, Command::Channel);
-    assert!(matches!(cmd_switch, Some(Commands::Channel { action: Some(ref a), name: Some(ref n) }) if a == "switch" && n == "nightly"));
+    assert!(
+        matches!(cmd_switch, Some(Commands::Channel { action: Some(ref a), name: Some(ref n) }) if a == "switch" && n == "nightly")
+    );
 
     let (a_direct, cmd_direct) = parse_args(argv(&["forgum", "channel", "dev"])).unwrap();
     assert_eq!(a_direct.command, Command::Channel);
-    assert!(matches!(cmd_direct, Some(Commands::Channel { action: Some(ref a), name: None }) if a == "dev"));
+    assert!(
+        matches!(cmd_direct, Some(Commands::Channel { action: Some(ref a), name: None }) if a == "dev")
+    );
 }
 
 #[test]
@@ -699,9 +726,16 @@ fn logs_flags_open_raw_filter_parse() {
 
 #[test]
 fn config_set_and_get_args_parse_cleanly() {
-    let (a, cmd) = parse_args(argv(&["forgum", "config", "set", "split_mode", "seamless"])).unwrap();
+    let (a, cmd) =
+        parse_args(argv(&["forgum", "config", "set", "split_mode", "seamless"])).unwrap();
     assert_eq!(a.command, Command::Config);
-    if let Some(Commands::Config { key, value, extra_value, .. }) = cmd {
+    if let Some(Commands::Config {
+        key,
+        value,
+        extra_value,
+        ..
+    }) = cmd
+    {
         assert_eq!(key.as_deref(), Some("set"));
         assert_eq!(value.as_deref(), Some("split_mode"));
         assert_eq!(extra_value.as_deref(), Some("seamless"));
@@ -717,7 +751,8 @@ fn config_set_and_get_args_parse_cleanly() {
         panic!("expected Commands::Config with get editor");
     }
 
-    let (_, cmd_direct) = parse_args(argv(&["forgum", "config", "split_mode", "seamless"])).unwrap();
+    let (_, cmd_direct) =
+        parse_args(argv(&["forgum", "config", "split_mode", "seamless"])).unwrap();
     if let Some(Commands::Config { key, value, .. }) = cmd_direct {
         assert_eq!(key.as_deref(), Some("split_mode"));
         assert_eq!(value.as_deref(), Some("seamless"));

@@ -181,7 +181,10 @@ impl RpsRng {
         let seed = nanos ^ rand_seed.rotate_left(17) ^ (pid.wrapping_mul(0x9e3779b97f4a7c15));
         let stream = rand_seed.wrapping_add(0xda942042e4dd58b5) | 1;
 
-        let mut rng = Self { state: seed, stream };
+        let mut rng = Self {
+            state: seed,
+            stream,
+        };
         // Warm up state
         rng.next_u32();
         rng.next_u32();
@@ -268,7 +271,10 @@ pub fn render_showdown_arena(
         cpu_move.name()
     );
 
-    out.push_str(&format!("  {:<42}  {}\x1b[K\r\n\x1b[K\r\n", p_header, c_header));
+    out.push_str(&format!(
+        "  {:<42}  {}\x1b[K\r\n\x1b[K\r\n",
+        p_header, c_header
+    ));
 
     let p_hand = player_move.ascii_player();
     let c_hand = cpu_move.ascii_cpu();
@@ -484,7 +490,13 @@ pub fn run_rps_battle(
     let outcome = RpsOutcome::evaluate(p_move, c_move);
 
     let mut log = String::new();
-    log.push_str(&render_showdown_arena(player_name, cpu_name, p_move, c_move, outcome));
+    log.push_str(&render_showdown_arena(
+        player_name,
+        cpu_name,
+        p_move,
+        c_move,
+        outcome,
+    ));
 
     let battle_log = run_battle(player_name, cpu_name);
     log.push_str(&battle_log);

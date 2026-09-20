@@ -212,7 +212,9 @@ impl EnvironmentStyle {
     pub fn random() -> Self {
         use rand::seq::SliceRandom;
         let mut rng = rand::thread_rng();
-        *Self::ALL_NON_NONE.choose(&mut rng).unwrap_or(&Self::Pasture)
+        *Self::ALL_NON_NONE
+            .choose(&mut rng)
+            .unwrap_or(&Self::Pasture)
     }
 
     pub fn parse(s: &str) -> Self {
@@ -996,7 +998,8 @@ pub fn render_trees_with_animal(
 
     // Natural Fibonacci phyllotaxis tree range across the visible span
     let avg_stride = min_dist + var_dist * 0.5;
-    let start_tree = (((scroll_x as isize - 35).max(0) as f32) / (avg_stride + var_dist)).floor() as usize;
+    let start_tree =
+        (((scroll_x as isize - 35).max(0) as f32) / (avg_stride + var_dist)).floor() as usize;
     // Start 6 trees earlier so wide canopies exiting on the left screen boundary do not clip prematurely
     let start_tree = start_tree.saturating_sub(6);
     let end_tree = (((scroll_x + width + 40) as f32 / min_dist).ceil() as usize) + 4;

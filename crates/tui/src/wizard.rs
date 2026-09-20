@@ -554,50 +554,77 @@ impl InstallerWizard {
             Line::from(vec![
                 Span::styled(
                     "  Color Depth     : ",
-                    Style::default().fg(theme::NEBULA_CYAN).add_modifier(Modifier::BOLD),
+                    Style::default()
+                        .fg(theme::NEBULA_CYAN)
+                        .add_modifier(Modifier::BOLD),
                 ),
                 if is_truecolor {
                     Span::styled(
                         "● TrueColor 24-bit (16.7M RGB Colors)",
-                        Style::default().fg(theme::AURORA_GREEN).add_modifier(Modifier::BOLD),
+                        Style::default()
+                            .fg(theme::AURORA_GREEN)
+                            .add_modifier(Modifier::BOLD),
                     )
                 } else {
-                    Span::styled("● 256 / 8-Color ANSI Mode", Style::default().fg(theme::SUPERNOVA_GOLD))
+                    Span::styled(
+                        "● 256 / 8-Color ANSI Mode",
+                        Style::default().fg(theme::SUPERNOVA_GOLD),
+                    )
                 },
             ]),
             Line::from(vec![
                 Span::styled(
                     "  Unicode / Glyphs: ",
-                    Style::default().fg(theme::NEBULA_CYAN).add_modifier(Modifier::BOLD),
+                    Style::default()
+                        .fg(theme::NEBULA_CYAN)
+                        .add_modifier(Modifier::BOLD),
                 ),
                 if self.utf8_supported {
-                    Span::styled("● UTF-8 Active [ 🐄 ✦ 🌌 🛡️ 🌿 ⚡ ✓ ]", Style::default().fg(theme::AURORA_GREEN))
+                    Span::styled(
+                        "● UTF-8 Active [ 🐄 ✦ 🌌 🛡️ 🌿 ⚡ ✓ ]",
+                        Style::default().fg(theme::AURORA_GREEN),
+                    )
                 } else {
-                    Span::styled("● ASCII Limited Mode", Style::default().fg(theme::SUPERNOVA_GOLD))
+                    Span::styled(
+                        "● ASCII Limited Mode",
+                        Style::default().fg(theme::SUPERNOVA_GOLD),
+                    )
                 },
             ]),
             Line::from(vec![
                 Span::styled(
                     "  TTY Frame Sync  : ",
-                    Style::default().fg(theme::NEBULA_CYAN).add_modifier(Modifier::BOLD),
+                    Style::default()
+                        .fg(theme::NEBULA_CYAN)
+                        .add_modifier(Modifier::BOLD),
                 ),
                 if self.sync_supported {
-                    Span::styled("● DEC 2026 Synchronized Output", Style::default().fg(theme::AURORA_GREEN))
+                    Span::styled(
+                        "● DEC 2026 Synchronized Output",
+                        Style::default().fg(theme::AURORA_GREEN),
+                    )
                 } else {
-                    Span::styled("● Standard Non-Atomic VT", Style::default().fg(theme::DUST_GRAY))
+                    Span::styled(
+                        "● Standard Non-Atomic VT",
+                        Style::default().fg(theme::DUST_GRAY),
+                    )
                 },
             ]),
             Line::from(vec![
                 Span::styled(
                     "  Terminal Host   : ",
-                    Style::default().fg(theme::NEBULA_CYAN).add_modifier(Modifier::BOLD),
+                    Style::default()
+                        .fg(theme::NEBULA_CYAN)
+                        .add_modifier(Modifier::BOLD),
                 ),
                 Span::styled(active_term, Style::default().fg(theme::STARLIGHT)),
             ]),
             Line::from(vec![
                 Span::styled(
                     "  Platform Target : ",
-                    Style::default().fg(theme::NEBULA_CYAN).add_modifier(Modifier::BOLD),
+                    Style::default()
+                        .fg(theme::NEBULA_CYAN)
+                        .add_modifier(Modifier::BOLD),
                 ),
                 Span::styled(
                     format!("{} ({})", std::env::consts::OS, std::env::consts::ARCH),
@@ -624,7 +651,9 @@ impl InstallerWizard {
             vec![
                 Line::from(Span::styled(
                     "  ✓ FFmpeg Media Engine: Detected on system PATH",
-                    Style::default().fg(theme::AURORA_GREEN).add_modifier(Modifier::BOLD),
+                    Style::default()
+                        .fg(theme::AURORA_GREEN)
+                        .add_modifier(Modifier::BOLD),
                 )),
                 Line::from(""),
                 Line::from("  Terminal session recording and high-res GIF export"),
@@ -634,21 +663,34 @@ impl InstallerWizard {
             vec![
                 Line::from(Span::styled(
                     "  ⚠️ FFmpeg Media Engine: Not found (Optional)",
-                    Style::default().fg(theme::SUPERNOVA_GOLD).add_modifier(Modifier::BOLD),
+                    Style::default()
+                        .fg(theme::SUPERNOVA_GOLD)
+                        .add_modifier(Modifier::BOLD),
                 )),
                 Line::from(""),
-                Line::from("  Forgum runs natively without it! Install anytime for GIF/video capture:"),
+                Line::from(
+                    "  Forgum runs natively without it! Install anytime for GIF/video capture:",
+                ),
                 Line::from(vec![
                     Span::styled("    Windows : ", Style::default().fg(theme::NEBULA_CYAN)),
-                    Span::styled("scoop install ffmpeg  |  winget install Gyan.FFmpeg", Style::default().fg(theme::STARFIRE_PINK)),
+                    Span::styled(
+                        "scoop install ffmpeg  |  winget install Gyan.FFmpeg",
+                        Style::default().fg(theme::STARFIRE_PINK),
+                    ),
                 ]),
                 Line::from(vec![
                     Span::styled("    macOS   : ", Style::default().fg(theme::NEBULA_CYAN)),
-                    Span::styled("brew install ffmpeg", Style::default().fg(theme::STARFIRE_PINK)),
+                    Span::styled(
+                        "brew install ffmpeg",
+                        Style::default().fg(theme::STARFIRE_PINK),
+                    ),
                 ]),
                 Line::from(vec![
                     Span::styled("    Linux   : ", Style::default().fg(theme::NEBULA_CYAN)),
-                    Span::styled("sudo apt install ffmpeg  |  pacman -S ffmpeg", Style::default().fg(theme::STARFIRE_PINK)),
+                    Span::styled(
+                        "sudo apt install ffmpeg  |  pacman -S ffmpeg",
+                        Style::default().fg(theme::STARFIRE_PINK),
+                    ),
                 ]),
             ]
         };
@@ -684,7 +726,9 @@ impl InstallerWizard {
             Line::from(vec![
                 Span::styled(
                     "  Package Managers: ",
-                    Style::default().fg(theme::SUPERNOVA_GOLD).add_modifier(Modifier::BOLD),
+                    Style::default()
+                        .fg(theme::SUPERNOVA_GOLD)
+                        .add_modifier(Modifier::BOLD),
                 ),
                 Span::styled(
                     if active_pms.is_empty() {
@@ -701,18 +745,29 @@ impl InstallerWizard {
         if inactive_shadows.is_empty() {
             pkg_lines.push(Line::from(Span::styled(
                 "  ✓ Reconciliation: Clean Single Installation",
-                Style::default().fg(theme::AURORA_GREEN).add_modifier(Modifier::BOLD),
+                Style::default()
+                    .fg(theme::AURORA_GREEN)
+                    .add_modifier(Modifier::BOLD),
             )));
-            pkg_lines.push(Line::from("    No conflicting shadow binaries detected on system PATH."));
+            pkg_lines.push(Line::from(
+                "    No conflicting shadow binaries detected on system PATH.",
+            ));
         } else {
             pkg_lines.push(Line::from(Span::styled(
-                format!("  ⚠️ SHADOW CONFLICT: {} duplicate binaries found!", inactive_shadows.len()),
-                Style::default().fg(theme::METEOR_RED).add_modifier(Modifier::BOLD),
+                format!(
+                    "  ⚠️ SHADOW CONFLICT: {} duplicate binaries found!",
+                    inactive_shadows.len()
+                ),
+                Style::default()
+                    .fg(theme::METEOR_RED)
+                    .add_modifier(Modifier::BOLD),
             )));
             for s in &self.shadow_installations {
                 pkg_lines.push(Line::from(format!("    {}", s.display_line())));
             }
-            pkg_lines.push(Line::from("    Tip: Uninstall duplicate managers to prevent PATH priority conflicts."));
+            pkg_lines.push(Line::from(
+                "    Tip: Uninstall duplicate managers to prevent PATH priority conflicts.",
+            ));
         }
 
         let card3 = Paragraph::new(pkg_lines).block(
@@ -729,9 +784,7 @@ impl InstallerWizard {
         f.render_widget(card3, right_chunks[0]);
 
         // Card 4: Release Stream / Channel Selector
-        let mut chan_lines = vec![
-            Line::from(""),
-        ];
+        let mut chan_lines = vec![Line::from("")];
 
         let mut pill_spans = vec![Span::raw("  ")];
         for (i, &ch) in ReleaseChannel::ALL.iter().enumerate() {
@@ -758,7 +811,9 @@ impl InstallerWizard {
         chan_lines.push(Line::from(vec![
             Span::styled(
                 "  Stream: ",
-                Style::default().fg(theme::STARFIRE_PINK).add_modifier(Modifier::BOLD),
+                Style::default()
+                    .fg(theme::STARFIRE_PINK)
+                    .add_modifier(Modifier::BOLD),
             ),
             Span::styled(
                 self.selected_channel.description(),

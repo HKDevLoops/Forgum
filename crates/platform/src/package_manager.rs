@@ -436,7 +436,9 @@ pub fn execute_package_manager_action(
 // ═══════════════════════════════════════════════════════════════════════════
 
 /// Release channel stream for Forgum installations and updates.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, serde::Serialize, serde::Deserialize)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Hash, Default, serde::Serialize, serde::Deserialize,
+)]
 #[serde(rename_all = "lowercase")]
 pub enum ReleaseChannel {
     #[default]
@@ -470,7 +472,9 @@ impl ReleaseChannel {
     pub const fn description(&self) -> &'static str {
         match self {
             Self::Stable => "Official release builds with maximum stability and verified features.",
-            Self::Nightly => "Automated continuous releases with latest enhancements and early fixes.",
+            Self::Nightly => {
+                "Automated continuous releases with latest enhancements and early fixes."
+            }
             Self::Dev => "Locally compiled developer build running from source.",
         }
     }
@@ -606,7 +610,11 @@ impl ShadowInstallation {
             .as_deref()
             .map(|v| format!("v{v}"))
             .unwrap_or_else(|| "unknown version".to_string());
-        format!("{tag} {} ({}, {ver})", self.path.display(), self.source.name())
+        format!(
+            "{tag} {} ({}, {ver})",
+            self.path.display(),
+            self.source.name()
+        )
     }
 }
 
@@ -628,7 +636,9 @@ pub fn detect_shadow_installations() -> Vec<ShadowInstallation> {
     let mut seen_canonical: std::collections::HashSet<PathBuf> = std::collections::HashSet::new();
 
     let current_exe = std::env::current_exe().ok();
-    let current_canon = current_exe.as_ref().and_then(|p| std::fs::canonicalize(p).ok());
+    let current_canon = current_exe
+        .as_ref()
+        .and_then(|p| std::fs::canonicalize(p).ok());
 
     let mut candidate_paths: Vec<PathBuf> = Vec::new();
 
@@ -642,7 +652,13 @@ pub fn detect_shadow_installations() -> Vec<ShadowInstallation> {
         for dir in std::env::split_paths(&path_var) {
             #[cfg(windows)]
             {
-                let names = ["forgum.exe", "forgum.cmd", "forgum.bat", "forgum.ps1", "forgum"];
+                let names = [
+                    "forgum.exe",
+                    "forgum.cmd",
+                    "forgum.bat",
+                    "forgum.ps1",
+                    "forgum",
+                ];
                 for name in names {
                     let candidate = dir.join(name);
                     if candidate.is_file() {
@@ -664,7 +680,9 @@ pub fn detect_shadow_installations() -> Vec<ShadowInstallation> {
     #[cfg(windows)]
     {
         if let Some(local_app_data) = std::env::var_os("LOCALAPPDATA") {
-            let p = PathBuf::from(&local_app_data).join("Forgum").join("forgum.exe");
+            let p = PathBuf::from(&local_app_data)
+                .join("Forgum")
+                .join("forgum.exe");
             if p.is_file() {
                 candidate_paths.push(p);
             }
@@ -816,7 +834,10 @@ fn query_binary_version(path: &Path) -> Option<String> {
 /// 2. Renames existing `target_exe` to `target_exe.bak` (works on Windows even while running!).
 /// 3. Moves temporary file to `target_exe`.
 /// 4. If step 3 fails, rolls back `target_exe.bak` -> `target_exe`.
-pub fn atomic_replace_binary(target_exe: &Path, new_binary_bytes: &[u8]) -> Result<(), PlatformError> {
+pub fn atomic_replace_binary(
+    target_exe: &Path,
+    new_binary_bytes: &[u8],
+) -> Result<(), PlatformError> {
     let parent = target_exe.parent().ok_or_else(|| {
         PlatformError::InvalidArgument(format!(
             "target executable has no parent dir: {}",
@@ -977,12 +998,30 @@ mod tests {
         assert_eq!(ReleaseChannel::Nightly.as_str(), "nightly");
         assert_eq!(ReleaseChannel::Dev.as_str(), "dev");
 
-        assert_eq!("stable".parse::<ReleaseChannel>().unwrap(), ReleaseChannel::Stable);
-        assert_eq!("main".parse::<ReleaseChannel>().unwrap(), ReleaseChannel::Stable);
-        assert_eq!("nightly".parse::<ReleaseChannel>().unwrap(), ReleaseChannel::Nightly);
-        assert_eq!("preview".parse::<ReleaseChannel>().unwrap(), ReleaseChannel::Nightly);
-        assert_eq!("dev".parse::<ReleaseChannel>().unwrap(), ReleaseChannel::Dev);
-        assert_eq!("local".parse::<ReleaseChannel>().unwrap(), ReleaseChannel::Dev);
+        assert_eq!(
+            "stable".parse::<ReleaseChannel>().unwrap(),
+            ReleaseChannel::Stable
+        );
+        assert_eq!(
+            "main".parse::<ReleaseChannel>().unwrap(),
+            ReleaseChannel::Stable
+        );
+        assert_eq!(
+            "nightly".parse::<ReleaseChannel>().unwrap(),
+            ReleaseChannel::Nightly
+        );
+        assert_eq!(
+            "preview".parse::<ReleaseChannel>().unwrap(),
+            ReleaseChannel::Nightly
+        );
+        assert_eq!(
+            "dev".parse::<ReleaseChannel>().unwrap(),
+            ReleaseChannel::Dev
+        );
+        assert_eq!(
+            "local".parse::<ReleaseChannel>().unwrap(),
+            ReleaseChannel::Dev
+        );
 
         assert!("invalid_channel".parse::<ReleaseChannel>().is_err());
     }

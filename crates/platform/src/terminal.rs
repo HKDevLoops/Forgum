@@ -4,8 +4,8 @@
 //! 256-color, or basic 8-color. Used by the color module to pick the right
 //! escape-sequence flavor.
 
-use std::sync::OnceLock;
 use serde::{Deserialize, Serialize};
+use std::sync::OnceLock;
 
 /// Color depth tiers we can target.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
@@ -410,7 +410,8 @@ pub fn plan_native_split(
                 target: "windows_terminal",
                 program: "wt.exe".to_string(),
                 args,
-                explanation: "Creates a native Windows Terminal horizontal split pane via wt.exe CLI",
+                explanation:
+                    "Creates a native Windows Terminal horizontal split pane via wt.exe CLI",
             })
         }
         TerminalEmulator::ITerm2 => {
@@ -678,7 +679,10 @@ pub fn query_controlling_terminal_size() -> Option<(u16, u16)> {
 pub fn has_controlling_terminal() -> bool {
     #[cfg(windows)]
     {
-        std::fs::OpenOptions::new().write(true).open("CONOUT$").is_ok()
+        std::fs::OpenOptions::new()
+            .write(true)
+            .open("CONOUT$")
+            .is_ok()
     }
     #[cfg(unix)]
     {
@@ -1001,7 +1005,11 @@ mod tests {
     #[test]
     fn terminal_emulator_names_and_ids() {
         let emulators = [
-            (TerminalEmulator::WindowsTerminal, "Windows Terminal", "windows_terminal"),
+            (
+                TerminalEmulator::WindowsTerminal,
+                "Windows Terminal",
+                "windows_terminal",
+            ),
             (TerminalEmulator::WezTerm, "WezTerm", "wezterm"),
             (TerminalEmulator::Kitty, "Kitty", "kitty"),
             (TerminalEmulator::Alacritty, "Alacritty", "alacritty"),
@@ -1013,10 +1021,26 @@ mod tests {
             (TerminalEmulator::XTerm, "XTerm", "xterm"),
             (TerminalEmulator::Urxvt, "urxvt", "urxvt"),
             (TerminalEmulator::Mintty, "Mintty", "mintty"),
-            (TerminalEmulator::AppleTerminal, "Apple Terminal", "apple_terminal"),
-            (TerminalEmulator::ConHost, "Legacy Windows ConHost", "conhost"),
-            (TerminalEmulator::LinuxConsole, "Linux Virtual Console (TTY)", "linux_console"),
-            (TerminalEmulator::SerialConsole, "Serial/Hypervisor Console", "serial_console"),
+            (
+                TerminalEmulator::AppleTerminal,
+                "Apple Terminal",
+                "apple_terminal",
+            ),
+            (
+                TerminalEmulator::ConHost,
+                "Legacy Windows ConHost",
+                "conhost",
+            ),
+            (
+                TerminalEmulator::LinuxConsole,
+                "Linux Virtual Console (TTY)",
+                "linux_console",
+            ),
+            (
+                TerminalEmulator::SerialConsole,
+                "Serial/Hypervisor Console",
+                "serial_console",
+            ),
             (TerminalEmulator::Dumb, "Dumb / Non-TTY", "dumb"),
             (TerminalEmulator::GenericVt, "Generic VT", "generic_vt"),
         ];
@@ -1031,7 +1055,10 @@ mod tests {
     fn terminal_emulator_decstbm_and_split_modes() {
         // Modern terminals support DECSTBM and default to Decstbm mode
         assert!(TerminalEmulator::WindowsTerminal.supports_decstbm());
-        assert_eq!(TerminalEmulator::WindowsTerminal.recommended_split_mode(), SplitMode::Decstbm);
+        assert_eq!(
+            TerminalEmulator::WindowsTerminal.recommended_split_mode(),
+            SplitMode::Decstbm
+        );
 
         assert!(TerminalEmulator::WezTerm.supports_decstbm());
         assert!(TerminalEmulator::WezTerm.supports_decslrm());
@@ -1049,15 +1076,24 @@ mod tests {
 
         // Hardware / legacy limitations
         assert!(!TerminalEmulator::ConHost.supports_decstbm());
-        assert_eq!(TerminalEmulator::ConHost.recommended_split_mode(), SplitMode::PrecmdFallback);
+        assert_eq!(
+            TerminalEmulator::ConHost.recommended_split_mode(),
+            SplitMode::PrecmdFallback
+        );
         assert!(TerminalEmulator::ConHost.limitation_notes().is_some());
 
         assert!(!TerminalEmulator::LinuxConsole.supports_decstbm());
-        assert_eq!(TerminalEmulator::LinuxConsole.recommended_split_mode(), SplitMode::PrecmdFallback);
+        assert_eq!(
+            TerminalEmulator::LinuxConsole.recommended_split_mode(),
+            SplitMode::PrecmdFallback
+        );
         assert!(TerminalEmulator::LinuxConsole.limitation_notes().is_some());
 
         assert!(!TerminalEmulator::Dumb.supports_decstbm());
-        assert_eq!(TerminalEmulator::Dumb.recommended_split_mode(), SplitMode::Disabled);
+        assert_eq!(
+            TerminalEmulator::Dumb.recommended_split_mode(),
+            SplitMode::Disabled
+        );
     }
 
     #[test]
@@ -1067,11 +1103,13 @@ mod tests {
             pane: "%1".into(),
             session: "dev".into(),
         };
-        let zellij_mux = crate::mux::Mux::Zellij {
-            tab: "main".into(),
-        };
+        let zellij_mux = crate::mux::Mux::Zellij { tab: "main".into() };
 
-        let args = vec!["render".to_string(), "--animal".to_string(), "tux".to_string()];
+        let args = vec![
+            "render".to_string(),
+            "--animal".to_string(),
+            "tux".to_string(),
+        ];
 
         // Tmux plan
         let plan_tmux = plan_native_split(TerminalEmulator::GenericVt, &tmux_mux, 12, 0.35, &args);
@@ -1083,7 +1121,8 @@ mod tests {
         assert!(p_tmux.args.contains(&"12".to_string()));
 
         // Zellij plan
-        let plan_zellij = plan_native_split(TerminalEmulator::GenericVt, &zellij_mux, 12, 0.35, &args);
+        let plan_zellij =
+            plan_native_split(TerminalEmulator::GenericVt, &zellij_mux, 12, 0.35, &args);
         assert!(plan_zellij.is_some());
         let p_zellij = plan_zellij.unwrap();
         assert_eq!(p_zellij.target, "zellij");
@@ -1107,7 +1146,8 @@ mod tests {
         assert!(p_kitty.args.contains(&"--bias=25".to_string()));
 
         // Windows Terminal plan
-        let plan_wt = plan_native_split(TerminalEmulator::WindowsTerminal, &no_mux, 10, 0.35, &args);
+        let plan_wt =
+            plan_native_split(TerminalEmulator::WindowsTerminal, &no_mux, 10, 0.35, &args);
         assert!(plan_wt.is_some());
         let p_wt = plan_wt.unwrap();
         assert_eq!(p_wt.target, "windows_terminal");
@@ -1115,7 +1155,8 @@ mod tests {
         assert!(p_wt.args.contains(&"sp".to_string()));
 
         // Alacritty has no native split API (pure VT)
-        let plan_alacritty = plan_native_split(TerminalEmulator::Alacritty, &no_mux, 10, 0.35, &args);
+        let plan_alacritty =
+            plan_native_split(TerminalEmulator::Alacritty, &no_mux, 10, 0.35, &args);
         assert!(plan_alacritty.is_none());
     }
 
@@ -1152,7 +1193,10 @@ mod tests {
 
         clear_vars();
         std::env::set_var("WT_SESSION", "9876-uuid");
-        assert_eq!(detect_terminal_emulator(), TerminalEmulator::WindowsTerminal);
+        assert_eq!(
+            detect_terminal_emulator(),
+            TerminalEmulator::WindowsTerminal
+        );
 
         clear_vars();
         std::env::set_var("WEZTERM_PANE", "3");

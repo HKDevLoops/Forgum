@@ -135,8 +135,8 @@ pub fn stdin_has_data() -> bool {
     }
 }
 pub use terminal::{
-    detect_capabilities, detect_terminal_emulator, is_stdout_tty, plan_native_split,
-    terminal_size, terminal_supports_sync, ColorLevel, GraphicsCaps, NativeSplitPlan, SplitMode,
+    detect_capabilities, detect_terminal_emulator, is_stdout_tty, plan_native_split, terminal_size,
+    terminal_supports_sync, ColorLevel, GraphicsCaps, NativeSplitPlan, SplitMode,
     TerminalCapabilities, TerminalEmulator,
 };
 /// Expand to the contained code only when compiling on a Unix-like target.

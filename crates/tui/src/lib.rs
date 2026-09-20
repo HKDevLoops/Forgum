@@ -227,7 +227,9 @@ pub fn run_tui(
                                 }
                             }
 
-                            if let Some(editor) = detect_terminal_editor(app.config().editor.as_deref()) {
+                            if let Some(editor) =
+                                detect_terminal_editor(app.config().editor.as_deref())
+                            {
                                 paused_for_closure.store(true, std::sync::atomic::Ordering::SeqCst);
 
                                 // Suspend TUI
@@ -241,7 +243,11 @@ pub fn run_tui(
                                 // Launch terminal/configured code editor synchronously
                                 let parts: Vec<&str> = editor.split_whitespace().collect();
                                 let bin = parts.first().copied().unwrap_or(&editor);
-                                let extra_args = if parts.len() > 1 { &parts[1..] } else { &[][..] };
+                                let extra_args = if parts.len() > 1 {
+                                    &parts[1..]
+                                } else {
+                                    &[][..]
+                                };
                                 let mut cmd = std::process::Command::new(bin);
                                 cmd.args(extra_args);
                                 cmd.arg(&target_path);
@@ -256,7 +262,8 @@ pub fn run_tui(
                                 );
                                 let _ = terminal.clear();
 
-                                paused_for_closure.store(false, std::sync::atomic::Ordering::SeqCst);
+                                paused_for_closure
+                                    .store(false, std::sync::atomic::Ordering::SeqCst);
 
                                 // Reload updated config if edited
                                 let fmt = app.config_format();
@@ -264,10 +271,8 @@ pub fn run_tui(
                                     app.set_config(cfg);
                                     app.config_path = Some(target_path.clone());
                                     app.mark_saved();
-                                    app.status_message = format!(
-                                        "Config reloaded after editing in {}",
-                                        editor
-                                    );
+                                    app.status_message =
+                                        format!("Config reloaded after editing in {}", editor);
                                 }
                             } else {
                                 app.open_editor_modal();
@@ -292,7 +297,10 @@ pub fn run_tui(
                                         .spawn();
                                     app.status_message = format!(
                                         "Launched VS Code on {}",
-                                        target_path.file_name().and_then(|n| n.to_str()).unwrap_or("config")
+                                        target_path
+                                            .file_name()
+                                            .and_then(|n| n.to_str())
+                                            .unwrap_or("config")
                                     );
                                 } else {
                                     let _ = std::process::Command::new("notepad.exe")
@@ -300,19 +308,27 @@ pub fn run_tui(
                                         .spawn();
                                     app.status_message = format!(
                                         "Launched Notepad on {}",
-                                        target_path.file_name().and_then(|n| n.to_str()).unwrap_or("config")
+                                        target_path
+                                            .file_name()
+                                            .and_then(|n| n.to_str())
+                                            .unwrap_or("config")
                                     );
                                 }
                             }
                             #[cfg(target_os = "macos")]
                             {
-                                let _ = std::process::Command::new("open").arg(&target_path).spawn();
-                                app.status_message = "Opened configuration in system editor.".into();
+                                let _ =
+                                    std::process::Command::new("open").arg(&target_path).spawn();
+                                app.status_message =
+                                    "Opened configuration in system editor.".into();
                             }
                             #[cfg(all(unix, not(target_os = "macos")))]
                             {
-                                let _ = std::process::Command::new("xdg-open").arg(&target_path).spawn();
-                                app.status_message = "Opened configuration in default editor.".into();
+                                let _ = std::process::Command::new("xdg-open")
+                                    .arg(&target_path)
+                                    .spawn();
+                                app.status_message =
+                                    "Opened configuration in default editor.".into();
                             }
                             app.show_editor_modal = false;
                         }
@@ -321,12 +337,15 @@ pub fn run_tui(
                             #[cfg(windows)]
                             {
                                 app.installer_log.push("▶ Run in PowerShell to install Neovim: winget install Neovim.Neovim".to_string());
-                                app.status_message = "Run 'winget install Neovim.Neovim' or 'scoop install neovim'".into();
+                                app.status_message =
+                                    "Run 'winget install Neovim.Neovim' or 'scoop install neovim'"
+                                        .into();
                             }
                             #[cfg(not(windows))]
                             {
                                 app.installer_log.push("▶ Run in shell to install Neovim: brew install neovim (or apt install neovim)".to_string());
-                                app.status_message = "Run 'brew install neovim' or 'sudo apt install neovim'".into();
+                                app.status_message =
+                                    "Run 'brew install neovim' or 'sudo apt install neovim'".into();
                             }
                         }
                     }
@@ -442,9 +461,7 @@ fn detect_terminal_editor(configured: Option<&str>) -> Option<String> {
         }
 
         // 3. Nano
-        let nano_paths = [
-            r"C:\Program Files\Git\usr\bin\nano.exe",
-        ];
+        let nano_paths = [r"C:\Program Files\Git\usr\bin\nano.exe"];
         for path in nano_paths {
             if std::path::Path::new(path).is_file() {
                 return Some(path.to_string());
@@ -485,7 +502,9 @@ fn detect_terminal_editor(configured: Option<&str>) -> Option<String> {
 
     #[cfg(not(windows))]
     {
-        let candidates = ["nvim", "vim", "nano", "emacs", "micro", "helix", "hx", "code", "vi", "ed"];
+        let candidates = [
+            "nvim", "vim", "nano", "emacs", "micro", "helix", "hx", "code", "vi", "ed",
+        ];
         for name in candidates {
             if command_exists(name) {
                 return Some(name.to_string());

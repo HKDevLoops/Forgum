@@ -302,7 +302,10 @@ pub fn run() -> ExitCode {
                                 ExitCode::SUCCESS
                             }
                             Err(e) => {
-                                eprintln!("{PROGRAM}: failed to write shell RC file {}: {e}", rc_path.display());
+                                eprintln!(
+                                    "{PROGRAM}: failed to write shell RC file {}: {e}",
+                                    rc_path.display()
+                                );
                                 ExitCode::from(1)
                             }
                         }
@@ -419,7 +422,10 @@ pub fn run() -> ExitCode {
             extra_value,
             migrate,
         }) => {
-            if list || key.as_deref().is_some_and(is_list_query) || value.as_deref().is_some_and(is_list_query) {
+            if list
+                || key.as_deref().is_some_and(is_list_query)
+                || value.as_deref().is_some_and(is_list_query)
+            {
                 let table = forgum_engine::options_table::render_options("config");
                 print!("{table}");
                 return ExitCode::SUCCESS;
@@ -507,18 +513,41 @@ pub fn run() -> ExitCode {
                         "auto_render_on_prompt" => println!("{}", cfg.auto_render_on_prompt),
                         "think" => println!("{}", cfg.think),
                         "color_mode" => println!("{}", cfg.color_mode),
-                        "shell_attach_mode" | "attach_mode" => println!("{}", cfg.shell_attach_mode),
-                        "environment" | "env" => println!("{}", cfg.environment.as_deref().unwrap_or("none")),
+                        "shell_attach_mode" | "attach_mode" => {
+                            println!("{}", cfg.shell_attach_mode)
+                        }
+                        "environment" | "env" => {
+                            println!("{}", cfg.environment.as_deref().unwrap_or("none"))
+                        }
                         "road" => println!("{}", cfg.road.as_deref().unwrap_or("none")),
-                        "mountain" | "mtn" => println!("{}", cfg.mountain.as_deref().unwrap_or("none")),
+                        "mountain" | "mtn" => {
+                            println!("{}", cfg.mountain.as_deref().unwrap_or("none"))
+                        }
                         "palette" => println!("{}", cfg.palette.as_deref().unwrap_or("none")),
                         "thought_interval" => println!("{}", cfg.thought_interval),
                         "split_scroll" => println!("{}", cfg.split_scroll),
-                        "reserve_rows" => println!("{}", cfg.reserve_rows.map(|n| n.to_string()).unwrap_or_else(|| "none".to_string())),
-                        "reserve_cols" => println!("{}", cfg.reserve_cols.map(|n| n.to_string()).unwrap_or_else(|| "none".to_string())),
-                        "split_ratio" => println!("{}", cfg.split_ratio.map(|r| r.to_string()).unwrap_or_else(|| "none".to_string())),
+                        "reserve_rows" => println!(
+                            "{}",
+                            cfg.reserve_rows
+                                .map(|n| n.to_string())
+                                .unwrap_or_else(|| "none".to_string())
+                        ),
+                        "reserve_cols" => println!(
+                            "{}",
+                            cfg.reserve_cols
+                                .map(|n| n.to_string())
+                                .unwrap_or_else(|| "none".to_string())
+                        ),
+                        "split_ratio" => println!(
+                            "{}",
+                            cfg.split_ratio
+                                .map(|r| r.to_string())
+                                .unwrap_or_else(|| "none".to_string())
+                        ),
                         "animation" => println!("{}", cfg.animation.as_deref().unwrap_or("none")),
-                        "animation_type" | "anim_type" => println!("{}", cfg.animation_type.as_deref().unwrap_or("none")),
+                        "animation_type" | "anim_type" => {
+                            println!("{}", cfg.animation_type.as_deref().unwrap_or("none"))
+                        }
                         "image" => println!("{}", cfg.image.as_deref().unwrap_or("none")),
                         "split_mode" => println!("{}", cfg.split_mode.as_deref().unwrap_or("none")),
                         "editor" => println!("{}", cfg.editor.as_deref().unwrap_or("auto")),
@@ -995,7 +1024,11 @@ pub fn run() -> ExitCode {
             println!("Config:     {}", config_info);
             println!("Logs:       {}", log_dir_info);
             println!("Terminal:   {}x{}", caps.width, caps.height);
-            println!("Emulator:   {} ({})", caps.emulator.name(), caps.emulator.id());
+            println!(
+                "Emulator:   {} ({})",
+                caps.emulator.name(),
+                caps.emulator.id()
+            );
             println!("TTY:        {}", caps.is_tty);
             println!("Color:      {}", caps.color.as_str());
             println!("Sync:       {}", if caps.sync { "yes" } else { "no" });
@@ -1705,7 +1738,10 @@ impl PaneGuard {
     fn acquire(
         session_id: &str,
         pid: u32,
-    ) -> (Self, Option<crossbeam_channel::Receiver<crate::control_socket::ControlCmd>>) {
+    ) -> (
+        Self,
+        Option<crossbeam_channel::Receiver<crate::control_socket::ControlCmd>>,
+    ) {
         let socket_path = forgum_platform::control_socket_path(session_id);
         let (server, cmd_rx) =
             match forgum_engine::control_socket::ControlServer::start(socket_path.clone()) {
@@ -1767,7 +1803,11 @@ fn handle_status_command(args: &cli::Args) -> ExitCode {
                 format!(
                     "\x1b[1;32mActive\x1b[0m (PID {}, socket: '{}')",
                     st.pid,
-                    if st.socket_path.is_empty() { "foreground" } else { &st.socket_path }
+                    if st.socket_path.is_empty() {
+                        "foreground"
+                    } else {
+                        &st.socket_path
+                    }
                 )
             } else {
                 "\x1b[1;33mIdle\x1b[0m (previous session terminated)".to_string()
@@ -1781,7 +1821,13 @@ fn handle_status_command(args: &cli::Args) -> ExitCode {
 
     let is_tty = crossterm::tty::IsTty::is_tty(&std::io::stdout());
     let (c_bold, c_cyan, c_green, c_yellow, c_reset) = if is_tty {
-        ("\x1b[1m", "\x1b[1;36m", "\x1b[1;32m", "\x1b[1;33m", "\x1b[0m")
+        (
+            "\x1b[1m",
+            "\x1b[1;36m",
+            "\x1b[1;32m",
+            "\x1b[1;33m",
+            "\x1b[0m",
+        )
     } else {
         ("", "", "", "", "")
     };
@@ -1801,7 +1847,10 @@ fn handle_status_command(args: &cli::Args) -> ExitCode {
     println!("{c_cyan}## Updates & Release Subsystem (Channel & Status){c_reset}");
     println!("  • Current Version:  {c_green}v{version}{c_reset} (installed)");
     println!("  • Install Source:   {c_bold}{}{c_reset}", source.name());
-    println!("  • Release Channel:  {c_green}{c_bold}{}{c_reset}", channel.display_name());
+    println!(
+        "  • Release Channel:  {c_green}{c_bold}{}{c_reset}",
+        channel.display_name()
+    );
     let channel_url = match channel {
         forgum_platform::ReleaseChannel::Stable => {
             "GitHub Releases (https://github.com/HKDevLoops/Forgum/releases/latest)"
@@ -1812,14 +1861,25 @@ fn handle_status_command(args: &cli::Args) -> ExitCode {
         forgum_platform::ReleaseChannel::Dev => "Local Development Build",
     };
     println!("  • Update Stream:    {channel_url}");
-    println!("  • Update Check:     `forgum update --check` (or `{}`)", source.check_command());
-    println!("  • Upgrade Command:  `forgum update` (or `{}`)", source.update_command());
+    println!(
+        "  • Update Check:     `forgum update --check` (or `{}`)",
+        source.check_command()
+    );
+    println!(
+        "  • Upgrade Command:  `forgum update` (or `{}`)",
+        source.update_command()
+    );
 
     let inactive_shadows: Vec<_> = shadows.iter().filter(|s| !s.is_active).collect();
     if inactive_shadows.is_empty() {
-        println!("  • Shadow Binaries:  {c_green}✓ Clean (0 shadow installations detected){c_reset}\n");
+        println!(
+            "  • Shadow Binaries:  {c_green}✓ Clean (0 shadow installations detected){c_reset}\n"
+        );
     } else {
-        println!("  • Shadow Binaries:  {c_yellow}⚠️ Detected {} shadow installation(s):{c_reset}", inactive_shadows.len());
+        println!(
+            "  • Shadow Binaries:  {c_yellow}⚠️ Detected {} shadow installation(s):{c_reset}",
+            inactive_shadows.len()
+        );
         for s in &shadows {
             println!("      {}", s.display_line());
         }
@@ -1832,14 +1892,36 @@ fn handle_status_command(args: &cli::Args) -> ExitCode {
     println!("  • Mascot (cow):     {c_yellow}'{}'{c_reset}", cfg.cow);
     println!("  • Animation Effect: {c_yellow}'{}'{c_reset}", cfg.effect);
     println!("  • Target FPS:       {c_bold}{}{c_reset}", cfg.fps);
-    println!("  • Color Mode:       {c_yellow}'{}'{c_reset}{}", cfg.color_mode, if let Some(ref pal) = cfg.palette { format!(" (palette: {pal})") } else { String::new() });
-    println!("  • Shell Attach:     {c_yellow}'{}'{c_reset}", cfg.shell_attach_mode);
-    println!("  • Auto on Prompt:   {c_bold}{}{c_reset}", cfg.auto_render_on_prompt);
-    println!("  • Duration:         {c_bold}{}s{c_reset} (0 = permanent / persistent)", cfg.duration);
-    println!("  • Space Split:      split_scroll={}, ratio={}, reserve_rows={}",
+    println!(
+        "  • Color Mode:       {c_yellow}'{}'{c_reset}{}",
+        cfg.color_mode,
+        if let Some(ref pal) = cfg.palette {
+            format!(" (palette: {pal})")
+        } else {
+            String::new()
+        }
+    );
+    println!(
+        "  • Shell Attach:     {c_yellow}'{}'{c_reset}",
+        cfg.shell_attach_mode
+    );
+    println!(
+        "  • Auto on Prompt:   {c_bold}{}{c_reset}",
+        cfg.auto_render_on_prompt
+    );
+    println!(
+        "  • Duration:         {c_bold}{}s{c_reset} (0 = permanent / persistent)",
+        cfg.duration
+    );
+    println!(
+        "  • Space Split:      split_scroll={}, ratio={}, reserve_rows={}",
         cfg.split_scroll,
-        cfg.split_ratio.map(|r| format!("{:.2}", r)).unwrap_or_else(|| "auto".into()),
-        cfg.reserve_rows.map(|r| r.to_string()).unwrap_or_else(|| "auto".into())
+        cfg.split_ratio
+            .map(|r| format!("{:.2}", r))
+            .unwrap_or_else(|| "auto".into()),
+        cfg.reserve_rows
+            .map(|r| r.to_string())
+            .unwrap_or_else(|| "auto".into())
     );
     if let Some(ref env) = cfg.environment {
         println!("  • Environment:      {c_yellow}'{env}'{c_reset}");
@@ -1893,7 +1975,10 @@ fn handle_channel_command(action: Option<&str>, name: Option<&str>) -> ExitCode 
     let target_str = match action {
         None | Some("list") | Some("status") => {
             println!("\x1b[1;36m━━━ Forgum Release Channels ━━━\x1b[0m");
-            println!("Active Channel:   \x1b[1;32m{}\x1b[0m", current_channel.display_name());
+            println!(
+                "Active Channel:   \x1b[1;32m{}\x1b[0m",
+                current_channel.display_name()
+            );
             println!("Install Source:   \x1b[1m{}\x1b[0m", source.name());
             println!("Active Version:   v{}", env!("CARGO_PKG_VERSION"));
             if let Some(r) = receipt {
@@ -1912,7 +1997,11 @@ fn handle_channel_command(action: Option<&str>, name: Option<&str>) -> ExitCode 
                 } else {
                     "  "
                 };
-                println!("{marker} \x1b[1m{:<8}\x1b[0m — {}", ch.as_str(), ch.description());
+                println!(
+                    "{marker} \x1b[1m{:<8}\x1b[0m — {}",
+                    ch.as_str(),
+                    ch.description()
+                );
             }
             println!("\nUsage:");
             println!("  forgum channel switch <stable|nightly|dev>");
@@ -1977,7 +2066,10 @@ fn handle_update_command(check: bool, channel_flag: Option<&str>) -> ExitCode {
         match ch_str.parse::<forgum_platform::ReleaseChannel>() {
             Ok(c) => {
                 let _ = forgum_platform::record_receipt(c, None);
-                println!("Active channel switched to: \x1b[1;32m{}\x1b[0m", c.display_name());
+                println!(
+                    "Active channel switched to: \x1b[1;32m{}\x1b[0m",
+                    c.display_name()
+                );
             }
             Err(e) => {
                 eprintln!("{PROGRAM}: {e}");
@@ -2002,7 +2094,9 @@ fn handle_update_command(check: bool, channel_flag: Option<&str>) -> ExitCode {
         for s in &shadows {
             println!("    {}", s.display_line());
         }
-        println!("  \x1b[90m(Suggestion: Remove duplicate versions to avoid PATH ambiguity)\x1b[0m\n");
+        println!(
+            "  \x1b[90m(Suggestion: Remove duplicate versions to avoid PATH ambiguity)\x1b[0m\n"
+        );
     }
 
     let action_str = if check {
@@ -2013,7 +2107,10 @@ fn handle_update_command(check: bool, channel_flag: Option<&str>) -> ExitCode {
 
     println!("\x1b[1;36m━━━ Forgum Auto-Update ━━━\x1b[0m");
     println!("Installed via:   \x1b[1;32m{}\x1b[0m", source.name());
-    println!("Release Channel: \x1b[1;33m{}\x1b[0m", channel.display_name());
+    println!(
+        "Release Channel: \x1b[1;33m{}\x1b[0m",
+        channel.display_name()
+    );
     println!(
         "Action:          \x1b[1;33m{}\x1b[0m (Command: `{}`)\n",
         action_str,
@@ -2049,21 +2146,19 @@ fn handle_update_command(check: bool, channel_flag: Option<&str>) -> ExitCode {
             );
             ExitCode::SUCCESS
         }
-        _ => {
-            match forgum_platform::execute_package_manager_action(source, check) {
-                Ok(output) => {
-                    if !output.is_empty() {
-                        println!("{output}");
-                    }
-                    println!("\n\x1b[1;32m✓ Action completed.\x1b[0m");
-                    ExitCode::SUCCESS
+        _ => match forgum_platform::execute_package_manager_action(source, check) {
+            Ok(output) => {
+                if !output.is_empty() {
+                    println!("{output}");
                 }
-                Err(err) => {
-                    eprintln!("\x1b[1;31m✗ Update action failed:\x1b[0m {err}");
-                    ExitCode::from(1)
-                }
+                println!("\n\x1b[1;32m✓ Action completed.\x1b[0m");
+                ExitCode::SUCCESS
             }
-        }
+            Err(err) => {
+                eprintln!("\x1b[1;31m✗ Update action failed:\x1b[0m {err}");
+                ExitCode::from(1)
+            }
+        },
     }
 }
 
@@ -2093,7 +2188,10 @@ fn handle_stop_command(all: bool, force: bool) -> ExitCode {
                     let path = entry.path();
                     let file_name = entry.file_name();
                     let name_str = file_name.to_string_lossy();
-                    if name_str.starts_with("daemon-") && name_str.ends_with(".json") && !state_paths.contains(&path) {
+                    if name_str.starts_with("daemon-")
+                        && name_str.ends_with(".json")
+                        && !state_paths.contains(&path)
+                    {
                         state_paths.push(path);
                     }
                 }
@@ -2295,10 +2393,8 @@ fn handle_think_command(mut args: cli::Args, thought: Vec<String>) -> ExitCode {
     }
 
     // 4. If explicit animation flags were passed, run bounded foreground animation.
-    let has_explicit_animation = args.animation.is_some()
-        || args.effect.is_some()
-        || args.duration.is_some()
-        || args.banner;
+    let has_explicit_animation =
+        args.animation.is_some() || args.effect.is_some() || args.duration.is_some() || args.banner;
 
     if has_explicit_animation {
         let mut scene = match build_scene_config(&args) {
@@ -2334,7 +2430,12 @@ fn handle_think_command(mut args: cli::Args, thought: Vec<String>) -> ExitCode {
     );
     let composed = cow::compose_scene_with_mode(&cow_text, &scene.text, true);
 
-    print_colored_scene(&composed, &scene.cow, &scene.color_mode, scene.palette.as_deref());
+    print_colored_scene(
+        &composed,
+        &scene.cow,
+        &scene.color_mode,
+        scene.palette.as_deref(),
+    );
     ExitCode::SUCCESS
 }
 
@@ -2431,12 +2532,27 @@ pub fn resolve_scene_randomness(
 ) {
     let random_setting = scene.random.clone();
     let is_random_enabled = scene.cow.trim().eq_ignore_ascii_case("random")
-        || scene.environment.as_deref().is_some_and(|s| s.trim().eq_ignore_ascii_case("random"))
-        || scene.road.as_deref().is_some_and(|s| s.trim().eq_ignore_ascii_case("random"))
-        || scene.mountain.as_deref().is_some_and(|s| s.trim().eq_ignore_ascii_case("random"))
-        || scene.animation.as_deref().is_some_and(|s| s.trim().eq_ignore_ascii_case("random"))
+        || scene
+            .environment
+            .as_deref()
+            .is_some_and(|s| s.trim().eq_ignore_ascii_case("random"))
+        || scene
+            .road
+            .as_deref()
+            .is_some_and(|s| s.trim().eq_ignore_ascii_case("random"))
+        || scene
+            .mountain
+            .as_deref()
+            .is_some_and(|s| s.trim().eq_ignore_ascii_case("random"))
+        || scene
+            .animation
+            .as_deref()
+            .is_some_and(|s| s.trim().eq_ignore_ascii_case("random"))
         || scene.effect.trim().eq_ignore_ascii_case("random")
-        || scene.animation_type.as_deref().is_some_and(|s| s.trim().eq_ignore_ascii_case("random"))
+        || scene
+            .animation_type
+            .as_deref()
+            .is_some_and(|s| s.trim().eq_ignore_ascii_case("random"))
         || scene.text.trim().is_empty()
         || scene.text.trim().eq_ignore_ascii_case("random")
         || random_setting.is_some();
@@ -2451,7 +2567,9 @@ pub fn resolve_scene_randomness(
 
     // ── 1. MASCOT (COW) ──────────────────────────────────────────────────
     let should_randomize_cow = scene.cow.trim().eq_ignore_ascii_case("random")
-        || (random_setting.as_ref().is_some_and(|r| r.randomizes_mascot())
+        || (random_setting
+            .as_ref()
+            .is_some_and(|r| r.randomizes_mascot())
             && explicit_args.cow.is_none());
 
     if should_randomize_cow {
@@ -2460,7 +2578,9 @@ pub fn resolve_scene_randomness(
         if let Ok(rd) = std::fs::read_dir(&cows_dir) {
             cow_names.extend(rd.flatten().filter_map(|e| {
                 let p = e.path();
-                if p.extension().is_some_and(|ext| ext.eq_ignore_ascii_case("cow")) {
+                if p.extension()
+                    .is_some_and(|ext| ext.eq_ignore_ascii_case("cow"))
+                {
                     p.file_stem().map(|s| s.to_string_lossy().into_owned())
                 } else {
                     None
@@ -2472,7 +2592,9 @@ pub fn resolve_scene_randomness(
                 if let Ok(rd) = std::fs::read_dir(&custom_dir) {
                     cow_names.extend(rd.flatten().filter_map(|e| {
                         let p = e.path();
-                        if p.extension().is_some_and(|ext| ext.eq_ignore_ascii_case("cow")) {
+                        if p.extension()
+                            .is_some_and(|ext| ext.eq_ignore_ascii_case("cow"))
+                        {
                             p.file_stem().map(|s| s.to_string_lossy().into_owned())
                         } else {
                             None
@@ -2505,8 +2627,13 @@ pub fn resolve_scene_randomness(
         }
         // If scenery was NOT explicitly pinned and NOT separately randomized, default to animal's native biome
         if explicit_args.environment.is_none()
-            && scene.environment.as_deref().is_none_or(|e| e == "default" || e.is_empty())
-            && !random_setting.as_ref().is_some_and(|r| r.randomizes_scenery())
+            && scene
+                .environment
+                .as_deref()
+                .is_none_or(|e| e == "default" || e.is_empty())
+            && !random_setting
+                .as_ref()
+                .is_some_and(|r| r.randomizes_scenery())
         {
             scene.environment = Some(profile.environment.as_str().to_string());
             scene.road = Some(profile.road.as_str().to_string());
@@ -2521,21 +2648,27 @@ pub fn resolve_scene_randomness(
         .environment
         .as_deref()
         .is_some_and(|s| s.trim().eq_ignore_ascii_case("random"))
-        || (random_setting.as_ref().is_some_and(|r| r.randomizes_scenery())
+        || (random_setting
+            .as_ref()
+            .is_some_and(|r| r.randomizes_scenery())
             && explicit_args.environment.is_none());
 
     let should_randomize_road = scene
         .road
         .as_deref()
         .is_some_and(|s| s.trim().eq_ignore_ascii_case("random"))
-        || (random_setting.as_ref().is_some_and(|r| r.randomizes_scenery())
+        || (random_setting
+            .as_ref()
+            .is_some_and(|r| r.randomizes_scenery())
             && explicit_args.road.is_none());
 
     let should_randomize_mountain = scene
         .mountain
         .as_deref()
         .is_some_and(|s| s.trim().eq_ignore_ascii_case("random"))
-        || (random_setting.as_ref().is_some_and(|r| r.randomizes_scenery())
+        || (random_setting
+            .as_ref()
+            .is_some_and(|r| r.randomizes_scenery())
             && explicit_args.mountain.is_none());
 
     if should_randomize_env {
@@ -2549,7 +2682,10 @@ pub fn resolve_scene_randomness(
         if !should_randomize_road && explicit_args.road.is_none() && scene.road.is_none() {
             let (dyn_mtn, dyn_road) = crate::scenery::environment_scenery_defaults(picked_env);
             scene.road = Some(dyn_road.as_str().to_string());
-            if !should_randomize_mountain && explicit_args.mountain.is_none() && scene.mountain.is_none() {
+            if !should_randomize_mountain
+                && explicit_args.mountain.is_none()
+                && scene.mountain.is_none()
+            {
                 scene.mountain = Some(dyn_mtn.as_str().to_string());
             }
         }
@@ -2625,7 +2761,9 @@ pub fn resolve_scene_randomness(
     // ── 4. THOUGHT / TEXT ────────────────────────────────────────────────
     let should_randomize_thought = scene.text.trim().is_empty()
         || scene.text.trim().eq_ignore_ascii_case("random")
-        || (random_setting.as_ref().is_some_and(|r| r.randomizes_thought())
+        || (random_setting
+            .as_ref()
+            .is_some_and(|r| r.randomizes_thought())
             && explicit_args.text.is_none());
 
     if should_randomize_thought {
@@ -2655,19 +2793,12 @@ fn render_subcommand_with_scene(
         return run_daemon_child(args);
     }
 
-    if args.split_mode.as_deref() == Some("native")
-        || scene.split_mode.as_deref() == Some("native")
+    if args.split_mode.as_deref() == Some("native") || scene.split_mode.as_deref() == Some("native")
     {
         let caps = forgum_platform::detect_capabilities();
         let mux = forgum_platform::detect_mux();
-        let reserved_rows = args
-            .reserve_rows
-            .or(scene.reserve_rows)
-            .unwrap_or(10) as usize;
-        let ratio = args
-            .split_ratio
-            .or(scene.split_ratio)
-            .unwrap_or(0.35);
+        let reserved_rows = args.reserve_rows.or(scene.reserve_rows).unwrap_or(10) as usize;
+        let ratio = args.split_ratio.or(scene.split_ratio).unwrap_or(0.35);
         let mut forward_args: Vec<String> = std::env::args()
             .skip(1)
             .filter(|a| a != "--split-mode" && a != "native")

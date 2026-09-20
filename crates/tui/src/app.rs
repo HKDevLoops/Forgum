@@ -131,13 +131,7 @@ impl Dropdown {
 }
 
 /// Dropdown option choices for ColorMode.
-pub const COLOR_MODE_OPTIONS: &[&str] = &[
-    "natural",
-    "animal",
-    "rainbow",
-    "solid",
-    "none",
-];
+pub const COLOR_MODE_OPTIONS: &[&str] = &["natural", "animal", "rainbow", "solid", "none"];
 
 /// Dropdown option choices for Environment.
 pub const ENVIRONMENT_OPTIONS: &[&str] = &[
@@ -178,18 +172,8 @@ pub const ROAD_STYLE_OPTIONS: &[&str] = &[
 
 /// Dropdown option choices for Mountain skyline.
 pub const MOUNTAIN_OPTIONS: &[&str] = &[
-    "hills",
-    "peaks",
-    "volcano",
-    "iceberg",
-    "skyline",
-    "seamount",
-    "plateau",
-    "crater",
-    "gothic",
-    "castle",
-    "garden",
-    "none",
+    "hills", "peaks", "volcano", "iceberg", "skyline", "seamount", "plateau", "crater", "gothic",
+    "castle", "garden", "none",
 ];
 
 /// Dropdown option choices for AnimationType.
@@ -265,10 +249,7 @@ pub const SCENERY_OPTIONS: &[(&str, &str)] = &[
         "throne",
         "Golden ceremonial incensed dust particles and imperial cathedral",
     ),
-    (
-        "none",
-        "Disable atmospheric particle and scenery layer",
-    ),
+    ("none", "Disable atmospheric particle and scenery layer"),
 ];
 
 /// Available Road Surfaces.
@@ -285,10 +266,7 @@ pub const ROAD_OPTIONS: &[(&str, &str)] = &[
         "magma",
         "Cracked obsidian basalt crust over glowing flowing lava",
     ),
-    (
-        "ice",
-        "Compact crystalline ice and packed polar snow",
-    ),
+    ("ice", "Compact crystalline ice and packed polar snow"),
     (
         "seabed",
         "Sand ripples, deep-sea coral rubble, and aquatic seafloor",
@@ -297,10 +275,7 @@ pub const ROAD_OPTIONS: &[(&str, &str)] = &[
         "sidewalk",
         "Paved urban concrete with asphalt curb and dividing lane lines",
     ),
-    (
-        "roof",
-        "Layered ceramic roof shingles and rooftop tiles",
-    ),
+    ("roof", "Layered ceramic roof shingles and rooftop tiles"),
     (
         "grid",
         "Glowing retro-futuristic vector grid and cybernetic matrix",
@@ -325,10 +300,7 @@ pub const ROAD_OPTIONS: &[(&str, &str)] = &[
         "checkerboard",
         "Alternating high-contrast dual tiles and retro arcade board",
     ),
-    (
-        "none",
-        "Empty clear baseline without road glyphs",
-    ),
+    ("none", "Empty clear baseline without road glyphs"),
 ];
 
 /// Available Kinematics Effects.
@@ -774,10 +746,7 @@ impl ConfigApp {
             .and_then(ConfigFormat::from_extension)
             .unwrap_or(ConfigFormat::Json);
 
-        let color_mode_dropdown = Dropdown::new(
-            COLOR_MODE_OPTIONS.to_vec(),
-            &config.color_mode,
-        );
+        let color_mode_dropdown = Dropdown::new(COLOR_MODE_OPTIONS.to_vec(), &config.color_mode);
         let environment_dropdown = Dropdown::new(
             ENVIRONMENT_OPTIONS.to_vec(),
             config.environment.as_deref().unwrap_or("pasture"),
@@ -812,11 +781,15 @@ impl ConfigApp {
         );
         let format_dropdown = Dropdown::new(vec!["json", "yaml", "toml"], format.extension());
         let split_mode_dropdown = Dropdown::new(
-            vec!["seamless", "auto", "decstbm", "native", "precmd", "disabled"],
+            vec![
+                "seamless", "auto", "decstbm", "native", "precmd", "disabled",
+            ],
             config.split_mode.as_deref().unwrap_or("seamless"),
         );
         let editor_dropdown = Dropdown::new(
-            vec!["auto", "nvim", "vim", "emacs", "nano", "helix", "micro", "code", "notepad"],
+            vec![
+                "auto", "nvim", "vim", "emacs", "nano", "helix", "micro", "code", "notepad",
+            ],
             config.editor.as_deref().unwrap_or("auto"),
         );
 
@@ -1042,7 +1015,8 @@ impl ConfigApp {
     /// Hot-reload full configuration from disk and re-sync all dropdowns and state.
     pub fn set_config(&mut self, config: SceneConfig) {
         self.config = config;
-        self.color_mode_dropdown = Dropdown::new(COLOR_MODE_OPTIONS.to_vec(), &self.config.color_mode);
+        self.color_mode_dropdown =
+            Dropdown::new(COLOR_MODE_OPTIONS.to_vec(), &self.config.color_mode);
         self.environment_dropdown = Dropdown::new(
             ENVIRONMENT_OPTIONS.to_vec(),
             self.config.environment.as_deref().unwrap_or("pasture"),
@@ -1057,7 +1031,10 @@ impl ConfigApp {
         );
         self.animation_type_dropdown = Dropdown::new(
             ANIMATION_TYPE_OPTIONS.to_vec(),
-            self.config.animation_type.as_deref().unwrap_or("animal_natural"),
+            self.config
+                .animation_type
+                .as_deref()
+                .unwrap_or("animal_natural"),
         );
         self.animation_dropdown = Dropdown::new(
             vec!["dynamic", "static"],
@@ -1068,11 +1045,15 @@ impl ConfigApp {
             &self.config.shell_attach_mode,
         );
         self.split_mode_dropdown = Dropdown::new(
-            vec!["seamless", "auto", "decstbm", "native", "precmd", "disabled"],
+            vec![
+                "seamless", "auto", "decstbm", "native", "precmd", "disabled",
+            ],
             self.config.split_mode.as_deref().unwrap_or("seamless"),
         );
         self.editor_dropdown = Dropdown::new(
-            vec!["auto", "nvim", "vim", "emacs", "nano", "helix", "micro", "code", "notepad"],
+            vec![
+                "auto", "nvim", "vim", "emacs", "nano", "helix", "micro", "code", "notepad",
+            ],
             self.config.editor.as_deref().unwrap_or("auto"),
         );
         self.cow_cache.clear();
@@ -1100,8 +1081,8 @@ impl ConfigApp {
         if let Some(p) = &self.config_path {
             p.clone()
         } else {
-            let default_dir = forgum_platform::paths::config_dir()
-                .unwrap_or_else(|_| PathBuf::from("."));
+            let default_dir =
+                forgum_platform::paths::config_dir().unwrap_or_else(|_| PathBuf::from("."));
             default_dir.join(format!("config.{}", self.config_format().extension()))
         }
     }
@@ -1160,7 +1141,8 @@ impl ConfigApp {
                     KeyCode::Tab => {
                         let next = (self.current_tab as usize + 1) % Tab::ALL.len();
                         self.current_tab = Tab::ALL[next];
-                        self.status_message = format!("Switched to {}", self.current_tab.mode_label());
+                        self.status_message =
+                            format!("Switched to {}", self.current_tab.mode_label());
                         return Ok(None);
                     }
                     KeyCode::BackTab => {
@@ -1170,7 +1152,8 @@ impl ConfigApp {
                             self.current_tab as usize - 1
                         };
                         self.current_tab = Tab::ALL[prev];
-                        self.status_message = format!("Switched to {}", self.current_tab.mode_label());
+                        self.status_message =
+                            format!("Switched to {}", self.current_tab.mode_label());
                         return Ok(None);
                     }
                     KeyCode::Char('r') => {
@@ -1183,27 +1166,32 @@ impl ConfigApp {
                     }
                     KeyCode::Char('1') if self.current_tab != Tab::Config => {
                         self.current_tab = Tab::Mascots;
-                        self.status_message = format!("Switched to {}", self.current_tab.mode_label());
+                        self.status_message =
+                            format!("Switched to {}", self.current_tab.mode_label());
                         return Ok(None);
                     }
                     KeyCode::Char('2') if self.current_tab != Tab::Config => {
                         self.current_tab = Tab::Scenery;
-                        self.status_message = format!("Switched to {}", self.current_tab.mode_label());
+                        self.status_message =
+                            format!("Switched to {}", self.current_tab.mode_label());
                         return Ok(None);
                     }
                     KeyCode::Char('3') if self.current_tab != Tab::Config => {
                         self.current_tab = Tab::Effects;
-                        self.status_message = format!("Switched to {}", self.current_tab.mode_label());
+                        self.status_message =
+                            format!("Switched to {}", self.current_tab.mode_label());
                         return Ok(None);
                     }
                     KeyCode::Char('4') if self.current_tab != Tab::Config => {
                         self.current_tab = Tab::Installer;
-                        self.status_message = format!("Switched to {}", self.current_tab.mode_label());
+                        self.status_message =
+                            format!("Switched to {}", self.current_tab.mode_label());
                         return Ok(None);
                     }
                     KeyCode::Char('5') if self.current_tab != Tab::Config => {
                         self.current_tab = Tab::Config;
-                        self.status_message = format!("Switched to {}", self.current_tab.mode_label());
+                        self.status_message =
+                            format!("Switched to {}", self.current_tab.mode_label());
                         return Ok(None);
                     }
                     _ => {}
@@ -1223,7 +1211,10 @@ impl ConfigApp {
     }
 
     /// Handle mouse interaction across all tabs, buttons, lists, and modal popups.
-    pub fn handle_mouse_event(&mut self, mouse: crossterm::event::MouseEvent) -> anyhow::Result<Option<Action>> {
+    pub fn handle_mouse_event(
+        &mut self,
+        mouse: crossterm::event::MouseEvent,
+    ) -> anyhow::Result<Option<Action>> {
         use crossterm::event::{MouseButton, MouseEventKind};
 
         let (term_w, term_h) = crossterm::terminal::size().unwrap_or((80, 24));
@@ -1237,8 +1228,10 @@ impl ConfigApp {
                     let modal_x = (term_w.saturating_sub(width)) / 2;
                     let modal_y = (term_h.saturating_sub(height)) / 2;
 
-                    if mouse.row < modal_y || mouse.row >= modal_y + height
-                        || mouse.column < modal_x || mouse.column >= modal_x + width
+                    if mouse.row < modal_y
+                        || mouse.row >= modal_y + height
+                        || mouse.column < modal_x
+                        || mouse.column >= modal_x + width
                     {
                         self.show_editor_modal = false;
                         self.status_message = "Editor request cancelled.".to_string();
@@ -1321,27 +1314,35 @@ impl ConfigApp {
                         Tab::Scenery => {
                             let chunks = Layout::default()
                                 .direction(Direction::Vertical)
-                                .constraints([Constraint::Percentage(60), Constraint::Percentage(40)])
+                                .constraints([
+                                    Constraint::Percentage(60),
+                                    Constraint::Percentage(40),
+                                ])
                                 .split(Rect::new(0, 3, left_width, area_h));
 
-                            if mouse.row > chunks[0].y && mouse.row < chunks[0].y + chunks[0].height {
+                            if mouse.row > chunks[0].y && mouse.row < chunks[0].y + chunks[0].height
+                            {
                                 let idx = (mouse.row - (chunks[0].y + 1)) as usize;
                                 if idx < SCENERY_OPTIONS.len() {
                                     self.scenery_idx = idx;
                                     self.scenery_sub_focus = 0;
                                     let env = SCENERY_OPTIONS[self.scenery_idx].0.to_string();
                                     self.config.environment = Some(env.clone());
-                                    self.environment_dropdown = Dropdown::new(ENVIRONMENT_OPTIONS.to_vec(), &env);
+                                    self.environment_dropdown =
+                                        Dropdown::new(ENVIRONMENT_OPTIONS.to_vec(), &env);
                                     self.saved = false;
                                 }
-                            } else if mouse.row > chunks[1].y && mouse.row < chunks[1].y + chunks[1].height {
+                            } else if mouse.row > chunks[1].y
+                                && mouse.row < chunks[1].y + chunks[1].height
+                            {
                                 let idx = (mouse.row - (chunks[1].y + 1)) as usize;
                                 if idx < ROAD_OPTIONS.len() {
                                     self.road_idx = idx;
                                     self.scenery_sub_focus = 1;
                                     let rd = ROAD_OPTIONS[self.road_idx].0.to_string();
                                     self.config.road = Some(rd.clone());
-                                    self.road_dropdown = Dropdown::new(ROAD_STYLE_OPTIONS.to_vec(), &rd);
+                                    self.road_dropdown =
+                                        Dropdown::new(ROAD_STYLE_OPTIONS.to_vec(), &rd);
                                     self.saved = false;
                                 }
                             }
@@ -1349,10 +1350,14 @@ impl ConfigApp {
                         Tab::Effects => {
                             let chunks = Layout::default()
                                 .direction(Direction::Vertical)
-                                .constraints([Constraint::Percentage(60), Constraint::Percentage(40)])
+                                .constraints([
+                                    Constraint::Percentage(60),
+                                    Constraint::Percentage(40),
+                                ])
                                 .split(Rect::new(0, 3, left_width, area_h));
 
-                            if mouse.row > chunks[0].y && mouse.row < chunks[0].y + chunks[0].height {
+                            if mouse.row > chunks[0].y && mouse.row < chunks[0].y + chunks[0].height
+                            {
                                 let idx = (mouse.row - (chunks[0].y + 1)) as usize;
                                 if idx < EFFECT_OPTIONS.len() {
                                     self.effect_idx = idx;
@@ -1360,17 +1365,21 @@ impl ConfigApp {
                                     let eff = EFFECT_OPTIONS[self.effect_idx].0.to_string();
                                     self.config.effect = eff.clone();
                                     self.config.animation_type = Some(eff.clone());
-                                    self.animation_type_dropdown = Dropdown::new(ANIMATION_TYPE_OPTIONS.to_vec(), &eff);
+                                    self.animation_type_dropdown =
+                                        Dropdown::new(ANIMATION_TYPE_OPTIONS.to_vec(), &eff);
                                     self.saved = false;
                                 }
-                            } else if mouse.row > chunks[1].y && mouse.row < chunks[1].y + chunks[1].height {
+                            } else if mouse.row > chunks[1].y
+                                && mouse.row < chunks[1].y + chunks[1].height
+                            {
                                 let idx = (mouse.row - (chunks[1].y + 1)) as usize;
                                 if idx < COLOR_OPTIONS.len() {
                                     self.color_idx = idx;
                                     self.fx_sub_focus = 1;
                                     let col = COLOR_OPTIONS[self.color_idx].0.to_string();
                                     self.config.color_mode = col.clone();
-                                    self.color_mode_dropdown = Dropdown::new(COLOR_MODE_OPTIONS.to_vec(), &col);
+                                    self.color_mode_dropdown =
+                                        Dropdown::new(COLOR_MODE_OPTIONS.to_vec(), &col);
                                     self.saved = false;
                                 }
                             }
@@ -1378,14 +1387,19 @@ impl ConfigApp {
                         Tab::Installer => {
                             let chunks = Layout::default()
                                 .direction(Direction::Vertical)
-                                .constraints([Constraint::Percentage(55), Constraint::Percentage(45)])
+                                .constraints([
+                                    Constraint::Percentage(55),
+                                    Constraint::Percentage(45),
+                                ])
                                 .split(Rect::new(0, 3, left_width, area_h));
 
-                            if mouse.row > chunks[0].y && mouse.row < chunks[0].y + chunks[0].height {
+                            if mouse.row > chunks[0].y && mouse.row < chunks[0].y + chunks[0].height
+                            {
                                 let idx = (mouse.row - (chunks[0].y + 1)) as usize;
                                 if idx < self.shells.len() {
                                     self.selected_shell_idx = idx;
-                                    self.status_message = format!("Selected {}", self.shells[idx].shell);
+                                    self.status_message =
+                                        format!("Selected {}", self.shells[idx].shell);
                                 }
                             }
                         }
@@ -1410,134 +1424,134 @@ impl ConfigApp {
                     }
                 }
             }
-            MouseEventKind::ScrollDown => {
-                match self.current_tab {
-                    Tab::Mascots => {
-                        let cows = CATEGORIES[self.mascot_category_idx].1;
-                        self.mascot_item_idx = (self.mascot_item_idx + 1) % cows.len();
-                        self.apply_selected_mascot();
+            MouseEventKind::ScrollDown => match self.current_tab {
+                Tab::Mascots => {
+                    let cows = CATEGORIES[self.mascot_category_idx].1;
+                    self.mascot_item_idx = (self.mascot_item_idx + 1) % cows.len();
+                    self.apply_selected_mascot();
+                }
+                Tab::Scenery => {
+                    if self.scenery_sub_focus == 0 {
+                        self.scenery_idx = (self.scenery_idx + 1) % SCENERY_OPTIONS.len();
+                        let env = SCENERY_OPTIONS[self.scenery_idx].0.to_string();
+                        self.config.environment = Some(env.clone());
+                        self.environment_dropdown =
+                            Dropdown::new(ENVIRONMENT_OPTIONS.to_vec(), &env);
+                    } else {
+                        self.road_idx = (self.road_idx + 1) % ROAD_OPTIONS.len();
+                        let rd = ROAD_OPTIONS[self.road_idx].0.to_string();
+                        self.config.road = Some(rd.clone());
+                        self.road_dropdown = Dropdown::new(ROAD_STYLE_OPTIONS.to_vec(), &rd);
                     }
-                    Tab::Scenery => {
-                        if self.scenery_sub_focus == 0 {
-                            self.scenery_idx = (self.scenery_idx + 1) % SCENERY_OPTIONS.len();
-                            let env = SCENERY_OPTIONS[self.scenery_idx].0.to_string();
-                            self.config.environment = Some(env.clone());
-                            self.environment_dropdown = Dropdown::new(ENVIRONMENT_OPTIONS.to_vec(), &env);
-                        } else {
-                            self.road_idx = (self.road_idx + 1) % ROAD_OPTIONS.len();
-                            let rd = ROAD_OPTIONS[self.road_idx].0.to_string();
-                            self.config.road = Some(rd.clone());
-                            self.road_dropdown = Dropdown::new(ROAD_STYLE_OPTIONS.to_vec(), &rd);
-                        }
-                        self.saved = false;
+                    self.saved = false;
+                }
+                Tab::Effects => {
+                    if self.fx_sub_focus == 0 {
+                        self.effect_idx = (self.effect_idx + 1) % EFFECT_OPTIONS.len();
+                        let eff = EFFECT_OPTIONS[self.effect_idx].0.to_string();
+                        self.config.effect = eff.clone();
+                        self.config.animation_type = Some(eff.clone());
+                        self.animation_type_dropdown =
+                            Dropdown::new(ANIMATION_TYPE_OPTIONS.to_vec(), &eff);
+                    } else {
+                        self.color_idx = (self.color_idx + 1) % COLOR_OPTIONS.len();
+                        let col = COLOR_OPTIONS[self.color_idx].0.to_string();
+                        self.config.color_mode = col.clone();
+                        self.color_mode_dropdown = Dropdown::new(COLOR_MODE_OPTIONS.to_vec(), &col);
                     }
-                    Tab::Effects => {
-                        if self.fx_sub_focus == 0 {
-                            self.effect_idx = (self.effect_idx + 1) % EFFECT_OPTIONS.len();
-                            let eff = EFFECT_OPTIONS[self.effect_idx].0.to_string();
-                            self.config.effect = eff.clone();
-                            self.config.animation_type = Some(eff.clone());
-                            self.animation_type_dropdown = Dropdown::new(ANIMATION_TYPE_OPTIONS.to_vec(), &eff);
-                        } else {
-                            self.color_idx = (self.color_idx + 1) % COLOR_OPTIONS.len();
-                            let col = COLOR_OPTIONS[self.color_idx].0.to_string();
-                            self.config.color_mode = col.clone();
-                            self.color_mode_dropdown = Dropdown::new(COLOR_MODE_OPTIONS.to_vec(), &col);
-                        }
-                        self.saved = false;
-                    }
-                    Tab::Installer => {
-                        if !self.shells.is_empty() {
-                            self.selected_shell_idx = (self.selected_shell_idx + 1) % self.shells.len();
-                        }
-                    }
-                    Tab::Config => {
-                        if self.editing_config {
-                            self.commit_config_edit();
-                            self.editing_config = false;
-                        }
-                        self.config_field_idx = (self.config_field_idx + 1) % ConfigField::ALL.len();
+                    self.saved = false;
+                }
+                Tab::Installer => {
+                    if !self.shells.is_empty() {
+                        self.selected_shell_idx = (self.selected_shell_idx + 1) % self.shells.len();
                     }
                 }
-            }
-            MouseEventKind::ScrollUp => {
-                match self.current_tab {
-                    Tab::Mascots => {
-                        let cows = CATEGORIES[self.mascot_category_idx].1;
-                        if self.mascot_item_idx > 0 {
-                            self.mascot_item_idx -= 1;
-                        } else {
-                            self.mascot_item_idx = cows.len().saturating_sub(1);
-                        }
-                        self.apply_selected_mascot();
+                Tab::Config => {
+                    if self.editing_config {
+                        self.commit_config_edit();
+                        self.editing_config = false;
                     }
-                    Tab::Scenery => {
-                        if self.scenery_sub_focus == 0 {
-                            if self.scenery_idx > 0 {
-                                self.scenery_idx -= 1;
-                            } else {
-                                self.scenery_idx = SCENERY_OPTIONS.len().saturating_sub(1);
-                            }
-                            let env = SCENERY_OPTIONS[self.scenery_idx].0.to_string();
-                            self.config.environment = Some(env.clone());
-                            self.environment_dropdown = Dropdown::new(ENVIRONMENT_OPTIONS.to_vec(), &env);
-                        } else {
-                            if self.road_idx > 0 {
-                                self.road_idx -= 1;
-                            } else {
-                                self.road_idx = ROAD_OPTIONS.len().saturating_sub(1);
-                            }
-                            let rd = ROAD_OPTIONS[self.road_idx].0.to_string();
-                            self.config.road = Some(rd.clone());
-                            self.road_dropdown = Dropdown::new(ROAD_STYLE_OPTIONS.to_vec(), &rd);
-                        }
-                        self.saved = false;
+                    self.config_field_idx = (self.config_field_idx + 1) % ConfigField::ALL.len();
+                }
+            },
+            MouseEventKind::ScrollUp => match self.current_tab {
+                Tab::Mascots => {
+                    let cows = CATEGORIES[self.mascot_category_idx].1;
+                    if self.mascot_item_idx > 0 {
+                        self.mascot_item_idx -= 1;
+                    } else {
+                        self.mascot_item_idx = cows.len().saturating_sub(1);
                     }
-                    Tab::Effects => {
-                        if self.fx_sub_focus == 0 {
-                            if self.effect_idx > 0 {
-                                self.effect_idx -= 1;
-                            } else {
-                                self.effect_idx = EFFECT_OPTIONS.len().saturating_sub(1);
-                            }
-                            let eff = EFFECT_OPTIONS[self.effect_idx].0.to_string();
-                            self.config.effect = eff.clone();
-                            self.config.animation_type = Some(eff.clone());
-                            self.animation_type_dropdown = Dropdown::new(ANIMATION_TYPE_OPTIONS.to_vec(), &eff);
+                    self.apply_selected_mascot();
+                }
+                Tab::Scenery => {
+                    if self.scenery_sub_focus == 0 {
+                        if self.scenery_idx > 0 {
+                            self.scenery_idx -= 1;
                         } else {
-                            if self.color_idx > 0 {
-                                self.color_idx -= 1;
-                            } else {
-                                self.color_idx = COLOR_OPTIONS.len().saturating_sub(1);
-                            }
-                            let col = COLOR_OPTIONS[self.color_idx].0.to_string();
-                            self.config.color_mode = col.clone();
-                            self.color_mode_dropdown = Dropdown::new(COLOR_MODE_OPTIONS.to_vec(), &col);
+                            self.scenery_idx = SCENERY_OPTIONS.len().saturating_sub(1);
                         }
-                        self.saved = false;
-                    }
-                    Tab::Installer => {
-                        if !self.shells.is_empty() {
-                            if self.selected_shell_idx > 0 {
-                                self.selected_shell_idx -= 1;
-                            } else {
-                                self.selected_shell_idx = self.shells.len().saturating_sub(1);
-                            }
-                        }
-                    }
-                    Tab::Config => {
-                        if self.editing_config {
-                            self.commit_config_edit();
-                            self.editing_config = false;
-                        }
-                        if self.config_field_idx > 0 {
-                            self.config_field_idx -= 1;
+                        let env = SCENERY_OPTIONS[self.scenery_idx].0.to_string();
+                        self.config.environment = Some(env.clone());
+                        self.environment_dropdown =
+                            Dropdown::new(ENVIRONMENT_OPTIONS.to_vec(), &env);
+                    } else {
+                        if self.road_idx > 0 {
+                            self.road_idx -= 1;
                         } else {
-                            self.config_field_idx = ConfigField::ALL.len().saturating_sub(1);
+                            self.road_idx = ROAD_OPTIONS.len().saturating_sub(1);
+                        }
+                        let rd = ROAD_OPTIONS[self.road_idx].0.to_string();
+                        self.config.road = Some(rd.clone());
+                        self.road_dropdown = Dropdown::new(ROAD_STYLE_OPTIONS.to_vec(), &rd);
+                    }
+                    self.saved = false;
+                }
+                Tab::Effects => {
+                    if self.fx_sub_focus == 0 {
+                        if self.effect_idx > 0 {
+                            self.effect_idx -= 1;
+                        } else {
+                            self.effect_idx = EFFECT_OPTIONS.len().saturating_sub(1);
+                        }
+                        let eff = EFFECT_OPTIONS[self.effect_idx].0.to_string();
+                        self.config.effect = eff.clone();
+                        self.config.animation_type = Some(eff.clone());
+                        self.animation_type_dropdown =
+                            Dropdown::new(ANIMATION_TYPE_OPTIONS.to_vec(), &eff);
+                    } else {
+                        if self.color_idx > 0 {
+                            self.color_idx -= 1;
+                        } else {
+                            self.color_idx = COLOR_OPTIONS.len().saturating_sub(1);
+                        }
+                        let col = COLOR_OPTIONS[self.color_idx].0.to_string();
+                        self.config.color_mode = col.clone();
+                        self.color_mode_dropdown = Dropdown::new(COLOR_MODE_OPTIONS.to_vec(), &col);
+                    }
+                    self.saved = false;
+                }
+                Tab::Installer => {
+                    if !self.shells.is_empty() {
+                        if self.selected_shell_idx > 0 {
+                            self.selected_shell_idx -= 1;
+                        } else {
+                            self.selected_shell_idx = self.shells.len().saturating_sub(1);
                         }
                     }
                 }
-            }
+                Tab::Config => {
+                    if self.editing_config {
+                        self.commit_config_edit();
+                        self.editing_config = false;
+                    }
+                    if self.config_field_idx > 0 {
+                        self.config_field_idx -= 1;
+                    } else {
+                        self.config_field_idx = ConfigField::ALL.len().saturating_sub(1);
+                    }
+                }
+            },
             _ => {}
         }
 
@@ -1602,13 +1616,19 @@ impl ConfigApp {
     pub fn sync_mascot_scenery(&mut self) {
         let name = self.config.cow.clone();
         let biome = forgum_platform::biome::get_mascot_biome(&name);
-        if let Some(pos) = SCENERY_OPTIONS.iter().position(|(env, _)| env.eq_ignore_ascii_case(biome.environment)) {
+        if let Some(pos) = SCENERY_OPTIONS
+            .iter()
+            .position(|(env, _)| env.eq_ignore_ascii_case(biome.environment))
+        {
             self.scenery_idx = pos;
             let env = SCENERY_OPTIONS[pos].0.to_string();
             self.config.environment = Some(env.clone());
             self.environment_dropdown = Dropdown::new(ENVIRONMENT_OPTIONS.to_vec(), &env);
         }
-        if let Some(pos) = ROAD_OPTIONS.iter().position(|(rd, _)| rd.eq_ignore_ascii_case(biome.road)) {
+        if let Some(pos) = ROAD_OPTIONS
+            .iter()
+            .position(|(rd, _)| rd.eq_ignore_ascii_case(biome.road))
+        {
             self.road_idx = pos;
             let rd = ROAD_OPTIONS[pos].0.to_string();
             self.config.road = Some(rd.clone());
@@ -1618,7 +1638,10 @@ impl ConfigApp {
         self.config.mountain = Some(mtn.clone());
         self.mountain_dropdown = Dropdown::new(MOUNTAIN_OPTIONS.to_vec(), &mtn);
         self.saved = false;
-        self.status_message = format!("🌿 Native habitat applied: {} (Atmosphere: {}, Ground: {}, Skyline: {})", biome.biome_name, biome.environment, biome.road, biome.mountain);
+        self.status_message = format!(
+            "🌿 Native habitat applied: {} (Atmosphere: {}, Ground: {}, Skyline: {})",
+            biome.biome_name, biome.environment, biome.road, biome.mountain
+        );
     }
 
     fn randomize_mascot(&mut self) {
@@ -2053,9 +2076,7 @@ export extern "forgum" [
                     );
                 }
             }
-            KeyCode::Char('t')
-            | KeyCode::Char('T')
-            | KeyCode::Char(' ') => {
+            KeyCode::Char('t') | KeyCode::Char('T') | KeyCode::Char(' ') => {
                 let field = ConfigField::ALL[self.config_field_idx];
                 if field == ConfigField::Text {
                     self.enter_config_edit();
@@ -2205,7 +2226,8 @@ export extern "forgum" [
                     "Editing Mascot Image Path: type image file path or 'none' and press Enter (Esc to cancel)".into();
             }
             ConfigField::Editor => {
-                self.config_edit_buffer = self.config.editor.clone().unwrap_or_else(|| "auto".into());
+                self.config_edit_buffer =
+                    self.config.editor.clone().unwrap_or_else(|| "auto".into());
                 self.editing_config = true;
                 self.status_message =
                     "Editing Preferred Editor: type editor command (e.g. 'nvim', 'emacs', 'nano', 'code') and press Enter (Esc to cancel)"
@@ -2236,7 +2258,8 @@ export extern "forgum" [
                     }
                 } else {
                     if let Some(pos) = DURATION_PRESETS.iter().position(|&s| s == current) {
-                        DURATION_PRESETS[(pos + DURATION_PRESETS.len() - 1) % DURATION_PRESETS.len()]
+                        DURATION_PRESETS
+                            [(pos + DURATION_PRESETS.len() - 1) % DURATION_PRESETS.len()]
                     } else {
                         DURATION_PRESETS
                             .iter()
@@ -2309,7 +2332,8 @@ export extern "forgum" [
                 self.cow_cache.clear();
                 self.ensure_cow_cached(&self.config.cow.clone());
                 self.saved = false;
-                self.status_message = format!("Eyes cycled to '{}' [Space/←/→: Cycle | e: Custom]", next);
+                self.status_message =
+                    format!("Eyes cycled to '{}' [Space/←/→: Cycle | e: Custom]", next);
             }
             ConfigField::Tongue => {
                 const TONGUE_PRESETS: [&str; 5] = ["  ", "U ", "||", "--", "V "];
@@ -2331,7 +2355,8 @@ export extern "forgum" [
                 self.cow_cache.clear();
                 self.ensure_cow_cached(&self.config.cow.clone());
                 self.saved = false;
-                self.status_message = format!("Tongue cycled to '{}' [Space/←/→: Cycle | e: Custom]", next);
+                self.status_message =
+                    format!("Tongue cycled to '{}' [Space/←/→: Cycle | e: Custom]", next);
             }
             ConfigField::ColorMode => {
                 self.color_mode_dropdown.cycle(forward);
@@ -2366,12 +2391,19 @@ export extern "forgum" [
                         PALETTE_PRESETS[PALETTE_PRESETS.len() - 1]
                     }
                 };
-                self.config.palette = if next.is_empty() { None } else { Some(next.to_string()) };
+                self.config.palette = if next.is_empty() {
+                    None
+                } else {
+                    Some(next.to_string())
+                };
                 self.saved = false;
                 self.status_message = if next.is_empty() {
                     "Palette set to default [Space/←/→: Cycle | e: Custom]".into()
                 } else {
-                    format!("Palette cycled to '{}' [Space/←/→: Cycle | e: Custom]", next)
+                    format!(
+                        "Palette cycled to '{}' [Space/←/→: Cycle | e: Custom]",
+                        next
+                    )
                 };
             }
             ConfigField::Environment => {
@@ -2504,7 +2536,10 @@ export extern "forgum" [
                 self.status_message = if next.is_empty() {
                     "Dialogue text cleared (no bubble) [Space/←/→: Cycle | e: Type custom]".into()
                 } else {
-                    format!("Dialogue text cycled to '{}' [Space/←/→: Cycle | e: Type custom]", next)
+                    format!(
+                        "Dialogue text cycled to '{}' [Space/←/→: Cycle | e: Type custom]",
+                        next
+                    )
                 };
             }
             ConfigField::Think => {
@@ -2548,8 +2583,10 @@ export extern "forgum" [
                 };
                 self.config.thought_interval = next;
                 self.saved = false;
-                self.status_message =
-                    format!("Thought interval set to {}s [Space/←/→: Cycle | e: Type]", next);
+                self.status_message = format!(
+                    "Thought interval set to {}s [Space/←/→: Cycle | e: Type]",
+                    next
+                );
             }
             ConfigField::Animation => {
                 self.animation_dropdown.cycle(forward);
@@ -2589,7 +2626,10 @@ export extern "forgum" [
                 self.status_message = if next.is_empty() {
                     "Default shell set to auto-detect [Space/←/→: Cycle | e: Type]".into()
                 } else {
-                    format!("Default shell switched to '{}' [Space/←/→: Cycle | e: Type]", next)
+                    format!(
+                        "Default shell switched to '{}' [Space/←/→: Cycle | e: Type]",
+                        next
+                    )
                 };
             }
             ConfigField::SplitRatio => {
@@ -2618,9 +2658,13 @@ export extern "forgum" [
                 self.config.split_ratio = next;
                 self.saved = false;
                 self.status_message = if let Some(r) = next {
-                    format!("Split ratio adjusted to {:.2} [Space/←/→: Cycle | e: Type]", r)
+                    format!(
+                        "Split ratio adjusted to {:.2} [Space/←/→: Cycle | e: Type]",
+                        r
+                    )
                 } else {
-                    "Split ratio set to auto (adaptive viewport) [Space/←/→: Cycle | e: Type]".into()
+                    "Split ratio set to auto (adaptive viewport) [Space/←/→: Cycle | e: Type]"
+                        .into()
                 };
             }
             ConfigField::ReserveRows => {
@@ -2650,9 +2694,13 @@ export extern "forgum" [
                 self.config.reserve_rows = next;
                 self.saved = false;
                 self.status_message = if let Some(r) = next {
-                    format!("Reserve rows set to {} rows [Space/←/→: Cycle | e: Type]", r)
+                    format!(
+                        "Reserve rows set to {} rows [Space/←/→: Cycle | e: Type]",
+                        r
+                    )
                 } else {
-                    "Reserve rows set to auto (dynamic calculation) [Space/←/→: Cycle | e: Type]".into()
+                    "Reserve rows set to auto (dynamic calculation) [Space/←/→: Cycle | e: Type]"
+                        .into()
                 };
             }
             ConfigField::ReserveCols => {
@@ -2682,7 +2730,10 @@ export extern "forgum" [
                 self.config.reserve_cols = next;
                 self.saved = false;
                 self.status_message = if let Some(c) = next {
-                    format!("Reserve cols set to {} cols [Space/←/→: Cycle | e: Type]", c)
+                    format!(
+                        "Reserve cols set to {} cols [Space/←/→: Cycle | e: Type]",
+                        c
+                    )
                 } else {
                     "Reserve cols set to auto (full width) [Space/←/→: Cycle | e: Type]".into()
                 };
@@ -2706,13 +2757,19 @@ export extern "forgum" [
                     None | Some(forgum_platform::protocol::RandomSetting::Bool(false)) => {
                         Some(forgum_platform::protocol::RandomSetting::Bool(true))
                     }
-                    Some(forgum_platform::protocol::RandomSetting::Bool(true)) => {
-                        Some(forgum_platform::protocol::RandomSetting::String("mascot".into()))
-                    }
+                    Some(forgum_platform::protocol::RandomSetting::Bool(true)) => Some(
+                        forgum_platform::protocol::RandomSetting::String("mascot".into()),
+                    ),
                     Some(forgum_platform::protocol::RandomSetting::String(s)) => match s.as_str() {
-                        "mascot" => Some(forgum_platform::protocol::RandomSetting::String("scenery".into())),
-                        "scenery" => Some(forgum_platform::protocol::RandomSetting::String("fx".into())),
-                        "fx" => Some(forgum_platform::protocol::RandomSetting::String("thought".into())),
+                        "mascot" => Some(forgum_platform::protocol::RandomSetting::String(
+                            "scenery".into(),
+                        )),
+                        "scenery" => Some(forgum_platform::protocol::RandomSetting::String(
+                            "fx".into(),
+                        )),
+                        "fx" => Some(forgum_platform::protocol::RandomSetting::String(
+                            "thought".into(),
+                        )),
                         _ => None,
                     },
                     _ => None,
@@ -2913,8 +2970,7 @@ export extern "forgum" [
                     if let Ok(val) = clean.parse::<f64>() {
                         let floor = if field == ConfigField::Fps { 1 } else { 0 };
                         let current = val.round() as u32;
-                        self.config_edit_buffer =
-                            current.saturating_sub(1).max(floor).to_string();
+                        self.config_edit_buffer = current.saturating_sub(1).max(floor).to_string();
                     }
                 } else if field == ConfigField::SplitRatio {
                     let clean = self.config_edit_buffer.trim();
@@ -2965,12 +3021,7 @@ export extern "forgum" [
                     || field == ConfigField::ReserveCols;
                 let is_float_numeric = field == ConfigField::SplitRatio;
 
-                if is_integer_numeric
-                    && !c.is_ascii_digit()
-                    && c != 's'
-                    && c != 'f'
-                    && c != 'p'
-                {
+                if is_integer_numeric && !c.is_ascii_digit() && c != 's' && c != 'f' && c != 'p' {
                     // Ignore non-digit characters on numeric fields so buffer isn't corrupted
                 } else if is_float_numeric && !c.is_ascii_digit() && c != '.' {
                     // Ignore non-digit/period characters on float ratio fields
@@ -3062,7 +3113,8 @@ export extern "forgum" [
                 if trimmed.is_empty() || trimmed.eq_ignore_ascii_case("none") {
                     self.config.palette = None;
                     self.saved = false;
-                    self.status_message = "✓ Palette cleared (using default color mode)".to_string();
+                    self.status_message =
+                        "✓ Palette cleared (using default color mode)".to_string();
                 } else {
                     self.config.palette = Some(trimmed.clone());
                     self.saved = false;
@@ -3307,7 +3359,9 @@ export extern "forgum" [
                         if let Some(pos) = l.find(pat) {
                             match earliest {
                                 None => earliest = Some((pos, pat)),
-                                Some((best_pos, _)) if pos < best_pos => earliest = Some((pos, pat)),
+                                Some((best_pos, _)) if pos < best_pos => {
+                                    earliest = Some((pos, pat))
+                                }
                                 _ => {}
                             }
                         }
@@ -3329,7 +3383,10 @@ export extern "forgum" [
 
             // 5. Unescape literal perl heredoc escapes: \$ to $, \@ to @, \# to #
             if l.contains(r"\$") || l.contains(r"\@") || l.contains(r"\#") {
-                l = l.replace(r"\$", "$").replace(r"\@", "@").replace(r"\#", "#");
+                l = l
+                    .replace(r"\$", "$")
+                    .replace(r"\@", "@")
+                    .replace(r"\#", "#");
             }
 
             out.push_str(&l);
@@ -3398,7 +3455,11 @@ export extern "forgum" [
             ))
             .borders(Borders::ALL)
             .border_type(BorderType::Rounded)
-            .border_style(Style::default().fg(tailwind::AMBER_500).add_modifier(Modifier::BOLD));
+            .border_style(
+                Style::default()
+                    .fg(tailwind::AMBER_500)
+                    .add_modifier(Modifier::BOLD),
+            );
 
         let inner = block.inner(popup_area);
         f.render_widget(block, popup_area);
@@ -3407,7 +3468,9 @@ export extern "forgum" [
             Line::from(""),
             Line::from(Span::styled(
                 "No terminal editor (neovim/vim, nano, emacs) detected on your system.",
-                Style::default().fg(Color::White).add_modifier(Modifier::BOLD),
+                Style::default()
+                    .fg(Color::White)
+                    .add_modifier(Modifier::BOLD),
             )),
             Line::from(Span::styled(
                 "Do you want to open with system file editor, or install a terminal editor?",
@@ -3439,9 +3502,7 @@ export extern "forgum" [
                 Span::styled("│  ", Style::default().fg(Color::DarkGray)),
                 Span::styled(
                     "[Esc] ",
-                    Style::default()
-                        .fg(Color::Red)
-                        .add_modifier(Modifier::BOLD),
+                    Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
                 ),
                 Span::styled("Cancel", Style::default().fg(Color::White)),
             ]),
@@ -3588,8 +3649,8 @@ export extern "forgum" [
         let right_split = Layout::default()
             .direction(Direction::Vertical)
             .constraints([
-                Constraint::Min(8),                     // Live Preview Canvas
-                Constraint::Length(inspector_len),      // Inspector & Details / Log
+                Constraint::Min(8),                // Live Preview Canvas
+                Constraint::Length(inspector_len), // Inspector & Details / Log
             ])
             .split(right_rect);
 
@@ -3634,7 +3695,13 @@ export extern "forgum" [
         self.render_installer_list(f, left_split[0]);
         self.render_package_managers_card(f, left_split[1]);
 
-        let log_height = if height < 22 { 5 } else if height < 30 { 7 } else { 9 };
+        let log_height = if height < 22 {
+            5
+        } else if height < 30 {
+            7
+        } else {
+            9
+        };
 
         // Right column split: Top = Grand Welcoming Hero & Diagnostics, Bottom = Log
         let right_split = Layout::default()
@@ -3688,14 +3755,12 @@ export extern "forgum" [
             Span::styled("forgum update", Style::default().fg(Color::Cyan)),
         ]));
 
-        let p = Paragraph::new(lines)
-            .wrap(Wrap { trim: true })
-            .block(
-                Block::default()
-                    .borders(Borders::ALL)
-                    .border_type(BorderType::Rounded)
-                    .title(" Package Managers (p: Check) "),
-            );
+        let p = Paragraph::new(lines).wrap(Wrap { trim: true }).block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_type(BorderType::Rounded)
+                .title(" Package Managers (p: Check) "),
+        );
         f.render_widget(p, area);
     }
 
@@ -3959,14 +4024,12 @@ export extern "forgum" [
             _ => " 📦 Package Managers & Update Distribution (View 3/3, press 'l') ",
         };
 
-        let p = Paragraph::new(lines)
-            .wrap(Wrap { trim: true })
-            .block(
-                Block::default()
-                    .borders(Borders::ALL)
-                    .border_type(BorderType::Rounded)
-                    .title(title),
-            );
+        let p = Paragraph::new(lines).wrap(Wrap { trim: true }).block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_type(BorderType::Rounded)
+                .title(title),
+        );
         f.render_widget(p, area);
     }
 
@@ -4039,8 +4102,11 @@ export extern "forgum" [
         } else {
             0
         };
-        let visible_items: Vec<ListItem> =
-            items.into_iter().skip(start_idx).take(visible_rows).collect();
+        let visible_items: Vec<ListItem> = items
+            .into_iter()
+            .skip(start_idx)
+            .take(visible_rows)
+            .collect();
 
         let list = List::new(visible_items).block(
             Block::default()
@@ -4082,7 +4148,12 @@ export extern "forgum" [
                     Span::styled(*name, style),
                 ];
                 if is_native {
-                    spans.push(Span::styled(" ★ Native", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)));
+                    spans.push(Span::styled(
+                        " ★ Native",
+                        Style::default()
+                            .fg(Color::Cyan)
+                            .add_modifier(Modifier::BOLD),
+                    ));
                 }
                 ListItem::new(Line::from(spans))
             })
@@ -4100,7 +4171,11 @@ export extern "forgum" [
             .take(visible_rows_scenery)
             .collect();
 
-        let scenery_title = format!(" Biomes / Scenery ({}) [Native: {}] ", SCENERY_OPTIONS.len(), native_biome.environment);
+        let scenery_title = format!(
+            " Biomes / Scenery ({}) [Native: {}] ",
+            SCENERY_OPTIONS.len(),
+            native_biome.environment
+        );
         let scenery_list = List::new(visible_scenery_items).block(
             Block::default()
                 .borders(Borders::ALL)
@@ -4132,7 +4207,12 @@ export extern "forgum" [
                     Span::styled(*name, style),
                 ];
                 if is_native {
-                    spans.push(Span::styled(" ★ Native", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)));
+                    spans.push(Span::styled(
+                        " ★ Native",
+                        Style::default()
+                            .fg(Color::Cyan)
+                            .add_modifier(Modifier::BOLD),
+                    ));
                 }
                 ListItem::new(Line::from(spans))
             })
@@ -4150,7 +4230,11 @@ export extern "forgum" [
             .take(visible_rows_road)
             .collect();
 
-        let road_title = format!(" Road Surfaces ({}) [Native: {}] ", ROAD_OPTIONS.len(), native_biome.road);
+        let road_title = format!(
+            " Road Surfaces ({}) [Native: {}] ",
+            ROAD_OPTIONS.len(),
+            native_biome.road
+        );
         let road_list = List::new(visible_road_items).block(
             Block::default()
                 .borders(Borders::ALL)
@@ -4318,7 +4402,10 @@ export extern "forgum" [
         match field {
             ConfigField::Duration => {
                 if is_sel && self.editing_config {
-                    format!("✎ [ {}_ ] (Enter: Commit | Esc: Cancel)", self.config_edit_buffer)
+                    format!(
+                        "✎ [ {}_ ] (Enter: Commit | Esc: Cancel)",
+                        self.config_edit_buffer
+                    )
                 } else if self.config.duration == 0 {
                     "0s (infinite / run until signal) [Enter/e: Edit Number | +/-: Step]".into()
                 } else {
@@ -4358,7 +4445,10 @@ export extern "forgum" [
                 if is_sel && self.editing_config {
                     format!("✎ [ {}_ ]", self.config_edit_buffer)
                 } else {
-                    format!("{}s [Enter/e: Edit | +/-: Step]", self.config.thought_interval)
+                    format!(
+                        "{}s [Enter/e: Edit | +/-: Step]",
+                        self.config.thought_interval
+                    )
                 }
             }
             ConfigField::Eyes => {
@@ -4418,7 +4508,10 @@ export extern "forgum" [
             ConfigField::AnimationType => {
                 format!(
                     "{} (←/→ cycle)",
-                    self.config.animation_type.as_deref().unwrap_or("animal_natural")
+                    self.config
+                        .animation_type
+                        .as_deref()
+                        .unwrap_or("animal_natural")
                 )
             }
             ConfigField::Background => {
@@ -4543,10 +4636,7 @@ export extern "forgum" [
                         Style::default().bg(tailwind::SLATE_800),
                     )
                 } else {
-                    (
-                        Style::default().fg(tailwind::SLATE_100),
-                        Style::default(),
-                    )
+                    (Style::default().fg(tailwind::SLATE_100), Style::default())
                 };
 
                 let val_color = if val_str.contains("✔ ON") {
@@ -4646,14 +4736,42 @@ export extern "forgum" [
         let c4 = palette.get(4).copied().unwrap_or(c1);
 
         // 1. Eyes: signature contrast or specific eye color
-        if matches!(ch, 'o' | 'O' | '@' | '^' | '*' | '$' | 'x' | 'X' | '=' | '0' | 'e' | '+' | 'v' | 'u' | 'w' | '8' | 'Q' | '•' | '●')
-            && (rel_y <= 4 || ch == 'o' || ch == 'O' || ch == '@' || ch == '*')
+        if matches!(
+            ch,
+            'o' | 'O'
+                | '@'
+                | '^'
+                | '*'
+                | '$'
+                | 'x'
+                | 'X'
+                | '='
+                | '0'
+                | 'e'
+                | '+'
+                | 'v'
+                | 'u'
+                | 'w'
+                | '8'
+                | 'Q'
+                | '•'
+                | '●'
+        ) && (rel_y <= 4 || ch == 'o' || ch == 'O' || ch == '@' || ch == '*')
         {
             return c4;
         }
 
         // 2. Beak, muzzle, nostrils, snout, udder accents
-        if ch == '.' || ch == ',' || ch == 'w' || ch == 'W' || ch == 'v' || ch == 'V' || ch == 'u' || ch == 'U' || ch == ':' {
+        if ch == '.'
+            || ch == ','
+            || ch == 'w'
+            || ch == 'W'
+            || ch == 'v'
+            || ch == 'V'
+            || ch == 'u'
+            || ch == 'U'
+            || ch == ':'
+        {
             return c3;
         }
 
@@ -4668,7 +4786,8 @@ export extern "forgum" [
         }
 
         // 5. Body markings, spots, stripes, and coat pattern (stable spatial hash)
-        let hash = ((rel_x.wrapping_mul(17) + rel_y.wrapping_mul(31)) ^ (rel_x.wrapping_mul(7))) % 100;
+        let hash =
+            ((rel_x.wrapping_mul(17) + rel_y.wrapping_mul(31)) ^ (rel_x.wrapping_mul(7))) % 100;
         let chosen = if hash < 55 {
             c0
         } else if hash < 80 {
@@ -4788,14 +4907,12 @@ export extern "forgum" [
             )
         };
 
-        lines.push(Line::from(vec![
-            Span::styled(
-                format!("  {hud_line}"),
-                Style::default()
-                    .fg(tailwind::SKY_400)
-                    .add_modifier(Modifier::BOLD),
-            ),
-        ]));
+        lines.push(Line::from(vec![Span::styled(
+            format!("  {hud_line}"),
+            Style::default()
+                .fg(tailwind::SKY_400)
+                .add_modifier(Modifier::BOLD),
+        )]));
         lines.push(Line::from(""));
 
         // 1. Procedural background mountains (slow parallax scroll, when background enabled)
@@ -4828,7 +4945,9 @@ export extern "forgum" [
             // 1.5. Procedural midground trees & flora layer (parallax scrolling, between mountains & mascot)
             let env_style = self.config.environment.as_deref().unwrap_or("pasture");
             let tree_layer = match env_style {
-                "forest" => "  /\\   /\\    /\\/\\    /\\   /\\/\\    /\\   /\\    /\\/\\    /\\   ",
+                "forest" => {
+                    "  /\\   /\\    /\\/\\    /\\   /\\/\\    /\\   /\\    /\\/\\    /\\   "
+                }
                 "pasture" => "   .---.       (:::)       .---.       (:::)       .---.   ",
                 "savanna" => "  _.~---~._        __~---~__        _.~---~._        __~---~__   ",
                 "arctic" => "    /▲\\         ^           /▲\\         ^           /▲\\    ",
@@ -4841,8 +4960,12 @@ export extern "forgum" [
             if !tree_layer.is_empty() {
                 let tree_chars: Vec<char> = tree_layer.chars().collect();
                 let tree_start = (t * 2.4) as usize % tree_chars.len();
-                let tree_slice: String =
-                    tree_chars.iter().cycle().skip(tree_start).take(30).collect();
+                let tree_slice: String = tree_chars
+                    .iter()
+                    .cycle()
+                    .skip(tree_start)
+                    .take(30)
+                    .collect();
                 let tree_color = match env_style {
                     "savanna" => Color::Rgb(139, 195, 74),
                     "arctic" => Color::Rgb(224, 247, 250),
@@ -4951,20 +5074,23 @@ export extern "forgum" [
                     l = l.replace("(__)", if chew_cycle > 0.52 { "(=-)" } else { "(-=)" });
                 }
 
-                let eff = if self.config.effect == "animal_natural" || self.config.effect == "default" {
-                    match self.config.cow.as_str() {
-                        "duck" | "pterodactyl" | "golden-eagle" | "tweety-bird" => "fly",
-                        "bunny" | "hamster" | "corgi" | "cat" | "cat2" | "catfence" | "kitty" | "kitten"
-                        | "doge" | "mule" | "pig" | "ram" | "sheep" | "goat" | "goat2" | "wolf" | "tiger"
-                        | "panther" | "fox" | "hedgehog" | "armadillo" | "rhino" => "walk",
-                        "dolphin" | "whale" | "docker-whale" | "happy-whale" | "octopus" | "smiling-octopus"
-                        | "squid" | "jellyfish" | "seahorse" | "seahorse-big" => "sway",
-                        "ghost" | "unipony" | "wizard" | "atat" => "float",
-                        _ => "breathe",
-                    }
-                } else {
-                    self.config.effect.as_str()
-                };
+                let eff =
+                    if self.config.effect == "animal_natural" || self.config.effect == "default" {
+                        match self.config.cow.as_str() {
+                            "duck" | "pterodactyl" | "golden-eagle" | "tweety-bird" => "fly",
+                            "bunny" | "hamster" | "corgi" | "cat" | "cat2" | "catfence"
+                            | "kitty" | "kitten" | "doge" | "mule" | "pig" | "ram" | "sheep"
+                            | "goat" | "goat2" | "wolf" | "tiger" | "panther" | "fox"
+                            | "hedgehog" | "armadillo" | "rhino" => "walk",
+                            "dolphin" | "whale" | "docker-whale" | "happy-whale" | "octopus"
+                            | "smiling-octopus" | "squid" | "jellyfish" | "seahorse"
+                            | "seahorse-big" => "sway",
+                            "ghost" | "unipony" | "wizard" | "atat" => "float",
+                            _ => "breathe",
+                        }
+                    } else {
+                        self.config.effect.as_str()
+                    };
 
                 // Effect kinematics
                 match eff {
@@ -5118,10 +5244,15 @@ export extern "forgum" [
                     || trimmed == "/"
                     || trimmed == "o o"
                     || trimmed == "\\ \\";
-                let is_border_line = (trimmed.starts_with('_') && trimmed.chars().all(|c| c == '_'))
+                let is_border_line = (trimmed.starts_with('_')
+                    && trimmed.chars().all(|c| c == '_'))
                     || (trimmed.starts_with('-') && trimmed.chars().all(|c| c == '-'))
-                    || (trimmed.starts_with('(') && trimmed.ends_with(')') && trimmed.chars().all(|c| c == '(' || c == ')' || c == '_'))
-                    || (trimmed.starts_with('|') && trimmed.ends_with('|') && trimmed.chars().all(|c| c == '|' || c == '_'));
+                    || (trimmed.starts_with('(')
+                        && trimmed.ends_with(')')
+                        && trimmed.chars().all(|c| c == '(' || c == ')' || c == '_'))
+                    || (trimmed.starts_with('|')
+                        && trimmed.ends_with('|')
+                        && trimmed.chars().all(|c| c == '|' || c == '_'));
 
                 let first_non_space = l.chars().position(|c| !c.is_whitespace());
                 let last_non_space = l
@@ -5174,11 +5305,17 @@ export extern "forgum" [
                             spans.push(Span::raw(" "));
                         } else {
                             let (r, g, b) = Self::natural_creature_color(p, x, animal_rel_y, ch);
-                            spans.push(Span::styled(ch.to_string(), Style::default().fg(Color::Rgb(r, g, b))));
+                            spans.push(Span::styled(
+                                ch.to_string(),
+                                Style::default().fg(Color::Rgb(r, g, b)),
+                            ));
                         }
                     }
                     if !sparkle.is_empty() {
-                        spans.push(Span::styled(sparkle.to_string(), Style::default().fg(Color::Yellow)));
+                        spans.push(Span::styled(
+                            sparkle.to_string(),
+                            Style::default().fg(Color::Yellow),
+                        ));
                     }
                     lines.push(Line::from(spans));
                 } else {
@@ -5195,7 +5332,9 @@ export extern "forgum" [
             let road_style = self.config.road.as_deref().unwrap_or("dirt");
             let ground_pattern = match road_style {
                 "dirt" => ".. . . .. ... . .. .. . ... .. . .. ... . .. .. . ... .. ",
-                "cobblestone" | "cobble" => "[_][_][_][_][_][_][_][_][_][_][_][_][_][_][_][_][_][_] ",
+                "cobblestone" | "cobble" => {
+                    "[_][_][_][_][_][_][_][_][_][_][_][_][_][_][_][_][_][_] "
+                }
                 "magma" => "~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ",
                 "ice" => "=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--= ",
                 "seabed" => "~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ",
@@ -5252,27 +5391,60 @@ export extern "forgum" [
 
                 let mut lines: Vec<Line> = Vec::with_capacity(8);
                 lines.push(Line::from(vec![
-                    Span::styled("Mascot: ", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
-                    Span::styled(current_cow.as_str(), Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
+                    Span::styled(
+                        "Mascot: ",
+                        Style::default()
+                            .fg(Color::Cyan)
+                            .add_modifier(Modifier::BOLD),
+                    ),
+                    Span::styled(
+                        current_cow.as_str(),
+                        Style::default()
+                            .fg(Color::Yellow)
+                            .add_modifier(Modifier::BOLD),
+                    ),
                     Span::raw("  ("),
                     Span::styled(cat_name, Style::default().fg(Color::White)),
                     Span::raw(")"),
                 ]));
                 lines.push(Line::from(vec![
-                    Span::styled("Native Biome: ", Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)),
+                    Span::styled(
+                        "Native Biome: ",
+                        Style::default()
+                            .fg(Color::Green)
+                            .add_modifier(Modifier::BOLD),
+                    ),
                     Span::styled(biome.biome_name, Style::default().fg(Color::White)),
                 ]));
                 lines.push(Line::from(vec![
-                    Span::styled("Recommended: ", Style::default().fg(Color::Magenta).add_modifier(Modifier::BOLD)),
-                    Span::styled(format!("Env: {}  │  Road: {}  │  Skyline: {}", biome.environment, biome.road, biome.mountain), Style::default().fg(Color::White)),
+                    Span::styled(
+                        "Recommended: ",
+                        Style::default()
+                            .fg(Color::Magenta)
+                            .add_modifier(Modifier::BOLD),
+                    ),
+                    Span::styled(
+                        format!(
+                            "Env: {}  │  Road: {}  │  Skyline: {}",
+                            biome.environment, biome.road, biome.mountain
+                        ),
+                        Style::default().fg(Color::White),
+                    ),
                 ]));
 
-                let mut swatch_spans = vec![
-                    Span::styled("Palette: ", Style::default().fg(Color::LightBlue).add_modifier(Modifier::BOLD)),
-                ];
-                for (hex, &(r, g, b)) in biome.natural_palette.iter().zip(biome.natural_rgb.iter()) {
+                let mut swatch_spans = vec![Span::styled(
+                    "Palette: ",
+                    Style::default()
+                        .fg(Color::LightBlue)
+                        .add_modifier(Modifier::BOLD),
+                )];
+                for (hex, &(r, g, b)) in biome.natural_palette.iter().zip(biome.natural_rgb.iter())
+                {
                     swatch_spans.push(Span::styled("■ ", Style::default().fg(Color::Rgb(r, g, b))));
-                    swatch_spans.push(Span::styled(format!("{hex} "), Style::default().fg(Color::DarkGray)));
+                    swatch_spans.push(Span::styled(
+                        format!("{hex} "),
+                        Style::default().fg(Color::DarkGray),
+                    ));
                 }
                 lines.push(Line::from(swatch_spans));
 
@@ -5282,23 +5454,24 @@ export extern "forgum" [
                 ]));
                 lines.push(Line::from(vec![
                     Span::styled("Shortcuts: ", Style::default().fg(Color::DarkGray)),
-                    Span::styled("[Enter/b] Apply Native Scenery  │  [r] Random Mascot", Style::default().fg(Color::Cyan)),
+                    Span::styled(
+                        "[Enter/b] Apply Native Scenery  │  [r] Random Mascot",
+                        Style::default().fg(Color::Cyan),
+                    ),
                 ]));
 
-                let p = Paragraph::new(lines)
-                    .wrap(Wrap { trim: true })
-                    .block(
-                        Block::default()
-                            .borders(Borders::ALL)
-                            .border_type(BorderType::Rounded)
-                            .border_style(Style::default().fg(tailwind::INDIGO_400))
-                            .title(Span::styled(
-                                " 🐾 Mascot Inspector & Native Biome ",
-                                Style::default()
-                                    .fg(tailwind::VIOLET_400)
-                                    .add_modifier(Modifier::BOLD),
-                            )),
-                    );
+                let p = Paragraph::new(lines).wrap(Wrap { trim: true }).block(
+                    Block::default()
+                        .borders(Borders::ALL)
+                        .border_type(BorderType::Rounded)
+                        .border_style(Style::default().fg(tailwind::INDIGO_400))
+                        .title(Span::styled(
+                            " 🐾 Mascot Inspector & Native Biome ",
+                            Style::default()
+                                .fg(tailwind::VIOLET_400)
+                                .add_modifier(Modifier::BOLD),
+                        )),
+                );
                 f.render_widget(p, area);
             }
             Tab::Scenery => {
@@ -5314,68 +5487,104 @@ export extern "forgum" [
 
                 let mut lines: Vec<Line> = Vec::with_capacity(6);
                 lines.push(Line::from(vec![
-                    Span::styled("Atmosphere: ", Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)),
+                    Span::styled(
+                        "Atmosphere: ",
+                        Style::default()
+                            .fg(Color::Green)
+                            .add_modifier(Modifier::BOLD),
+                    ),
                     Span::styled(sc_name, Style::default().fg(Color::Yellow)),
                     if is_native_env {
-                        Span::styled(" ★ Native", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
+                        Span::styled(
+                            " ★ Native",
+                            Style::default()
+                                .fg(Color::Cyan)
+                                .add_modifier(Modifier::BOLD),
+                        )
                     } else {
                         Span::raw("")
                     },
-                    Span::styled(format!(" — {sc_desc}"), Style::default().fg(Color::DarkGray)),
+                    Span::styled(
+                        format!(" — {sc_desc}"),
+                        Style::default().fg(Color::DarkGray),
+                    ),
                 ]));
                 lines.push(Line::from(vec![
-                    Span::styled("Ground Surface: ", Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)),
+                    Span::styled(
+                        "Ground Surface: ",
+                        Style::default()
+                            .fg(Color::Green)
+                            .add_modifier(Modifier::BOLD),
+                    ),
                     Span::styled(rd_name, Style::default().fg(Color::Yellow)),
                     if is_native_road {
-                        Span::styled(" ★ Native", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
+                        Span::styled(
+                            " ★ Native",
+                            Style::default()
+                                .fg(Color::Cyan)
+                                .add_modifier(Modifier::BOLD),
+                        )
                     } else {
                         Span::raw("")
                     },
-                    Span::styled(format!(" — {rd_desc}"), Style::default().fg(Color::DarkGray)),
+                    Span::styled(
+                        format!(" — {rd_desc}"),
+                        Style::default().fg(Color::DarkGray),
+                    ),
                 ]));
                 lines.push(Line::from(vec![
-                    Span::styled(format!("Native for {}: ", current_cow), Style::default().fg(Color::Magenta).add_modifier(Modifier::BOLD)),
-                    Span::styled(format!("{} (Env: {}, Road: {}, Skyline: {})", biome.biome_name, biome.environment, biome.road, biome.mountain), Style::default().fg(Color::White)),
+                    Span::styled(
+                        format!("Native for {}: ", current_cow),
+                        Style::default()
+                            .fg(Color::Magenta)
+                            .add_modifier(Modifier::BOLD),
+                    ),
+                    Span::styled(
+                        format!(
+                            "{} (Env: {}, Road: {}, Skyline: {})",
+                            biome.biome_name, biome.environment, biome.road, biome.mountain
+                        ),
+                        Style::default().fg(Color::White),
+                    ),
                 ]));
                 lines.push(Line::from(vec![
                     Span::styled("Quick Action: ", Style::default().fg(Color::DarkGray)),
-                    Span::styled("[b/r] Sync to Native Biome", Style::default().fg(Color::Cyan)),
+                    Span::styled(
+                        "[b/r] Sync to Native Biome",
+                        Style::default().fg(Color::Cyan),
+                    ),
                 ]));
 
-                let p = Paragraph::new(lines)
-                    .wrap(Wrap { trim: true })
-                    .block(
-                        Block::default()
-                            .borders(Borders::ALL)
-                            .border_type(BorderType::Rounded)
-                            .border_style(Style::default().fg(tailwind::INDIGO_400))
-                            .title(Span::styled(
-                                " 🏔️ Landscape & Road Details ",
-                                Style::default()
-                                    .fg(tailwind::VIOLET_400)
-                                    .add_modifier(Modifier::BOLD),
-                            )),
-                    );
+                let p = Paragraph::new(lines).wrap(Wrap { trim: true }).block(
+                    Block::default()
+                        .borders(Borders::ALL)
+                        .border_type(BorderType::Rounded)
+                        .border_style(Style::default().fg(tailwind::INDIGO_400))
+                        .title(Span::styled(
+                            " 🏔️ Landscape & Road Details ",
+                            Style::default()
+                                .fg(tailwind::VIOLET_400)
+                                .add_modifier(Modifier::BOLD),
+                        )),
+                );
                 f.render_widget(p, area);
             }
             Tab::Effects => {
                 let ef_desc = EFFECT_OPTIONS[self.effect_idx].1;
                 let cl_desc = COLOR_OPTIONS[self.color_idx].1;
                 let text = format!("Kinematics: {ef_desc}\nPalette: {cl_desc}");
-                let p = Paragraph::new(text)
-                    .wrap(Wrap { trim: true })
-                    .block(
-                        Block::default()
-                            .borders(Borders::ALL)
-                            .border_type(BorderType::Rounded)
-                            .border_style(Style::default().fg(tailwind::INDIGO_400))
-                            .title(Span::styled(
-                                " ✨ Dynamics & Rendering ",
-                                Style::default()
-                                    .fg(tailwind::VIOLET_400)
-                                    .add_modifier(Modifier::BOLD),
-                            )),
-                    );
+                let p = Paragraph::new(text).wrap(Wrap { trim: true }).block(
+                    Block::default()
+                        .borders(Borders::ALL)
+                        .border_type(BorderType::Rounded)
+                        .border_style(Style::default().fg(tailwind::INDIGO_400))
+                        .title(Span::styled(
+                            " ✨ Dynamics & Rendering ",
+                            Style::default()
+                                .fg(tailwind::VIOLET_400)
+                                .add_modifier(Modifier::BOLD),
+                        )),
+                );
                 f.render_widget(p, area);
             }
             Tab::Installer => {
@@ -5384,7 +5593,9 @@ export extern "forgum" [
                     .iter()
                     .rev()
                     .take(area.height.saturating_sub(2) as usize)
-                    .map(|msg| Line::from(Span::styled(msg, Style::default().fg(tailwind::SKY_400))))
+                    .map(|msg| {
+                        Line::from(Span::styled(msg, Style::default().fg(tailwind::SKY_400)))
+                    })
                     .collect();
 
                 let p = Paragraph::new(log_lines)
@@ -5409,11 +5620,26 @@ export extern "forgum" [
 
                 let mut lines: Vec<Line> = Vec::with_capacity(10);
                 lines.push(Line::from(vec![
-                    Span::styled("Parameter: ", Style::default().fg(tailwind::VIOLET_400).add_modifier(Modifier::BOLD)),
-                    Span::styled(field.label(), Style::default().fg(tailwind::AMBER_400).add_modifier(Modifier::BOLD)),
+                    Span::styled(
+                        "Parameter: ",
+                        Style::default()
+                            .fg(tailwind::VIOLET_400)
+                            .add_modifier(Modifier::BOLD),
+                    ),
+                    Span::styled(
+                        field.label(),
+                        Style::default()
+                            .fg(tailwind::AMBER_400)
+                            .add_modifier(Modifier::BOLD),
+                    ),
                 ]));
                 lines.push(Line::from(vec![
-                    Span::styled("Value: ", Style::default().fg(tailwind::SKY_400).add_modifier(Modifier::BOLD)),
+                    Span::styled(
+                        "Value: ",
+                        Style::default()
+                            .fg(tailwind::SKY_400)
+                            .add_modifier(Modifier::BOLD),
+                    ),
                     Span::styled(
                         &val_str,
                         Style::default().fg(if val_str.contains("✔ ON") {
@@ -5443,20 +5669,18 @@ export extern "forgum" [
                     Span::styled("Save", Style::default().fg(tailwind::SLATE_300)),
                 ]));
 
-                let p = Paragraph::new(lines)
-                    .wrap(Wrap { trim: true })
-                    .block(
-                        Block::default()
-                            .borders(Borders::ALL)
-                            .border_type(BorderType::Rounded)
-                            .border_style(Style::default().fg(tailwind::INDIGO_400))
-                            .title(Span::styled(
-                                " ⚙️ Parameter Details ",
-                                Style::default()
-                                    .fg(tailwind::VIOLET_400)
-                                    .add_modifier(Modifier::BOLD),
-                            )),
-                    );
+                let p = Paragraph::new(lines).wrap(Wrap { trim: true }).block(
+                    Block::default()
+                        .borders(Borders::ALL)
+                        .border_type(BorderType::Rounded)
+                        .border_style(Style::default().fg(tailwind::INDIGO_400))
+                        .title(Span::styled(
+                            " ⚙️ Parameter Details ",
+                            Style::default()
+                                .fg(tailwind::VIOLET_400)
+                                .add_modifier(Modifier::BOLD),
+                        )),
+                );
                 f.render_widget(p, area);
             }
         }
@@ -5468,42 +5692,58 @@ export extern "forgum" [
             vec![
                 Span::styled(
                     " <Tab/1-5> ",
-                    Style::default().bg(tailwind::SLATE_800).fg(tailwind::SLATE_200),
+                    Style::default()
+                        .bg(tailwind::SLATE_800)
+                        .fg(tailwind::SLATE_200),
                 ),
                 Span::styled(" Tabs  ", Style::default().fg(tailwind::SLATE_400)),
                 Span::styled(
                     " <j/k> ",
-                    Style::default().bg(tailwind::SLATE_800).fg(tailwind::SLATE_200),
+                    Style::default()
+                        .bg(tailwind::SLATE_800)
+                        .fg(tailwind::SLATE_200),
                 ),
                 Span::styled(" Shell  ", Style::default().fg(tailwind::SLATE_400)),
                 Span::styled(
                     " <i> ",
-                    Style::default().bg(tailwind::SLATE_800).fg(tailwind::EMERALD_400),
+                    Style::default()
+                        .bg(tailwind::SLATE_800)
+                        .fg(tailwind::EMERALD_400),
                 ),
                 Span::styled(" Install  ", Style::default().fg(tailwind::SLATE_300)),
                 Span::styled(
                     " <u> ",
-                    Style::default().bg(tailwind::SLATE_800).fg(tailwind::ROSE_400),
+                    Style::default()
+                        .bg(tailwind::SLATE_800)
+                        .fg(tailwind::ROSE_400),
                 ),
                 Span::styled(" Uninstall  ", Style::default().fg(tailwind::SLATE_300)),
                 Span::styled(
                     " <t> ",
-                    Style::default().bg(tailwind::SLATE_800).fg(tailwind::AMBER_400),
+                    Style::default()
+                        .bg(tailwind::SLATE_800)
+                        .fg(tailwind::AMBER_400),
                 ),
                 Span::styled(" Test  ", Style::default().fg(tailwind::SLATE_300)),
                 Span::styled(
                     " <l> ",
-                    Style::default().bg(tailwind::SLATE_800).fg(tailwind::CYAN_400),
+                    Style::default()
+                        .bg(tailwind::SLATE_800)
+                        .fg(tailwind::CYAN_400),
                 ),
                 Span::styled(" License  ", Style::default().fg(tailwind::SLATE_300)),
                 Span::styled(
                     " <p> ",
-                    Style::default().bg(tailwind::SLATE_800).fg(tailwind::VIOLET_400),
+                    Style::default()
+                        .bg(tailwind::SLATE_800)
+                        .fg(tailwind::VIOLET_400),
                 ),
                 Span::styled(" Updates  ", Style::default().fg(tailwind::SLATE_300)),
                 Span::styled(
                     " <q> ",
-                    Style::default().bg(tailwind::SLATE_800).fg(tailwind::ROSE_500),
+                    Style::default()
+                        .bg(tailwind::SLATE_800)
+                        .fg(tailwind::ROSE_500),
                 ),
                 Span::styled(" Quit  ", Style::default().fg(tailwind::SLATE_300)),
                 Span::styled(
@@ -5515,27 +5755,37 @@ export extern "forgum" [
             vec![
                 Span::styled(
                     " <Enter> ",
-                    Style::default().bg(tailwind::SLATE_800).fg(tailwind::EMERALD_400),
+                    Style::default()
+                        .bg(tailwind::SLATE_800)
+                        .fg(tailwind::EMERALD_400),
                 ),
                 Span::styled(" Confirm  ", Style::default().fg(tailwind::SLATE_300)),
                 Span::styled(
                     " <Esc> ",
-                    Style::default().bg(tailwind::SLATE_800).fg(tailwind::ROSE_400),
+                    Style::default()
+                        .bg(tailwind::SLATE_800)
+                        .fg(tailwind::ROSE_400),
                 ),
                 Span::styled(" Cancel  ", Style::default().fg(tailwind::SLATE_300)),
                 Span::styled(
                     " <Up/Down> ",
-                    Style::default().bg(tailwind::SLATE_800).fg(tailwind::SKY_400),
+                    Style::default()
+                        .bg(tailwind::SLATE_800)
+                        .fg(tailwind::SKY_400),
                 ),
                 Span::styled(" Step ±1  ", Style::default().fg(tailwind::SLATE_300)),
                 Span::styled(
                     " <Left/Right> ",
-                    Style::default().bg(tailwind::SLATE_800).fg(tailwind::SKY_400),
+                    Style::default()
+                        .bg(tailwind::SLATE_800)
+                        .fg(tailwind::SKY_400),
                 ),
                 Span::styled(" Step ±5  ", Style::default().fg(tailwind::SLATE_300)),
                 Span::styled(
                     " <Ctrl+U> ",
-                    Style::default().bg(tailwind::SLATE_800).fg(tailwind::AMBER_400),
+                    Style::default()
+                        .bg(tailwind::SLATE_800)
+                        .fg(tailwind::AMBER_400),
                 ),
                 Span::styled(" Clear  ", Style::default().fg(tailwind::SLATE_300)),
                 Span::styled(
@@ -5547,37 +5797,51 @@ export extern "forgum" [
             vec![
                 Span::styled(
                     " <Tab> ",
-                    Style::default().bg(tailwind::SLATE_800).fg(tailwind::SLATE_200),
+                    Style::default()
+                        .bg(tailwind::SLATE_800)
+                        .fg(tailwind::SLATE_200),
                 ),
                 Span::styled(" Tabs  ", Style::default().fg(tailwind::SLATE_400)),
                 Span::styled(
                     " <j/k> ",
-                    Style::default().bg(tailwind::SLATE_800).fg(tailwind::SLATE_200),
+                    Style::default()
+                        .bg(tailwind::SLATE_800)
+                        .fg(tailwind::SLATE_200),
                 ),
                 Span::styled(" Select  ", Style::default().fg(tailwind::SLATE_400)),
                 Span::styled(
                     " <e/Enter> ",
-                    Style::default().bg(tailwind::SLATE_800).fg(tailwind::EMERALD_400),
+                    Style::default()
+                        .bg(tailwind::SLATE_800)
+                        .fg(tailwind::EMERALD_400),
                 ),
                 Span::styled(" Edit  ", Style::default().fg(tailwind::SLATE_300)),
                 Span::styled(
                     " <+/-> ",
-                    Style::default().bg(tailwind::SLATE_800).fg(tailwind::AMBER_400),
+                    Style::default()
+                        .bg(tailwind::SLATE_800)
+                        .fg(tailwind::AMBER_400),
                 ),
                 Span::styled(" Step  ", Style::default().fg(tailwind::SLATE_300)),
                 Span::styled(
                     " <o> ",
-                    Style::default().bg(tailwind::SLATE_800).fg(tailwind::VIOLET_400),
+                    Style::default()
+                        .bg(tailwind::SLATE_800)
+                        .fg(tailwind::VIOLET_400),
                 ),
                 Span::styled(" Open Editor  ", Style::default().fg(tailwind::SLATE_300)),
                 Span::styled(
                     " <s> ",
-                    Style::default().bg(tailwind::SLATE_800).fg(tailwind::CYAN_400),
+                    Style::default()
+                        .bg(tailwind::SLATE_800)
+                        .fg(tailwind::CYAN_400),
                 ),
                 Span::styled(" Save  ", Style::default().fg(tailwind::SLATE_300)),
                 Span::styled(
                     " <q> ",
-                    Style::default().bg(tailwind::SLATE_800).fg(tailwind::ROSE_500),
+                    Style::default()
+                        .bg(tailwind::SLATE_800)
+                        .fg(tailwind::ROSE_500),
                 ),
                 Span::styled(" Quit  ", Style::default().fg(tailwind::SLATE_300)),
                 Span::styled(
@@ -5589,42 +5853,58 @@ export extern "forgum" [
             vec![
                 Span::styled(
                     " <Tab/1-5> ",
-                    Style::default().bg(tailwind::SLATE_800).fg(tailwind::SLATE_200),
+                    Style::default()
+                        .bg(tailwind::SLATE_800)
+                        .fg(tailwind::SLATE_200),
                 ),
                 Span::styled(" Switch Tab  ", Style::default().fg(tailwind::SLATE_400)),
                 Span::styled(
                     " <j/k> ",
-                    Style::default().bg(tailwind::SLATE_800).fg(tailwind::SLATE_200),
+                    Style::default()
+                        .bg(tailwind::SLATE_800)
+                        .fg(tailwind::SLATE_200),
                 ),
                 Span::styled(" Select  ", Style::default().fg(tailwind::SLATE_400)),
                 Span::styled(
                     " <b> ",
-                    Style::default().bg(tailwind::SLATE_800).fg(tailwind::CYAN_400),
+                    Style::default()
+                        .bg(tailwind::SLATE_800)
+                        .fg(tailwind::CYAN_400),
                 ),
                 Span::styled(" Native Biome  ", Style::default().fg(tailwind::SLATE_300)),
                 Span::styled(
                     " <Space> ",
-                    Style::default().bg(tailwind::SLATE_800).fg(tailwind::SLATE_200),
+                    Style::default()
+                        .bg(tailwind::SLATE_800)
+                        .fg(tailwind::SLATE_200),
                 ),
                 Span::styled(" Toggle  ", Style::default().fg(tailwind::SLATE_300)),
                 Span::styled(
                     " <o> ",
-                    Style::default().bg(tailwind::SLATE_800).fg(tailwind::VIOLET_400),
+                    Style::default()
+                        .bg(tailwind::SLATE_800)
+                        .fg(tailwind::VIOLET_400),
                 ),
                 Span::styled(" Open Editor  ", Style::default().fg(tailwind::SLATE_300)),
                 Span::styled(
                     " <r> ",
-                    Style::default().bg(tailwind::SLATE_800).fg(tailwind::AMBER_400),
+                    Style::default()
+                        .bg(tailwind::SLATE_800)
+                        .fg(tailwind::AMBER_400),
                 ),
                 Span::styled(" Random  ", Style::default().fg(tailwind::SLATE_300)),
                 Span::styled(
                     " <s> ",
-                    Style::default().bg(tailwind::SLATE_800).fg(tailwind::CYAN_400),
+                    Style::default()
+                        .bg(tailwind::SLATE_800)
+                        .fg(tailwind::CYAN_400),
                 ),
                 Span::styled(" Save  ", Style::default().fg(tailwind::SLATE_300)),
                 Span::styled(
                     " <q> ",
-                    Style::default().bg(tailwind::SLATE_800).fg(tailwind::ROSE_500),
+                    Style::default()
+                        .bg(tailwind::SLATE_800)
+                        .fg(tailwind::ROSE_500),
                 ),
                 Span::styled(" Quit  ", Style::default().fg(tailwind::SLATE_300)),
                 Span::styled(
@@ -6252,11 +6532,8 @@ mod tests {
         assert_eq!(app.config.duration, 5);
 
         // Navigate to FPS (field 1)
-        app.handle_event(Event::Key(KeyEvent::new(
-            KeyCode::Down,
-            KeyModifiers::NONE,
-        )))
-        .unwrap();
+        app.handle_event(Event::Key(KeyEvent::new(KeyCode::Down, KeyModifiers::NONE)))
+            .unwrap();
         assert_eq!(app.config_field_idx, 1);
 
         // Type '6' then '0' directly
@@ -6353,7 +6630,8 @@ mod tests {
         let mut app = ConfigApp::new(None, None, Some(Tab::Config));
         app.open_config_directory();
         assert!(
-            app.status_message.starts_with("📁 Opened") || app.status_message.starts_with("⚠ Failed"),
+            app.status_message.starts_with("📁 Opened")
+                || app.status_message.starts_with("⚠ Failed"),
             "Status message must report directory open status: {}",
             app.status_message
         );

@@ -266,12 +266,23 @@ pub fn natural_creature_color(
     let c4 = palette.get(4).copied().unwrap_or(c1);
 
     // 1. Eyes: signature contrast or specific eye color
-    if crate::cow::is_eye_glyph(ch) && (rel_y <= 4 || ch == 'o' || ch == 'O' || ch == '@' || ch == '*') {
+    if crate::cow::is_eye_glyph(ch)
+        && (rel_y <= 4 || ch == 'o' || ch == 'O' || ch == '@' || ch == '*')
+    {
         return c4;
     }
 
     // 2. Beak, muzzle, nostrils, snout, udder accents
-    if ch == '.' || ch == ',' || ch == 'w' || ch == 'W' || ch == 'v' || ch == 'V' || ch == 'u' || ch == 'U' || ch == ':' {
+    if ch == '.'
+        || ch == ','
+        || ch == 'w'
+        || ch == 'W'
+        || ch == 'v'
+        || ch == 'V'
+        || ch == 'u'
+        || ch == 'U'
+        || ch == ':'
+    {
         return c3;
     }
 
@@ -679,15 +690,18 @@ mod tests {
         let kittens_p = get_natural_palette("kittens");
         assert_eq!(cat_p, kittens_p);
         assert!(cat_p.contains(&(255, 255, 255))); // white
-        assert!(cat_p.contains(&(211, 84, 0)));    // ginger
-        assert!(cat_p.contains(&(121, 85, 72)));   // brown
+        assert!(cat_p.contains(&(211, 84, 0))); // ginger
+        assert!(cat_p.contains(&(121, 85, 72))); // brown
         assert!(cat_p.contains(&(255, 182, 193))); // pink nose
-        assert!(cat_p.contains(&(33, 33, 33)));    // black
+        assert!(cat_p.contains(&(33, 33, 33))); // black
 
         // Bunny: white in nature with soft pink inner ears/nose
         let bunny_p = get_natural_palette("bunny");
         for &(r, g, b) in bunny_p {
-            assert!(r >= 200 && g >= 180 && b >= 180, "bunny must be white with soft pink: ({r},{g},{b})");
+            assert!(
+                r >= 200 && g >= 180 && b >= 180,
+                "bunny must be white with soft pink: ({r},{g},{b})"
+            );
         }
 
         // Doge: Shiba golden orange

@@ -447,9 +447,30 @@ pub fn run_health_check(explicit_config: Option<&Path>) -> HealthReport {
             caps.split_mode.as_str()
         ),
         details: vec![
-            format!("DECSTBM hardware margins: {}", if decstbm_supported { "supported" } else { "unsupported" }),
-            format!("DECSLRM horizontal margins: {}", if caps.emulator.supports_decslrm() { "supported" } else { "unsupported" }),
-            format!("Native Split API: {}", if native_split_available { "available" } else { "none (standard DECSTBM margin split)" }),
+            format!(
+                "DECSTBM hardware margins: {}",
+                if decstbm_supported {
+                    "supported"
+                } else {
+                    "unsupported"
+                }
+            ),
+            format!(
+                "DECSLRM horizontal margins: {}",
+                if caps.emulator.supports_decslrm() {
+                    "supported"
+                } else {
+                    "unsupported"
+                }
+            ),
+            format!(
+                "Native Split API: {}",
+                if native_split_available {
+                    "available"
+                } else {
+                    "none (standard DECSTBM margin split)"
+                }
+            ),
         ],
         suggestion: caps.emulator.limitation_notes().map(String::from),
     });

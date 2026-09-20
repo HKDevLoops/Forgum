@@ -1297,7 +1297,10 @@ pub static ALL_MASCOTS: [MascotBiomeInfo; 106] = [
 
 /// Retrieve the comprehensive biological biome profile for any mascot.
 pub fn get_mascot_biome(animal: &str) -> &'static MascotBiomeInfo {
-    let clean = animal.strip_suffix(".cow").unwrap_or(animal).to_ascii_lowercase();
+    let clean = animal
+        .strip_suffix(".cow")
+        .unwrap_or(animal)
+        .to_ascii_lowercase();
     for mascot in &ALL_MASCOTS {
         if mascot.name == clean {
             return mascot;

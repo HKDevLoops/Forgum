@@ -1277,7 +1277,10 @@ pub fn build_scene_config(args: &Args) -> Result<SceneConfig, String> {
     }
 
     // Normalize color_mode aliases to "natural"
-    if cfg.color_mode == "default" || cfg.color_mode == "animal" || cfg.color_mode == "animal_natural" {
+    if cfg.color_mode == "default"
+        || cfg.color_mode == "animal"
+        || cfg.color_mode == "animal_natural"
+    {
         cfg.color_mode = "natural".to_string();
     }
 
@@ -1726,7 +1729,13 @@ mod tests {
         let (a3, _) = parse(&["forgum", "--anim", "animal_natural"]);
         assert_eq!(a3.effect, Some("animal_natural".to_string()));
 
-        let (a4, _) = parse(&["forgum", "--animation-type", "animal_natural", "--cow", "ghost"]);
+        let (a4, _) = parse(&[
+            "forgum",
+            "--animation-type",
+            "animal_natural",
+            "--cow",
+            "ghost",
+        ]);
         assert_eq!(a4.animation_type, Some("animal_natural".to_string()));
         let cfg4 = build_scene_config(&a4).unwrap();
         assert_eq!(cfg4.animation_type, Some("float".to_string()));
@@ -1758,17 +1767,10 @@ mod tests {
         assert_eq!(cfg.road, Some("seabed".to_string()));
 
         // Explicit road override
-        let (a2, _) = parse(&[
-            "forgum",
-            "--environment",
-            "ocean",
-            "--road",
-            "magma",
-        ]);
+        let (a2, _) = parse(&["forgum", "--environment", "ocean", "--road", "magma"]);
         let cfg2 = build_scene_config(&a2).unwrap();
         assert_eq!(cfg2.environment, Some("ocean".to_string()));
         assert_eq!(cfg2.mountain, Some("seamount".to_string()));
         assert_eq!(cfg2.road, Some("magma".to_string()));
     }
 }
-

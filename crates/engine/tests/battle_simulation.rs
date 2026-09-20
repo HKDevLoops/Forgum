@@ -1,4 +1,4 @@
-use forgum_engine::battle::{Battle, BattlePhase, run_battle};
+use forgum_engine::battle::{run_battle, Battle, BattlePhase};
 
 #[test]
 fn test_battle_simulation_full_lifecycle() {
@@ -22,7 +22,10 @@ fn test_battle_simulation_full_lifecycle() {
 
     assert_eq!(battle.phase, BattlePhase::Done);
     assert!(battle.cow1.alive, "Cow 1 should be alive when winner is 1");
-    assert!(!battle.cow2.alive, "Cow 2 should be defeated when winner is 1");
+    assert!(
+        !battle.cow2.alive,
+        "Cow 2 should be defeated when winner is 1"
+    );
     assert_eq!(battle.cow1.eyes, "^^");
     assert_eq!(battle.cow2.eyes, "xx");
     assert_eq!(battle.cow2.hp, 0);
@@ -36,7 +39,10 @@ fn test_battle_simulation_winner2_lifecycle() {
     }
 
     assert_eq!(battle.phase, BattlePhase::Done);
-    assert!(!battle.cow1.alive, "Cow 1 should be defeated when winner is 2");
+    assert!(
+        !battle.cow1.alive,
+        "Cow 1 should be defeated when winner is 2"
+    );
     assert!(battle.cow2.alive, "Cow 2 should be alive when winner is 2");
     assert_eq!(battle.cow1.eyes, "xx");
     assert_eq!(battle.cow2.eyes, "@@");
@@ -106,14 +112,8 @@ fn test_battle_sessions_travel_distances_vary_dynamically() {
     // Generate 5 distinct battles with different entropy
     let mut clash_points = std::collections::HashSet::new();
     for i in 0..10 {
-        let b = Battle::with_dimensions_and_seed(
-            "Knight",
-            "Paladin",
-            80,
-            14,
-            1,
-            100_000 + i * 777_777,
-        );
+        let b =
+            Battle::with_dimensions_and_seed("Knight", "Paladin", 80, 14, 1, 100_000 + i * 777_777);
         clash_points.insert(b.clash_x);
     }
     // Must produce multiple different clash points across runs

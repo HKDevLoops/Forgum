@@ -391,7 +391,10 @@ pub fn expand_cow_with_landmarks(
 
         // 5. Unescape literal perl heredoc escapes: \$ to $, \@ to @, \# to #
         if line.contains(r"\$") || line.contains(r"\@") || line.contains(r"\#") {
-            line = line.replace(r"\$", "$").replace(r"\@", "@").replace(r"\#", "#");
+            line = line
+                .replace(r"\$", "$")
+                .replace(r"\@", "@")
+                .replace(r"\#", "#");
         }
 
         result.push_str(&line);
@@ -410,7 +413,24 @@ pub fn expand_cow_with_landmarks(
 pub fn is_eye_glyph(ch: char) -> bool {
     matches!(
         ch,
-        'o' | 'O' | '@' | '^' | '*' | '$' | 'x' | 'X' | '=' | '0' | 'e' | '+' | 'v' | 'u' | 'w' | '8' | 'Q' | '•' | '●'
+        'o' | 'O'
+            | '@'
+            | '^'
+            | '*'
+            | '$'
+            | 'x'
+            | 'X'
+            | '='
+            | '0'
+            | 'e'
+            | '+'
+            | 'v'
+            | 'u'
+            | 'w'
+            | '8'
+            | 'Q'
+            | '•'
+            | '●'
     )
 }
 
@@ -443,7 +463,13 @@ pub fn detect_cow_eyes(cow_text: &str, cow_start_line: usize) -> Vec<(usize, usi
                         let eye_indices: Vec<usize> = span
                             .iter()
                             .enumerate()
-                            .filter_map(|(idx, &c)| if is_eye_glyph(c) { Some(i + 1 + idx) } else { None })
+                            .filter_map(|(idx, &c)| {
+                                if is_eye_glyph(c) {
+                                    Some(i + 1 + idx)
+                                } else {
+                                    None
+                                }
+                            })
                             .collect();
                         if !eye_indices.is_empty() && eye_indices.len() <= 3 {
                             for col in eye_indices {

@@ -320,7 +320,9 @@ pub fn daemon_bootstrap<F: FnOnce() -> std::process::ExitCode>(
 ) -> std::process::ExitCode {
     use std::io::Write;
     use std::os::windows::process::CommandExt;
-    use windows_sys::Win32::System::Threading::{CREATE_BREAKAWAY_FROM_JOB, CREATE_NEW_PROCESS_GROUP};
+    use windows_sys::Win32::System::Threading::{
+        CREATE_BREAKAWAY_FROM_JOB, CREATE_NEW_PROCESS_GROUP,
+    };
 
     if std::env::args().any(|a| a == "--internal-daemon-runner") {
         return fallback();
@@ -494,7 +496,11 @@ pub fn find_forgum_pids() -> Vec<u32> {
 
     // Fallback: use pgrep on macOS or systems where /proc isn't populated
     if pids.is_empty() {
-        if let Ok(output) = std::process::Command::new("pgrep").arg("-f").arg("forgum").output() {
+        if let Ok(output) = std::process::Command::new("pgrep")
+            .arg("-f")
+            .arg("forgum")
+            .output()
+        {
             let out_str = String::from_utf8_lossy(&output.stdout);
             for line in out_str.lines() {
                 if let Ok(pid) = line.trim().parse::<u32>() {

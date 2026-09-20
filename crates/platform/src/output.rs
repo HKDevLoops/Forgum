@@ -159,8 +159,8 @@ fn open_tty() -> Result<Box<dyn Write + Send>, PlatformError> {
     use std::os::windows::fs::OpenOptionsExt;
     use std::os::windows::io::AsRawHandle;
     use windows_sys::Win32::System::Console::{
-        GetConsoleMode, SetConsoleMode, ENABLE_PROCESSED_OUTPUT, ENABLE_VIRTUAL_TERMINAL_PROCESSING,
-        ENABLE_WRAP_AT_EOL_OUTPUT,
+        GetConsoleMode, SetConsoleMode, ENABLE_PROCESSED_OUTPUT,
+        ENABLE_VIRTUAL_TERMINAL_PROCESSING, ENABLE_WRAP_AT_EOL_OUTPUT,
     };
 
     // `CONOUT$` is the Windows console output device. Open it with

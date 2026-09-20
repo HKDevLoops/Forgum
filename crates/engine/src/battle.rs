@@ -106,9 +106,8 @@ pub fn compute_battle_kinematics(
 
     // 3. Harmonic trigonometric superposition for natural battlefield variation
     let two_pi = std::f64::consts::TAU;
-    let harmonic = 0.50
-        + 0.32 * (two_pi * phi_offset).sin()
-        + 0.14 * (two_pi * phi_offset * PHI).cos();
+    let harmonic =
+        0.50 + 0.32 * (two_pi * phi_offset).sin() + 0.14 * (two_pi * phi_offset * PHI).cos();
     let t = harmonic.clamp(0.18, 0.82);
 
     // 4. Determine valid clash zone within the arena
@@ -142,7 +141,9 @@ pub fn compute_battle_kinematics(
 
     // 5. Cinematic pacing: charge duration between 40 and 55 frames (slow and real!)
     let base_charge = 44.0 + 8.0 * (phi_offset * two_pi).sin();
-    let charge_frames = (base_charge * (width as f64 / 80.0)).clamp(36.0, 56.0).round() as u32;
+    let charge_frames = (base_charge * (width as f64 / 80.0))
+        .clamp(36.0, 56.0)
+        .round() as u32;
 
     let speed1 = dist1 as f32 / charge_frames as f32;
     let speed2 = dist2 as f32 / charge_frames as f32;
@@ -160,7 +161,16 @@ pub fn compute_battle_kinematics(
         (hp1_raw, hp2_raw)
     };
 
-    (clash_x, dist1, dist2, speed1, speed2, charge_frames, max_hp1, max_hp2)
+    (
+        clash_x,
+        dist1,
+        dist2,
+        speed1,
+        speed2,
+        charge_frames,
+        max_hp1,
+        max_hp2,
+    )
 }
 
 impl Battle {
@@ -447,7 +457,9 @@ impl Battle {
                 }
             }
             BattlePhase::Aftermath => {
-                format!("  🏆 {loser_name} is unseated! {winner_name} claims supreme jousting glory!")
+                format!(
+                    "  🏆 {loser_name} is unseated! {winner_name} claims supreme jousting glory!"
+                )
             }
             BattlePhase::Done => {
                 format!("  🏁 Tournament ended. All hail the Victor, {winner_name}!")
@@ -482,7 +494,8 @@ impl Battle {
         // 6. Turf & dust line
         let turf_y = self.height.saturating_sub(2);
         if turf_y < self.height {
-            let grass_pattern = "  .  ..   ...  ...      . ..    ...   . . ...       ... .. .    ... .  .. ";
+            let grass_pattern =
+                "  .  ..   ...  ...      . ..    ...   . . ...       ... .. .    ... .  .. ";
             for (i, ch) in grass_pattern.chars().enumerate() {
                 let x = i + 1;
                 if x < self.width.saturating_sub(1) {
@@ -544,20 +557,8 @@ impl Battle {
         // 9. Cows
         let lance1_broken = !self.cow1.alive && self.phase != BattlePhase::Charging;
         let lance2_broken = !self.cow2.alive && self.phase != BattlePhase::Charging;
-        self.render_cow_art(
-            &mut fb,
-            &self.cow1,
-            true,
-            self.frames / 3,
-            lance1_broken,
-        );
-        self.render_cow_art(
-            &mut fb,
-            &self.cow2,
-            false,
-            self.frames / 3,
-            lance2_broken,
-        );
+        self.render_cow_art(&mut fb, &self.cow1, true, self.frames / 3, lance1_broken);
+        self.render_cow_art(&mut fb, &self.cow2, false, self.frames / 3, lance2_broken);
 
         // 10. Collision Sparks / Impact Burst at dynamic clash_x
         if self.phase == BattlePhase::Collision {
@@ -603,7 +604,11 @@ impl Battle {
                 for (i, ch) in ground_dust.chars().enumerate() {
                     let gx = clash_x - 4 + i as i32;
                     if gx >= 1 && gx < (self.width as i32 - 1) {
-                        fb.set(gx as usize, turf_y, Cell::new(ch, Color::rgb(180, 160, 120)));
+                        fb.set(
+                            gx as usize,
+                            turf_y,
+                            Cell::new(ch, Color::rgb(180, 160, 120)),
+                        );
                     }
                 }
             }
@@ -632,11 +637,7 @@ impl Battle {
             for (si, sc) in stars.chars().enumerate() {
                 let sx = head_x + si as i32 - 3;
                 if sx >= 1 && sx < (self.width as i32 - 1) && star_y < self.height {
-                    fb.set(
-                        sx as usize,
-                        star_y,
-                        Cell::new(sc, Color::rgb(255, 220, 50)),
-                    );
+                    fb.set(sx as usize, star_y, Cell::new(sc, Color::rgb(255, 220, 50)));
                 }
             }
 
@@ -750,11 +751,7 @@ fn cow1_art(eyes: &str, legs_frame: u32, lance_broken: bool) -> Vec<String> {
 }
 
 fn cow2_art(eyes: &str, legs_frame: u32, lance_broken: bool) -> Vec<String> {
-    let lance = if lance_broken {
-        "-  - =="
-    } else {
-        "<======="
-    };
+    let lance = if lance_broken { "-  - ==" } else { "<=======" };
     let (leg1, leg2) = match legs_frame % 3 {
         0 => ("||----w |", "||     ||"),
         1 => ("\\\\----w |", "||     \\\\"),

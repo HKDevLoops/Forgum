@@ -83,7 +83,24 @@ pub fn find_cow_start_line(text: &str) -> usize {
 pub(crate) fn is_eye_glyph(ch: char) -> bool {
     matches!(
         ch,
-        'o' | 'O' | '@' | '^' | '*' | '$' | 'x' | 'X' | '=' | '0' | 'e' | '+' | 'v' | 'u' | 'w' | '8' | 'Q' | '•' | '●'
+        'o' | 'O'
+            | '@'
+            | '^'
+            | '*'
+            | '$'
+            | 'x'
+            | 'X'
+            | '='
+            | '0'
+            | 'e'
+            | '+'
+            | 'v'
+            | 'u'
+            | 'w'
+            | '8'
+            | 'Q'
+            | '•'
+            | '●'
     )
 }
 
@@ -268,11 +285,7 @@ impl StaticEffect {
         Self::with_palette(cow_text, color_mode, Vec::new())
     }
 
-    pub fn with_palette(
-        cow_text: String,
-        color_mode: String,
-        palette: Vec<(u8, u8, u8)>,
-    ) -> Self {
+    pub fn with_palette(cow_text: String, color_mode: String, palette: Vec<(u8, u8, u8)>) -> Self {
         let cow_start = find_cow_start_line(&cow_text);
         let landmarks = crate::cow::detect_cow_eyes(&cow_text, cow_start);
         let mut blink_lines: Vec<String> = cow_text.lines().map(|s| s.to_string()).collect();
@@ -388,7 +401,11 @@ impl BreatheEffect {
 
         let instinct = detect_animal_instinct(&cow_text, dna);
         let eye_landmarks = crate::cow::detect_cow_eyes(&cow_text, cow_start_line);
-        let mouth_pos = Some(detect_creature_mouth(&cow_text, cow_start_line, &eye_landmarks));
+        let mouth_pos = Some(detect_creature_mouth(
+            &cow_text,
+            cow_start_line,
+            &eye_landmarks,
+        ));
 
         Self {
             cow_text,
@@ -451,7 +468,9 @@ impl Effect for BreatheEffect {
 
                 // Blink eyes: works across all detected eye landmarks (single, separated, or pairs)
                 let is_landmark = self.eye_landmarks.contains(&(y, x));
-                if is_blinking && (is_landmark || (is_eye_glyph(ch) && chars_iter.peek().copied() == Some(ch))) {
+                if is_blinking
+                    && (is_landmark || (is_eye_glyph(ch) && chars_iter.peek().copied() == Some(ch)))
+                {
                     let rel_y = y.saturating_sub(self.cow_start_line);
                     let cell_fg = resolve_fg_palette_char(
                         &self.color_mode,
@@ -796,9 +815,8 @@ impl Effect for FloatEffect {
 
         // Compute continuous vertical bob offset in terminal rows.
         // Amplitude is amp.float * 2 rows (max ±1 row by default with amp.float=0.3).
-        let bob_raw = (time * self.speed * std::f32::consts::TAU + self.phase).sin()
-            * self.amp.float
-            * 2.0;
+        let bob_raw =
+            (time * self.speed * std::f32::consts::TAU + self.phase).sin() * self.amp.float * 2.0;
         let bob_offset: i32 = bob_raw.round() as i32;
 
         // Periodic eye-blink:
@@ -844,7 +862,10 @@ impl Effect for FloatEffect {
 
                     // Periodic eye-blink across all eye landmarks (use original y for lookup):
                     let is_landmark = self.eye_landmarks.contains(&(y, uxi));
-                    if is_blinking && (is_landmark || (is_eye_glyph(ch) && chars_iter.peek().copied() == Some(ch))) {
+                    if is_blinking
+                        && (is_landmark
+                            || (is_eye_glyph(ch) && chars_iter.peek().copied() == Some(ch)))
+                    {
                         let cell_fg = resolve_fg_palette_char(
                             &self.color_mode,
                             &self.palette,
@@ -1232,7 +1253,9 @@ impl Effect for WalkEffect {
 
                 // 2. Eye blinking animation
                 let is_eye = self.eye_landmarks.contains(&(y, x))
-                    || self.eye_pos.is_some_and(|(eye_row, eye_col)| y == eye_row && (x == eye_col || x == eye_col + 1));
+                    || self.eye_pos.is_some_and(|(eye_row, eye_col)| {
+                        y == eye_row && (x == eye_col || x == eye_col + 1)
+                    });
                 if is_eye && is_blinking {
                     display_ch = '-';
                 }
@@ -1434,7 +1457,9 @@ impl ParticlesEffect {
 impl Effect for ParticlesEffect {
     fn update(&mut self, dt: f32, cols: usize, rows: usize) {
         self.frame_count = self.frame_count.wrapping_add(1);
-        let frame_seed = self.dna.phase_seed
+        let frame_seed = self
+            .dna
+            .phase_seed
             .wrapping_add(self.instance_id)
             .wrapping_add(self.frame_count.wrapping_mul(7919))
             .wrapping_add((self.spawn_timer * 10000.0) as u32);
@@ -1467,8 +1492,16 @@ impl Effect for ParticlesEffect {
 
     fn render(&self, fb: &mut FrameBuffer, time: f32) {
         let palette = color::parse_palette(&self.dna.palette);
-        render_text_palette(fb, &self.cow_text, Color::WHITE, &self.color_mode, &palette, time);
-        self.pool.render_with_cutoff(fb, time, easing::expo_out, self.cow_start_line);
+        render_text_palette(
+            fb,
+            &self.cow_text,
+            Color::WHITE,
+            &self.color_mode,
+            &palette,
+            time,
+        );
+        self.pool
+            .render_with_cutoff(fb, time, easing::expo_out, self.cow_start_line);
     }
 }
 
@@ -1917,7 +1950,9 @@ impl Effect for FlyEffect {
 
                 // Eye blinking across all eye landmarks:
                 let is_landmark = self.eye_landmarks.contains(&(y, x));
-                if is_blinking && (is_landmark || (is_eye_glyph(ch) && chars_iter.peek().copied() == Some(ch))) {
+                if is_blinking
+                    && (is_landmark || (is_eye_glyph(ch) && chars_iter.peek().copied() == Some(ch)))
+                {
                     let cell_fg = resolve_fg_palette_char(
                         &self.color_mode,
                         &self.palette,
@@ -2145,7 +2180,9 @@ impl Effect for TalkEffect {
 
                 // 1. Natural eye preservation and blinking across all landmarks
                 let is_eye = self.eye_landmarks.contains(&(y, x))
-                    || self.eye_pos.is_some_and(|(eye_row, eye_col)| y == eye_row && (x == eye_col || x == eye_col + 1));
+                    || self.eye_pos.is_some_and(|(eye_row, eye_col)| {
+                        y == eye_row && (x == eye_col || x == eye_col + 1)
+                    });
                 if is_eye {
                     if is_blinking {
                         display_ch = '-';
@@ -2636,8 +2673,12 @@ pub(crate) fn resolve_bubble_line_char_fg(line: &str, x: usize, ch: char) -> Col
 
     let is_border = (trimmed.starts_with('_') && trimmed.chars().all(|c| c == '_'))
         || (trimmed.starts_with('-') && trimmed.chars().all(|c| c == '-'))
-        || (trimmed.starts_with('(') && trimmed.ends_with(')') && trimmed.chars().all(|c| c == '(' || c == ')' || c == '_'))
-        || (trimmed.starts_with('|') && trimmed.ends_with('|') && trimmed.chars().all(|c| c == '|' || c == '_'));
+        || (trimmed.starts_with('(')
+            && trimmed.ends_with(')')
+            && trimmed.chars().all(|c| c == '(' || c == ')' || c == '_'))
+        || (trimmed.starts_with('|')
+            && trimmed.ends_with('|')
+            && trimmed.chars().all(|c| c == '|' || c == '_'));
 
     let first_non_space = line.chars().position(|c| !c.is_whitespace());
     let last_non_space = line
@@ -2661,7 +2702,16 @@ pub(crate) fn resolve_bubble_line_char_fg(line: &str, x: usize, ch: char) -> Col
 /// Ensures 100% maximum contrast and crystal-clear readability against any terminal background.
 #[inline]
 pub(crate) fn resolve_bubble_cell_fg(ch: char) -> Color {
-    if ch == '_' || ch == '-' || ch == '=' || ch == '(' || ch == ')' || ch == '|' || ch == '<' || ch == '>' || ch == '+' {
+    if ch == '_'
+        || ch == '-'
+        || ch == '='
+        || ch == '('
+        || ch == ')'
+        || ch == '|'
+        || ch == '<'
+        || ch == '>'
+        || ch == '+'
+    {
         Color::rgb(215, 225, 240)
     } else if ch == '\\' || ch == '/' {
         Color::rgb(180, 230, 255)
@@ -2839,7 +2889,13 @@ impl CompoundSignatureEffect {
         let cow_start_line = find_cow_start_line(&cow_text);
         let eye_landmarks = crate::cow::detect_cow_eyes(&cow_text, cow_start_line);
         let mouth_pos = detect_creature_mouth(&cow_text, cow_start_line, &eye_landmarks);
-        let base_effect = create_effect(dna.base, cow_text.clone(), dna.clone(), instance_id, &color_mode);
+        let base_effect = create_effect(
+            dna.base,
+            cow_text.clone(),
+            dna.clone(),
+            instance_id,
+            &color_mode,
+        );
         Self {
             _cow_text: cow_text,
             dna,
@@ -2889,7 +2945,9 @@ impl Effect for CompoundSignatureEffect {
 
         if self.dna.particles.rate > 0 {
             self.frame_count = self.frame_count.wrapping_add(1);
-            let frame_seed = self.dna.phase_seed
+            let frame_seed = self
+                .dna
+                .phase_seed
                 .wrapping_add(self.instance_id)
                 .wrapping_add(self.frame_count.wrapping_mul(7919))
                 .wrapping_add((self.spawn_timer * 10000.0) as u32);
@@ -2921,7 +2979,8 @@ impl Effect for CompoundSignatureEffect {
         self.base_effect.render(fb, time);
 
         if self.dna.particles.rate > 0 {
-            self.pool.render_with_cutoff(fb, time, easing::expo_out, self.cow_start_line);
+            self.pool
+                .render_with_cutoff(fb, time, easing::expo_out, self.cow_start_line);
         }
 
         // Apply DNA glow if configured
@@ -2946,17 +3005,42 @@ impl Effect for CompoundSignatureEffect {
 }
 
 pub const DYNAMIC_ANIMATION_TYPES: &[&str] = &[
-    "breathe", "float", "walk", "particles", "pulse", "glitch", "fly", "talk", "sway", "dissolve",
+    "breathe",
+    "float",
+    "walk",
+    "particles",
+    "pulse",
+    "glitch",
+    "fly",
+    "talk",
+    "sway",
+    "dissolve",
 ];
 
 pub const ALL_EFFECTS: &[&str] = &[
-    "static", "breathe", "float", "walk", "particles", "pulse", "glitch", "fly", "talk", "sway", "dissolve", "matrix", "squish", "abduction",
+    "static",
+    "breathe",
+    "float",
+    "walk",
+    "particles",
+    "pulse",
+    "glitch",
+    "fly",
+    "talk",
+    "sway",
+    "dissolve",
+    "matrix",
+    "squish",
+    "abduction",
 ];
 
 pub fn random_dynamic_animation() -> &'static str {
     use rand::seq::SliceRandom;
     let mut rng = rand::thread_rng();
-    DYNAMIC_ANIMATION_TYPES.choose(&mut rng).copied().unwrap_or("breathe")
+    DYNAMIC_ANIMATION_TYPES
+        .choose(&mut rng)
+        .copied()
+        .unwrap_or("breathe")
 }
 
 pub fn random_effect_name() -> &'static str {
@@ -4468,11 +4552,18 @@ mod tests {
 
         let dna = CowDna::default();
         let mut fb = FrameBuffer::new(40, 10);
-        let mut scene_box = create_scene_effect("random", "  ^__^\n  (oo)\n".to_string(), dna.clone(), 0, "natural");
+        let mut scene_box = create_scene_effect(
+            "random",
+            "  ^__^\n  (oo)\n".to_string(),
+            dna.clone(),
+            0,
+            "natural",
+        );
         scene_box.update(0.1, 40, 10);
         scene_box.render(&mut fb, 0.1);
 
-        let mut scene_box_upper = create_scene_effect("RANDOM", "  ^__^\n  (oo)\n".to_string(), dna, 0, "natural");
+        let mut scene_box_upper =
+            create_scene_effect("RANDOM", "  ^__^\n  (oo)\n".to_string(), dna, 0, "natural");
         scene_box_upper.update(0.1, 40, 10);
         scene_box_upper.render(&mut fb, 0.1);
     }

@@ -21,28 +21,117 @@ use forgum_engine::dna::{load_animations, BaseAnim, ParticleType};
 /// Curated 106 mascots from `crates/tui/src/app.rs` CATEGORIES.
 const MASCOTS_106: &[&str] = &[
     // Farm & Domestic (22)
-    "default", "cat", "cat2", "catfence", "charlie", "corgi", "bunny", "doge", "fat-cow",
-    "goat", "goat2", "hippie", "kitty", "kitten", "meow", "hamster", "mule", "pig", "ram",
-    "rooster", "sheep", "turkey",
+    "default",
+    "cat",
+    "cat2",
+    "catfence",
+    "charlie",
+    "corgi",
+    "bunny",
+    "doge",
+    "fat-cow",
+    "goat",
+    "goat2",
+    "hippie",
+    "kitty",
+    "kitten",
+    "meow",
+    "hamster",
+    "mule",
+    "pig",
+    "ram",
+    "rooster",
+    "sheep",
+    "turkey",
     // Wild & Safari (16)
-    "armadillo", "bearface", "elephant", "elephant2", "elephant-in-snake", "fox",
-    "hedgehog", "koala", "luke-koala", "moofasa", "panther", "rhino", "sloth",
-    "telebears", "tiger", "wolf",
+    "armadillo",
+    "bearface",
+    "elephant",
+    "elephant2",
+    "elephant-in-snake",
+    "fox",
+    "hedgehog",
+    "koala",
+    "luke-koala",
+    "moofasa",
+    "panther",
+    "rhino",
+    "sloth",
+    "telebears",
+    "tiger",
+    "wolf",
     // Oceanic & Amphibian (14)
-    "bud-frogs", "docker-whale", "dolphin", "duck", "ebi_furai", "happy-whale",
-    "jellyfish", "octopus", "pufferfish", "seahorse", "squid", "turtle", "walrus", "whale",
+    "bud-frogs",
+    "docker-whale",
+    "dolphin",
+    "duck",
+    "ebi_furai",
+    "happy-whale",
+    "jellyfish",
+    "octopus",
+    "pufferfish",
+    "seahorse",
+    "squid",
+    "turtle",
+    "walrus",
+    "whale",
     // Fantasy & Sci-Fi (19)
-    "atat", "cthulhu-mini", "daemon", "dragon", "dragon-and-cow", "ghost", "ghostbusters",
-    "glados", "mech-and-cow", "minotaur", "mooghidjirah", "moojira", "pterodactyl",
-    "sauron", "stegosaurus", "unipony", "vader", "wizard", "yoda",
+    "atat",
+    "cthulhu-mini",
+    "daemon",
+    "dragon",
+    "dragon-and-cow",
+    "ghost",
+    "ghostbusters",
+    "glados",
+    "mech-and-cow",
+    "minotaur",
+    "mooghidjirah",
+    "moojira",
+    "pterodactyl",
+    "sauron",
+    "stegosaurus",
+    "unipony",
+    "vader",
+    "wizard",
+    "yoda",
     // Pop Culture & Fun (17)
-    "beavis.zen", "bill-the-cat", "charizardvice", "fat-banana", "flaming-sheep",
-    "golden-eagle", "hellokitty", "hypno", "kiss", "mona-lisa", "nyan", "radioactive-kitty",
-    "ren", "snoopy", "stimpy", "tux", "vulpix",
+    "beavis.zen",
+    "bill-the-cat",
+    "charizardvice",
+    "fat-banana",
+    "flaming-sheep",
+    "golden-eagle",
+    "hellokitty",
+    "hypno",
+    "kiss",
+    "mona-lisa",
+    "nyan",
+    "radioactive-kitty",
+    "ren",
+    "snoopy",
+    "stimpy",
+    "tux",
+    "vulpix",
     // Abstract & Quirky (18)
-    "apt", "bees", "claw-arm", "cower", "cowfee", "eyes", "fence", "hiya", "jesus",
-    "kosh", "mutilated", "queen", "skeleton", "small", "supermilker", "surgery",
-    "three-eyes", "viper",
+    "apt",
+    "bees",
+    "claw-arm",
+    "cower",
+    "cowfee",
+    "eyes",
+    "fence",
+    "hiya",
+    "jesus",
+    "kosh",
+    "mutilated",
+    "queen",
+    "skeleton",
+    "small",
+    "supermilker",
+    "surgery",
+    "three-eyes",
+    "viper",
 ];
 
 fn repo_root() -> PathBuf {
@@ -177,12 +266,17 @@ fn test_dna_properties_and_palette_matching() {
         if let Some(p) = d_entry.get("particles") {
             if !p.is_null() {
                 if let Some(s) = p.as_str() {
-                    let _: ParticleType = serde_json::from_value(serde_json::Value::String(s.to_string()))
-                        .unwrap_or_else(|_| panic!("Invalid particle shorthand '{s}' for mascot '{mascot}'"));
+                    let _: ParticleType =
+                        serde_json::from_value(serde_json::Value::String(s.to_string()))
+                            .unwrap_or_else(|_| {
+                                panic!("Invalid particle shorthand '{s}' for mascot '{mascot}'")
+                            });
                 } else if let Some(obj) = p.as_object() {
                     if let Some(t) = obj.get("type") {
-                        let _: ParticleType = serde_json::from_value(t.clone())
-                            .unwrap_or_else(|_| panic!("Invalid particle type '{t:?}' for mascot '{mascot}'"));
+                        let _: ParticleType =
+                            serde_json::from_value(t.clone()).unwrap_or_else(|_| {
+                                panic!("Invalid particle type '{t:?}' for mascot '{mascot}'")
+                            });
                     }
                 }
             }
@@ -219,12 +313,17 @@ fn test_dna_properties_and_palette_matching() {
         if let Some(p) = c_entry.get("particles") {
             if !p.is_null() {
                 if let Some(s) = p.as_str() {
-                    let _: ParticleType = serde_json::from_value(serde_json::Value::String(s.to_string()))
-                        .unwrap_or_else(|_| panic!("Invalid particle shorthand '{s}' for mascot '{mascot}'"));
+                    let _: ParticleType =
+                        serde_json::from_value(serde_json::Value::String(s.to_string()))
+                            .unwrap_or_else(|_| {
+                                panic!("Invalid particle shorthand '{s}' for mascot '{mascot}'")
+                            });
                 } else if let Some(obj) = p.as_object() {
                     if let Some(t) = obj.get("type") {
-                        let _: ParticleType = serde_json::from_value(t.clone())
-                            .unwrap_or_else(|_| panic!("Invalid particle type '{t:?}' for mascot '{mascot}'"));
+                        let _: ParticleType =
+                            serde_json::from_value(t.clone()).unwrap_or_else(|_| {
+                                panic!("Invalid particle type '{t:?}' for mascot '{mascot}'")
+                            });
                     }
                 }
             }

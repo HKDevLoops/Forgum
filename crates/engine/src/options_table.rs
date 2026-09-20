@@ -1128,4 +1128,3 @@ mod tests {
         assert!(text.contains("Authentic biological motion"));
     }
 }
-

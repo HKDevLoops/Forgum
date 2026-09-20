@@ -390,7 +390,8 @@ impl SimState {
                 {
                     let natural_hexes = crate::color::get_natural_hex_palette(&self.config.cow);
                     if !natural_hexes.is_empty() {
-                        self.cow_dna.palette = natural_hexes.iter().map(|&s| s.to_string()).collect();
+                        self.cow_dna.palette =
+                            natural_hexes.iter().map(|&s| s.to_string()).collect();
                     }
                 }
                 let env_override = self
@@ -456,11 +457,8 @@ impl SimState {
                     &self.config.tongue,
                     thoughts_glyph,
                 );
-                let composed = crate::cow::compose_scene_with_mode(
-                    &cow_text,
-                    &self.config.text,
-                    true,
-                );
+                let composed =
+                    crate::cow::compose_scene_with_mode(&cow_text, &self.config.text, true);
                 if let Ok(mut lock) = self.active_composed.write() {
                     *lock = composed.clone();
                 }
@@ -532,12 +530,16 @@ impl SimState {
             }
             ControlMsg::ColorMode(mode) => {
                 self.config.color_mode = mode.clone();
-                if (mode == "natural" || mode == "animal" || mode == "default" || mode == "animal_natural")
+                if (mode == "natural"
+                    || mode == "animal"
+                    || mode == "default"
+                    || mode == "animal_natural")
                     && self.config.palette.is_none()
                 {
                     let natural_hexes = crate::color::get_natural_hex_palette(&self.config.cow);
                     if !natural_hexes.is_empty() {
-                        self.cow_dna.palette = natural_hexes.iter().map(|&s| s.to_string()).collect();
+                        self.cow_dna.palette =
+                            natural_hexes.iter().map(|&s| s.to_string()).collect();
                     }
                 }
                 let thoughts_glyph = if self.config.think { "o" } else { "\\" };
@@ -590,12 +592,19 @@ fn sim_thread(
             break;
         }
         if max_frames > 0 && sim.frame_count >= max_frames {
-            crate::log_info!("engine", "SIM thread reached max_frames ({}), shutting down", max_frames);
+            crate::log_info!(
+                "engine",
+                "SIM thread reached max_frames ({}), shutting down",
+                max_frames
+            );
             shutdown.trigger();
             break;
         }
         if sim.effect.is_done() {
-            crate::log_info!("engine", "SIM thread effect.is_done() returned true, shutting down");
+            crate::log_info!(
+                "engine",
+                "SIM thread effect.is_done() returned true, shutting down"
+            );
             shutdown.trigger();
             break;
         }
@@ -619,7 +628,10 @@ fn sim_thread(
         while let Ok(msg) = control_rx.try_recv() {
             match msg {
                 ControlMsg::Stop => {
-                    crate::log_info!("engine", "SIM thread received ControlMsg::Stop, shutting down");
+                    crate::log_info!(
+                        "engine",
+                        "SIM thread received ControlMsg::Stop, shutting down"
+                    );
                     shutdown.trigger();
                     break;
                 }
@@ -675,7 +687,10 @@ fn sim_thread(
 
         // Send to render thread (bounded — backpressure if render is slow).
         if frame_tx.send(frame).is_err() {
-            crate::log_warn!("engine", "SIM thread: render thread dropped receiver, exiting");
+            crate::log_warn!(
+                "engine",
+                "SIM thread: render thread dropped receiver, exiting"
+            );
             break;
         }
 
@@ -777,9 +792,9 @@ impl RenderState {
             self._total_rows = total_rows;
             if total_rows > frame.rows + 2 {
                 let scroll_top = frame.rows + 1;
-                let _ = self
-                    .out
-                    .write_all(format!("\x1b7\x1b[?6l\x1b[{scroll_top};{total_rows}r\x1b8").as_bytes());
+                let _ = self.out.write_all(
+                    format!("\x1b7\x1b[?6l\x1b[{scroll_top};{total_rows}r\x1b8").as_bytes(),
+                );
             }
             if self.overlay_rows > frame.rows {
                 for y in (frame.rows + 1)..=self.overlay_rows {
@@ -838,7 +853,10 @@ fn render_thread(mut state: RenderState, frame_rx: Receiver<Arc<Frame>>, shutdow
                 continue;
             }
             Err(crossbeam_channel::RecvTimeoutError::Disconnected) => {
-                crate::log_info!("engine", "RENDER thread: SIM thread dropped sender, exiting");
+                crate::log_info!(
+                    "engine",
+                    "RENDER thread: SIM thread dropped sender, exiting"
+                );
                 break;
             }
         }
@@ -861,7 +879,9 @@ fn render_thread(mut state: RenderState, frame_rx: Receiver<Arc<Frame>>, shutdow
         clean_buf.extend_from_slice(b"\x1b[r\x1b[?6l\x1b[?69l\x1b8\x1b[0m\x1b[?25h");
         let _ = state.out.write_all(&clean_buf);
     } else {
-        let _ = state.out.write_all(b"\x1b[r\x1b[?6l\x1b[?69l\x1b[0m\x1b[?25h\n");
+        let _ = state
+            .out
+            .write_all(b"\x1b[r\x1b[?6l\x1b[?69l\x1b[0m\x1b[?25h\n");
     }
     let _ = state.out.flush();
 }
@@ -1190,8 +1210,9 @@ pub fn run_engine_overlay(
     let can_split_scroll = config.split_scroll && caps.emulator.supports_decstbm();
     if can_split_scroll && total_rows > rows + 2 {
         let scroll_top = rows + 1;
-        let _ = out
-            .write_all(format!("\x1b[?6l\x1b[{scroll_top};{total_rows}r\x1b[{scroll_top};1H").as_bytes());
+        let _ = out.write_all(
+            format!("\x1b[?6l\x1b[{scroll_top};{total_rows}r\x1b[{scroll_top};1H").as_bytes(),
+        );
         let _ = out.flush();
     }
 

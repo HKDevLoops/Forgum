@@ -432,7 +432,13 @@ fn shell_preexec_hooks_reset_margins_before_command_execution() {
 #[test]
 fn shell_subcommand_forwarding_includes_interactive_commands() {
     let interactive_cmds = ["tui", "rps-battle", "battle", "image", "arena", "think"];
-    for shell in [Shell::Bash, Shell::Zsh, Shell::Fish, Shell::Pwsh, Shell::PowerShell] {
+    for shell in [
+        Shell::Bash,
+        Shell::Zsh,
+        Shell::Fish,
+        Shell::Pwsh,
+        Shell::PowerShell,
+    ] {
         let hook = generate_hook(shell, ENGINE);
         for cmd in interactive_cmds {
             assert!(
