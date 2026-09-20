@@ -35,7 +35,7 @@ sudo zypper in rust cargo gcc git
 # Clone and build
 git clone https://github.com/HKDevLoops/Forgum.git
 cd Forgum
-cargo build --release -p forgum-engine --bin forgum
+cargo build --release --bin forgum
 sudo install -m 0755 target/release/forgum /usr/local/bin/forgum
 ```
 
