@@ -475,7 +475,7 @@ jobs:
       - name: Multi-Distro Sandbox Test (Ubuntu)
         run: |
           docker run --rm -v ${{ github.workspace }}:/workspace:ro ubuntu:latest bash -c \
-            "apt-get update -qq && apt-get install -y -qq curl ca-certificates tar && /workspace/install.sh --headless && forgum doctor && forgum --animal cat --text 'Ubuntu Container Verified' --duration 1"
+            "apt-get update -qq && apt-get install -y -qq curl ca-certificates tar && bash /workspace/install.sh --headless && forgum doctor && forgum --animal cat --text 'Ubuntu Container Verified' --duration 1"
 
   # =====================================================================
   # Layer 3 — Packaging (blocks RELEASE only, NOT merge)
