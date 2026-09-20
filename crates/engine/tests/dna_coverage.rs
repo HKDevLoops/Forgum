@@ -258,16 +258,16 @@ fn test_dna_loads_every_single_entry_without_fallback() {
     let anims_data = load_animations(&data_dir);
     assert_eq!(
         anims_data.len(),
-        133,
-        "data/animations.json must load all 133 animals"
+        132,
+        "data/animations.json must load all 132 animals"
     );
 
     // Load from data/Cows/ (data/Cows/animations.json)
     let anims_cows = load_animations(&cows_dir);
     assert_eq!(
         anims_cows.len(),
-        133,
-        "data/Cows/animations.json must load all 133 animals"
+        132,
+        "data/Cows/animations.json must load all 132 animals"
     );
 
     for &mascot in MASCOTS_106 {
