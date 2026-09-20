@@ -1885,32 +1885,6 @@
       "falloff": "gaussian"
     }
   },
-  "ibm": {
-    "base": "Walk",
-    "particles": null,
-    "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.0
-    },
-    "palette": [
-      "#0066cc",
-      "#ffffff",
-      "#0099ff",
-      "#212121",
-      "#e0e0e0"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 10582,
-    "glow": {
-      "color": "#0066cc",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    }
-  },
   "jellyfish": {
     "base": "Float",
     "particles": {

@@ -1151,18 +1151,6 @@
       "#76ff03"
     ]
   },
-  "ibm": {
-    "base": "Walk",
-    "particles": null,
-    "speed": 1.0,
-    "palette": [
-      "#0066cc",
-      "#ffffff",
-      "#0099ff",
-      "#212121",
-      "#e0e0e0"
-    ]
-  },
   "kiss": {
     "base": "Talk",
     "particles": null,

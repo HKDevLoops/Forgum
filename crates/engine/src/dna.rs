@@ -366,26 +366,15 @@ pub fn get_dna(animations: &HashMap<String, CowDna>, cow_name: &str) -> CowDna {
     let clean = cow_name.strip_suffix(".cow").unwrap_or(cow_name);
     let with_cow = format!("{clean}.cow");
 
-    let mut dna = if let Some(dna) = animations.get(cow_name) {
+    if let Some(dna) = animations.get(cow_name) {
         dna.clone()
     } else if let Some(dna) = animations.get(clean) {
         dna.clone()
     } else if let Some(dna) = animations.get(&with_cow) {
         dna.clone()
     } else {
-        let mut d = CowDna::default();
-        let profile = crate::scenery::get_animal_profile(clean);
-        d.base = profile.base_anim;
-        d
-    };
-
-    if dna.palette.is_empty() {
-        dna.palette = crate::color::get_natural_hex_palette(clean)
-            .iter()
-            .map(|&s| s.to_string())
-            .collect();
+        CowDna::default()
     }
-    dna
 }
 
 /// Compute per-instance phase offset using golden ratio.
@@ -554,27 +543,16 @@ mod tests {
                 ..CowDna::default()
             },
         );
-        // "dragon.cow.cow" → strip_suffix strips ".cow" → "dragon.cow" → not in map → derives profile defaults
+        // "dragon.cow.cow" → strip_suffix strips ".cow" → "dragon.cow" → not in map → default
         let dna = get_dna(&map, "dragon.cow.cow");
-        let mut expected = CowDna::default();
-        expected.base = BaseAnim::Breathe;
-        expected.palette = crate::color::get_natural_hex_palette("dragon")
-            .iter()
-            .map(|&s| s.to_string())
-            .collect();
-        assert_eq!(dna, expected);
+        assert_eq!(dna, CowDna::default());
     }
 
     #[test]
     fn get_dna_falls_back_to_default() {
         let map = HashMap::new();
         let dna = get_dna(&map, "nonexistent.cow");
-        let mut expected = CowDna::default();
-        expected.palette = crate::color::get_natural_hex_palette("default")
-            .iter()
-            .map(|&s| s.to_string())
-            .collect();
-        assert_eq!(dna, expected);
+        assert_eq!(dna, CowDna::default());
     }
 
     /// Schema-drift guard: parse a full DNA doc, re-serialize it through the
