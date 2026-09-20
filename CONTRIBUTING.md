@@ -23,6 +23,46 @@ cargo run -p forgum-engine --bin forgum -- say "moo"
 
 The user-facing binary and execution keyword is accessed strictly and exclusively as `forgum`.
 
+### 🐳 Containerized contributor dev environment (Docker & Podman)
+
+Contributors can spin up an instant, zero-host-modification development environment with Rust 1.98.0+, all required C dependencies, multi-shell environments (Bash, Zsh, Fish), and preconfigured contributor commands:
+
+#### Option 1: Docker Compose / Podman Compose
+```bash
+# Start the interactive contributor development container
+docker compose run --rm dev
+
+# Or with podman-compose:
+podman-compose run --rm dev
+```
+
+#### Option 2: Direct CLI (Docker or Podman)
+```bash
+# Build the contributor dev container:
+docker build -t forgum-dev -f Dockerfile.dev .
+# Or with Podman:
+podman build -t forgum-dev -f Containerfile.dev .
+
+# Launch interactive development shell with live workspace mount:
+docker run -it --rm -v "${PWD}:/workspace:z" forgum-dev
+```
+
+#### Contributor helper commands inside the container:
+Inside the dev container, contributor shortcuts are pre-installed in `$PATH`:
+- `forgum-check`: Runs strict formatting and Clippy checks (`cargo clippy --workspace --all-targets -- -D warnings && cargo fmt --check`).
+- `forgum-build`: Builds the optimized release binary (`cargo build --release --bin forgum`).
+- `forgum-test`: Runs the full workspace test suite (`cargo test --workspace`).
+
+#### Multi-distro verification matrix:
+Test installation, dependency resolution, and `forgum doctor` across all supported Linux distributions (Ubuntu, Debian, Alpine, Fedora, openSUSE Leap):
+```bash
+# Run all distribution tests via docker-compose:
+docker compose -f docker-compose.test.yml up --abort-on-container-exit
+
+# Or with podman-compose:
+podman-compose -f podman-compose.test.yml up --abort-on-container-exit
+```
+
 ### Workspace architecture
 
 | Crate | Package | Responsibility |

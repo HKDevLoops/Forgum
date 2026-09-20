@@ -6,7 +6,7 @@
 # =============================================================================
 
 # --- Stage 1: Build from source ---
-FROM rust:1.80-slim-bookworm AS builder
+FROM rust:bookworm AS builder
 
 WORKDIR /build
 
@@ -24,7 +24,7 @@ COPY crates/ crates/
 COPY data/ data/
 
 # Build optimized release binary
-RUN cargo build --release --locked -p forgum-engine --bin forgum
+RUN cargo build --release --locked --bin forgum
 
 # --- Stage 2: Runtime Sandbox ---
 FROM debian:bookworm-slim AS runtime

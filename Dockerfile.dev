@@ -1,0 +1,88 @@
+# syntax=docker/dockerfile:1
+# =============================================================================
+# Forgum: Contributor Development Environment
+# Ready-to-code workspace with Rust 1.98.0+, all build dependencies,
+# multiple shells (Bash, Zsh, Fish), testing utilities, and preconfigured hooks.
+# =============================================================================
+
+FROM rust:bookworm AS dev
+
+LABEL maintainer="harish2222 <harish2222@users.noreply.github.com>"
+LABEL description="Full-featured development container for Forgum contributors"
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV TERM=xterm-256color
+ENV COLORTERM=truecolor
+ENV LANG=C.UTF-8
+ENV LC_ALL=C.UTF-8
+
+# Install build essentials, shells, and testing utilities
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    pkg-config \
+    libssl-dev \
+    git \
+    curl \
+    ca-certificates \
+    sudo \
+    less \
+    procps \
+    tmux \
+    ffmpeg \
+    zsh \
+    fish \
+    bash \
+    jq \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install modern Rust development components
+RUN rustup component add clippy rustfmt
+
+# Create unprivileged contributor user with passwordless sudo
+RUN useradd -m -s /bin/zsh -u 1000 forgum-dev && \
+    echo "forgum-dev ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers.d/forgum-dev && \
+    chmod 0440 /etc/sudoers.d/forgum-dev
+
+# Setup workspace directory
+WORKDIR /workspace
+COPY --chown=forgum-dev:forgum-dev . /workspace
+
+# Install contributor helper commands
+RUN cat << 'EOF' > /usr/local/bin/forgum-check
+#!/usr/bin/env bash
+set -e
+echo "=== Running Forgum Contributor Code Checks ==="
+cargo clippy --workspace --all-targets -- -D warnings
+cargo fmt --check
+echo "✓ All checks passed!"
+EOF
+
+RUN cat << 'EOF' > /usr/local/bin/forgum-build
+#!/usr/bin/env bash
+set -e
+echo "=== Building Forgum Release Binary ==="
+cargo build --release --bin forgum
+echo "✓ Built target/release/forgum"
+EOF
+
+RUN cat << 'EOF' > /usr/local/bin/forgum-test
+#!/usr/bin/env bash
+set -e
+echo "=== Running Forgum Standards & Integration Tests ==="
+cargo test --workspace
+echo "✓ All tests passed!"
+EOF
+
+RUN chmod +x /usr/local/bin/forgum-check /usr/local/bin/forgum-build /usr/local/bin/forgum-test
+
+# Switch to contributor user
+USER forgum-dev
+ENV HOME=/home/forgum-dev
+
+# Pre-configure shell hooks in contributor home
+RUN echo 'export PATH="/workspace/target/release:$PATH"' >> ~/.bashrc && \
+    echo 'export PATH="/workspace/target/release:$PATH"' >> ~/.zshrc && \
+    mkdir -p ~/.config/fish && \
+    echo 'set -gx PATH /workspace/target/release $PATH' >> ~/.config/fish/config.fish
+
+CMD ["/bin/zsh", "-l"]

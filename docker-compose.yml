@@ -1,4 +1,24 @@
 services:
+  # Contributor development environment with Rust toolchain, shells & dev tools
+  dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    image: forgum-dev:latest
+    container_name: forgum-dev
+    stdin_open: true
+    tty: true
+    volumes:
+      - .:/workspace:z
+      - cargo-registry:/usr/local/cargo/registry:z
+      - cargo-git:/usr/local/cargo/git:z
+    environment:
+      - COLORTERM=truecolor
+      - TERM=xterm-256color
+      - LANG=C.UTF-8
+    working_dir: /workspace
+    command: ["/bin/zsh", "-l"]
+
   # Interactive zero-modification sandbox terminal
   forgum:
     build:
@@ -58,3 +78,7 @@ services:
       dockerfile: Dockerfile
     image: forgum:latest
     command: ["/usr/local/bin/test-all-shells.sh"]
+
+volumes:
+  cargo-registry:
+  cargo-git:

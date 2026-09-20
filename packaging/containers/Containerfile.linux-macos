@@ -1,6 +1,6 @@
 # Podman / Dockerfile for Forgum: Hybrid Linux + macOS (Darwin-style) Terminal Environment
 # Multi-stage build enabling reproducible compilation and zero-host-modification testing
-FROM rust:1.80-slim-bookworm AS builder
+FROM rust:bookworm AS builder
 
 WORKDIR /build
 
@@ -15,7 +15,7 @@ COPY Cargo.toml Cargo.lock ./
 COPY crates/ crates/
 COPY data/ data/
 
-RUN cargo build --release --locked -p forgum-engine --bin forgum
+RUN cargo build --release --locked --bin forgum
 
 FROM debian:bookworm-slim AS base
 

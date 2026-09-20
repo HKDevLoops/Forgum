@@ -458,6 +458,25 @@ jobs:
           path: test-renders/video/
           if-no-files-found: warn
 
+  container-verification:
+    name: Container Environments & Multi-Distro Validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Contributor Dev Container (Dockerfile.dev)
+        run: docker build -t forgum-dev:test -f Dockerfile.dev .
+
+      - name: Verify Contributor Dev Container Toolchain & Helpers
+        run: |
+          docker run --rm forgum-dev:test bash -c \
+            "rustc --version && cargo --version && zsh --version && fish --version && tmux -V && ffmpeg -version | head -n1 && test -x /usr/local/bin/forgum-check && test -x /usr/local/bin/forgum-build && test -x /usr/local/bin/forgum-test"
+
+      - name: Multi-Distro Sandbox Test (Ubuntu)
+        run: |
+          docker run --rm -v ${{ github.workspace }}:/workspace:ro ubuntu:latest bash -c \
+            "apt-get update -qq && apt-get install -y -qq curl ca-certificates tar && /workspace/install.sh --headless && forgum doctor && forgum --animal cat --text 'Ubuntu Container Verified' --duration 1"
+
   # =====================================================================
   # Layer 3 — Packaging (blocks RELEASE only, NOT merge)
   # These run on push/PR to catch breakage early but are non-merge-blocking

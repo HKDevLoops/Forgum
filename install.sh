@@ -102,16 +102,25 @@ else
   echo -e "      \033[90mTip: Install ffmpeg to enable high-fps mascot recording & export.\033[0m"
 fi
 
-# --- WSL and platform / distro detection ------------------------------------
+# --- WSL, container, and platform / distro detection ------------------------
+IS_CONTAINER=0
+if [ -f /.dockerenv ] || [ -f /run/.containerenv ] || [ -f /run/systemd/container ] || [ -n "${container:-}" ]; then
+  IS_CONTAINER=1
+fi
+
 IS_WSL=0
 WSL_DISTRO=""
-if [ -n "${WSL_DISTRO_NAME:-}" ]; then
-  IS_WSL=1
-  WSL_DISTRO="${WSL_DISTRO_NAME}"
-elif [ -f /proc/version ] && grep -qi -E 'microsoft|wsl' /proc/version 2>/dev/null; then
-  IS_WSL=1
-  WSL_DISTRO="$(grep -oP '(?<=WSL_DISTRO_NAME=).*' /proc/self/environ 2>/dev/null || echo "WSL")"
-  [ -z "$WSL_DISTRO" ] && WSL_DISTRO="WSL"
+if [ "$IS_CONTAINER" -eq 0 ]; then
+  if [ -n "${WSL_DISTRO_NAME:-}" ]; then
+    IS_WSL=1
+    WSL_DISTRO="${WSL_DISTRO_NAME}"
+  elif [ -f /proc/sys/fs/binfmt_misc/WSLInterop ] || [ -d /run/WSL ]; then
+    IS_WSL=1
+    WSL_DISTRO="WSL"
+  elif [ -f /proc/version ] && grep -qi -E 'microsoft|wsl' /proc/version 2>/dev/null; then
+    IS_WSL=1
+    WSL_DISTRO="WSL"
+  fi
 fi
 
 RAW_OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
@@ -123,15 +132,15 @@ DISTRO_VERSION=""
 DISTRO_ID_LIKE=""
 
 if [ -f /etc/os-release ]; then
-  DISTRO_ID="$(grep -E '^ID=' /etc/os-release | head -n1 | cut -d= -f2 | tr -d '"'\''')"
-  DISTRO_NAME="$(grep -E '^PRETTY_NAME=' /etc/os-release | head -n1 | cut -d= -f2 | tr -d '"'\''')"
-  [ -z "$DISTRO_NAME" ] && DISTRO_NAME="$(grep -E '^NAME=' /etc/os-release | head -n1 | cut -d= -f2 | tr -d '"'\''')"
-  DISTRO_VERSION="$(grep -E '^VERSION_ID=' /etc/os-release | head -n1 | cut -d= -f2 | tr -d '"'\''')"
-  DISTRO_ID_LIKE="$(grep -E '^ID_LIKE=' /etc/os-release | head -n1 | cut -d= -f2 | tr -d '"'\''')"
+  DISTRO_ID="$((grep -E '^ID=' /etc/os-release 2>/dev/null || true) | head -n1 | cut -d= -f2 | tr -d '"'\' )"
+  DISTRO_NAME="$((grep -E '^PRETTY_NAME=' /etc/os-release 2>/dev/null || true) | head -n1 | cut -d= -f2 | tr -d '"'\' )"
+  [ -z "$DISTRO_NAME" ] && DISTRO_NAME="$((grep -E '^NAME=' /etc/os-release 2>/dev/null || true) | head -n1 | cut -d= -f2 | tr -d '"'\' )"
+  DISTRO_VERSION="$((grep -E '^VERSION_ID=' /etc/os-release 2>/dev/null || true) | head -n1 | cut -d= -f2 | tr -d '"'\' )"
+  DISTRO_ID_LIKE="$((grep -E '^ID_LIKE=' /etc/os-release 2>/dev/null || true) | head -n1 | cut -d= -f2 | tr -d '"'\' )"
 elif [ -f /usr/lib/os-release ]; then
-  DISTRO_ID="$(grep -E '^ID=' /usr/lib/os-release | head -n1 | cut -d= -f2 | tr -d '"'\''')"
-  DISTRO_NAME="$(grep -E '^PRETTY_NAME=' /usr/lib/os-release | head -n1 | cut -d= -f2 | tr -d '"'\''')"
-  DISTRO_ID_LIKE="$(grep -E '^ID_LIKE=' /usr/lib/os-release | head -n1 | cut -d= -f2 | tr -d '"'\''')"
+  DISTRO_ID="$((grep -E '^ID=' /usr/lib/os-release 2>/dev/null || true) | head -n1 | cut -d= -f2 | tr -d '"'\' )"
+  DISTRO_NAME="$((grep -E '^PRETTY_NAME=' /usr/lib/os-release 2>/dev/null || true) | head -n1 | cut -d= -f2 | tr -d '"'\' )"
+  DISTRO_ID_LIKE="$((grep -E '^ID_LIKE=' /usr/lib/os-release 2>/dev/null || true) | head -n1 | cut -d= -f2 | tr -d '"'\' )"
 elif [ -f /etc/SuSE-release ]; then
   DISTRO_ID="opensuse"
   DISTRO_NAME="openSUSE"
@@ -162,40 +171,72 @@ fi
 PACKAGE_MANAGER=""
 PM_CMD=""
 
-if command -v zypper >/dev/null 2>&1 && { [[ "$DISTRO_ID" =~ opensuse|sles ]] || [[ "$DISTRO_ID_LIKE" =~ suse ]] || [ -z "$DISTRO_ID" ]; }; then
-  PACKAGE_MANAGER="zypper"
-  PM_CMD="$(command -v zypper)"
-elif command -v apt-get >/dev/null 2>&1 && { [[ "$DISTRO_ID" =~ debian|ubuntu|kali|pop|linuxmint|raspbian ]] || [[ "$DISTRO_ID_LIKE" =~ debian ]] || [ -z "$DISTRO_ID" ]; }; then
-  PACKAGE_MANAGER="apt-get"
-  PM_CMD="$(command -v apt-get)"
-elif command -v dnf >/dev/null 2>&1 && { [[ "$DISTRO_ID" =~ fedora|rhel|centos|rocky|almalinux ]] || [[ "$DISTRO_ID_LIKE" =~ rhel|fedora ]] || [ -z "$DISTRO_ID" ]; }; then
-  PACKAGE_MANAGER="dnf"
-  PM_CMD="$(command -v dnf)"
-elif command -v yum >/dev/null 2>&1 && { [[ "$DISTRO_ID" =~ fedora|rhel|centos|rocky|almalinux ]] || [[ "$DISTRO_ID_LIKE" =~ rhel|fedora ]] || [ -z "$DISTRO_ID" ]; }; then
-  PACKAGE_MANAGER="yum"
-  PM_CMD="$(command -v yum)"
-elif command -v pacman >/dev/null 2>&1 && { [[ "$DISTRO_ID" =~ arch|manjaro|endeavouros|artix ]] || [[ "$DISTRO_ID_LIKE" =~ arch ]] || [ -z "$DISTRO_ID" ]; }; then
-  PACKAGE_MANAGER="pacman"
-  PM_CMD="$(command -v pacman)"
-elif command -v apk >/dev/null 2>&1 && [ "$DISTRO_ID" = "alpine" ]; then
-  PACKAGE_MANAGER="apk"
-  PM_CMD="$(command -v apk)"
-elif command -v xbps-install >/dev/null 2>&1; then
-  PACKAGE_MANAGER="xbps"
-  PM_CMD="$(command -v xbps-install)"
-elif command -v emerge >/dev/null 2>&1; then
-  PACKAGE_MANAGER="emerge"
-  PM_CMD="$(command -v emerge)"
-elif command -v brew >/dev/null 2>&1; then
-  PACKAGE_MANAGER="brew"
-  PM_CMD="$(command -v brew)"
-elif command -v pkg >/dev/null 2>&1 && [ "$RAW_OS" = "freebsd" ]; then
-  PACKAGE_MANAGER="pkg"
-  PM_CMD="$(command -v pkg)"
+COMBINED_DISTRO="${DISTRO_ID} ${DISTRO_ID_LIKE}"
+case "$COMBINED_DISTRO" in
+  *opensuse*|*sles*|*suse*)
+    if command -v zypper >/dev/null 2>&1; then
+      PACKAGE_MANAGER="zypper"
+      PM_CMD="$(command -v zypper)"
+    fi
+    ;;
+  *debian*|*ubuntu*|*kali*|*pop*|*linuxmint*|*raspbian*)
+    if command -v apt-get >/dev/null 2>&1; then
+      PACKAGE_MANAGER="apt-get"
+      PM_CMD="$(command -v apt-get)"
+    fi
+    ;;
+  *fedora*|*rhel*|*centos*|*rocky*|*almalinux*)
+    if command -v dnf >/dev/null 2>&1; then
+      PACKAGE_MANAGER="dnf"
+      PM_CMD="$(command -v dnf)"
+    elif command -v yum >/dev/null 2>&1; then
+      PACKAGE_MANAGER="yum"
+      PM_CMD="$(command -v yum)"
+    fi
+    ;;
+  *arch*|*manjaro*|*endeavouros*|*artix*)
+    if command -v pacman >/dev/null 2>&1; then
+      PACKAGE_MANAGER="pacman"
+      PM_CMD="$(command -v pacman)"
+    fi
+    ;;
+  *alpine*)
+    if command -v apk >/dev/null 2>&1; then
+      PACKAGE_MANAGER="apk"
+      PM_CMD="$(command -v apk)"
+    fi
+    ;;
+esac
+
+# Fallback detection if distribution string was empty or generic
+if [ -z "$PACKAGE_MANAGER" ]; then
+  if command -v zypper >/dev/null 2>&1; then
+    PACKAGE_MANAGER="zypper"; PM_CMD="$(command -v zypper)"
+  elif command -v apt-get >/dev/null 2>&1; then
+    PACKAGE_MANAGER="apt-get"; PM_CMD="$(command -v apt-get)"
+  elif command -v dnf >/dev/null 2>&1; then
+    PACKAGE_MANAGER="dnf"; PM_CMD="$(command -v dnf)"
+  elif command -v yum >/dev/null 2>&1; then
+    PACKAGE_MANAGER="yum"; PM_CMD="$(command -v yum)"
+  elif command -v pacman >/dev/null 2>&1; then
+    PACKAGE_MANAGER="pacman"; PM_CMD="$(command -v pacman)"
+  elif command -v apk >/dev/null 2>&1; then
+    PACKAGE_MANAGER="apk"; PM_CMD="$(command -v apk)"
+  elif command -v xbps-install >/dev/null 2>&1; then
+    PACKAGE_MANAGER="xbps"; PM_CMD="$(command -v xbps-install)"
+  elif command -v emerge >/dev/null 2>&1; then
+    PACKAGE_MANAGER="emerge"; PM_CMD="$(command -v emerge)"
+  elif command -v brew >/dev/null 2>&1; then
+    PACKAGE_MANAGER="brew"; PM_CMD="$(command -v brew)"
+  elif command -v pkg >/dev/null 2>&1 && [ "$RAW_OS" = "freebsd" ]; then
+    PACKAGE_MANAGER="pkg"; PM_CMD="$(command -v pkg)"
+  fi
 fi
 
 echo -e "\033[36m>> Platform & Environment Diagnostics:\033[0m"
-if [ "$IS_WSL" -eq 1 ]; then
+if [ "$IS_CONTAINER" -eq 1 ]; then
+  echo -e "  \033[32m[✓] Environment: Container (Docker/Podman Sandbox)\033[0m"
+elif [ "$IS_WSL" -eq 1 ]; then
   echo -e "  \033[32m[✓] Environment: WSL2 (${WSL_DISTRO})\033[0m"
 else
   echo -e "  \033[32m[✓] Environment: Native (${RAW_OS})\033[0m"
@@ -586,13 +627,19 @@ else
       tar xzf "$ARCHIVE" -C "$TMP" 2>/dev/null || true
       EXTRACTED="$(find "$TMP" -maxdepth 2 -type f \( -name 'forgum' -o -name 'forgum-engine' \) | head -n1 || true)"
       if [ -n "$EXTRACTED" ]; then
-        if [ -w "$INSTALL_DIR" ]; then
-          install -m 0755 "$EXTRACTED" "$BIN_PATH"
+        chmod +x "$EXTRACTED" 2>/dev/null || true
+        if "$EXTRACTED" --version >/dev/null 2>&1; then
+          if [ -w "$INSTALL_DIR" ]; then
+            install -m 0755 "$EXTRACTED" "$BIN_PATH"
+          else
+            run_elevated install -m 0755 "$EXTRACTED" "$BIN_PATH"
+          fi
+          ln -sf "$BIN_PATH" "$LEGACY_PATH" 2>/dev/null || true
+          echo -e "\033[32m>> Successfully installed prebuilt binary: $BIN_PATH\033[0m"
         else
-          run_elevated install -m 0755 "$EXTRACTED" "$BIN_PATH"
+          echo -e "\033[33m>> Prebuilt binary incompatible with host C library (GLIBC/musl mismatch). Falling back to source build...\033[0m"
+          DOWNLOAD_OK=0
         fi
-        ln -sf "$BIN_PATH" "$LEGACY_PATH" 2>/dev/null || true
-        echo -e "\033[32m>> Successfully installed prebuilt binary: $BIN_PATH\033[0m"
       else
         DOWNLOAD_OK=0
       fi
@@ -604,15 +651,15 @@ else
     ensure_build_dependencies
 
     if [ -f "Cargo.toml" ]; then
-      echo -e "\033[36m>> Building local workspace (-p forgum-engine --bin forgum)...\033[0m"
-      cargo build --release -p forgum-engine --bin forgum
+      echo -e "\033[36m>> Building local workspace (--bin forgum)...\033[0m"
+      cargo build --release --bin forgum
       install -m 0755 "target/release/forgum" "$BIN_PATH"
       ln -sf "$BIN_PATH" "$LEGACY_PATH"
     else
       echo -e "\033[36m>> Fetching latest source from https://github.com/${REPO}.git...\033[0m"
       BUILD_DIR="$TMP/src"
       if git clone --depth 1 "https://github.com/${REPO}.git" "$BUILD_DIR" 2>/dev/null; then
-        cargo build --release --manifest-path "$BUILD_DIR/Cargo.toml" -p forgum-engine --bin forgum
+        cargo build --release --manifest-path "$BUILD_DIR/Cargo.toml" --bin forgum
         install -m 0755 "$BUILD_DIR/target/release/forgum" "$BIN_PATH"
         ln -sf "$BIN_PATH" "$LEGACY_PATH"
       else

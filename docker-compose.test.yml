@@ -1,0 +1,77 @@
+services:
+  # Ubuntu Distribution Test
+  test-ubuntu:
+    image: docker.io/library/ubuntu:latest
+    container_name: forgum-test-ubuntu
+    volumes:
+      - .:/workspace:ro
+    environment:
+      - COLORTERM=truecolor
+      - TERM=xterm-256color
+    command: >
+      bash -c "apt-get update -qq &&
+               apt-get install -y -qq curl ca-certificates tar &&
+               /workspace/install.sh --headless &&
+               forgum doctor &&
+               forgum --animal cat --text 'Ubuntu Container Test Passed' --duration 1"
+
+  # Debian Distribution Test
+  test-debian:
+    image: docker.io/library/debian:bookworm-slim
+    container_name: forgum-test-debian
+    volumes:
+      - .:/workspace:ro
+    environment:
+      - COLORTERM=truecolor
+      - TERM=xterm-256color
+    command: >
+      bash -c "apt-get update -qq &&
+               apt-get install -y -qq curl ca-certificates tar &&
+               /workspace/install.sh --headless &&
+               forgum doctor &&
+               forgum --animal doge --text 'Debian Container Test Passed' --duration 1"
+
+  # Alpine Linux (musl libc) Test
+  test-alpine:
+    image: docker.io/library/alpine:latest
+    container_name: forgum-test-alpine
+    volumes:
+      - .:/workspace:ro
+    environment:
+      - COLORTERM=truecolor
+      - TERM=xterm-256color
+    command: >
+      sh -c "apk add --no-cache curl ca-certificates tar bash &&
+             /workspace/install.sh --headless &&
+             forgum doctor &&
+             forgum --animal dragon --text 'Alpine Container Test Passed' --duration 1"
+
+  # Fedora Linux (dnf) Test
+  test-fedora:
+    image: docker.io/library/fedora:latest
+    container_name: forgum-test-fedora
+    volumes:
+      - .:/workspace:ro
+    environment:
+      - COLORTERM=truecolor
+      - TERM=xterm-256color
+    command: >
+      bash -c "dnf install -y -q curl tar ca-certificates &&
+               /workspace/install.sh --headless &&
+               forgum doctor &&
+               forgum --animal cow --text 'Fedora Container Test Passed' --duration 1"
+
+  # openSUSE Leap 16.0 (zypper) Test
+  test-opensuse:
+    image: registry.opensuse.org/opensuse/leap:16.0
+    container_name: forgum-test-opensuse
+    volumes:
+      - .:/workspace:ro
+    environment:
+      - COLORTERM=truecolor
+      - TERM=xterm-256color
+    command: >
+      bash -c "zypper in -y curl tar ca-certificates-mozilla &&
+               /workspace/install.sh --headless &&
+               forgum doctor &&
+               forgum --animal tux --text 'openSUSE Container Test Passed' --duration 1"

@@ -1,0 +1,14 @@
+# Docker ignore file for Forgum
+target/
+.git/
+.github/
+packaging/windows/*.msi
+packaging/windows/*.wixobj
+test-renders/
+*.log
+*.tmp
+*.bak
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
