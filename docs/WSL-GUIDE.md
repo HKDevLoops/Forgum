@@ -2,31 +2,44 @@
 
 Forgum works in Windows Subsystem for Linux (WSL). This guide covers installation, configuration, and known issues.
 
-## Installation Options
+### Option 1: Universal One-Command Installer (Recommended)
 
-### Option 1: Native Linux Build (Recommended)
+Run the celestial installer directly inside your WSL terminal:
 
-Build Forgum directly inside WSL:
+```bash
+curl -fsSL https://raw.githubusercontent.com/HKDevLoops/Forgum/dev/install.sh | bash
+```
+
+The installer automatically:
+1. Detects your WSL2 environment and active distribution (`openSUSE`, `Ubuntu`, `Debian`, `Kali`, `Arch`, `Fedora`, `Alpine`, etc.).
+2. Identifies the distribution package manager (`zypper`, `apt-get`, `pacman`, `dnf`, `apk`).
+3. Prompts for root/sudo credentials if build or system utilities (`tar`, `rust`, `cargo`, `gcc`, `git`) are missing, automatically installing them via your distribution's native package manager.
+4. Resiliently resolves release versions without 404 aborts, downloading prebuilt binaries or compiling seamlessly from source.
+5. Adds Forgum to your `$PATH` and launches the celestial setup wizard.
+
+### Option 2: Native Linux Build (Manual)
+
+Build Forgum manually inside WSL:
 
 ```bash
 # Install Rust (if not already installed)
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 source ~/.cargo/env
 
-# Install dependencies
-sudo apt-get update
-sudo apt-get install -y pkg-config libfontconfig1-dev
+# Install dependencies (Ubuntu/Debian)
+sudo apt-get update && sudo apt-get install -y build-essential git
+
+# Or for openSUSE:
+sudo zypper in rust cargo gcc git
 
 # Clone and build
 git clone https://github.com/HKDevLoops/Forgum.git
 cd Forgum
-cargo build --workspace
-
-# Install (optional)
-cargo install --path crates/engine
+cargo build --release -p forgum-engine --bin forgum
+sudo install -m 0755 target/release/forgum /usr/local/bin/forgum
 ```
 
-### Option 2: Windows Binary via WSL Interop
+### Option 3: Windows Binary via WSL Interop
 
 Use the Windows binary from WSL:
 
@@ -40,7 +53,7 @@ sudo ln -s /mnt/c/Program\ Files/Forgum/forgum.exe /usr/local/bin/forgum
 
 **Caveat:** Windows binaries may have different path handling (backslashes vs forward slashes).
 
-### Option 3: Pre-built Binary
+### Option 4: Pre-built Binary
 
 Download the Linux binary from GitHub releases:
 

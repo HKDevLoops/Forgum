@@ -63,9 +63,12 @@ If you prefer using your operating system's native package manager:
 | **Homebrew** | macOS / Linux | `brew install forgum` | `brew upgrade forgum` |
 | **WinGet** | Windows | `winget install HKDevLoops.Forgum` | `winget upgrade HKDevLoops.Forgum` |
 | **Chocolatey** | Windows | `choco install forgum` | `choco upgrade forgum` |
-| **Arch (AUR)** | Linux | `yay -S forgum` | `yay -Syu forgum` |
-| **Debian / Ubuntu** | Linux | `sudo dpkg -i forgum.deb` | `sudo apt update && sudo apt install --only-upgrade forgum` |
-| **Fedora / RHEL** | Linux | `sudo rpm -i forgum.rpm` | `sudo dnf upgrade forgum` |
+| **Arch (AUR / Pacman)** | Linux | `yay -S forgum` | `yay -Syu forgum` |
+| **openSUSE (Zypper / RPM)** | Linux | `sudo zypper in forgum` | `sudo zypper update forgum` |
+| **Debian / Ubuntu (APT)** | Linux | `sudo dpkg -i forgum.deb` | `sudo apt update && sudo apt install --only-upgrade forgum` |
+| **Fedora / RHEL (DNF)** | Linux | `sudo rpm -i forgum.rpm` | `sudo dnf upgrade forgum` |
+| **Alpine (APK)** | Linux | `sudo apk add forgum` | `sudo apk upgrade forgum` |
+| **FreeBSD (pkg)** | FreeBSD | `sudo pkg install forgum` | `sudo pkg upgrade forgum` |
 | **Nix** | Cross-platform | `nix profile install .#forgum` | `nix profile upgrade forgum` |
 | **Cargo** | Cross-platform | `cargo install forgum-cli` | `cargo install --force forgum-cli` |
 

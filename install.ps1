@@ -189,24 +189,50 @@ if ($existingInstallations.Count -gt 0 -and -not $Headless) {
     }
 }
 
-# --- resolve version --------------------------------------------------------
+# --- resolve version (100% resilient multi-tier fallback) -------------------
 if (-not $Version) {
     if (Test-Path -LiteralPath (Join-Path $PWD 'Cargo.toml')) {
         $versionLine = (Get-Content -LiteralPath (Join-Path $PWD 'Cargo.toml') -Raw) `
-            -split "`n" | Where-Object { $_ -match '^version' } | Select-Object -First 1
+            -split "`n" | Where-Object { $_ -match '^version\s*=' } | Select-Object -First 1
         if ($versionLine -match '"([^"]+)"') { $Version = $Matches[1] }
     }
 }
 if (-not $Version) {
-    # Fall back to the latest GitHub release tag.
+    # Attempt raw GitHub Cargo.toml from repo branches
+    foreach ($branch in @('dev', 'main', 'master')) {
+        try {
+            $rawCargo = (Invoke-RestMethod -Uri "https://raw.githubusercontent.com/$Repo/$branch/Cargo.toml" `
+                -Headers @{ 'User-Agent' = 'forgum-install' } -ErrorAction Stop)
+            $versionLine = ($rawCargo -split "`n") | Where-Object { $_ -match '^version\s*=' } | Select-Object -First 1
+            if ($versionLine -match '"([^"]+)"') {
+                $Version = $Matches[1]
+                break
+            }
+        } catch {}
+    }
+}
+if (-not $Version) {
+    # Attempt GitHub releases API without failing on 404
     try {
         $latest = (Invoke-RestMethod -Uri "https://api.github.com/repos/$Repo/releases/latest" `
-            -Headers @{ 'User-Agent' = 'forgum-install' }).tag_name
-        $Version = $latest.TrimStart('v')
-    } catch {
-        Write-Error "Could not determine version. Pass -Version, or run from a repo with Cargo.toml. $_"
-        exit 1
-    }
+            -Headers @{ 'User-Agent' = 'forgum-install' } -ErrorAction Stop).tag_name
+        if ($latest) {
+            $Version = $latest.TrimStart('v')
+        }
+    } catch {}
+}
+if (-not $Version) {
+    # Attempt GitHub tags API
+    try {
+        $tags = Invoke-RestMethod -Uri "https://api.github.com/repos/$Repo/tags" `
+            -Headers @{ 'User-Agent' = 'forgum-install' } -ErrorAction Stop
+        if ($tags -and $tags.Count -gt 0) {
+            $Version = ($tags[0].name).TrimStart('v')
+        }
+    } catch {}
+}
+if (-not $Version) {
+    $Version = "0.4.0"
 }
 
 $Tag = "v$Version"
@@ -273,12 +299,12 @@ if (Test-Path -LiteralPath $localRelease) {
         if (Get-Command cargo -ErrorAction SilentlyContinue) {
             Write-Host ">> Release archive download unavailable. Compiling via Cargo..." -ForegroundColor Yellow
             if (Test-Path -LiteralPath (Join-Path $PWD 'Cargo.toml')) {
-                cargo build --release --bin forgum --bin forgum-engine
+                cargo build --release -p forgum-engine --bin forgum
                 Copy-Item -LiteralPath 'target\release\forgum.exe' -Destination $binPath -Force
                 Copy-Item -LiteralPath 'target\release\forgum.exe' -Destination $legacyPath -Force
             } else {
-                cargo install forgum-cli
-                $cargoBin = Join-Path $HOME '.cargo\bin\forgum.exe'
+                cargo install --git "https://github.com/$Repo.git" --bin forgum --root (Join-Path $HOME '.local') --force
+                $cargoBin = Join-Path $HOME '.local\bin\forgum.exe'
                 if (Test-Path -LiteralPath $cargoBin) {
                     Copy-Item -LiteralPath $cargoBin -Destination $binPath -Force
                     Copy-Item -LiteralPath $cargoBin -Destination $legacyPath -Force
@@ -286,7 +312,15 @@ if (Test-Path -LiteralPath $localRelease) {
             }
             Write-Host ">> Installed via Cargo: $binPath" -ForegroundColor Green
         } else {
-            Write-Error "Failed to install Forgum: $_"
+            Write-Host ">> Release archive download unavailable and Cargo is not installed." -ForegroundColor Yellow
+            if (Get-Command winget -ErrorAction SilentlyContinue) {
+                Write-Host ">> Tip: Install Rust via 'winget install Rustlang.Rustup' to compile Forgum from source." -ForegroundColor Cyan
+            } elseif (Get-Command scoop -ErrorAction SilentlyContinue) {
+                Write-Host ">> Tip: Install Rust via 'scoop install rust' to compile Forgum from source." -ForegroundColor Cyan
+            } elseif (Get-Command choco -ErrorAction SilentlyContinue) {
+                Write-Host ">> Tip: Install Rust via 'choco install rust -y' to compile Forgum from source." -ForegroundColor Cyan
+            }
+            Write-Error "Failed to install Forgum: Rust toolchain (cargo) is required to build from source."
             exit 1
         }
     } finally {
