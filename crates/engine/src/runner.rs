@@ -2878,67 +2878,71 @@ fn render_subcommand_with_scene(
         }
     }
 
-    if let Some(st) = active_state {
-        // If split/daemon was requested and one already exists: report PID and return.
-        if args.daemon || is_split_mode {
-            println!("{}", st.pid);
-            return ExitCode::SUCCESS;
-        }
-
-        // Forward updates to the running instance via control socket if responsive.
-        let mut forwarded = false;
-        if !st.socket_path.is_empty() {
-            if let Some(ref cow) = args.cow {
-                let payload = serde_json::json!({"cmd": "COW", "arg": cow}).to_string();
-                let _ = crate::herd::send_command(&st.socket_path, &payload);
-                forwarded = true;
-            }
-            if let Some(ref effect) = args.effect {
-                let payload = serde_json::json!({"cmd": "EFFECT", "arg": effect}).to_string();
-                let _ = crate::herd::send_command(&st.socket_path, &payload);
-                forwarded = true;
-            }
-            if let Some(ref color) = args.color_mode {
-                let payload = serde_json::json!({"cmd": "COLOR", "arg": color}).to_string();
-                let _ = crate::herd::send_command(&st.socket_path, &payload);
-                forwarded = true;
+    let is_stdout_piped = !crossterm::tty::IsTty::is_tty(&std::io::stdout());
+    if !is_stdout_piped {
+        if let Some(st) = active_state {
+            // If split/daemon was requested and one already exists: report PID and return.
+            if args.daemon || is_split_mode {
+                println!("{}", st.pid);
+                return ExitCode::SUCCESS;
             }
 
-            let text_to_send = if let Some(ref t) = args.text {
-                Some(t.clone())
-            } else if !scene.text.trim().is_empty() {
-                Some(scene.text.clone())
-            } else {
-                None
-            };
-
-            if let Some(ref msg) = text_to_send {
-                let cmd_name = if scene.think || args.think || args.command == cli::Command::Think {
-                    "THINK"
-                } else {
-                    "TEXT"
-                };
-                let payload = serde_json::json!({"cmd": cmd_name, "arg": msg}).to_string();
-                if crate::herd::send_command(&st.socket_path, &payload).is_ok() {
+            // Forward updates to the running instance via control socket if responsive.
+            let mut forwarded = false;
+            if !st.socket_path.is_empty() {
+                if let Some(ref cow) = args.cow {
+                    let payload = serde_json::json!({"cmd": "COW", "arg": cow}).to_string();
+                    let _ = crate::herd::send_command(&st.socket_path, &payload);
                     forwarded = true;
                 }
-            } else if !forwarded {
-                if let Ok(data) = data_dir() {
-                    if let Some(f) = fortune::random_fortune(&data) {
-                        let payload = serde_json::json!({"cmd": "TEXT", "arg": f}).to_string();
-                        let _ = crate::herd::send_command(&st.socket_path, &payload);
+                if let Some(ref effect) = args.effect {
+                    let payload = serde_json::json!({"cmd": "EFFECT", "arg": effect}).to_string();
+                    let _ = crate::herd::send_command(&st.socket_path, &payload);
+                    forwarded = true;
+                }
+                if let Some(ref color) = args.color_mode {
+                    let payload = serde_json::json!({"cmd": "COLOR", "arg": color}).to_string();
+                    let _ = crate::herd::send_command(&st.socket_path, &payload);
+                    forwarded = true;
+                }
+
+                let text_to_send = if let Some(ref t) = args.text {
+                    Some(t.clone())
+                } else if !scene.text.trim().is_empty() {
+                    Some(scene.text.clone())
+                } else {
+                    None
+                };
+
+                if let Some(ref msg) = text_to_send {
+                    let cmd_name =
+                        if scene.think || args.think || args.command == cli::Command::Think {
+                            "THINK"
+                        } else {
+                            "TEXT"
+                        };
+                    let payload = serde_json::json!({"cmd": cmd_name, "arg": msg}).to_string();
+                    if crate::herd::send_command(&st.socket_path, &payload).is_ok() {
                         forwarded = true;
+                    }
+                } else if !forwarded {
+                    if let Ok(data) = data_dir() {
+                        if let Some(f) = fortune::random_fortune(&data) {
+                            let payload = serde_json::json!({"cmd": "TEXT", "arg": f}).to_string();
+                            let _ = crate::herd::send_command(&st.socket_path, &payload);
+                            forwarded = true;
+                        }
                     }
                 }
             }
-        }
 
-        if forwarded || st.is_alive() {
-            return ExitCode::SUCCESS;
-        }
+            if forwarded {
+                return ExitCode::SUCCESS;
+            }
 
-        // Stale state: clean up and proceed
-        daemon::cleanup_daemon_state(&session_id);
+            // Stale state: clean up and proceed
+            daemon::cleanup_daemon_state(&session_id);
+        }
     }
 
     if args.daemon || is_split_mode {

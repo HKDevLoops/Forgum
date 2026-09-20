@@ -172,6 +172,8 @@ fn bare_engine_renders_thought_bubble_and_cow_when_piped() {
 
     let output = Command::new(&bin)
         .env("FORGUM_CONFIG", &cfg_path)
+        .env("FORGUM_RUNTIME", tmp.path())
+        .env("FORGUM_DAEMON_SESSION", "test-bare-engine")
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -214,6 +216,8 @@ fn think_subcommand_renders_thought_bubble_with_custom_text() {
     let custom_thought = "Quantum cows roam the cosmic pastures";
     let output = Command::new(&bin)
         .env("FORGUM_CONFIG", &cfg_path)
+        .env("FORGUM_RUNTIME", tmp.path())
+        .env("FORGUM_DAEMON_SESSION", "test-think-subcommand")
         .args(["think", custom_thought])
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
@@ -255,6 +259,8 @@ fn render_with_text_renders_speech_bubble() {
     let speech_text = "Classic speech in speech bubble";
     let output = Command::new(&bin)
         .env("FORGUM_CONFIG", &cfg_path)
+        .env("FORGUM_RUNTIME", tmp.path())
+        .env("FORGUM_DAEMON_SESSION", "test-render-speech")
         .args(["render", "--text", speech_text])
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
