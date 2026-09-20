@@ -2,23 +2,24 @@ Describe "Forgum ffmpeg animation capture" {
     BeforeAll {
         $root = (Resolve-Path "$PSScriptRoot/..").Path
         $videoDir = Join-Path $root "test-renders/video"
+        $script:hasFfmpeg = [bool](Get-Command ffmpeg -CommandType Application -ErrorAction SilentlyContinue) -and [bool](Get-Command ffprobe -CommandType Application -ErrorAction SilentlyContinue)
     }
-    It "ffmpeg and ffprobe are available" {
-        (Get-Command ffmpeg -ErrorAction SilentlyContinue) | Should -Not -Be $null
-        (Get-Command ffprobe -ErrorAction SilentlyContinue) | Should -Not -Be $null
+    It "ffmpeg and ffprobe are available" -Skip:(-not $script:hasFfmpeg) {
+        (Get-Command ffmpeg -CommandType Application -ErrorAction SilentlyContinue) | Should -Not -Be $null
+        (Get-Command ffprobe -CommandType Application -ErrorAction SilentlyContinue) | Should -Not -Be $null
     }
-    It "cargo ffmpeg_capture tests pass" {
+    It "cargo ffmpeg_capture tests pass" -Skip:(-not $script:hasFfmpeg) {
         $out = cargo test --test ffmpeg_capture -- --nocapture 2>&1 | Out-String
         $out | Should -Match "test result: ok"
         $out | Should -Match "0 failed"
     }
-    It "video directory contains mp4s after capture" {
+    It "video directory contains mp4s after capture" -Skip:(-not $script:hasFfmpeg) {
         Test-Path $videoDir | Should -Be $true
         $mp4s = Get-ChildItem $videoDir -Filter *.mp4 -ErrorAction SilentlyContinue
         $mp4s.Count | Should -BeGreaterThan 5
         foreach ($f in $mp4s) { $f.Length | Should -BeGreaterThan 512 }
     }
-    It "ffprobe reports correct dimensions on sample" {
+    It "ffprobe reports correct dimensions on sample" -Skip:(-not $script:hasFfmpeg) {
         $sample = Get-ChildItem (Join-Path $videoDir "*.mp4") | Select-Object -First 1
         if ($null -eq $sample) { Set-ItResult -Skipped -Because "no mp4" ; return }
         $json = ffprobe -v error -select_streams v:0 -show_entries stream=width,height,codec_name -of json $sample.FullName | ConvertFrom-Json
@@ -26,7 +27,7 @@ Describe "Forgum ffmpeg animation capture" {
         $json.streams[0].height | Should -Be 384
         $json.streams[0].codec_name | Should -Be "h264"
     }
-    It "ffmpeg can decode video back to rawvideo" {
+    It "ffmpeg can decode video back to rawvideo" -Skip:(-not $script:hasFfmpeg) {
         $sample = Get-ChildItem (Join-Path $videoDir "*.mp4") | Select-Object -First 1
         if ($null -eq $sample) { Set-ItResult -Skipped -Because "no mp4"; return }
         $tmp = Join-Path $env:TEMP "forgum_ffmpeg_raw.bin"

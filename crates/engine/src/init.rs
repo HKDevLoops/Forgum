@@ -242,7 +242,7 @@ __forgum_precmd() {{
     fi
   fi
 }}
-if [[ -v PROMPT_COMMAND ]]; then
+if [ -n "${{PROMPT_COMMAND+x}}" ]; then
   PROMPT_COMMAND="__forgum_precmd${{PROMPT_COMMAND:+;$PROMPT_COMMAND}}"
 else
   PROMPT_COMMAND="__forgum_precmd"

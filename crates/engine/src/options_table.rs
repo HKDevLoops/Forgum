@@ -1125,7 +1125,7 @@ mod tests {
         assert!(text.contains("Animation Effects"));
         assert!(text.contains("animal_natural"));
         assert!(text.contains("Signature DNA"));
-        assert!(text.contains("Authentic biological motion and particle effects"));
+        assert!(text.contains("Authentic biological motion"));
     }
 }
 

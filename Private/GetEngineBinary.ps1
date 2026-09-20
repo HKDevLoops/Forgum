@@ -32,7 +32,7 @@ function Get-ForgumEngineBinary {
 
     # 3. System PATH.
     foreach ($exeName in $exeNames) {
-        $onPath = Get-Command $exeName -ErrorAction SilentlyContinue
+        $onPath = Get-Command $exeName -CommandType Application -ErrorAction SilentlyContinue
         if ($onPath) {
             return $onPath.Source
         }
