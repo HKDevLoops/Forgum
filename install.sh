@@ -10,7 +10,7 @@
 # Celestial Terminal UI Wizard for interactive configuration.
 #
 # Usage:
-#   ./install.sh [--version X.Y.Z] [--channel stable|nightly|dev] [--headless]
+#   ./install.sh [--version X.Y.Z] [--channel stable|alpha|nightly|dev] [--headless]
 #                [--telemetry allow|decline] [-y|--yes] [--no-deps] [--build-from-source]
 #
 # Environment overrides:
@@ -22,6 +22,7 @@
 #
 # Examples:
 #   curl -fsSL https://raw.githubusercontent.com/HKDevLoops/Forgum/dev/install.sh | bash
+#   ./install.sh --channel alpha
 #   ./install.sh --channel nightly
 #   ./install.sh --headless -y
 #
@@ -45,7 +46,7 @@ while [ $# -gt 0 ]; do
       [ $# -ge 2 ] || { echo "error: --version requires an argument" >&2; exit 2; }
       VERSION_OVERRIDE="$2"; shift 2 ;;
     --channel)
-      [ $# -ge 2 ] || { echo "error: --channel requires an argument (stable|nightly|dev)" >&2; exit 2; }
+      [ $# -ge 2 ] || { echo "error: --channel requires an argument (stable|alpha|nightly|dev)" >&2; exit 2; }
       CHANNEL="$2"; shift 2 ;;
     --headless) HEADLESS=1; shift ;;
     --telemetry)
@@ -593,12 +594,26 @@ else
 
   DOWNLOAD_OK=0
   if [ "$BUILD_FROM_SOURCE" -eq 0 ]; then
-    CANDIDATE_URLS=(
-      "https://github.com/${REPO}/releases/download/${TAG}/forgum-${VERSION}-${TARGET_ARCH}-${TARGET_OS}.tar.gz"
-      "https://github.com/${REPO}/releases/download/${TAG}/forgum-${TAG}-${TARGET_ARCH}-${TARGET_OS}.tar.gz"
-      "https://github.com/${REPO}/releases/download/nightly/forgum-nightly-${TARGET_ARCH}-${TARGET_OS}.tar.gz"
-      "https://github.com/${REPO}/releases/latest/download/forgum-${TARGET_ARCH}-${TARGET_OS}.tar.gz"
-    )
+    if [ "$CHANNEL" = "alpha" ]; then
+      CANDIDATE_URLS=(
+        "https://github.com/${REPO}/releases/download/alpha/forgum-alpha-${TARGET_ARCH}-${TARGET_OS}.tar.gz"
+        "https://github.com/${REPO}/releases/download/${TAG}/forgum-${VERSION}-${TARGET_ARCH}-${TARGET_OS}.tar.gz"
+        "https://github.com/${REPO}/releases/download/${TAG}/forgum-${TAG}-${TARGET_ARCH}-${TARGET_OS}.tar.gz"
+        "https://github.com/${REPO}/releases/latest/download/forgum-${TARGET_ARCH}-${TARGET_OS}.tar.gz"
+      )
+    elif [ "$CHANNEL" = "nightly" ]; then
+      CANDIDATE_URLS=(
+        "https://github.com/${REPO}/releases/download/nightly/forgum-nightly-${TARGET_ARCH}-${TARGET_OS}.tar.gz"
+        "https://github.com/${REPO}/releases/download/${TAG}/forgum-${VERSION}-${TARGET_ARCH}-${TARGET_OS}.tar.gz"
+        "https://github.com/${REPO}/releases/latest/download/forgum-${TARGET_ARCH}-${TARGET_OS}.tar.gz"
+      )
+    else
+      CANDIDATE_URLS=(
+        "https://github.com/${REPO}/releases/download/${TAG}/forgum-${VERSION}-${TARGET_ARCH}-${TARGET_OS}.tar.gz"
+        "https://github.com/${REPO}/releases/download/${TAG}/forgum-${TAG}-${TARGET_ARCH}-${TARGET_OS}.tar.gz"
+        "https://github.com/${REPO}/releases/latest/download/forgum-${TARGET_ARCH}-${TARGET_OS}.tar.gz"
+      )
+    fi
 
     ARCHIVE=""
     for CANDIDATE in "${CANDIDATE_URLS[@]}"; do

@@ -415,13 +415,7 @@ fn init_list_and_default_subcommand() {
 
     let (a_def, cmd_def) = parse_args(argv(&["forgum-engine", "init"])).unwrap();
     assert_eq!(a_def.command, Command::Init);
-    assert!(matches!(
-        cmd_def,
-        Some(Commands::Init {
-            shell: None,
-            ..
-        })
-    ));
+    assert!(matches!(cmd_def, Some(Commands::Init { shell: None, .. })));
 }
 
 #[test]

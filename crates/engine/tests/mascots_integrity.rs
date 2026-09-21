@@ -36,10 +36,7 @@ fn test_all_106_mascots_in_categories_are_embedded_and_distinct() {
         "..",
         "test",
     );
-    assert!(
-        !default_art.is_empty(),
-        "Default cow art must not be empty"
-    );
+    assert!(!default_art.is_empty(), "Default cow art must not be empty");
 
     let mut failed_mascots = Vec::new();
     let mut fallback_detected = Vec::new();

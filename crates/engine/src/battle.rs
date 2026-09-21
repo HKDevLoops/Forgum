@@ -823,6 +823,10 @@ pub fn run_battle_live_internal(
     }
 
     if manage_alt_screen {
+        // Reset margins and attributes INSIDE the alternate screen before leaving
+        print!("\x1b[r\x1b[?6l\x1b[?69l\x1b[0m\x1b[?25h");
+        let _ = std::io::stdout().flush();
+
         drop(_alt_guard);
         drop(_cursor_guard);
 

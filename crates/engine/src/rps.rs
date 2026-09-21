@@ -462,6 +462,10 @@ pub fn run_rps_battle_live(
     // Transition smoothly into physical jousting battle inside the same alternate screen
     crate::battle::run_battle_live_internal(player_name, cpu_name, winner, fps, false);
 
+    // Reset margins and attributes INSIDE the alternate screen before leaving
+    let _ = io::stdout().write_all(b"\x1b[r\x1b[?6l\x1b[?69l\x1b[0m\x1b[?25h");
+    let _ = io::stdout().flush();
+
     // Drop alternate screen and cursor guards so we leave alternate screen
     drop(_alt_guard);
     drop(_cursor_guard);

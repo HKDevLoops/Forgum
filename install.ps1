@@ -14,7 +14,7 @@
     current directory, then to the latest GitHub release.
 
 .PARAMETER Channel
-    Release channel stream: 'stable', 'nightly', or 'dev'. Defaults to 'stable'.
+    Release channel stream: 'stable', 'alpha', 'nightly', or 'dev'. Defaults to 'stable'.
 
 .PARAMETER Repo
     owner/name of the GitHub repo. Defaults to HKDevLoops/Forgum.
@@ -30,13 +30,14 @@
 
 .EXAMPLE
     ./install.ps1
+    ./install.ps1 -Channel alpha
     ./install.ps1 -Channel nightly
     ./install.ps1 -Headless -Telemetry decline
 #>
 [CmdletBinding()]
 param(
     [string] $Version,
-    [ValidateSet('stable', 'nightly', 'dev', '')]
+    [ValidateSet('stable', 'alpha', 'nightly', 'dev', '')]
     [string] $Channel = 'stable',
     [string] $Repo = 'HKDevLoops/Forgum',
     [switch] $Headless,
@@ -274,13 +275,27 @@ if (Test-Path -LiteralPath $localRelease) {
         default { $arch }
     }
 
-    $candidateUrls = @(
-        "https://github.com/$Repo/releases/download/$Tag/$asset",
-        "https://github.com/$Repo/releases/download/$Tag/forgum-$Version-$targetArch-pc-windows-msvc.zip",
-        "https://github.com/$Repo/releases/download/$Tag/forgum-$Tag-$targetArch-pc-windows-msvc.zip",
-        "https://github.com/$Repo/releases/download/nightly/forgum-nightly-$targetArch-pc-windows-msvc.zip",
-        "https://github.com/$Repo/releases/latest/download/forgum-$targetArch-pc-windows-msvc.zip"
-    )
+    $candidateUrls = if ($Channel -eq 'alpha') {
+        @(
+            "https://github.com/$Repo/releases/download/alpha/forgum-alpha-$targetArch-pc-windows-msvc.zip",
+            "https://github.com/$Repo/releases/download/$Tag/$asset",
+            "https://github.com/$Repo/releases/download/$Tag/forgum-$Version-$targetArch-pc-windows-msvc.zip",
+            "https://github.com/$Repo/releases/latest/download/forgum-$targetArch-pc-windows-msvc.zip"
+        )
+    } elseif ($Channel -eq 'nightly') {
+        @(
+            "https://github.com/$Repo/releases/download/nightly/forgum-nightly-$targetArch-pc-windows-msvc.zip",
+            "https://github.com/$Repo/releases/download/$Tag/$asset",
+            "https://github.com/$Repo/releases/latest/download/forgum-$targetArch-pc-windows-msvc.zip"
+        )
+    } else {
+        @(
+            "https://github.com/$Repo/releases/download/$Tag/$asset",
+            "https://github.com/$Repo/releases/download/$Tag/forgum-$Version-$targetArch-pc-windows-msvc.zip",
+            "https://github.com/$Repo/releases/download/$Tag/forgum-$Tag-$targetArch-pc-windows-msvc.zip",
+            "https://github.com/$Repo/releases/latest/download/forgum-$targetArch-pc-windows-msvc.zip"
+        )
+    }
 
     $tmp = Join-Path ([System.IO.Path]::GetTempPath()) ("forgum-" + [guid]::NewGuid().ToString('N'))
     New-Item -ItemType Directory -Path $tmp -Force | Out-Null

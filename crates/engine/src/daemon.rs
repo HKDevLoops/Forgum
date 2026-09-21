@@ -138,14 +138,16 @@ pub fn stop_session_daemon_and_reset_margins() {
     }
 
     if had_daemon {
+        let (_, rows) = forgum_platform::terminal_size();
         let mut clean_buf = Vec::new();
-        clean_buf.extend_from_slice(b"\x1b7");
         if ob_y1 > 0 {
             for y in 1..=(ob_y1 as usize).min(60) {
                 clean_buf.extend_from_slice(format!("\x1b[{y};1H\x1b[2K").as_bytes());
             }
         }
-        clean_buf.extend_from_slice(b"\x1b[r\x1b[?6l\x1b[?69l\x1b8\x1b[0m\x1b[?25h");
+        clean_buf.extend_from_slice(b"\x1b[r\x1b[?6l\x1b[?69l\x1b[0m\x1b[?25h");
+        let target_row = ((ob_y1 + 1) as u16).min(rows.max(1));
+        clean_buf.extend_from_slice(format!("\x1b[{target_row};1H\x1b[J").as_bytes());
         let _ = std::io::Write::write_all(&mut std::io::stdout(), &clean_buf);
         let _ = std::io::Write::flush(&mut std::io::stdout());
     }

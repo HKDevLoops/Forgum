@@ -93,10 +93,7 @@ pub fn load_cow_with_landmarks(
     }
     // 3. Try compile-time embedded built-in mascot catalog (100% zero-disk resilience).
     if let Some(embedded) = forgum_platform::embedded_cows::get_embedded_cow(resolved) {
-        crate::log_debug!(
-            "cow",
-            "Loaded embedded built-in mascot '{resolved}'"
-        );
+        crate::log_debug!("cow", "Loaded embedded built-in mascot '{resolved}'");
         let (expanded, landmarks) = expand_cow_with_landmarks(embedded, eyes, tongue, thoughts);
         let final_landmarks = if landmarks.is_empty() {
             detect_cow_eyes(&expanded, 0)
@@ -157,14 +154,17 @@ pub fn resolve_cow_name(cow_name: &str, data_dir: &Path) -> String {
             return cow_name.to_string();
         }
         // Mascot not found: find closest match among available cows
-        let mut available_names: Vec<String> = forgum_platform::embedded_cows::all_embedded_cow_names()
-            .iter()
-            .map(|s| s.to_string())
-            .collect();
+        let mut available_names: Vec<String> =
+            forgum_platform::embedded_cows::all_embedded_cow_names()
+                .iter()
+                .map(|s| s.to_string())
+                .collect();
         if let Ok(rd) = std::fs::read_dir(data_dir.join("Cows")) {
             for entry in rd.flatten() {
                 let p = entry.path();
-                if p.extension().is_some_and(|ext| ext.eq_ignore_ascii_case("cow")) {
+                if p.extension()
+                    .is_some_and(|ext| ext.eq_ignore_ascii_case("cow"))
+                {
                     if let Some(stem) = p.file_stem().map(|s| s.to_string_lossy().into_owned()) {
                         if !available_names.contains(&stem) {
                             available_names.push(stem);

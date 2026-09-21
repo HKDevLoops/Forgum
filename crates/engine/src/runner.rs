@@ -198,8 +198,8 @@ pub fn run() -> ExitCode {
             render_args,
         }) => {
             let target_shell_arg = shell.unwrap_or_else(|| {
-                let detected = forgum_platform::shell::Shell::detect_current_shell()
-                    .unwrap_or(Shell::Bash);
+                let detected =
+                    forgum_platform::shell::Shell::detect_current_shell().unwrap_or(Shell::Bash);
                 match detected {
                     Shell::Bash => cli::ShellArg::Bash,
                     Shell::Zsh => cli::ShellArg::Zsh,
@@ -1024,7 +1024,11 @@ pub fn run() -> ExitCode {
                 .map(|rd| rd.filter_map(|e| e.ok()).count())
                 .unwrap_or(0);
             let embedded_count = forgum_platform::embedded_cows::embedded_cow_count();
-            let cow_count = if disk_cow_count > 0 { disk_cow_count } else { embedded_count };
+            let cow_count = if disk_cow_count > 0 {
+                disk_cow_count
+            } else {
+                embedded_count
+            };
 
             let native_plan = forgum_platform::terminal::plan_native_split(
                 caps.emulator,
@@ -1096,7 +1100,14 @@ pub fn run() -> ExitCode {
                 }
             }
             if disk_cow_count > 0 {
-                println!("Cows:       {} loaded (from disk: {})", disk_cow_count, cows_dir.as_ref().map(|p| p.display().to_string()).unwrap_or_default());
+                println!(
+                    "Cows:       {} loaded (from disk: {})",
+                    disk_cow_count,
+                    cows_dir
+                        .as_ref()
+                        .map(|p| p.display().to_string())
+                        .unwrap_or_default()
+                );
             } else {
                 println!("Cows:       {} loaded (built-in embedded)", cow_count);
             }
@@ -1883,6 +1894,9 @@ fn handle_status_command(args: &cli::Args) -> ExitCode {
         forgum_platform::ReleaseChannel::Stable => {
             "GitHub Releases (https://github.com/HKDevLoops/Forgum/releases/latest)"
         }
+        forgum_platform::ReleaseChannel::Alpha => {
+            "GitHub Alpha (https://github.com/HKDevLoops/Forgum/releases/tag/alpha)"
+        }
         forgum_platform::ReleaseChannel::Nightly => {
             "GitHub Nightly (https://github.com/HKDevLoops/Forgum/releases/tag/nightly)"
         }
@@ -2032,8 +2046,8 @@ fn handle_channel_command(action: Option<&str>, name: Option<&str>) -> ExitCode 
                 );
             }
             println!("\nUsage:");
-            println!("  forgum channel switch <stable|nightly|dev>");
-            println!("  forgum update --channel <stable|nightly|dev>");
+            println!("  forgum channel switch <stable|alpha|nightly|dev>");
+            println!("  forgum update --channel <stable|alpha|nightly|dev>");
 
             let shadows = forgum_platform::detect_shadow_installations();
             let inactive: Vec<_> = shadows.iter().filter(|s| !s.is_active).collect();
@@ -2055,7 +2069,7 @@ fn handle_channel_command(action: Option<&str>, name: Option<&str>) -> ExitCode 
     };
 
     let Some(target) = target_str else {
-        eprintln!("usage: forgum channel switch <stable|nightly|dev>");
+        eprintln!("usage: forgum channel switch <stable|alpha|nightly|dev>");
         return ExitCode::from(1);
     };
 
@@ -2149,6 +2163,83 @@ fn handle_update_command(check: bool, channel_flag: Option<&str>) -> ExitCode {
         }
     );
 
+    // Contributor & Tester Git Synchronization
+    if let Some(mut git_status) = forgum_platform::detect_git_status(channel) {
+        println!("\x1b[1;36m━━━ Git Workspace Detected (Contributor / Tester Mode) ━━━\x1b[0m");
+        println!(
+            "  • Current Branch:    \x1b[1;32m{}\x1b[0m (commit: {})",
+            git_status.branch, git_status.local_commit
+        );
+        println!(
+            "  • Target Tracking:   \x1b[1morigin/{}\x1b[0m",
+            git_status.remote_branch
+        );
+        if git_status.is_dirty {
+            println!(
+                "  • Working Directory: \x1b[1;33m⚠️  Uncommitted modifications detected\x1b[0m"
+            );
+        } else {
+            println!("  • Working Directory: \x1b[1;32m✓ Clean\x1b[0m");
+        }
+
+        print!("  • Remote Status:     Fetching updates from HKDevLoops/Forgum... ");
+        let _ = std::io::Write::flush(&mut std::io::stdout());
+
+        match forgum_platform::check_git_updates(&mut git_status) {
+            Ok(()) => {
+                if git_status.commits_behind == 0 {
+                    println!(
+                        "\x1b[1;32m✓ Up to date with origin/{}\x1b[0m",
+                        git_status.remote_branch
+                    );
+                } else {
+                    println!(
+                        "\x1b[1;33m⚠️  Behind origin/{} by {} commit(s)\x1b[0m",
+                        git_status.remote_branch, git_status.commits_behind
+                    );
+                }
+
+                if let Some(ref summary) = git_status.latest_remote_summary {
+                    println!("  • Latest Remote:     \x1b[90m{summary}\x1b[0m");
+                }
+
+                if check {
+                    if git_status.commits_behind > 0 {
+                        println!(
+                            "\nRun `forgum update` to pull latest changes and rebuild binary."
+                        );
+                    }
+                    return ExitCode::SUCCESS;
+                }
+
+                if git_status.commits_behind == 0 {
+                    println!("\n\x1b[1;32m✓ Already on latest commit. No update required.\x1b[0m");
+                    return ExitCode::SUCCESS;
+                }
+
+                println!(
+                    "\n\x1b[1;36m>> Pulling latest commits from origin/{}...\x1b[0m",
+                    git_status.remote_branch
+                );
+                match forgum_platform::execute_git_update(&git_status) {
+                    Ok(msg) => {
+                        println!("{msg}");
+                        println!("\n\x1b[1;32m✓ Tester/Contributor update completed successfully.\x1b[0m");
+                        return ExitCode::SUCCESS;
+                    }
+                    Err(err) => {
+                        eprintln!("\x1b[1;31m✗ Git update failed:\x1b[0m {err}");
+                        return ExitCode::from(1);
+                    }
+                }
+            }
+            Err(e) => {
+                println!("\x1b[1;31m✗ Could not fetch remote:\x1b[0m {e}");
+            }
+        }
+        println!();
+    }
+
     match source {
         forgum_platform::PackageManager::DirectBinary => {
             let version = env!("CARGO_PKG_VERSION");
@@ -2156,17 +2247,24 @@ fn handle_update_command(check: bool, channel_flag: Option<&str>) -> ExitCode {
                 forgum_platform::ReleaseChannel::Stable => {
                     "https://github.com/HKDevLoops/Forgum/releases/latest"
                 }
+                forgum_platform::ReleaseChannel::Alpha => {
+                    "https://github.com/HKDevLoops/Forgum/releases/tag/alpha"
+                }
                 forgum_platform::ReleaseChannel::Nightly => {
                     "https://github.com/HKDevLoops/Forgum/releases/tag/nightly"
                 }
                 forgum_platform::ReleaseChannel::Dev => {
-                    "Local git repository (compile with `cargo build --release`)"
+                    "https://github.com/HKDevLoops/Forgum/tree/dev"
                 }
             };
+            let channel_name = channel.as_str();
             println!(
                 "Forgum v{version} is running as a Standalone Binary.\n\
                  Target stream for channel {channel}:\n\
                  {channel_stream}\n\n\
+                 Instant update commands for testers and contributors:\n\
+                   PowerShell: irm https://raw.githubusercontent.com/HKDevLoops/Forgum/{channel_name}/install.ps1 | iex\n\
+                   Bash/Zsh:   curl -fsSL https://raw.githubusercontent.com/HKDevLoops/Forgum/{channel_name}/install.sh | bash -s -- --channel {channel_name}\n\n\
                  To install or update via an official package manager:\n\
                    Scoop:  scoop update forgum\n\
                    WinGet: winget upgrade HKDevLoops.Forgum\n\
@@ -2275,26 +2373,11 @@ fn handle_stop_command(all: bool, force: bool) -> ExitCode {
     }
 
     // 3. Complete space reservation and terminal margins reset
-    let (_, height) = forgum_platform::terminal_size();
     let mut clean_buf = Vec::new();
-    if max_ob_y1 > 0 {
-        let clear_rows = (max_ob_y1 as usize).min(height as usize);
-        clean_buf.extend_from_slice(b"\x1b7");
-        for y in 1..=clear_rows {
-            clean_buf.extend_from_slice(format!("\x1b[{y};1H\x1b[2K").as_bytes());
-        }
-        clean_buf.extend_from_slice(b"\x1b[r\x1b[?6l\x1b[?69l\x1b8\x1b[0m\x1b[?25h");
-    } else if stopped_count > 0 {
-        let clear_rows = (height as usize).min(16);
-        clean_buf.extend_from_slice(b"\x1b7");
-        for y in 1..=clear_rows {
-            clean_buf.extend_from_slice(format!("\x1b[{y};1H\x1b[2K").as_bytes());
-        }
-        clean_buf.extend_from_slice(b"\x1b[r\x1b[?6l\x1b[?69l\x1b8\x1b[0m\x1b[?25h");
-    } else {
-        // Reset margins cleanly without destroying existing terminal scrollback lines
-        clean_buf.extend_from_slice(b"\x1b[r\x1b[?6l\x1b[?69l\x1b8\x1b[0m\x1b[?25h");
-    }
+    // Unconditionally reset DECSTBM scroll margins, origin mode, and DECSLRM
+    clean_buf.extend_from_slice(b"\x1b[r\x1b[?6l\x1b[?69l\x1b[0m\x1b[?25h");
+    // Clear entire visible screen and home cursor so no old commands are left to be overwritten
+    clean_buf.extend_from_slice(b"\x1b[2J\x1b[1;1H");
     let _ = std::io::Write::write_all(&mut std::io::stdout(), &clean_buf);
     let _ = std::io::Write::flush(&mut std::io::stdout());
 
@@ -2302,9 +2385,9 @@ fn handle_stop_command(all: bool, force: bool) -> ExitCode {
     let _ = crossterm::terminal::disable_raw_mode();
 
     if stopped_count > 0 {
-        println!("forgum: stopped {stopped_count} running animation(s), terminal margins and reserved space reset.");
+        println!("forgum: stopped {stopped_count} running animation(s), terminal margins and space reset.");
     } else {
-        println!("forgum: pasture cleared; terminal margins and reserved space reset.");
+        println!("forgum: pasture cleared; terminal margins and space reset.");
     }
 
     ExitCode::SUCCESS

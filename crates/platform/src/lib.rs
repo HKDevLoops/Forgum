@@ -69,10 +69,11 @@ pub use guards::{AltScreenGuard, CursorShowGuard, RawModeGuard};
 pub use mux::{detect_mux, Mux};
 pub use output::{open_output, OutputHandle, OutputTarget};
 pub use package_manager::{
-    atomic_replace_binary, detect_available_package_managers, detect_installation_source,
-    detect_shadow_installations, detect_source_from_path, execute_package_manager_action,
-    read_receipt, record_receipt, rollback_binary, write_receipt, PackageManager, Receipt,
-    ReleaseChannel, ShadowInstallation,
+    atomic_replace_binary, check_git_updates, detect_available_package_managers, detect_git_status,
+    detect_installation_source, detect_shadow_installations, detect_source_from_path,
+    execute_git_update, execute_package_manager_action, read_receipt, record_receipt,
+    rollback_binary, write_receipt, GitRepoStatus, PackageManager, Receipt, ReleaseChannel,
+    ShadowInstallation,
 };
 pub use paths::{
     config_dir, config_path, control_socket_path, daemon_state_path, data_dir, detect_config_file,

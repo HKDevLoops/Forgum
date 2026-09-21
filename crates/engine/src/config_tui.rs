@@ -12,9 +12,6 @@
 extern crate forgum_tui;
 
 #[cfg(feature = "tui")]
-const FULL_VT_RESET_SEQ: &[u8] =
-    b"\x1b[r\x1b[?6l\x1b[?69l\x1b[?7h\x1b[0m\x1b[?25h\x1b[?1000l\x1b[?1002l\x1b[?1003l\x1b[?1006l\x1b[?1015l\x1b[?2004l";
-
 /// Open the interactive config TUI for the specified file path.
 ///
 /// Returns `0` on success, `1` on error / unavailable build.
@@ -29,8 +26,6 @@ pub fn run(path: &std::path::Path) -> i32 {
                 1
             }
         };
-        let _ = std::io::Write::write_all(&mut std::io::stdout(), FULL_VT_RESET_SEQ);
-        let _ = std::io::Write::flush(&mut std::io::stdout());
         code
     }
     #[cfg(not(feature = "tui"))]
@@ -58,8 +53,6 @@ pub fn run_standalone(initial_tab: Option<&str>) -> i32 {
                 1
             }
         };
-        let _ = std::io::Write::write_all(&mut std::io::stdout(), FULL_VT_RESET_SEQ);
-        let _ = std::io::Write::flush(&mut std::io::stdout());
         code
     }
     #[cfg(not(feature = "tui"))]
@@ -87,8 +80,6 @@ pub fn run_installer_wizard() -> i32 {
                 1
             }
         };
-        let _ = std::io::Write::write_all(&mut std::io::stdout(), FULL_VT_RESET_SEQ);
-        let _ = std::io::Write::flush(&mut std::io::stdout());
         code
     }
     #[cfg(not(feature = "tui"))]
@@ -115,8 +106,6 @@ pub fn run_uninstaller_wizard() -> i32 {
                 1
             }
         };
-        let _ = std::io::Write::write_all(&mut std::io::stdout(), FULL_VT_RESET_SEQ);
-        let _ = std::io::Write::flush(&mut std::io::stdout());
         code
     }
     #[cfg(not(feature = "tui"))]

@@ -870,13 +870,15 @@ fn render_thread(mut state: RenderState, frame_rx: Receiver<Arc<Frame>>, shutdow
             .write_all(format!("\x1b8\x1b[{}B\r\x1b[0m\x1b[?25h\n", state.banner_rows).as_bytes());
     } else if state.is_overlay {
         let mut clean_buf = Vec::new();
-        clean_buf.extend_from_slice(b"\x1b7");
         for y in 1..=state.overlay_rows {
             clean_buf.extend_from_slice(format!("\x1b[{y};1H\x1b[2K").as_bytes());
         }
         // Unconditionally reset DECSTBM scroll margins, origin mode, and DECSLRM
         // so reserved terminal rows are completely restored for subsequent applications.
-        clean_buf.extend_from_slice(b"\x1b[r\x1b[?6l\x1b[?69l\x1b8\x1b[0m\x1b[?25h");
+        clean_buf.extend_from_slice(b"\x1b[r\x1b[?6l\x1b[?69l\x1b[0m\x1b[?25h");
+        // Clear space below and position cursor cleanly on the first unreserved row
+        let prompt_row = (state.overlay_rows + 1).min(state.rows);
+        clean_buf.extend_from_slice(format!("\x1b[{prompt_row};1H\x1b[J").as_bytes());
         let _ = state.out.write_all(&clean_buf);
     } else {
         let _ = state

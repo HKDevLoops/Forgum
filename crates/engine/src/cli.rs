@@ -412,17 +412,17 @@ pub enum Commands {
         /// Only check for updates without modifying the system.
         #[arg(long)]
         check: bool,
-        /// Target release channel to update or switch to (stable, nightly, dev).
+        /// Target release channel to update or switch to (stable, alpha, nightly, dev).
         #[arg(long, value_name = "CHANNEL")]
         channel: Option<String>,
     },
-    /// View, switch, or manage release channels (stable, nightly, dev).
+    /// View, switch, or manage release channels (stable, alpha, nightly, dev).
     #[command(alias = "channels")]
     Channel {
         /// Action: 'get', 'set', 'list', 'switch', or target channel name directly.
         #[arg(value_name = "ACTION")]
         action: Option<String>,
-        /// Channel name when action is 'set' or 'switch' (stable, nightly, dev).
+        /// Channel name when action is 'set' or 'switch' (stable, alpha, nightly, dev).
         #[arg(value_name = "NAME")]
         name: Option<String>,
     },
@@ -644,6 +644,7 @@ pub enum Commands {
         alias = "halt",
         alias = "reset",
         alias = "unreserve",
+        alias = "clear",
         alias = "clear-margins",
         alias = "clear_margins"
     )]

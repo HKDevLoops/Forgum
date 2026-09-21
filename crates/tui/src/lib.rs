@@ -16,17 +16,29 @@ use crate::app::{ConfigApp, Tab};
 pub use wizard::{run_installer_wizard, run_uninstaller_wizard};
 
 /// Complete ANSI / VT terminal restoration sequence to guarantee
-/// scroll margins, cursor, mouse modes, and attributes are reset.
+/// mouse modes, bracketed paste, auto-wrap, and cursor attributes are cleanly restored.
+///
+/// NOTE: We explicitly DO NOT send `\x1b[r` (DECSTBM margin reset) on the primary screen,
+/// because ECMA-48/VT standards specify that `\x1b[r` moves the cursor to (1, 1), which
+/// would corrupt the primary screen cursor position and cause subsequent shell commands
+/// to overwrite existing terminal contents.
 pub const FULL_VT_RESET_SEQ: &[u8] =
-    b"\x1b[r\x1b[?6l\x1b[?69l\x1b[?7h\x1b[0m\x1b[?25h\x1b[?1000l\x1b[?1002l\x1b[?1003l\x1b[?1006l\x1b[?1015l\x1b[?2004l";
+    b"\x1b[?7h\x1b[0m\x1b[?25h\x1b[?1000l\x1b[?1002l\x1b[?1003l\x1b[?1006l\x1b[?1015l\x1b[?2004l";
 
 /// Restores the terminal cleanly from raw mode, mouse capture, and alternate screen.
 pub fn restore_terminal_cleanly() {
+    // 1. Reset margins and attributes INSIDE the alternate screen before leaving
+    let _ = io::stdout().write_all(b"\x1b[r\x1b[?6l\x1b[?69l\x1b[0m\x1b[?25h");
+    let _ = io::stdout().flush();
+
+    // 2. Disable mouse capture and leave alternate screen, cleanly restoring primary screen & cursor
     let _ = crossterm::execute!(
         io::stdout(),
         crossterm::event::DisableMouseCapture,
         crossterm::terminal::LeaveAlternateScreen
     );
+
+    // 3. Reset primary terminal modes without touching scroll margins or cursor position
     let _ = io::stdout().write_all(FULL_VT_RESET_SEQ);
     let _ = io::stdout().flush();
     let _ = crossterm::terminal::disable_raw_mode();

@@ -199,7 +199,7 @@ __forgum_preexec() {{
       kill "$pid" 2>/dev/null
     fi
     rm -f "$state"
-    printf '\x1b[r'
+    printf '\x1b7\x1b[r\x1b8'
   fi
 }}
 trap '__forgum_preexec' DEBUG 2>/dev/null
@@ -213,10 +213,10 @@ __forgum_precmd() {{
     if [ -n "$pid" ] && ! kill -0 "$pid" 2>/dev/null; then
       local rows; rows=$(awk -F'"' '/ob_y1/{{print $4}}' "$state" 2>/dev/null || echo 0)
       local cols=${{COLUMNS:-80}}
-      printf '\x1b7'
       local y=1; while [ "$y" -le "$rows" ]; do printf '\x1b[%d;1H%*s' "$y" "$cols" ''; y=$((y+1)); done
+      local next_row=$((rows + 1))
       printf '\x1b[r'
-      printf '\x1b8\x1b[0m'
+      printf '\x1b[?6l\x1b[?69l\x1b[0m\x1b[?25h\x1b[%d;1H\x1b[J' "$next_row"
       rm -f "$state"
     fi
   fi
@@ -329,10 +329,10 @@ __forgum_precmd() {{
     if [ -n "$pid" ] && ! kill -0 "$pid" 2>/dev/null; then
       local rows; rows=$(awk -F'"' '/ob_y1/{{print $4}}' "$state" 2>/dev/null || echo 0)
       local cols=${{COLUMNS:-80}}
-      printf '\x1b7'
       local y=1; while [ "$y" -le "$rows" ]; do printf '\x1b[%d;1H%*s' "$y" "$cols" ''; y=$((y+1)); done
+      local next_row=$((rows + 1))
       printf '\x1b[r'
-      printf '\x1b8\x1b[0m'
+      printf '\x1b[?6l\x1b[?69l\x1b[0m\x1b[?25h\x1b[%d;1H\x1b[J' "$next_row"
       rm -f "$state"
     fi
   fi
@@ -369,7 +369,7 @@ __forgum_preexec() {{
       kill "$pid" 2>/dev/null
     fi
     rm -f "$state"
-    printf '\x1b[r'
+    printf '\x1b7\x1b[r\x1b8'
   fi
 }}
 autoload -Uz add-zsh-hook 2>/dev/null
@@ -454,7 +454,7 @@ function __forgum_preexec --on-event fish_preexec
             kill $pid 2>/dev/null
         end
         rm -f $state
-        printf '\x1b[r'
+        printf '\x1b7\x1b[r\x1b8'
     end
 end
 
@@ -466,10 +466,10 @@ function __forgum_sweep --on-event fish_prompt
         if test -n "$pid"; and not kill -0 $pid 2>/dev/null
             set rows (awk -F'"' '/ob_y1/{{print $4}}' $state 2>/dev/null; or echo 0)
             set cols $COLUMNS
-            printf '\x1b7'
             for y in (seq 1 $rows); printf '\x1b[%d;1H%*s' $y $cols ''; end
+            set -l next_row (math $rows + 1)
             printf '\x1b[r'
-            printf '\x1b8\x1b[0m'
+            printf '\x1b[?6l\x1b[?69l\x1b[0m\x1b[?25h\x1b[%d;1H\x1b[J' $next_row
             rm -f $state
         end
     end

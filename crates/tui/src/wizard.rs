@@ -167,10 +167,14 @@ impl InstallerWizard {
                 }
                 KeyCode::Char('2') => {
                     self.channel_selection_idx = 1;
-                    self.selected_channel = ReleaseChannel::Nightly;
+                    self.selected_channel = ReleaseChannel::Alpha;
                 }
                 KeyCode::Char('3') => {
                     self.channel_selection_idx = 2;
+                    self.selected_channel = ReleaseChannel::Nightly;
+                }
+                KeyCode::Char('4') => {
+                    self.channel_selection_idx = 3;
                     self.selected_channel = ReleaseChannel::Dev;
                 }
                 KeyCode::Enter | KeyCode::Char(' ') | KeyCode::Down => {

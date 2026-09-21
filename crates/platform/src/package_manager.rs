@@ -443,17 +443,19 @@ pub fn execute_package_manager_action(
 pub enum ReleaseChannel {
     #[default]
     Stable,
+    Alpha,
     Nightly,
     Dev,
 }
 
 impl ReleaseChannel {
-    pub const ALL: &[Self] = &[Self::Stable, Self::Nightly, Self::Dev];
+    pub const ALL: &[Self] = &[Self::Stable, Self::Alpha, Self::Nightly, Self::Dev];
 
     #[must_use]
     pub const fn as_str(&self) -> &'static str {
         match self {
             Self::Stable => "stable",
+            Self::Alpha => "alpha",
             Self::Nightly => "nightly",
             Self::Dev => "dev",
         }
@@ -463,6 +465,7 @@ impl ReleaseChannel {
     pub const fn display_name(&self) -> &'static str {
         match self {
             Self::Stable => "Stable (main releases)",
+            Self::Alpha => "Alpha (early testing / dev branch)",
             Self::Nightly => "Nightly (bleeding edge)",
             Self::Dev => "Dev (local / git build)",
         }
@@ -472,6 +475,9 @@ impl ReleaseChannel {
     pub const fn description(&self) -> &'static str {
         match self {
             Self::Stable => "Official release builds with maximum stability and verified features.",
+            Self::Alpha => {
+                "Pre-release builds tracking the dev/alpha branch for early testing and contributors."
+            }
             Self::Nightly => {
                 "Automated continuous releases with latest enhancements and early fixes."
             }
@@ -492,10 +498,11 @@ impl std::str::FromStr for ReleaseChannel {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.trim().to_ascii_lowercase().as_str() {
             "stable" | "main" | "release" | "prod" => Ok(Self::Stable),
+            "alpha" | "test" | "testing" => Ok(Self::Alpha),
             "nightly" | "edge" | "preview" => Ok(Self::Nightly),
             "dev" | "develop" | "local" => Ok(Self::Dev),
             other => Err(PlatformError::InvalidArgument(format!(
-                "invalid release channel '{other}'. Valid channels: stable, nightly, dev"
+                "invalid release channel '{other}'. Valid channels: stable, alpha, nightly, dev"
             ))),
         }
     }
@@ -905,6 +912,206 @@ pub fn rollback_binary(target_exe: &Path) -> Result<(), PlatformError> {
     Ok(())
 }
 
+/// Detailed status of a local Git repository tracking Forgum development.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct GitRepoStatus {
+    pub is_git_repo: bool,
+    pub branch: String,
+    pub local_commit: String,
+    pub remote_branch: String,
+    pub commits_behind: usize,
+    pub commits_ahead: usize,
+    pub is_dirty: bool,
+    pub latest_remote_summary: Option<String>,
+}
+
+/// Detect whether the current directory or workspace is inside a Git repository.
+#[must_use]
+pub fn detect_git_status(target_channel: ReleaseChannel) -> Option<GitRepoStatus> {
+    if !is_cmd_available("git") {
+        return None;
+    }
+
+    let Ok(out) = Command::new("git")
+        .args(["rev-parse", "--is-inside-work-tree"])
+        .output()
+    else {
+        return None;
+    };
+    if !out.status.success() || String::from_utf8_lossy(&out.stdout).trim() != "true" {
+        return None;
+    }
+
+    let branch = Command::new("git")
+        .args(["rev-parse", "--abbrev-ref", "HEAD"])
+        .output()
+        .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
+        .unwrap_or_else(|_| "HEAD".to_string());
+
+    let local_commit = Command::new("git")
+        .args(["rev-parse", "--short", "HEAD"])
+        .output()
+        .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
+        .unwrap_or_else(|_| "unknown".to_string());
+
+    let is_dirty = Command::new("git")
+        .args(["status", "--porcelain"])
+        .output()
+        .map(|o| !String::from_utf8_lossy(&o.stdout).trim().is_empty())
+        .unwrap_or(false);
+
+    let remote_branch = match target_channel {
+        ReleaseChannel::Dev => "dev".to_string(),
+        ReleaseChannel::Alpha => {
+            if branch == "alpha" {
+                "alpha".to_string()
+            } else {
+                "dev".to_string()
+            }
+        }
+        ReleaseChannel::Stable => "main".to_string(),
+        ReleaseChannel::Nightly => "dev".to_string(),
+    };
+
+    Some(GitRepoStatus {
+        is_git_repo: true,
+        branch,
+        local_commit,
+        remote_branch,
+        commits_behind: 0,
+        commits_ahead: 0,
+        is_dirty,
+        latest_remote_summary: None,
+    })
+}
+
+/// Fetch remote status and compute behind/ahead commit counts against HKDevLoops/Forgum.
+pub fn check_git_updates(status: &mut GitRepoStatus) -> Result<(), String> {
+    if !is_cmd_available("git") {
+        return Err("git CLI tool is not available in PATH".to_string());
+    }
+
+    let _ = Command::new("git")
+        .args(["fetch", "--quiet", "origin", &status.remote_branch])
+        .output();
+
+    let target_ref = format!("origin/{}", status.remote_branch);
+
+    let behind_range = format!("HEAD..{target_ref}");
+    if let Ok(out) = Command::new("git")
+        .args(["rev-list", "--count", &behind_range])
+        .output()
+    {
+        if out.status.success() {
+            status.commits_behind = String::from_utf8_lossy(&out.stdout)
+                .trim()
+                .parse::<usize>()
+                .unwrap_or(0);
+        }
+    }
+
+    let ahead_range = format!("{target_ref}..HEAD");
+    if let Ok(out) = Command::new("git")
+        .args(["rev-list", "--count", &ahead_range])
+        .output()
+    {
+        if out.status.success() {
+            status.commits_ahead = String::from_utf8_lossy(&out.stdout)
+                .trim()
+                .parse::<usize>()
+                .unwrap_or(0);
+        }
+    }
+
+    if let Ok(out) = Command::new("git")
+        .args(["log", "-n", "1", "--format=%h %s (%cr)", &target_ref])
+        .output()
+    {
+        if out.status.success() {
+            let summary = String::from_utf8_lossy(&out.stdout).trim().to_string();
+            if !summary.is_empty() {
+                status.latest_remote_summary = Some(summary);
+            }
+        }
+    }
+
+    Ok(())
+}
+
+/// Pull latest commits fast-forward and rebuild release binary via cargo if available.
+pub fn execute_git_update(status: &GitRepoStatus) -> Result<String, String> {
+    if status.is_dirty {
+        return Err(
+            "Working tree has uncommitted local changes. Please stash or commit them before updating:\n  git stash"
+                .to_string(),
+        );
+    }
+
+    let target_ref = &status.remote_branch;
+
+    let pull_out = Command::new("git")
+        .args(["pull", "--ff-only", "origin", target_ref])
+        .output()
+        .map_err(|e| format!("Failed to invoke `git pull`: {e}"))?;
+
+    if !pull_out.status.success() {
+        let stderr = String::from_utf8_lossy(&pull_out.stderr).to_string();
+        return Err(format!("`git pull` failed:\n{}", stderr.trim()));
+    }
+
+    let mut result_msg = String::from_utf8_lossy(&pull_out.stdout).trim().to_string();
+
+    let new_commit = Command::new("git")
+        .args(["rev-parse", "--short", "HEAD"])
+        .output()
+        .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
+        .unwrap_or_else(|_| "unknown".to_string());
+
+    result_msg.push_str(&format!(
+        "\nLocal branch is now synchronized at commit \x1b[1;32m{new_commit}\x1b[0m."
+    ));
+
+    if is_cmd_available("cargo") {
+        result_msg.push_str(
+            "\n\x1b[36m>> Compiling release binary (`cargo build --release --bin forgum`)...\x1b[0m",
+        );
+        let build_out = Command::new("cargo")
+            .args([
+                "build",
+                "--release",
+                "-p",
+                "forgum-engine",
+                "--bin",
+                "forgum",
+            ])
+            .output();
+
+        match build_out {
+            Ok(bo) if bo.status.success() => {
+                result_msg.push_str(
+                    "\n\x1b[1;32m✓ Successfully rebuilt forgum binary to latest commit!\x1b[0m",
+                );
+            }
+            Ok(bo) => {
+                let err = String::from_utf8_lossy(&bo.stderr);
+                result_msg.push_str(&format!(
+                    "\n\x1b[1;33m⚠️  Binary rebuild returned non-zero. Run manually: `cargo build --release`\n{}\x1b[0m",
+                    err.lines().take(5).collect::<Vec<_>>().join("\n")
+                ));
+            }
+            Err(e) => {
+                result_msg.push_str(&format!("\n\x1b[1;33m⚠️  Could not run cargo: {e}\x1b[0m"));
+            }
+        }
+    } else {
+        result_msg.push_str(
+            "\n\x1b[90m(Install Rust/cargo to auto-compile binaries: https://rustup.rs)\x1b[0m",
+        );
+    }
+
+    Ok(result_msg)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -995,6 +1202,7 @@ mod tests {
     fn release_channel_parse_and_display() {
         assert_eq!(ReleaseChannel::default(), ReleaseChannel::Stable);
         assert_eq!(ReleaseChannel::Stable.as_str(), "stable");
+        assert_eq!(ReleaseChannel::Alpha.as_str(), "alpha");
         assert_eq!(ReleaseChannel::Nightly.as_str(), "nightly");
         assert_eq!(ReleaseChannel::Dev.as_str(), "dev");
 
@@ -1005,6 +1213,14 @@ mod tests {
         assert_eq!(
             "main".parse::<ReleaseChannel>().unwrap(),
             ReleaseChannel::Stable
+        );
+        assert_eq!(
+            "alpha".parse::<ReleaseChannel>().unwrap(),
+            ReleaseChannel::Alpha
+        );
+        assert_eq!(
+            "test".parse::<ReleaseChannel>().unwrap(),
+            ReleaseChannel::Alpha
         );
         assert_eq!(
             "nightly".parse::<ReleaseChannel>().unwrap(),
