@@ -9,7 +9,6 @@
 
 use std::fs::{self, OpenOptions};
 use std::io::{BufRead, BufReader, Write};
-use std::sync::Mutex;
 
 use chrono::Local;
 use serde::{Deserialize, Serialize};
@@ -91,12 +90,18 @@ impl LogEntry {
 }
 
 use std::sync::atomic::{AtomicU8, Ordering};
+use std::sync::{mpsc, OnceLock};
 
 /// Global minimum log level threshold. Defaults to LogLevel::Info (2).
 static LOG_THRESHOLD: AtomicU8 = AtomicU8::new(LogLevel::Info as u8);
 
-/// Global logger lock to prevent write interleaving across threads.
-static LOG_LOCK: Mutex<()> = Mutex::new(());
+/// Bounded async log channel sender — initialized once on first log call.
+/// Using OnceLock so the background thread is only spawned when actually needed.
+static LOG_SENDER: OnceLock<mpsc::SyncSender<LogEntry>> = OnceLock::new();
+
+/// Maximum queued log entries before new entries are silently dropped (backpressure).
+/// At INFO level during idle this is never hit; prevents render stalls during bursts.
+const LOG_CHANNEL_CAPACITY: usize = 512;
 
 /// Set minimum logging severity threshold.
 pub fn set_min_log_level(level: LogLevel) {
@@ -122,12 +127,112 @@ pub fn get_min_log_level() -> LogLevel {
     }
 }
 
+/// Get or initialize the background log writer channel.
+/// On first call, spawns a daemon thread that owns persistent BufWriters to both log files.
+fn get_log_sender() -> &'static mpsc::SyncSender<LogEntry> {
+    LOG_SENDER.get_or_init(|| {
+        let (tx, rx) = mpsc::sync_channel::<LogEntry>(LOG_CHANNEL_CAPACITY);
+
+        std::thread::Builder::new()
+            .name("forgum-log-writer".into())
+            .spawn(move || {
+                use std::io::BufWriter;
+
+                let Ok(log_dir) = forgum_platform::log_dir() else {
+                    // Can't get log dir — consume and discard all messages
+                    for _ in rx {}
+                    return;
+                };
+
+                let _ = fs::create_dir_all(&log_dir);
+                const MAX_LOG_SIZE: u64 = 10 * 1024 * 1024; // 10 MB
+
+                // Open both log files once, keep them alive for the process lifetime.
+                let text_path = log_dir.join("forgum.log");
+                let jsonl_path = log_dir.join("forgum.jsonl");
+
+                let mut text_writer: Option<BufWriter<fs::File>> = OpenOptions::new()
+                    .create(true)
+                    .append(true)
+                    .open(&text_path)
+                    .ok()
+                    .map(BufWriter::new);
+                let mut jsonl_writer: Option<BufWriter<fs::File>> = OpenOptions::new()
+                    .create(true)
+                    .append(true)
+                    .open(&jsonl_path)
+                    .ok()
+                    .map(BufWriter::new);
+
+                for entry in rx {
+                    // --- Log rotation check (cheap stat, amortized) ---
+                    if let Ok(meta) = fs::metadata(&text_path) {
+                        if meta.len() > MAX_LOG_SIZE {
+                            drop(text_writer.take());
+                            let _ = fs::rename(&text_path, log_dir.join("forgum.log.1"));
+                            text_writer = OpenOptions::new()
+                                .create(true)
+                                .append(true)
+                                .open(&text_path)
+                                .ok()
+                                .map(BufWriter::new);
+                        }
+                    }
+                    if let Ok(meta) = fs::metadata(&jsonl_path) {
+                        if meta.len() > MAX_LOG_SIZE {
+                            drop(jsonl_writer.take());
+                            let _ = fs::rename(&jsonl_path, log_dir.join("forgum.jsonl.1"));
+                            jsonl_writer = OpenOptions::new()
+                                .create(true)
+                                .append(true)
+                                .open(&jsonl_path)
+                                .ok()
+                                .map(BufWriter::new);
+                        }
+                    }
+
+                    // --- Write text log line ---
+                    // Reconstruct timestamp_human from ISO timestamp (truncate to milliseconds)
+                    let ts_human = entry.timestamp.get(..23).unwrap_or(&entry.timestamp);
+                    if let Some(ref mut w) = text_writer {
+                        let mut line = format!(
+                            "[{}] [{:<5}] [{}] {}",
+                            ts_human, entry.level, entry.target, entry.message
+                        );
+                        if let Some(ref uh) = entry.user_hint {
+                            line.push_str(&format!(" [USER: {uh}]"));
+                        }
+                        if let Some(ref dh) = entry.developer_hint {
+                            line.push_str(&format!(" [DEV: {dh}]"));
+                        }
+                        let _ = writeln!(w, "{line}");
+                        let _ = w.flush();
+                    }
+
+                    // --- Write JSONL line ---
+                    if let Some(ref mut w) = jsonl_writer {
+                        if let Ok(json) = serde_json::to_string(&entry) {
+                            let _ = writeln!(w, "{json}");
+                            let _ = w.flush();
+                        }
+                    }
+                }
+            })
+            .expect("forgum-log-writer thread failed to spawn");
+
+        tx
+    })
+}
+
 /// Log a message at the given level and target.
 pub fn log(level: LogLevel, target: &str, message: &str) {
     log_diagnostic(level, target, message, None, None);
 }
 
 /// Log a structured message with explicit user remediation hint and developer context.
+/// This function is **non-blocking**: the message is sent to a background writer thread
+/// via a bounded channel. If the channel is full (512 pending entries) the message
+/// is silently dropped rather than blocking the caller (e.g. the render loop).
 pub fn log_diagnostic(
     level: LogLevel,
     target: &str,
@@ -141,7 +246,6 @@ pub fn log_diagnostic(
     }
 
     let now = Local::now();
-    let timestamp_human = now.format("%Y-%m-%d %H:%M:%S%.3f").to_string();
     let timestamp_iso = now.to_rfc3339();
 
     let entry = LogEntry {
@@ -153,64 +257,8 @@ pub fn log_diagnostic(
         developer_hint: developer_hint.map(|s| s.to_string()),
     };
 
-    let Ok(log_dir) = forgum_platform::log_dir() else {
-        return;
-    };
-
-    let Ok(_guard) = LOG_LOCK.lock() else {
-        return;
-    };
-
-    if !log_dir.is_dir() {
-        let _ = fs::create_dir_all(&log_dir);
-    }
-
-    const MAX_LOG_SIZE: u64 = 10 * 1024 * 1024; // 10 MB
-
-    // 1. Text log: [2026-08-20 11:00:00.123] [INFO] [target] Message (Hint: ...)
-    let text_path = log_dir.join("forgum.log");
-    if let Ok(meta) = fs::metadata(&text_path) {
-        if meta.len() > MAX_LOG_SIZE {
-            let _ = fs::rename(&text_path, log_dir.join("forgum.log.1"));
-        }
-    }
-    if let Ok(mut file) = OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(&text_path)
-    {
-        let mut line = format!(
-            "[{}] [{:<5}] [{}] {}",
-            timestamp_human,
-            level.as_str(),
-            target,
-            message
-        );
-        if let Some(ref uh) = entry.user_hint {
-            line.push_str(&format!(" [USER: {uh}]"));
-        }
-        if let Some(ref dh) = entry.developer_hint {
-            line.push_str(&format!(" [DEV: {dh}]"));
-        }
-        let _ = writeln!(file, "{line}");
-    }
-
-    // 2. JSONL log: {"timestamp":"...","level":"...","target":"...","message":"...", ...}
-    let jsonl_path = log_dir.join("forgum.jsonl");
-    if let Ok(meta) = fs::metadata(&jsonl_path) {
-        if meta.len() > MAX_LOG_SIZE {
-            let _ = fs::rename(&jsonl_path, log_dir.join("forgum.jsonl.1"));
-        }
-    }
-    if let Ok(mut file) = OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(&jsonl_path)
-    {
-        if let Ok(json) = serde_json::to_string(&entry) {
-            let _ = writeln!(file, "{json}");
-        }
-    }
+    // Fire-and-forget: try_send never blocks — drops silently on full channel.
+    let _ = get_log_sender().try_send(entry);
 }
 
 #[macro_export]
@@ -313,13 +361,12 @@ pub fn get_log_paths() -> Option<(std::path::PathBuf, std::path::PathBuf, std::p
 }
 
 /// Clear / truncate existing log files.
+/// Note: The background writer thread owns the file handles; this truncates at the OS level.
+/// A small window exists where a log entry may be written after truncation — this is acceptable.
 pub fn clear_logs() -> Result<(), std::io::Error> {
     let log_dir = match forgum_platform::log_dir() {
         Ok(d) => d,
         Err(_) => return Ok(()),
-    };
-    let Ok(_guard) = LOG_LOCK.lock() else {
-        return Ok(());
     };
 
     let text_path = log_dir.join("forgum.log");
