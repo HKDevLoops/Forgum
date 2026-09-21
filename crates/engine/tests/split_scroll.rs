@@ -17,15 +17,15 @@ fn compute_reserved_dimensions_width_consciousness_ultrawide() {
         ..Default::default()
     };
 
-    // Ultrawide viewport (>= 160 cols): expansive canvas
+    // Ultrawide viewport (>= 160 cols): locked fixed-size canvas
     let (cols, rows) = compute_reserved_dimensions(200, 50, 8, &config);
     assert_eq!(cols, 200);
-    // target = mascot_lines(8).max(12).min(50 * 40 / 100 = 20) -> 12, clamped in 6..=22
-    assert_eq!(rows, 12);
+    // Locked to FIXED_SPLIT_ANIM_ROWS (10), confining shell prompt to remaining space
+    assert_eq!(rows, 10);
 
-    // Ultrawide with taller mascot (16 lines)
+    // Ultrawide with taller mascot: locked fixed-size canvas
     let (_, rows_tall) = compute_reserved_dimensions(200, 60, 16, &config);
-    assert_eq!(rows_tall, 16);
+    assert_eq!(rows_tall, 10);
 }
 
 #[test]
@@ -35,14 +35,13 @@ fn compute_reserved_dimensions_tall_mascot_adaptive_sizing() {
         ..Default::default()
     };
 
-    // Charizard / tall mascots (41 lines including bubble and road clearance) in standard widescreen
+    // Charizard / tall mascots: locked fixed-size canvas
     let (_, rows_tall) = compute_reserved_dimensions(140, 60, 41, &config);
-    // Preserves full 41 rows without arbitrary 22-row clipping, leaving 19 rows for shell prompt
-    assert_eq!(rows_tall, 41);
+    assert_eq!(rows_tall, 10);
 
-    // In a vertically constrained terminal (35 rows), safe prompt headroom (35 - 4 = 31) bounds reservation cleanly
+    // In a vertically constrained terminal (35 rows): locked fixed-size canvas
     let (_, rows_constrained) = compute_reserved_dimensions(140, 35, 41, &config);
-    assert_eq!(rows_constrained, 31);
+    assert_eq!(rows_constrained, 10);
 }
 
 #[test]
@@ -55,7 +54,7 @@ fn compute_reserved_dimensions_width_consciousness_standard() {
     // Standard widescreen viewport (100..159 cols)
     let (cols, rows) = compute_reserved_dimensions(120, 40, 8, &config);
     assert_eq!(cols, 120);
-    // target = mascot_lines(8).max(10).min(40 * 38 / 100 = 15) -> 10, clamped in 6..=22
+    // Locked to FIXED_SPLIT_ANIM_ROWS (10)
     assert_eq!(rows, 10);
 }
 
@@ -69,9 +68,8 @@ fn compute_reserved_dimensions_width_consciousness_compact() {
     // Compact terminal (< 100 cols, e.g. 80x24 standard terminal)
     let (cols, rows) = compute_reserved_dimensions(80, 24, 8, &config);
     assert_eq!(cols, 80);
-    // target = mascot_lines(8).max(8).min(24 * 35 / 100 = 8) -> 8
-    // Safe prompt headroom: 24 - 4 = 20, so 8 is within bounds
-    assert_eq!(rows, 8);
+    // Locked to FIXED_SPLIT_ANIM_ROWS (10)
+    assert_eq!(rows, 10);
 }
 
 #[test]
