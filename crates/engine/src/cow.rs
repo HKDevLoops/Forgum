@@ -1611,7 +1611,12 @@ mod tests {
         let tmp = std::env::temp_dir().join("forgum_test_cow_resolve_empty");
         let cows = tmp.join("Cows");
         let _ = std::fs::create_dir_all(&cows);
-        assert_eq!(resolve_cow_name("random", &tmp), "default");
+        let name = resolve_cow_name("random", &tmp);
+        // With zero-disk embedded cows, an empty directory falls back to embedded mascots
+        assert!(
+            forgum_platform::embedded_cows::get_embedded_cow(&name).is_some() || name == "default",
+            "Random with empty disk dir must resolve to an embedded mascot or default, got: {name}"
+        );
         let _ = std::fs::remove_dir_all(&tmp);
     }
 
