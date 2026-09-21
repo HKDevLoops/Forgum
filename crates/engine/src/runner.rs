@@ -197,12 +197,43 @@ pub fn run() -> ExitCode {
             install,
             render_args,
         }) => {
-            if matches!(shell, cli::ShellArg::List) {
+            let target_shell_arg = shell.unwrap_or_else(|| {
+                if let Some(detected) = forgum_platform::shell::Shell::detect_current_shell() {
+                    match detected {
+                        Shell::Bash => cli::ShellArg::Bash,
+                        Shell::Zsh => cli::ShellArg::Zsh,
+                        Shell::Fish => cli::ShellArg::Fish,
+                        Shell::Pwsh => cli::ShellArg::Pwsh,
+                        Shell::Cmd => cli::ShellArg::Cmd,
+                        Shell::PowerShell => cli::ShellArg::PowerShell,
+                        Shell::Elvish => cli::ShellArg::Elvish,
+                        Shell::Nushell => cli::ShellArg::Nushell,
+                        Shell::Carapace => cli::ShellArg::Carapace,
+                        Shell::Xonsh => cli::ShellArg::Xonsh,
+                        Shell::Tcsh => cli::ShellArg::Tcsh,
+                        Shell::Ksh => cli::ShellArg::Ksh,
+                        Shell::Ion => cli::ShellArg::Ion,
+                        Shell::Oil => cli::ShellArg::Oil,
+                        Shell::Yash => cli::ShellArg::Yash,
+                    }
+                } else {
+                    #[cfg(windows)]
+                    {
+                        cli::ShellArg::Pwsh
+                    }
+                    #[cfg(not(windows))]
+                    {
+                        cli::ShellArg::Bash
+                    }
+                }
+            });
+
+            if matches!(target_shell_arg, cli::ShellArg::List) {
                 let table = forgum_engine::options_table::render_options("shells");
                 print!("{table}");
                 return ExitCode::SUCCESS;
             }
-            let shell: Shell = shell.into();
+            let shell: Shell = target_shell_arg.into();
             let engine_path = std::env::current_exe()
                 .ok()
                 .and_then(|p| p.to_str().map(String::from))
@@ -996,11 +1027,13 @@ pub fn run() -> ExitCode {
                 .ok()
                 .map(|d| d.join("Cows"))
                 .filter(|d| d.is_dir());
-            let cow_count = cows_dir
+            let disk_cow_count = cows_dir
                 .as_ref()
                 .and_then(|d| std::fs::read_dir(d).ok())
                 .map(|rd| rd.filter_map(|e| e.ok()).count())
                 .unwrap_or(0);
+            let embedded_count = forgum_platform::embedded_cows::embedded_cow_count();
+            let cow_count = if disk_cow_count > 0 { disk_cow_count } else { embedded_count };
 
             let native_plan = forgum_platform::terminal::plan_native_split(
                 caps.emulator,
@@ -1071,7 +1104,11 @@ pub fn run() -> ExitCode {
                     println!("            {}", s.display_line());
                 }
             }
-            println!("Cows:       {} loaded", cow_count);
+            if disk_cow_count > 0 {
+                println!("Cows:       {} loaded (from disk: {})", disk_cow_count, cows_dir.as_ref().map(|p| p.display().to_string()).unwrap_or_default());
+            } else {
+                println!("Cows:       {} loaded (built-in embedded)", cow_count);
+            }
             if let Some(limitation) = caps.emulator.limitation_notes() {
                 println!("Limitation: \x1b[1;33m{}\x1b[0m", limitation);
             }
@@ -2793,8 +2830,20 @@ fn render_subcommand_with_scene(
         return run_daemon_child(args);
     }
 
-    if args.split_mode.as_deref() == Some("native") || scene.split_mode.as_deref() == Some("native")
-    {
+    let is_split_mode = !args.banner
+        && (args.split_scroll
+            || scene.split_scroll
+            || args.reserve_rows.is_some()
+            || scene.reserve_rows.is_some()
+            || args.split_ratio.is_some()
+            || scene.split_ratio.is_some()
+            || scene.shell_attach_mode == "split");
+
+    let wants_native_split = !args.banner
+        && (args.split_mode.as_deref() == Some("native")
+            || (scene.split_mode.as_deref() == Some("native") && is_split_mode));
+
+    if wants_native_split {
         let caps = forgum_platform::detect_capabilities();
         let mux = forgum_platform::detect_mux();
         let reserved_rows = args.reserve_rows.or(scene.reserve_rows).unwrap_or(10) as usize;
@@ -2837,14 +2886,6 @@ fn render_subcommand_with_scene(
             );
         }
     }
-
-    let is_split_mode = args.split_scroll
-        || scene.split_scroll
-        || args.reserve_rows.is_some()
-        || scene.reserve_rows.is_some()
-        || args.split_ratio.is_some()
-        || scene.split_ratio.is_some()
-        || scene.shell_attach_mode == "split";
 
     // ── SINGLE-INSTANCE PANE GUARD ───────────────────────────────────────
     // If an instance of forgum is already running on this pane/session,
@@ -3076,8 +3117,8 @@ fn render_subcommand_with_scene(
     // competing rendering. Cleaned up via Drop when we exit.
     let (_pane_guard, cmd_rx) = PaneGuard::acquire(&session_id, instance_id);
 
-    let result = if scene.background || scene.split_scroll || args.split_scroll {
-        render::render_loop_background(
+    let result = if args.banner {
+        render::render_loop_banner(
             out,
             scene,
             shutdown,
@@ -3087,8 +3128,8 @@ fn render_subcommand_with_scene(
             data,
             &cmd_rx,
         )
-    } else if args.banner {
-        render::render_loop_banner(
+    } else if scene.background || scene.split_scroll || args.split_scroll {
+        render::render_loop_background(
             out,
             scene,
             shutdown,

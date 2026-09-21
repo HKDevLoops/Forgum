@@ -28,7 +28,7 @@
 > zero-alloc dirty-damage rasterization, fail-safe signal/input handling, shell hooks, daemons, and capability probes.
 > Cross-platform on Windows, macOS, and Linux.
 
-**Repo:** `HKDevLoops/Forgum` · **Version:** `0.4.0` · **License:** MIT
+**Repo:** `HKDevLoops/Forgum` · **Version:** `alpha 0.1.0` · **License:** MIT
 
 <p align="center">
   <a href="docs/TELEMETRY.md"><img src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fcountapi.mileshilliard.com%2Fapi%2Fv1%2Fget%2Fhkdevloops_forgum_users_tried&query=%24.value&label=Users%20Tried&color=blueviolet&style=for-the-badge&logo=starship" alt="Users Tried" /></a>
@@ -889,7 +889,7 @@ forgum tui
 ```
 
 ```text
- ✨ FORGUM CONFIGURATOR   [CONFIG]  1 Mascots  2 Scenery  3 Effects  4 Installer  5 [Config]           v0.4.0
+ ✨ FORGUM CONFIGURATOR   [CONFIG]  1 Mascots  2 Scenery  3 Effects  4 Installer  5 [Config]        alpha 0.1.0
 ┌──────────────────────────── ⚙️ Forgum Engine Settings ──────────────────────────────┬───────────────────────────────┐
 │ > 01. cow                   [ moojira                      ]                       │ ⚙️ Parameter Details          │
 │   02. text                  [                              ]                       │ Parameter: split_mode         │

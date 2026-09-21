@@ -91,6 +91,20 @@ pub fn load_cow_with_landmarks(
             return (expanded, final_landmarks);
         }
     }
+    // 3. Try compile-time embedded built-in mascot catalog (100% zero-disk resilience).
+    if let Some(embedded) = forgum_platform::embedded_cows::get_embedded_cow(resolved) {
+        crate::log_debug!(
+            "cow",
+            "Loaded embedded built-in mascot '{resolved}'"
+        );
+        let (expanded, landmarks) = expand_cow_with_landmarks(embedded, eyes, tongue, thoughts);
+        let final_landmarks = if landmarks.is_empty() {
+            detect_cow_eyes(&expanded, 0)
+        } else {
+            landmarks
+        };
+        return (expanded, final_landmarks);
+    }
     if resolved != "default" {
         crate::log_diag!(
             crate::logger::LogLevel::Warn,
@@ -139,28 +153,32 @@ pub fn resolve_cow_name(cow_name: &str, data_dir: &Path) -> String {
                 return cow_name.to_string();
             }
         }
+        if forgum_platform::embedded_cows::get_embedded_cow(cow_name).is_some() {
+            return cow_name.to_string();
+        }
         // Mascot not found: find closest match among available cows
+        let mut available_names: Vec<String> = forgum_platform::embedded_cows::all_embedded_cow_names()
+            .iter()
+            .map(|s| s.to_string())
+            .collect();
         if let Ok(rd) = std::fs::read_dir(data_dir.join("Cows")) {
-            let names: Vec<String> = rd
-                .flatten()
-                .filter_map(|e| {
-                    let p = e.path();
-                    if p.extension()
-                        .is_some_and(|ext| ext.eq_ignore_ascii_case("cow"))
-                    {
-                        p.file_stem().map(|s| s.to_string_lossy().into_owned())
-                    } else {
-                        None
+            for entry in rd.flatten() {
+                let p = entry.path();
+                if p.extension().is_some_and(|ext| ext.eq_ignore_ascii_case("cow")) {
+                    if let Some(stem) = p.file_stem().map(|s| s.to_string_lossy().into_owned()) {
+                        if !available_names.contains(&stem) {
+                            available_names.push(stem);
+                        }
                     }
-                })
-                .collect();
-            let name_refs: Vec<&str> = names.iter().map(|s| s.as_str()).collect();
-            if let Some(closest) = crate::cli::find_closest_match(cow_name, &name_refs) {
-                eprintln!(
-                    "\x1b[1;33m💡 Mascot '{cow_name}' not found. Did you mean '{closest}'? (Using '{closest}'). Run 'forgum list animals' for all 106 options.\x1b[0m"
-                );
-                return closest.to_string();
+                }
             }
+        }
+        let name_refs: Vec<&str> = available_names.iter().map(|s| s.as_str()).collect();
+        if let Some(closest) = crate::cli::find_closest_match(cow_name, &name_refs) {
+            eprintln!(
+                "\x1b[1;33m💡 Mascot '{cow_name}' not found. Did you mean '{closest}'? (Using '{closest}'). Run 'forgum list animals' for all available options.\x1b[0m"
+            );
+            return closest.to_string();
         }
         return cow_name.to_string();
     }
@@ -194,6 +212,12 @@ pub fn resolve_cow_name(cow_name: &str, data_dir: &Path) -> String {
                     None
                 }
             }));
+        }
+    }
+
+    if entries.is_empty() {
+        for name in forgum_platform::embedded_cows::all_embedded_cow_names() {
+            entries.push(name.to_string());
         }
     }
 

@@ -15,6 +15,62 @@ use ratatui::Terminal;
 use crate::app::{ConfigApp, Tab};
 pub use wizard::{run_installer_wizard, run_uninstaller_wizard};
 
+/// Complete ANSI / VT terminal restoration sequence to guarantee
+/// scroll margins, cursor, mouse modes, and attributes are reset.
+pub const FULL_VT_RESET_SEQ: &[u8] =
+    b"\x1b[r\x1b[?6l\x1b[?69l\x1b[?7h\x1b[0m\x1b[?25h\x1b[?1000l\x1b[?1002l\x1b[?1003l\x1b[?1006l\x1b[?1015l\x1b[?2004l";
+
+/// Restores the terminal cleanly from raw mode, mouse capture, and alternate screen.
+pub fn restore_terminal_cleanly() {
+    let _ = crossterm::execute!(
+        io::stdout(),
+        crossterm::event::DisableMouseCapture,
+        crossterm::terminal::LeaveAlternateScreen
+    );
+    let _ = io::stdout().write_all(FULL_VT_RESET_SEQ);
+    let _ = io::stdout().flush();
+    let _ = crossterm::terminal::disable_raw_mode();
+}
+
+/// RAII Drop guard ensuring the terminal is ALWAYS cleanly restored
+/// even if a panic, early exit, signal, or error occurs.
+#[derive(Debug)]
+pub struct TuiTerminalGuard {
+    active: bool,
+}
+
+impl TuiTerminalGuard {
+    pub fn enter() -> anyhow::Result<Self> {
+        crossterm::terminal::enable_raw_mode().context("enable raw mode")?;
+        let mut stdout = io::stdout();
+        crossterm::execute!(
+            stdout,
+            crossterm::terminal::EnterAlternateScreen,
+            crossterm::event::EnableMouseCapture
+        )
+        .context("enter alternate screen and enable mouse")?;
+
+        // Reset scroll margins, clear screen, and position at top-left
+        let _ = stdout.write_all(b"\x1b[r\x1b[2J\x1b[1;1H");
+        let _ = stdout.flush();
+
+        Ok(Self { active: true })
+    }
+
+    /// Disarm the guard if manual restoration was explicitly performed
+    pub fn disarm(&mut self) {
+        self.active = false;
+    }
+}
+
+impl Drop for TuiTerminalGuard {
+    fn drop(&mut self) {
+        if self.active {
+            restore_terminal_cleanly();
+        }
+    }
+}
+
 /// Run the interactive TUI associated with a config path (backward compatibility).
 ///
 /// NOTE: Even if `config_path` does not exist on disk, this DOES NOT fail. It
@@ -92,21 +148,9 @@ pub fn run_tui(
         let _ = std::fs::remove_file(&daemon_state_path);
     }
 
-    // Terminal setup
-    crossterm::terminal::enable_raw_mode().context("enable raw mode")?;
-    let mut stdout = io::stdout();
-    crossterm::execute!(
-        stdout,
-        crossterm::terminal::EnterAlternateScreen,
-        crossterm::event::EnableMouseCapture
-    )
-    .context("enter alternate screen and enable mouse")?;
-
-    // Unconditionally reset DECSTBM scroll margins (\x1b[r), clear entire screen (\x1b[2J),
-    // and reposition cursor at (1, 1) so Ratatui has 100% full unconstrained screen access.
-    let _ = stdout.write_all(b"\x1b[r\x1b[2J\x1b[1;1H");
-    let _ = stdout.flush();
-
+    // Terminal setup via RAII guard
+    let mut terminal_guard = TuiTerminalGuard::enter()?;
+    let stdout = io::stdout();
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend).context("build terminal")?;
 
@@ -365,15 +409,9 @@ pub fn run_tui(
 
     shutdown_flag.store(true, std::sync::atomic::Ordering::Relaxed);
 
-    // Restore the terminal unconditionally
-    let _ = crossterm::execute!(
-        io::stdout(),
-        crossterm::event::DisableMouseCapture,
-        crossterm::terminal::LeaveAlternateScreen
-    );
-    let _ = io::stdout().write_all(b"\x1b[r\x1b[0m\x1b[?25h");
-    let _ = io::stdout().flush();
-    let _ = crossterm::terminal::disable_raw_mode();
+    // Restore the terminal cleanly and disarm RAII guard
+    restore_terminal_cleanly();
+    terminal_guard.disarm();
 
     result?;
     Ok(())

@@ -205,8 +205,13 @@ pub fn render_loop_background(
     )
 }
 
-/// Compute dynamic reserved rows and columns based on terminal resolution,
-/// mascot height, config overrides, and width consciousness.
+/// Standard fixed row allocation for split-scroll animations.
+/// Locking rows and columns guarantees a deterministic animation viewport
+/// and confines the user's interactive shell strictly to the remaining rows below.
+pub const FIXED_SPLIT_ANIM_ROWS: usize = 10;
+
+/// Compute reserved rows and columns based on terminal resolution,
+/// mascot height, config overrides, and fixed split-scroll sizing.
 pub fn compute_reserved_dimensions(
     total_cols: usize,
     total_rows: usize,
@@ -219,22 +224,21 @@ pub fn compute_reserved_dimensions(
         total_cols.max(20)
     };
 
+    let is_split = config.split_scroll
+        || config.shell_attach_mode == "split"
+        || config.split_mode.as_deref() == Some("seamless")
+        || config.split_mode.as_deref() == Some("decstbm");
+
     let raw_rows = if let Some(rr) = config.reserve_rows {
         rr as usize
     } else if let Some(ratio) = config.split_ratio {
         let clamped_ratio = ratio.clamp(0.10, 0.75);
         ((total_rows as f32) * clamped_ratio).round() as usize
-    } else if config.split_scroll || config.shell_attach_mode == "split" {
-        // Dynamic adaptive sizing based on terminal width consciousness and height:
-        // Seamlessly accommodates tall creatures without arbitrary row clamps
-        let min_scenic = if total_cols >= 160 {
-            12
-        } else if total_cols >= 100 {
-            10
-        } else {
-            8
-        };
-        mascot_lines.max(min_scenic)
+    } else if is_split {
+        // Fixed size split-scroll animation canvas: lock rows and columns so the
+        // animation runs at a deterministic size and the user's interactive shell
+        // is strictly confined to the remaining rows below.
+        FIXED_SPLIT_ANIM_ROWS
     } else {
         mascot_lines
     };

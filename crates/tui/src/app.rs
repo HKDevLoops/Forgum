@@ -1125,6 +1125,9 @@ impl ConfigApp {
                 // Global keybindings
                 match key.code {
                     KeyCode::Char('q') | KeyCode::Esc => return Ok(Some(Action::Quit)),
+                    KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                        return Ok(Some(Action::Quit));
+                    }
                     KeyCode::Char('s') => return Ok(Some(Action::Save)),
                     KeyCode::Char('o') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                         let path = self.resolve_config_path();
@@ -1930,10 +1933,18 @@ export extern "forgum" [
                 .and_then(|cp| sh.shell_source_command(&cp))
                 .unwrap_or_default();
             let hook_cmd = match sh {
-                Shell::Bash | Shell::Zsh => "eval \"$(forgum init)\"",
+                Shell::Bash => "eval \"$(forgum init bash)\"",
+                Shell::Zsh => "eval \"$(forgum init zsh)\"",
                 Shell::Fish => "forgum init fish | source",
                 Shell::Pwsh | Shell::PowerShell => "Invoke-Expression (&forgum init pwsh)",
-                Shell::Nushell => "forgum init nu",
+                Shell::Nushell => "forgum init nushell",
+                Shell::Elvish => "eval (forgum init elvish | slurp)",
+                Shell::Tcsh => "eval `forgum init tcsh`",
+                Shell::Ksh => "eval \"$(forgum init ksh)\"",
+                Shell::Ion => "eval $(forgum init ion)",
+                Shell::Oil => "eval \"$(forgum init oil)\"",
+                Shell::Yash => "eval \"$(forgum init yash)\"",
+                Shell::Xonsh => "exec($(forgum init xonsh))",
                 _ => "forgum init",
             };
             let block = format!(
@@ -3237,16 +3248,19 @@ export extern "forgum" [
     }
 
     fn load_cow_art(&self, cow_name: &str) -> String {
-        let data = match forgum_platform::data_dir() {
-            Ok(d) => d,
-            Err(_) => return Self::fallback_cow(&self.config.eyes, &self.config.tongue),
-        };
-        let cow_path = data.join("Cows").join(format!("{cow_name}.cow"));
-        let raw = match std::fs::read_to_string(&cow_path) {
-            Ok(s) => s,
-            Err(_) => return Self::fallback_cow(&self.config.eyes, &self.config.tongue),
-        };
-        Self::expand_cow_template(&raw, &self.config.eyes, &self.config.tongue)
+        // 1. Try disk data directory first if available
+        if let Ok(data) = forgum_platform::data_dir() {
+            let cow_path = data.join("Cows").join(format!("{cow_name}.cow"));
+            if let Ok(raw) = std::fs::read_to_string(&cow_path) {
+                return Self::expand_cow_template(&raw, &self.config.eyes, &self.config.tongue);
+            }
+        }
+        // 2. Try compile-time embedded built-in mascot catalog (100% zero-disk resilience)
+        if let Some(embedded) = forgum_platform::embedded_cows::get_embedded_cow(cow_name) {
+            return Self::expand_cow_template(embedded, &self.config.eyes, &self.config.tongue);
+        }
+        // 3. Fallback to default cow
+        Self::fallback_cow(&self.config.eyes, &self.config.tongue)
     }
 
     pub fn expand_cow_template(template: &str, eyes: &str, tongue: &str) -> String {

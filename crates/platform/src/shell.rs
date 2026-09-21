@@ -66,6 +66,73 @@ impl Shell {
         }
     }
 
+    /// Detect the active host shell from environment variables and process context.
+    pub fn detect_current_shell() -> Option<Self> {
+        // 1. Check shell-specific unique environment markers
+        if std::env::var_os("BASH_VERSION").is_some() {
+            return Some(Shell::Bash);
+        }
+        if std::env::var_os("ZSH_VERSION").is_some() {
+            return Some(Shell::Zsh);
+        }
+        if std::env::var_os("FISH_VERSION").is_some() {
+            return Some(Shell::Fish);
+        }
+        if std::env::var_os("NU_VERSION").is_some() {
+            return Some(Shell::Nushell);
+        }
+        if std::env::var_os("XONSH_VERSION").is_some() {
+            return Some(Shell::Xonsh);
+        }
+        if std::env::var_os("KSH_VERSION").is_some() {
+            return Some(Shell::Ksh);
+        }
+        if std::env::var_os("OIL_VERSION").is_some() || std::env::var_os("YSH_VERSION").is_some() {
+            return Some(Shell::Oil);
+        }
+        if std::env::var_os("YASH_VERSION").is_some() {
+            return Some(Shell::Yash);
+        }
+        if std::env::var_os("ION_SHELL").is_some() {
+            return Some(Shell::Ion);
+        }
+
+        // 2. Inspect $SHELL environment variable
+        if let Some(shell_env) = std::env::var_os("SHELL") {
+            let p = Path::new(&shell_env);
+            if let Some(stem) = p.file_stem().and_then(|s| s.to_str()) {
+                if let Some(sh) = Self::parse(stem) {
+                    return Some(sh);
+                }
+            }
+        }
+
+        // 3. Inspect PowerShell / Pwsh environment indicators
+        if std::env::var_os("PSModulePath").is_some() {
+            #[cfg(windows)]
+            {
+                if std::env::var_os("POWERSHELL_DISTRIBUTION_CHANNEL").is_some() {
+                    return Some(Shell::Pwsh);
+                }
+                return Some(Shell::PowerShell);
+            }
+            #[cfg(not(windows))]
+            {
+                return Some(Shell::Pwsh);
+            }
+        }
+
+        // 4. Default fallback by OS
+        #[cfg(windows)]
+        {
+            Some(Shell::Pwsh)
+        }
+        #[cfg(not(windows))]
+        {
+            Some(Shell::Bash)
+        }
+    }
+
     /// Default config file path for this shell.
     pub fn default_config_path(&self) -> &str {
         match self {

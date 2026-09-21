@@ -428,9 +428,9 @@ pub enum Commands {
     },
     /// Generate shell integration hooks.
     Init {
-        /// Target shell, or 'list' to view supported shells.
-        #[arg(value_enum, default_value = "list")]
-        shell: ShellArg,
+        /// Target shell, or 'list' to view supported shells. If omitted, detects current active shell.
+        #[arg(value_enum)]
+        shell: Option<ShellArg>,
         /// Only print the generated hook (CI validation); identical output to a
         /// normal `init` but explicit about the use-case.
         #[arg(long)]

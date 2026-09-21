@@ -12,9 +12,6 @@ use std::time::Duration;
 
 use anyhow::Context;
 use crossterm::event::{self, Event, KeyCode, KeyEvent};
-use crossterm::terminal::{
-    disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen,
-};
 use ratatui::backend::CrosstermBackend;
 use ratatui::layout::{Alignment, Constraint, Direction, Layout, Rect};
 use ratatui::style::{Modifier, Style};
@@ -139,6 +136,9 @@ impl InstallerWizard {
     }
 
     pub fn handle_key(&mut self, key: KeyEvent) -> bool {
+        if key.modifiers.contains(event::KeyModifiers::CONTROL) && key.code == KeyCode::Char('c') {
+            return true;
+        }
         match self.step {
             InstallStep::Welcome => match key.code {
                 KeyCode::Enter | KeyCode::Char(' ') | KeyCode::Right => {
@@ -1312,6 +1312,9 @@ impl UninstallerWizard {
     }
 
     pub fn handle_key(&mut self, key: KeyEvent) -> bool {
+        if key.modifiers.contains(event::KeyModifiers::CONTROL) && key.code == KeyCode::Char('c') {
+            return true;
+        }
         match self.step {
             UninstallStep::Welcome => match key.code {
                 KeyCode::Enter | KeyCode::Char(' ') | KeyCode::Right => {
@@ -1824,9 +1827,8 @@ impl UninstallerWizard {
 
 /// Launch the interactive Celestial Installation Wizard.
 pub fn run_installer_wizard() -> Result<(), Box<dyn std::error::Error>> {
-    enable_raw_mode().context("enable raw mode")?;
-    let mut stdout = io::stdout();
-    crossterm::execute!(stdout, EnterAlternateScreen).context("enter alternate screen")?;
+    let mut guard = crate::TuiTerminalGuard::enter()?;
+    let stdout = io::stdout();
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend).context("build terminal")?;
 
@@ -1848,16 +1850,15 @@ pub fn run_installer_wizard() -> Result<(), Box<dyn std::error::Error>> {
         Ok(())
     })();
 
-    let _ = disable_raw_mode();
-    let _ = crossterm::execute!(io::stdout(), LeaveAlternateScreen);
+    crate::restore_terminal_cleanly();
+    guard.disarm();
     res.map_err(|e| e.into())
 }
 
 /// Launch the interactive Celestial Uninstallation Wizard.
 pub fn run_uninstaller_wizard() -> Result<(), Box<dyn std::error::Error>> {
-    enable_raw_mode().context("enable raw mode")?;
-    let mut stdout = io::stdout();
-    crossterm::execute!(stdout, EnterAlternateScreen).context("enter alternate screen")?;
+    let mut guard = crate::TuiTerminalGuard::enter()?;
+    let stdout = io::stdout();
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend).context("build terminal")?;
 
@@ -1879,8 +1880,8 @@ pub fn run_uninstaller_wizard() -> Result<(), Box<dyn std::error::Error>> {
         Ok(())
     })();
 
-    let _ = disable_raw_mode();
-    let _ = crossterm::execute!(io::stdout(), LeaveAlternateScreen);
+    crate::restore_terminal_cleanly();
+    guard.disarm();
     res.map_err(|e| e.into())
 }
 

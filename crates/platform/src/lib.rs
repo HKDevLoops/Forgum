@@ -53,6 +53,9 @@ pub mod uninstaller;
 // Built-in 8×8 bitmap font for real glyph rasterization and video capture.
 pub mod font;
 
+// Built-in embedded mascot catalog for zero-disk resilience across all deployment targets.
+pub mod embedded_cows;
+
 // Platform-specific impls
 #[cfg(unix)]
 pub mod platform_unix;

@@ -185,6 +185,17 @@ pub fn data_dir() -> Result<PathBuf, PlatformError> {
             }
         }
     }
+    #[cfg(unix)]
+    {
+        let usr_local = PathBuf::from("/usr/local/share/forgum");
+        if usr_local.join("Cows").is_dir() {
+            return Ok(usr_local);
+        }
+        let usr_share = PathBuf::from("/usr/share/forgum");
+        if usr_share.join("Cows").is_dir() {
+            return Ok(usr_share);
+        }
+    }
     Ok(def)
 }
 

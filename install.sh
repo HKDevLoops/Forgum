@@ -673,6 +673,19 @@ else
   fi
 fi
 
+# --- install mascot data if available in source checkout ---------------------
+SHARE_DIR="/usr/local/share/forgum"
+if [ ! -w /usr/local/share ] && [ ! -w /usr/local ]; then
+  SHARE_DIR="$HOME/.local/share/forgum"
+fi
+if [ -d "data" ]; then
+  mkdir -p "$SHARE_DIR" 2>/dev/null || run_elevated mkdir -p "$SHARE_DIR" 2>/dev/null || true
+  cp -r data/* "$SHARE_DIR/" 2>/dev/null || run_elevated cp -r data/* "$SHARE_DIR/" 2>/dev/null || true
+elif [ -n "${BUILD_DIR:-}" ] && [ -d "$BUILD_DIR/data" ]; then
+  mkdir -p "$SHARE_DIR" 2>/dev/null || run_elevated mkdir -p "$SHARE_DIR" 2>/dev/null || true
+  cp -r "$BUILD_DIR/data/"* "$SHARE_DIR/" 2>/dev/null || run_elevated cp -r "$BUILD_DIR/data/"* "$SHARE_DIR/" 2>/dev/null || true
+fi
+
 # --- check & update PATH (idempotent prepend) --------------------------------
 case ":$PATH:" in
   *":$INSTALL_DIR:"*) ;;
