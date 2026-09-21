@@ -146,7 +146,7 @@ pub fn stop_session_daemon_and_reset_margins() {
             }
         }
         clean_buf.extend_from_slice(b"\x1b[r\x1b[?6l\x1b[?69l\x1b[0m\x1b[?25h");
-        let target_row = ((ob_y1 + 1) as u16).min(rows.max(1));
+        let target_row = (ob_y1 + 1).min(rows.max(1));
         clean_buf.extend_from_slice(format!("\x1b[{target_row};1H\x1b[J").as_bytes());
         let _ = std::io::Write::write_all(&mut std::io::stdout(), &clean_buf);
         let _ = std::io::Write::flush(&mut std::io::stdout());
