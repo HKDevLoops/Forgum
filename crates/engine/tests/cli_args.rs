@@ -290,7 +290,7 @@ fn init_pwsh_subcommand() {
     assert!(matches!(
         cmd,
         Some(Commands::Init {
-            shell: forgum_engine::cli::ShellArg::Pwsh,
+            shell: Some(forgum_engine::cli::ShellArg::Pwsh),
             ..
         })
     ));
@@ -408,7 +408,7 @@ fn init_list_and_default_subcommand() {
     assert!(matches!(
         cmd,
         Some(Commands::Init {
-            shell: forgum_engine::cli::ShellArg::List,
+            shell: Some(forgum_engine::cli::ShellArg::List),
             ..
         })
     ));
@@ -418,7 +418,7 @@ fn init_list_and_default_subcommand() {
     assert!(matches!(
         cmd_def,
         Some(Commands::Init {
-            shell: forgum_engine::cli::ShellArg::List,
+            shell: None,
             ..
         })
     ));

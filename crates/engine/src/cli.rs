@@ -1529,7 +1529,7 @@ mod tests {
         assert!(matches!(
             cmd,
             Some(Commands::Init {
-                shell: ShellArg::Bash,
+                shell: Some(ShellArg::Bash),
                 ..
             })
         ));

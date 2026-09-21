@@ -198,33 +198,24 @@ pub fn run() -> ExitCode {
             render_args,
         }) => {
             let target_shell_arg = shell.unwrap_or_else(|| {
-                if let Some(detected) = forgum_platform::shell::Shell::detect_current_shell() {
-                    match detected {
-                        Shell::Bash => cli::ShellArg::Bash,
-                        Shell::Zsh => cli::ShellArg::Zsh,
-                        Shell::Fish => cli::ShellArg::Fish,
-                        Shell::Pwsh => cli::ShellArg::Pwsh,
-                        Shell::Cmd => cli::ShellArg::Cmd,
-                        Shell::PowerShell => cli::ShellArg::PowerShell,
-                        Shell::Elvish => cli::ShellArg::Elvish,
-                        Shell::Nushell => cli::ShellArg::Nushell,
-                        Shell::Carapace => cli::ShellArg::Carapace,
-                        Shell::Xonsh => cli::ShellArg::Xonsh,
-                        Shell::Tcsh => cli::ShellArg::Tcsh,
-                        Shell::Ksh => cli::ShellArg::Ksh,
-                        Shell::Ion => cli::ShellArg::Ion,
-                        Shell::Oil => cli::ShellArg::Oil,
-                        Shell::Yash => cli::ShellArg::Yash,
-                    }
-                } else {
-                    #[cfg(windows)]
-                    {
-                        cli::ShellArg::Pwsh
-                    }
-                    #[cfg(not(windows))]
-                    {
-                        cli::ShellArg::Bash
-                    }
+                let detected = forgum_platform::shell::Shell::detect_current_shell()
+                    .unwrap_or(Shell::Bash);
+                match detected {
+                    Shell::Bash => cli::ShellArg::Bash,
+                    Shell::Zsh => cli::ShellArg::Zsh,
+                    Shell::Fish => cli::ShellArg::Fish,
+                    Shell::Pwsh => cli::ShellArg::Pwsh,
+                    Shell::Cmd => cli::ShellArg::Cmd,
+                    Shell::PowerShell => cli::ShellArg::PowerShell,
+                    Shell::Elvish => cli::ShellArg::Elvish,
+                    Shell::Nushell => cli::ShellArg::Nushell,
+                    Shell::Carapace => cli::ShellArg::Carapace,
+                    Shell::Xonsh => cli::ShellArg::Xonsh,
+                    Shell::Tcsh => cli::ShellArg::Tcsh,
+                    Shell::Ksh => cli::ShellArg::Ksh,
+                    Shell::Ion => cli::ShellArg::Ion,
+                    Shell::Oil => cli::ShellArg::Oil,
+                    Shell::Yash => cli::ShellArg::Yash,
                 }
             });
 
