@@ -31,18 +31,18 @@ pub trait Effect: Send + Sync {
 /// If a speech or thought bubble precedes the cow, returns the line index of the
 /// first line of cow art. If no bubble is present, returns 0.
 pub fn find_cow_start_line(text: &str) -> usize {
-    let lines: Vec<&str> = text.lines().collect();
-    if lines.is_empty() {
+    let mut lines = text.lines();
+    let Some(first) = lines.next() else {
         return 0;
-    }
-    let first = lines[0].trim();
+    };
+    let first = first.trim();
     // A speech or thought bubble starts with a top border of underscores, hyphens, or equals
     if !(first.chars().all(|c| c == '_' || c == '-' || c == '=') && first.len() >= 3) {
         return 0; // No bubble at top
     }
     // Find bottom border: starts and ends with '|' or '(' and contains border chars
     let mut bottom_border_idx = None;
-    for (i, line) in lines.iter().enumerate().skip(1) {
+    for (idx, line) in (1..).zip(lines.by_ref()) {
         let trimmed = line.trim();
         if (trimmed.starts_with('|')
             && trimmed.ends_with('|')
@@ -53,7 +53,7 @@ pub fn find_cow_start_line(text: &str) -> usize {
                     .chars()
                     .all(|c| c == '(' || c == ')' || c == '_' || c == '-'))
         {
-            bottom_border_idx = Some(i);
+            bottom_border_idx = Some(idx);
             break;
         }
     }
@@ -62,8 +62,8 @@ pub fn find_cow_start_line(text: &str) -> usize {
     };
     // After bottom border, skip connector lines (lines that contain only whitespace and 'o' or '\' or '/')
     let mut cow_start = b_idx + 1;
-    while cow_start < lines.len() {
-        let trimmed = lines[cow_start].trim();
+    for line in lines {
+        let trimmed = line.trim();
         if trimmed.is_empty()
             || trimmed == "o"
             || trimmed == "\\"
@@ -107,16 +107,15 @@ pub(crate) fn is_eye_glyph(ch: char) -> bool {
 /// Dynamically find the bottom-most non-empty line of the cow/animal art.
 /// This corresponds to the row where the creature's feet / legs touch the ground.
 pub fn find_cow_foot_y(text: &str) -> usize {
-    let lines: Vec<&str> = text.lines().collect();
-    if lines.is_empty() {
-        return 0;
-    }
-    for (i, line) in lines.iter().enumerate().rev() {
+    let mut last_row = None;
+    let mut total_lines = 0;
+    for (i, line) in text.lines().enumerate() {
+        total_lines = i + 1;
         if line.chars().any(|c| !c.is_whitespace()) {
-            return i;
+            last_row = Some(i);
         }
     }
-    lines.len().saturating_sub(1)
+    last_row.unwrap_or(total_lines.saturating_sub(1))
 }
 
 /// Anatomically detect creature mouth/snout or head origin row and column for particle emission.
@@ -125,23 +124,24 @@ pub fn detect_creature_mouth(
     cow_start_line: usize,
     eye_landmarks: &[(usize, usize)],
 ) -> (usize, usize) {
-    let lines: Vec<&str> = cow_text.lines().collect();
-    for (i, line) in lines.iter().enumerate().skip(cow_start_line) {
+    let mut fallback_pos = None;
+    for (i, line) in cow_text.lines().enumerate().skip(cow_start_line) {
         if let Some(open) = line.find("(__)") {
             return (i, open + 1);
         } else if let Some(idx) = line.find("\\@") {
             return (i, idx);
         }
+        if fallback_pos.is_none() {
+            if let Some(pos) = line.find(|c: char| !c.is_whitespace()) {
+                fallback_pos = Some((i, pos));
+            }
+        }
     }
     if let Some(&(er, ec)) = eye_landmarks.first() {
         return (er + 1, ec);
     }
-    if lines.len() > cow_start_line {
-        for (i, line) in lines.iter().enumerate().skip(cow_start_line) {
-            if let Some(pos) = line.find(|c: char| !c.is_whitespace()) {
-                return (i, pos);
-            }
-        }
+    if let Some(pos) = fallback_pos {
+        return pos;
     }
     (cow_start_line.saturating_add(2), 14)
 }
@@ -2600,13 +2600,22 @@ pub(crate) fn resolve_fg_palette_char(
                 let (r, g, b) = crate::color::natural_creature_color(p, x, y, ch);
                 Color { r, g, b, a: 255 }
             } else if color_mode.starts_with('#') {
-                let hexes: Vec<String> = color_mode
-                    .split(',')
-                    .map(|s| s.trim().to_string())
-                    .collect();
-                let custom_palette = crate::color::parse_palette(&hexes);
-                let (r, g, b) =
-                    crate::color::palette_gradient(&custom_palette, x as f32, y as f32, time);
+                let mut custom_palette = [(0u8, 0u8, 0u8); 8];
+                let mut count = 0;
+                for s in color_mode.split(',') {
+                    if count < custom_palette.len() {
+                        if let Some(rgb) = crate::color::parse_hex(s.trim()) {
+                            custom_palette[count] = rgb;
+                            count += 1;
+                        }
+                    }
+                }
+                let (r, g, b) = crate::color::palette_gradient(
+                    &custom_palette[..count],
+                    x as f32,
+                    y as f32,
+                    time,
+                );
                 Color { r, g, b, a: 255 }
             } else if !palette.is_empty() {
                 let (r, g, b) = crate::color::natural_creature_color(palette, x, y, ch);

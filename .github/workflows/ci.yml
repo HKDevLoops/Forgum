@@ -401,9 +401,8 @@ jobs:
         run: cargo build --workspace
       - name: Engine help
         run: cargo run -p forgum-engine --bin forgum -- --version
-      - name: Control status (best-effort)
-        continue-on-error: true
-        run: cargo run -p forgum-engine --bin forgum -- control status
+      - name: Forgum status
+        run: cargo run -p forgum-engine --bin forgum -- status
 
   terminal-capabilities:
     name: Terminal capabilities
