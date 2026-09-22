@@ -218,7 +218,7 @@ pub fn render_options(category: &str) -> String {
             "\n\x1b[1;33mUnknown options category '{category}'.\x1b[0m\n\n\
             \x1b[1;36mAvailable categories:\x1b[0m\n\
               • \x1b[1mall\x1b[0m            - Complete options catalog across all domains\n\
-              • \x1b[1manimals\x1b[0m        - 133 animal mascots & visual archetypes (--animal / --cow)\n\
+              • \x1b[1manimals\x1b[0m        - 132 animal mascots & visual archetypes (--animal / --cow)\n\
               • \x1b[1meffects\x1b[0m        - Dynamic animation motion effects (--effect / --animation)\n\
               • \x1b[1mscenery\x1b[0m        - Procedural mountains, roads, and particle environments\n\
               • \x1b[1mmountains\x1b[0m      - Procedural mountain horizons (--mountain)\n\
@@ -337,7 +337,7 @@ pub fn render_options(category: &str) -> String {
         ];
         out.push_str(&format_table(&headers, &rows));
 
-        out.push_str("\n\x1b[1;35m━━━ Complete Cow Mascot Catalog (133 Available Built-In Animals) ━━━\x1b[0m\n");
+        out.push_str("\n\x1b[1;35m━━━ Complete Cow Mascot Catalog (132 Available Built-In Animals) ━━━\x1b[0m\n");
         let cat_headers = ["Category", "Mascot Names"];
         let cat_rows = vec![
             vec!["Farm & Domestic", "default, bunny, cat, cat2, catfence, charlie, corgi, doge, duck, fat-cow, goat, goat2, hamster, hippie, kitty, kitten, lamb, lamb2, meow, moose, mule, owl, pig, ram, rooster, sheep, shrug, squirrel, turkey"],
@@ -736,7 +736,7 @@ pub fn render_options(category: &str) -> String {
             vec![
                 "cow",
                 "string",
-                "default, tux, dragon... (133 mascots)",
+                "default, tux, dragon... (132 mascots)",
                 "Mascot animal basename to render",
             ],
             vec![

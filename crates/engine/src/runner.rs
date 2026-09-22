@@ -2922,11 +2922,25 @@ fn render_subcommand_with_scene(
         let mux = forgum_platform::detect_mux();
         let reserved_rows = args.reserve_rows.or(scene.reserve_rows).unwrap_or(10) as usize;
         let ratio = args.split_ratio.or(scene.split_ratio).unwrap_or(0.35);
-        let mut forward_args: Vec<String> = std::env::args()
-            .skip(1)
-            .filter(|a| a != "--split-mode" && a != "native")
-            .collect();
-        forward_args.insert(0, "render".to_string());
+        let current_bin = std::env::current_exe()
+            .ok()
+            .and_then(|p| p.to_str().map(String::from))
+            .unwrap_or_else(|| "forgum".to_string());
+
+        let mut forward_args: Vec<String> = vec![current_bin];
+        let mut has_subcommand = false;
+        for arg in std::env::args().skip(1) {
+            if arg == "--split-mode" || arg == "native" {
+                continue;
+            }
+            if !has_subcommand && !arg.starts_with('-') {
+                has_subcommand = true;
+            }
+            forward_args.push(arg);
+        }
+        if !has_subcommand {
+            forward_args.insert(1, "render".to_string());
+        }
         if let Some(plan) = forgum_platform::plan_native_split(
             caps.emulator,
             &mux,

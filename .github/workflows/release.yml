@@ -73,7 +73,10 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@stable
         with:
+          toolchain: 1.98.0
           targets: ${{ matrix.target }}
+      - name: Ensure target is installed via rustup
+        run: rustup target add ${{ matrix.target }}
 
       - uses: Swatinem/rust-cache@v2
         with:
@@ -85,7 +88,7 @@ jobs:
 
       - name: Build (cross)
         if: matrix.cross
-        run: cross build --release --locked --target ${{ matrix.target }} -p forgum-engine
+        run: cross build --release --locked --target ${{ matrix.target }} -p forgum-engine --bin forgum
 
       - name: Build (native)
         if: ${{ !matrix.cross }}
@@ -93,7 +96,7 @@ jobs:
         # compile against windows-sys / crossterm on x86-32. Only the build step is
         # continue-on-error; packaging + upload below still skip build_only targets.
         continue-on-error: ${{ matrix.build_only || false }}
-        run: cargo build --release --locked --target ${{ matrix.target }} -p forgum-engine
+        run: cargo build --release --locked --target ${{ matrix.target }} -p forgum-engine --bin forgum
 
       - name: Package (unix)
         if: ${{ runner.os != 'Windows' }}

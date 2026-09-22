@@ -78,7 +78,10 @@ jobs:
           ref: dev
       - uses: dtolnay/rust-toolchain@stable
         with:
+          toolchain: 1.98.0
           targets: ${{ matrix.target }}
+      - name: Ensure target is installed via rustup
+        run: rustup target add ${{ matrix.target }}
       - uses: Swatinem/rust-cache@v2
         with:
           key: nightly-${{ matrix.target }}

@@ -92,6 +92,8 @@ reports/
 todos/
 TODO.md
 TODOs.md
+TODO*.md
+TODO_MASTER_AUDIT_AND_REMEDIATION.md
 
 # --- Out-of-Project Helper Scripts & Workflows ---
 /scripts/

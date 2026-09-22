@@ -397,6 +397,14 @@ pub fn plan_native_split(
             })
         }
         TerminalEmulator::WindowsTerminal => {
+            // When running inside WSL, Windows Terminal hosts the Linux session via ConPTY.
+            // Spawning `wt.exe` directly from WSL attempts to execute Windows binaries on the host PATH,
+            // failing with ERROR_FILE_NOT_FOUND (0x80070002).
+            // Furthermore, Windows Terminal has native hardware DECSTBM scroll margin support.
+            // In WSL, returning None allows the runner to use the seamless in-terminal DECSTBM split.
+            if is_wsl() {
+                return None;
+            }
             let mut args = vec![
                 "-w".to_string(),
                 "0".to_string(),
@@ -428,6 +436,21 @@ pub fn plan_native_split(
         }
         _ => None,
     }
+}
+
+/// Check if the process is running inside Windows Subsystem for Linux (WSL).
+#[must_use]
+pub fn is_wsl() -> bool {
+    if std::env::var_os("WSL_DISTRO_NAME").is_some() || std::env::var_os("WSL_INTEROP").is_some() {
+        return true;
+    }
+    if let Ok(v) = std::fs::read_to_string("/proc/version") {
+        let lower = v.to_ascii_lowercase();
+        if lower.contains("microsoft") || lower.contains("wsl") {
+            return true;
+        }
+    }
+    false
 }
 
 /// Detect the terminal emulator identity from the process environment.
