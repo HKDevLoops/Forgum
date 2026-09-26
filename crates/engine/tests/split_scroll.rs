@@ -17,15 +17,14 @@ fn compute_reserved_dimensions_width_consciousness_ultrawide() {
         ..Default::default()
     };
 
-    // Ultrawide viewport (>= 160 cols): locked fixed-size canvas
+    // Ultrawide viewport (>= 160 cols): dynamically allocates full mascot height
     let (cols, rows) = compute_reserved_dimensions(200, 50, 8, &config);
     assert_eq!(cols, 200);
-    // Locked to FIXED_SPLIT_ANIM_ROWS (10), confining shell prompt to remaining space
-    assert_eq!(rows, 10);
+    assert_eq!(rows, 8);
 
-    // Ultrawide with taller mascot: locked fixed-size canvas
+    // Ultrawide with taller mascot: dynamic reservation allocates full mascot height
     let (_, rows_tall) = compute_reserved_dimensions(200, 60, 16, &config);
-    assert_eq!(rows_tall, 10);
+    assert_eq!(rows_tall, 16);
 }
 
 #[test]
@@ -35,13 +34,13 @@ fn compute_reserved_dimensions_tall_mascot_adaptive_sizing() {
         ..Default::default()
     };
 
-    // Charizard / tall mascots: locked fixed-size canvas
+    // Charizard / tall mascots: allocates full 41 lines without truncation
     let (_, rows_tall) = compute_reserved_dimensions(140, 60, 41, &config);
-    assert_eq!(rows_tall, 10);
+    assert_eq!(rows_tall, 41);
 
-    // In a vertically constrained terminal (35 rows): locked fixed-size canvas
+    // In a vertically constrained terminal (35 rows): safe prompt headroom (35 - 4 = 31) bounds reservation cleanly
     let (_, rows_constrained) = compute_reserved_dimensions(140, 35, 41, &config);
-    assert_eq!(rows_constrained, 10);
+    assert_eq!(rows_constrained, 31);
 }
 
 #[test]
@@ -54,8 +53,7 @@ fn compute_reserved_dimensions_width_consciousness_standard() {
     // Standard widescreen viewport (100..159 cols)
     let (cols, rows) = compute_reserved_dimensions(120, 40, 8, &config);
     assert_eq!(cols, 120);
-    // Locked to FIXED_SPLIT_ANIM_ROWS (10)
-    assert_eq!(rows, 10);
+    assert_eq!(rows, 8);
 }
 
 #[test]
@@ -68,8 +66,58 @@ fn compute_reserved_dimensions_width_consciousness_compact() {
     // Compact terminal (< 100 cols, e.g. 80x24 standard terminal)
     let (cols, rows) = compute_reserved_dimensions(80, 24, 8, &config);
     assert_eq!(cols, 80);
-    // Locked to FIXED_SPLIT_ANIM_ROWS (10)
-    assert_eq!(rows, 10);
+    assert_eq!(rows, 8);
+}
+
+#[test]
+fn compute_reserved_dimensions_tall_mascots_automatic_reservation() {
+    let config = SceneConfig {
+        split_scroll: true,
+        ..Default::default()
+    };
+
+    // Dragon (22 lines) in a 60-row terminal receives full height (22 rows)
+    let (cols_dragon, rows_dragon) = compute_reserved_dimensions(100, 60, 22, &config);
+    assert_eq!(cols_dragon, 100);
+    assert_eq!(rows_dragon, 22);
+
+    // Charizard (41 lines) in a 60-row terminal receives full height (41 rows, prompt gets 19 headroom)
+    let (cols_charizard, rows_charizard) = compute_reserved_dimensions(120, 60, 41, &config);
+    assert_eq!(cols_charizard, 120);
+    assert_eq!(rows_charizard, 41);
+
+    // In a 40-row terminal, Charizard (41 lines) is clamped to max safe rows (40 - 4 = 36)
+    let (_, rows_charizard_clamped) = compute_reserved_dimensions(120, 40, 41, &config);
+    assert_eq!(rows_charizard_clamped, 36);
+
+    // Elephant / Moojira (e.g. 28 lines) in an 80-row terminal receives full height (28 rows)
+    let (_, rows_elephant) = compute_reserved_dimensions(120, 80, 28, &config);
+    assert_eq!(rows_elephant, 28);
+}
+
+#[test]
+fn compute_reserved_dimensions_automatic_column_reservation() {
+    use forgum_engine::render::compute_reserved_dimensions_with_cols;
+
+    let config = SceneConfig {
+        split_scroll: true,
+        ..Default::default()
+    };
+
+    // Default column reservation when reserve_cols is None defaults to total_cols.max(20)
+    let (cols, _) = compute_reserved_dimensions_with_cols(120, 50, 10, 40, &config);
+    assert_eq!(cols, 120);
+
+    // Bounded split mode clamps columns to mascot width + padding (40 + 4 = 44)
+    let mut bounded_config = config.clone();
+    bounded_config.split_mode = Some("bounded".to_string());
+    let (cols_bounded, _) =
+        compute_reserved_dimensions_with_cols(120, 50, 10, 40, &bounded_config);
+    assert_eq!(cols_bounded, 44);
+
+    // Bounded columns minimum 20
+    let (cols_min, _) = compute_reserved_dimensions_with_cols(120, 50, 10, 5, &bounded_config);
+    assert_eq!(cols_min, 20);
 }
 
 #[test]

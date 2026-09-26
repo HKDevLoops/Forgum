@@ -88,6 +88,16 @@ impl Tab {
         }
     }
 
+    pub fn compact_title(self) -> &'static str {
+        match self {
+            Tab::Mascots => " 1:Mascots ",
+            Tab::Scenery => " 2:Scenery ",
+            Tab::Effects => " 3:FX ",
+            Tab::Installer => " 4:Setup ",
+            Tab::Config => " 5:Config ",
+        }
+    }
+
     pub fn mode_label(self) -> &'static str {
         match self {
             Tab::Mascots => " 🐾 MASCOTS ",
@@ -95,6 +105,49 @@ impl Tab {
             Tab::Effects => " ✨ ANIMATION & FX ",
             Tab::Installer => " 🚀 SHELL INSTALLER ",
             Tab::Config => " ⚙️ CONFIG MATRIX ",
+        }
+    }
+
+    pub fn compact_mode_label(self) -> &'static str {
+        match self {
+            Tab::Mascots => "🐾 MASCOTS",
+            Tab::Scenery => "🏔️ SCENERY",
+            Tab::Effects => "✨ EFFECTS",
+            Tab::Installer => "🚀 INSTALL",
+            Tab::Config => "⚙️ CONFIG",
+        }
+    }
+
+    pub fn short_name(self) -> &'static str {
+        match self {
+            Tab::Mascots => "Mascots",
+            Tab::Scenery => "Scenery",
+            Tab::Effects => "FX",
+            Tab::Installer => "Setup",
+            Tab::Config => "Config",
+        }
+    }
+}
+
+/// Responsive layout breakpoint inspired by modern Tailwind CSS styling.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Breakpoint {
+    /// Compact: width < 80 cols or height < 22 rows.
+    Compact,
+    /// Standard: 80..=120 cols and height >= 22 rows.
+    Standard,
+    /// Wide: > 120 cols and height >= 24 rows.
+    Wide,
+}
+
+impl Breakpoint {
+    pub fn from_size(width: u16, height: u16) -> Self {
+        if width < 80 || height < 22 {
+            Breakpoint::Compact
+        } else if width > 120 && height >= 24 {
+            Breakpoint::Wide
+        } else {
+            Breakpoint::Standard
         }
     }
 }
@@ -189,6 +242,14 @@ pub const ANIMATION_TYPE_OPTIONS: &[&str] = &[
     "glitch",
     "particles",
     "dissolve",
+];
+
+/// Dropdown option choices for ShellAttachMode.
+pub const SHELL_ATTACH_OPTIONS: &[&str] = &["banner", "split", "reactive", "manual", "none"];
+
+/// Dropdown option choices for SplitMode.
+pub const SPLIT_MODE_OPTIONS: &[&str] = &[
+    "seamless", "auto", "decstbm", "native", "precmd", "disabled",
 ];
 
 /// Available Scenery Archetypes.
@@ -644,7 +705,7 @@ impl ConfigField {
             ConfigField::Eyes => "ASCII characters for eyes (e.g. 'oo', '$$', 'XX', '@@')",
             ConfigField::Tongue => "ASCII characters for tongue (e.g. 'U ', '  ', '||')",
             ConfigField::ColorMode => "Color rendering palette mode: natural, animal, rainbow, solid, none",
-            ConfigField::Palette => "Custom TrueColor hex palette gradient (comma-separated, e.g. '#ffffff,#1a1a1a')",
+            ConfigField::Palette => "Custom Hex Gradient Override (optional, comma-separated)",
             ConfigField::Environment => "Atmospheric particle system: pasture, inferno, ocean, arctic, city, forest, savanna, swamp, space, cyber, graveyard, jurassic, hive, throne, none",
             ConfigField::Road => "Ground terrain surface style: dirt, cobblestone, magma, ice, seabed, sidewalk, roof, grid, crypt, savanna, mud, tracks, checkerboard, none",
             ConfigField::Mountain => "Horizon background silhouette: hills, peaks, volcano, iceberg, skyline, seamount, plateau, crater, gothic, castle, garden, none",
@@ -652,10 +713,10 @@ impl ConfigField {
             ConfigField::AnimationType => "Kinematic animation driver: animal_natural, walk, breathe, float, fly, talk, sway, pulse, glitch, particles, dissolve",
             ConfigField::Background => "Daemon non-blocking prompt overlay mode (true/false)",
             ConfigField::AutoRenderOnPrompt => "Trigger mascot automatically on shell prompt enter",
-            ConfigField::ShellAttachMode => "Prompt hook integration: banner, split, reactive, manual",
+            ConfigField::ShellAttachMode => "Prompt hook integration: split (DECSTBM hardware pane), banner (top of prompt), reactive (live trigger), manual, none",
             ConfigField::DefaultShell => "Default shell used for hook generation and prompts: auto, bash, zsh, fish, pwsh, nu",
-            ConfigField::SplitMode => "Single-pane split execution mode: seamless (simultaneous in same pane), auto, decstbm, native, precmd, disabled",
-            ConfigField::SplitScroll => "Terminal margin split scrolling (DECSTBM hardware scroll region)",
+            ConfigField::SplitMode => "Split execution mode: decstbm (hardware scroll margins), seamless (simultaneous in same pane), auto, native, precmd, disabled",
+            ConfigField::SplitScroll => "Terminal margin split scrolling (DECSTBM hardware scroll region, syncs with shell_attach_mode='split')",
             ConfigField::SplitRatio => "Dynamic ratio of total terminal height reserved for animation canvas (0.1..0.8)",
             ConfigField::ReserveRows => "Explicit fixed rows reserved at top of terminal for animation canvas (e.g. 12)",
             ConfigField::ReserveCols => "Explicit fixed columns reserved for animation canvas (e.g. 80, 0 = full width)",
@@ -724,6 +785,9 @@ pub struct ConfigApp {
     pub cow_cache: HashMap<String, String>,
     pub show_editor_modal: bool,
     pub original_edit_value: String,
+    /// Last known terminal size (width, height) — updated on every render call.
+    /// Used by `current_breakpoint()` for out-of-render-context queries.
+    pub last_terminal_size: (u16, u16),
 }
 
 /// Detect the active host terminal name from environment markers.
@@ -800,14 +864,12 @@ impl ConfigApp {
             config.animation.as_deref().unwrap_or("dynamic"),
         );
         let attach_mode_dropdown = Dropdown::new(
-            vec!["banner", "split", "reactive", "manual"],
+            SHELL_ATTACH_OPTIONS.to_vec(),
             &config.shell_attach_mode,
         );
         let format_dropdown = Dropdown::new(vec!["json", "yaml", "toml"], format.extension());
         let split_mode_dropdown = Dropdown::new(
-            vec![
-                "seamless", "auto", "decstbm", "native", "precmd", "disabled",
-            ],
+            SPLIT_MODE_OPTIONS.to_vec(),
             config.split_mode.as_deref().unwrap_or("seamless"),
         );
         let editor_dropdown = Dropdown::new(
@@ -924,6 +986,7 @@ impl ConfigApp {
             cow_cache: HashMap::new(),
             show_editor_modal: false,
             original_edit_value: String::new(),
+            last_terminal_size: (0, 0),
         };
 
         // Cache the initial cow
@@ -1020,6 +1083,15 @@ impl ConfigApp {
         self.animation_time += dt;
     }
 
+    /// Return the responsive layout breakpoint for the last known terminal size.
+    ///
+    /// This can be called outside of render context (e.g., in event handlers or
+    /// tests) because it reads the cached `last_terminal_size` rather than
+    /// querying the terminal directly.
+    pub fn current_breakpoint(&self) -> Breakpoint {
+        Breakpoint::from_size(self.last_terminal_size.0, self.last_terminal_size.1)
+    }
+
     pub fn config(&self) -> &SceneConfig {
         &self.config
     }
@@ -1041,6 +1113,10 @@ impl ConfigApp {
         self.config = config;
         self.color_mode_dropdown =
             Dropdown::new(COLOR_MODE_OPTIONS.to_vec(), &self.config.color_mode);
+        self.color_idx = COLOR_OPTIONS
+            .iter()
+            .position(|(c, _)| c.eq_ignore_ascii_case(&self.config.color_mode))
+            .unwrap_or(0);
         self.environment_dropdown = Dropdown::new(
             ENVIRONMENT_OPTIONS.to_vec(),
             self.config.environment.as_deref().unwrap_or("pasture"),
@@ -1065,13 +1141,11 @@ impl ConfigApp {
             self.config.animation.as_deref().unwrap_or("dynamic"),
         );
         self.attach_mode_dropdown = Dropdown::new(
-            vec!["banner", "split", "reactive", "manual"],
+            SHELL_ATTACH_OPTIONS.to_vec(),
             &self.config.shell_attach_mode,
         );
         self.split_mode_dropdown = Dropdown::new(
-            vec![
-                "seamless", "auto", "decstbm", "native", "precmd", "disabled",
-            ],
+            SPLIT_MODE_OPTIONS.to_vec(),
             self.config.split_mode.as_deref().unwrap_or("seamless"),
         );
         self.editor_dropdown = Dropdown::new(
@@ -2214,7 +2288,7 @@ export extern "forgum" [
                 self.config_edit_buffer = self.config.palette.clone().unwrap_or_default();
                 self.editing_config = true;
                 self.status_message =
-                    "Editing Palette: type comma-separated hex codes (e.g. '#ffffff,#1a1a1a') and press Enter (Esc to cancel)"
+                    "Editing Palette: Custom Hex Gradient Override (optional, comma-separated, e.g. '#ffffff,#1a1a1a') or empty for mascot DNA [Enter: Confirm | Esc: Cancel]"
                         .into();
             }
             ConfigField::DefaultShell => {
@@ -2433,7 +2507,7 @@ export extern "forgum" [
                 };
                 self.saved = false;
                 self.status_message = if next.is_empty() {
-                    "Palette set to default [Space/←/→: Cycle | e: Custom]".into()
+                    "Palette set to default (mascot DNA) [Space/←/→: Cycle | e: Custom]".into()
                 } else {
                     format!(
                         "Palette cycled to '{}' [Space/←/→: Cycle | e: Custom]",
@@ -2508,7 +2582,16 @@ export extern "forgum" [
             }
             ConfigField::ShellAttachMode => {
                 self.attach_mode_dropdown.cycle(forward);
-                self.config.shell_attach_mode = self.attach_mode_dropdown.current();
+                let mode = self.attach_mode_dropdown.current();
+                self.config.shell_attach_mode = mode.clone();
+                if mode == "split" {
+                    self.config.split_scroll = true;
+                    self.config.split_mode = Some("decstbm".to_string());
+                    self.split_mode_dropdown =
+                        Dropdown::new(SPLIT_MODE_OPTIONS.to_vec(), "decstbm");
+                } else if mode == "banner" || mode == "none" {
+                    self.config.split_scroll = false;
+                }
                 self.saved = false;
                 self.status_message =
                     format!("Shell attach mode: {}", self.config.shell_attach_mode);
@@ -2526,18 +2609,45 @@ export extern "forgum" [
                 self.split_mode_dropdown.cycle(forward);
                 let current = self.split_mode_dropdown.current();
                 self.config.split_mode = Some(current.clone());
+                if current == "decstbm" {
+                    self.config.split_scroll = true;
+                    self.config.shell_attach_mode = "split".to_string();
+                    self.attach_mode_dropdown =
+                        Dropdown::new(SHELL_ATTACH_OPTIONS.to_vec(), "split");
+                } else if current == "disabled" {
+                    self.config.split_scroll = false;
+                    if self.config.shell_attach_mode == "split" {
+                        self.config.shell_attach_mode = "none".to_string();
+                        self.attach_mode_dropdown =
+                            Dropdown::new(SHELL_ATTACH_OPTIONS.to_vec(), "none");
+                    }
+                }
                 self.saved = false;
                 self.status_message = format!("Split execution mode switched to {}", current);
             }
             ConfigField::SplitScroll => {
                 self.config.split_scroll = !self.config.split_scroll;
+                if self.config.split_scroll {
+                    self.config.shell_attach_mode = "split".to_string();
+                    self.attach_mode_dropdown =
+                        Dropdown::new(SHELL_ATTACH_OPTIONS.to_vec(), "split");
+                    if self.config.split_mode.as_deref() != Some("decstbm") {
+                        self.config.split_mode = Some("decstbm".to_string());
+                        self.split_mode_dropdown =
+                            Dropdown::new(SPLIT_MODE_OPTIONS.to_vec(), "decstbm");
+                    }
+                } else {
+                    self.config.shell_attach_mode = "none".to_string();
+                    self.attach_mode_dropdown =
+                        Dropdown::new(SHELL_ATTACH_OPTIONS.to_vec(), "none");
+                }
                 self.saved = false;
                 self.status_message = format!(
                     "Split scroll region {}",
                     if self.config.split_scroll {
-                        "ENABLED (DECSTBM margin scroll)"
+                        "ENABLED (DECSTBM margin scroll, attach: split)"
                     } else {
-                        "DISABLED"
+                        "DISABLED (attach: none)"
                     }
                 );
             }
@@ -3149,7 +3259,7 @@ export extern "forgum" [
                     self.config.palette = None;
                     self.saved = false;
                     self.status_message =
-                        "✓ Palette cleared (using default color mode)".to_string();
+                        "✓ Palette cleared (using mascot DNA biological colors)".to_string();
                 } else {
                     self.config.palette = Some(trimmed.clone());
                     self.saved = false;
@@ -4511,12 +4621,12 @@ export extern "forgum" [
                     format!("✎ [ {}_ ]", self.config_edit_buffer)
                 } else if let Some(pal) = &self.config.palette {
                     if pal.is_empty() {
-                        "none (default) [Enter to edit]".into()
+                        "none (mascot DNA) [Enter to edit]".into()
                     } else {
                         format!("'{}' [Enter to edit]", pal)
                     }
                 } else {
-                    "none (default) [Enter to edit]".into()
+                    "none (mascot DNA) [Enter to edit]".into()
                 }
             }
             ConfigField::Environment => {
@@ -4567,7 +4677,11 @@ export extern "forgum" [
                 }
             }
             ConfigField::ShellAttachMode => {
-                format!("{} (←/→ cycle)", self.config.shell_attach_mode)
+                if self.config.shell_attach_mode == "split" {
+                    format!("{} (split_scroll ON) (←/→ cycle)", self.config.shell_attach_mode)
+                } else {
+                    format!("{} (←/→ cycle)", self.config.shell_attach_mode)
+                }
             }
             ConfigField::DefaultShell => {
                 if is_sel && self.editing_config {
@@ -4583,9 +4697,9 @@ export extern "forgum" [
             }
             ConfigField::SplitScroll => {
                 if self.config.split_scroll {
-                    "✔ ON (Space/Enter to toggle)".into()
+                    "✔ ON (attach: split) [Space/Enter to toggle]".into()
                 } else {
-                    "✖ OFF (Space/Enter to toggle)".into()
+                    "✖ OFF (attach: none) [Space/Enter to toggle]".into()
                 }
             }
             ConfigField::SplitRatio => {

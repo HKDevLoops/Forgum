@@ -544,7 +544,7 @@ fn animal_signature_defaults_apply_automatically() {
     assert_eq!(cfg.road.as_deref(), Some("grid"));
     assert_eq!(cfg.mountain.as_deref(), Some("crater"));
     assert_eq!(cfg.effect, "fly");
-    assert!(cfg.palette.as_ref().unwrap().contains("#ff69b4"));
+    assert!(cfg.palette.as_ref().unwrap().contains("#e91e63"));
 }
 
 #[test]

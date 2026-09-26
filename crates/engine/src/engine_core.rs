@@ -701,8 +701,9 @@ fn sim_thread(
         // Fixed-timestep simulation with elapsed compute compensation.
         let now = Instant::now();
         let raw_dt = now.duration_since(last_frame);
-        // Clamp dt to [1ms, 100ms] to prevent physics explosion or freeze on window drag
-        let dt = raw_dt.clamp(Duration::from_millis(1), Duration::from_millis(100));
+        // Clamp dt to [100µs, 100ms] to preserve sub-millisecond precision for high frame rates (e.g. 144–240 FPS)
+        // without artificial physics acceleration or freeze on window drag.
+        let dt = raw_dt.clamp(Duration::from_micros(100), Duration::from_millis(100));
         last_frame = now;
 
         let frame = sim.tick(dt);
@@ -1218,7 +1219,7 @@ pub fn run_engine_overlay(
     let total_cols = caps.width.max(20) as usize;
     let total_rows = caps.height.max(1) as usize;
     let cols = overlay_cols.min(total_cols).max(20);
-    let rows = overlay_rows.min(total_rows.saturating_sub(3)).max(1);
+    let rows = overlay_rows.min(total_rows.saturating_sub(4)).max(1);
 
     if cols < 20 || rows < 1 {
         let cow_display = composed_text.unwrap_or(&config.text);
@@ -1320,7 +1321,17 @@ pub fn run_engine_overlay(
     // Dynamic resize detection polls terminal::size() and notifies the SIM thread via control channel.
     let mut cur_total_cols = total_cols;
     let mut cur_total_rows = total_rows;
-    let line_count = overlay_rows;
+    let cow_display = composed_text.unwrap_or(&config.text);
+    let cow_foot = effects::find_cow_foot_y(cow_display);
+    let req_lines = (cow_foot + 4)
+        .max(cow_display.lines().count() + 3)
+        .max(6)
+        .max(overlay_rows);
+    let req_cols = cow_display
+        .lines()
+        .map(crate::cow::str_display_width)
+        .max()
+        .unwrap_or(0);
 
     while !shutdown.is_shutdown() {
         let (w_u16, h_u16) = forgum_platform::terminal_size();
@@ -1330,7 +1341,7 @@ pub fn run_engine_overlay(
             cur_total_cols = w;
             cur_total_rows = h;
             let (new_cols, new_rows) =
-                crate::render::compute_reserved_dimensions(w, h, line_count, &config);
+                crate::render::compute_reserved_dimensions_with_cols(w, h, req_lines, req_cols, &config);
             let session_id = forgum_platform::detect_session_id();
             let socket_path = forgum_platform::control_socket_path(&session_id);
             let _ = crate::daemon::write_daemon_state(

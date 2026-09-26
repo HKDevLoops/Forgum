@@ -178,8 +178,13 @@ pub fn render_loop_background(
 
     let cow_foot = effects::find_cow_foot_y(cow_display);
     let line_count = (cow_foot + 4).max(cow_display.lines().count() + 3).max(6);
+    let mascot_cols = cow_display
+        .lines()
+        .map(crate::cow::str_display_width)
+        .max()
+        .unwrap_or(0);
     let (overlay_cols, overlay_rows) =
-        compute_reserved_dimensions(cols as usize, rows as usize, line_count, &config);
+        compute_reserved_dimensions_with_cols(cols as usize, rows as usize, line_count, mascot_cols, &config);
 
     // Update daemon state with the exact reserved rows so shell prompt hooks
     // and split-clear commands know precisely where the shell partition begins!
@@ -207,41 +212,37 @@ pub fn render_loop_background(
     )
 }
 
-/// Standard fixed row allocation for split-scroll animations.
-/// Locking rows and columns guarantees a deterministic animation viewport
-/// and confines the user's interactive shell strictly to the remaining rows below.
+/// Legacy fixed row allocation constant, preserved for backward compatibility.
+/// Dynamic reservation now dynamically determines required rows directly from mascot anatomy.
+#[deprecated(note = "Removed in favor of dynamic automatic row reservation based on mascot anatomy")]
 pub const FIXED_SPLIT_ANIM_ROWS: usize = 10;
 
 /// Compute reserved rows and columns based on terminal resolution,
-/// mascot height, config overrides, and fixed split-scroll sizing.
-pub fn compute_reserved_dimensions(
+/// mascot height, mascot width, config overrides, and dynamic reservation sizing.
+pub fn compute_reserved_dimensions_with_cols(
     total_cols: usize,
     total_rows: usize,
     mascot_lines: usize,
+    mascot_cols: usize,
     config: &SceneConfig,
 ) -> (usize, usize) {
+    let bounded_split = config.split_mode.as_deref() == Some("bounded");
     let cols = if let Some(rc) = config.reserve_cols {
         (rc as usize).min(total_cols).max(20)
+    } else if bounded_split && mascot_cols > 0 {
+        // Clamped to mascot width + padding when bounded split is desired
+        (mascot_cols + 4).min(total_cols).max(20)
     } else {
         total_cols.max(20)
     };
-
-    let is_split = config.split_scroll
-        || config.shell_attach_mode == "split"
-        || config.split_mode.as_deref() == Some("seamless")
-        || config.split_mode.as_deref() == Some("decstbm");
 
     let raw_rows = if let Some(rr) = config.reserve_rows {
         rr as usize
     } else if let Some(ratio) = config.split_ratio {
         let clamped_ratio = ratio.clamp(0.10, 0.75);
         ((total_rows as f32) * clamped_ratio).round() as usize
-    } else if is_split {
-        // Fixed size split-scroll animation canvas: lock rows and columns so the
-        // animation runs at a deterministic size and the user's interactive shell
-        // is strictly confined to the remaining rows below.
-        FIXED_SPLIT_ANIM_ROWS
     } else {
+        // Automatic dynamic row reservation: allocate full height required by mascot lines
         mascot_lines
     };
 
@@ -250,6 +251,17 @@ pub fn compute_reserved_dimensions(
     let rows = raw_rows.min(max_safe_rows).max(1);
 
     (cols, rows)
+}
+
+/// Compute reserved rows and columns based on terminal resolution,
+/// mascot height, config overrides, and dynamic reservation sizing.
+pub fn compute_reserved_dimensions(
+    total_cols: usize,
+    total_rows: usize,
+    mascot_lines: usize,
+    config: &SceneConfig,
+) -> (usize, usize) {
+    compute_reserved_dimensions_with_cols(total_cols, total_rows, mascot_lines, 0, config)
 }
 
 /// Run the banner render loop. Renders inline directly in the terminal scrollback
