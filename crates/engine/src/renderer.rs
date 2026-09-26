@@ -6,7 +6,7 @@
 
 use std::io::Write;
 
-use crate::framebuffer::{Cell, FrameBuffer};
+use crate::framebuffer::{Cell, Color, FrameBuffer};
 
 /// Trait for rendering framebuffer damage to a terminal.
 pub trait Renderer: Send {
@@ -127,6 +127,8 @@ impl Renderer for AnsiRenderer {
         }
 
         let mut cur_y = 0;
+        let mut cur_cursor: Option<(usize, usize)> = None;
+        let mut last_fg: Option<Color> = None;
         let mut i = 0;
         while i < damage.len() {
             let (x0, y0) = damage[i];
@@ -151,7 +153,7 @@ impl Renderer for AnsiRenderer {
                 buf.extend_from_slice(b"\x1b[");
                 Self::write_decimal(buf, (x0 + 1) as u32);
                 buf.push(b'G');
-            } else {
+            } else if cur_cursor != Some((x0, y0)) {
                 buf.extend_from_slice(b"\x1b[");
                 Self::write_decimal(buf, (y0 + 1) as u32);
                 buf.push(b';');
@@ -176,15 +178,19 @@ impl Renderer for AnsiRenderer {
                 for _ in 0..run_len {
                     buf.push(b' ');
                 }
+                cur_cursor = Some((x0 + run_len, y0));
                 i += run_len;
             } else {
-                buf.extend_from_slice(b"\x1b[38;2;");
-                Self::write_decimal(buf, u32::from(cell0.fg.r));
-                buf.push(b';');
-                Self::write_decimal(buf, u32::from(cell0.fg.g));
-                buf.push(b';');
-                Self::write_decimal(buf, u32::from(cell0.fg.b));
-                buf.push(b'm');
+                if last_fg != Some(cell0.fg) {
+                    buf.extend_from_slice(b"\x1b[38;2;");
+                    Self::write_decimal(buf, u32::from(cell0.fg.r));
+                    buf.push(b';');
+                    Self::write_decimal(buf, u32::from(cell0.fg.g));
+                    buf.push(b';');
+                    Self::write_decimal(buf, u32::from(cell0.fg.b));
+                    buf.push(b'm');
+                    last_fg = Some(cell0.fg);
+                }
 
                 let mut ch_buf = [0u8; 4];
                 let s = cell0.ch.encode_utf8(&mut ch_buf);
@@ -205,6 +211,7 @@ impl Renderer for AnsiRenderer {
                     buf.extend_from_slice(s.as_bytes());
                     run_len += 1;
                 }
+                cur_cursor = Some((x0 + run_len, y0));
                 i += run_len;
             }
         }

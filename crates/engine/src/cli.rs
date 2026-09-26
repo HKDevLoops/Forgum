@@ -1285,7 +1285,12 @@ pub fn build_scene_config(args: &Args) -> Result<SceneConfig, String> {
         cfg.color_mode = "natural".to_string();
     }
 
-    // If color_mode is natural and no explicit CLI palette was provided, delegate to mascot's natural palette (unless text_only is active)
+    // If explicit CLI palette was provided, switch color_mode to "custom" unless an explicit color_mode was given
+    if args.palette.is_some() && args.color_mode.is_none() {
+        cfg.color_mode = "custom".to_string();
+    }
+
+    // In "natural" mode, the mascot's God-given natural biological palette takes precedence unless user passed an explicit palette
     if !args.text_only && cfg.color_mode == "natural" && args.palette.is_none() {
         let animal_name = args.cow.as_deref().unwrap_or(&cfg.cow);
         let natural_hexes = crate::color::get_natural_hex_palette(animal_name);
@@ -1464,7 +1469,7 @@ mod tests {
 
     #[test]
     fn remote_attach_subcommand() {
-        let (a, cmd) = parse(&["forgum-engine", "remote", "attach", "user@host"]);
+        let (a, cmd) = parse(&["forgum", "remote", "attach", "user@host"]);
         assert_eq!(a.command, Command::Remote);
         assert!(matches!(
             cmd,
@@ -1476,7 +1481,7 @@ mod tests {
 
     #[test]
     fn no_args_is_render() {
-        let (a, _cmd) = parse(&["forgum-engine"]);
+        let (a, _cmd) = parse(&["forgum"]);
         assert_eq!(a.command, Command::Render);
         assert!(!a.background);
     }
@@ -1484,7 +1489,7 @@ mod tests {
     #[test]
     fn render_command_with_flags() {
         let (a, _cmd) = parse(&[
-            "forgum-engine",
+            "forgum",
             "render",
             "--cow",
             "tux",
@@ -1500,32 +1505,32 @@ mod tests {
 
     #[test]
     fn render_banner_flag() {
-        let (a, _cmd) = parse(&["forgum-engine", "--banner"]);
+        let (a, _cmd) = parse(&["forgum", "--banner"]);
         assert!(a.banner);
         let cfg = build_scene_config(&a).unwrap();
         assert_eq!(cfg.shell_attach_mode, "banner");
 
-        let (a2, _cmd) = parse(&["forgum-engine", "-B"]);
+        let (a2, _cmd) = parse(&["forgum", "-B"]);
         assert!(a2.banner);
     }
 
     #[test]
     fn fortune_subcommand() {
-        let (a, cmd) = parse(&["forgum-engine", "fortune"]);
+        let (a, cmd) = parse(&["forgum", "fortune"]);
         assert_eq!(a.command, Command::Fortune);
         assert!(matches!(cmd, Some(Commands::Fortune)));
     }
 
     #[test]
     fn status_subcommand() {
-        let (a, cmd) = parse(&["forgum-engine", "status"]);
+        let (a, cmd) = parse(&["forgum", "status"]);
         assert_eq!(a.command, Command::Status);
         assert!(matches!(cmd, Some(Commands::Status)));
     }
 
     #[test]
     fn init_bash() {
-        let (a, cmd) = parse(&["forgum-engine", "init", "bash"]);
+        let (a, cmd) = parse(&["forgum", "init", "bash"]);
         assert_eq!(a.command, Command::Init);
         assert!(matches!(
             cmd,
@@ -1538,7 +1543,7 @@ mod tests {
 
     #[test]
     fn completions_zsh() {
-        let (a, cmd) = parse(&["forgum-engine", "completions", "zsh"]);
+        let (a, cmd) = parse(&["forgum", "completions", "zsh"]);
         assert_eq!(a.command, Command::Completions);
         assert!(matches!(
             cmd,
@@ -1555,7 +1560,7 @@ mod tests {
         std::fs::write(&cfg_path, r#"{"cow":"base","fps":15}"#).unwrap();
 
         let (a, _) = parse(&[
-            "forgum-engine",
+            "forgum",
             "render",
             "--config",
             cfg_path.to_str().unwrap(),
@@ -1569,7 +1574,7 @@ mod tests {
 
     #[test]
     fn tmux_install_subcommand() {
-        let (a, cmd) = parse(&["forgum-engine", "tmux", "install"]);
+        let (a, cmd) = parse(&["forgum", "tmux", "install"]);
         assert_eq!(a.command, Command::Tmux);
         assert!(matches!(
             cmd,
@@ -1581,7 +1586,7 @@ mod tests {
 
     #[test]
     fn status_line_default_max_len() {
-        let (a, cmd) = parse(&["forgum-engine", "status-line"]);
+        let (a, cmd) = parse(&["forgum", "status-line"]);
         assert_eq!(a.command, Command::StatusLine);
         assert_eq!(a.max_len, Some(70));
         assert!(matches!(cmd, Some(Commands::StatusLine { max_len: 70 })));
@@ -1589,7 +1594,7 @@ mod tests {
 
     #[test]
     fn status_line_custom_max_len() {
-        let (a, cmd) = parse(&["forgum-engine", "status-line", "--max-len", "40"]);
+        let (a, cmd) = parse(&["forgum", "status-line", "--max-len", "40"]);
         assert_eq!(a.command, Command::StatusLine);
         assert_eq!(a.max_len, Some(40));
         assert!(matches!(cmd, Some(Commands::StatusLine { max_len: 40 })));

@@ -2928,16 +2928,28 @@ fn render_subcommand_with_scene(
             .unwrap_or_else(|| "forgum".to_string());
 
         let mut forward_args: Vec<String> = vec![current_bin];
-        let mut has_subcommand = false;
         for arg in std::env::args().skip(1) {
             if arg == "--split-mode" || arg == "native" {
                 continue;
             }
-            if !has_subcommand && !arg.starts_with('-') {
-                has_subcommand = true;
-            }
             forward_args.push(arg);
         }
+        let has_subcommand = forward_args.iter().skip(1).any(|a| {
+            matches!(
+                a.as_str(),
+                "render"
+                    | "think"
+                    | "tui"
+                    | "battle"
+                    | "arena"
+                    | "rps-battle"
+                    | "image"
+                    | "fortune"
+                    | "status"
+                    | "stop"
+                    | "herd"
+            )
+        });
         if !has_subcommand {
             forward_args.insert(1, "render".to_string());
         }
@@ -3010,11 +3022,21 @@ fn render_subcommand_with_scene(
     let is_stdout_piped = !crossterm::tty::IsTty::is_tty(&std::io::stdout());
     if !is_stdout_piped {
         if let Some(st) = active_state {
-            // If split/daemon was requested and one already exists: report PID and return.
-            if args.daemon || is_split_mode {
+            // If daemon mode was specifically requested (e.g. background keep-alive from shell hook), report PID and exit.
+            if args.daemon {
                 println!("{}", st.pid);
                 return ExitCode::SUCCESS;
             }
+
+            // If an explicit duration was requested or foreground animation is running,
+            // terminate the old background instance so the user's animation takes the pane.
+            if args.duration.is_some() || !scene.background {
+                let _ = forgum_platform::kill_process(st.pid);
+                let _ = std::fs::remove_file(&state_path);
+                if let Ok(rt) = forgum_platform::runtime_dir() {
+                    let _ = std::fs::remove_file(rt.join("daemon.json"));
+                }
+            } else {
 
             // Forward updates to the running instance via control socket if responsive.
             let mut forwarded = false;
@@ -3071,11 +3093,12 @@ fn render_subcommand_with_scene(
 
             // Stale state: clean up and proceed
             daemon::cleanup_daemon_state(&session_id);
+            }
         }
     }
 
-    if args.daemon || is_split_mode {
-        // ── DAEMON / SPLIT MODE — PARENT PATH ────────────────────────
+    if args.daemon {
+        // ── DAEMON MODE — PARENT PATH ────────────────────────
         //
         // Spawn the actual daemon as a brand-new process via `Command::spawn`
         // (which is `posix_spawn` on POSIX and `CreateProcess` on Windows).
@@ -3328,8 +3351,11 @@ fn run_daemon_child(args: cli::Args) -> ExitCode {
     // Start the control socket server BEFORE writing the state file so
     // a fast caller can already be connecting by the time the file
     // appears.
-    let (server, cmd_rx) =
-        match forgum_engine::control_socket::ControlServer::start(socket_path.clone()) {
+    let (server, cmd_rx) = match forgum_engine::control_socket::ControlServer::start_with_fps(
+        socket_path.clone(),
+        scene.fps,
+        &scene.effect,
+    ) {
             Ok(v) => v,
             Err(e) => {
                 eprintln!("{PROGRAM}: control socket: {e}");

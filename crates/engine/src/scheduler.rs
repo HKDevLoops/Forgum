@@ -35,6 +35,8 @@ pub struct Scheduler {
     consecutive_idle_frames: u32,
     last_frame: Instant,
     paused_from: Option<SchedulerTier>,
+    /// When true, the scheduler stays in `Active` tier regardless of damage count.
+    pub is_dynamic: bool,
 }
 
 impl Scheduler {
@@ -48,6 +50,7 @@ impl Scheduler {
             consecutive_idle_frames: 0,
             last_frame: Instant::now(),
             paused_from: None,
+            is_dynamic: false,
         }
     }
 
@@ -97,6 +100,11 @@ impl Scheduler {
     /// * `damaged_count` — number of cells that differ between back and front.
     pub fn observe(&mut self, damaged_count: usize) {
         if matches!(self.tier, SchedulerTier::Suspended) {
+            return;
+        }
+        if self.is_dynamic {
+            self.consecutive_idle_frames = 0;
+            self.tier = SchedulerTier::Active;
             return;
         }
         if damaged_count == 0 {

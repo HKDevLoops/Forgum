@@ -128,6 +128,44 @@ impl Drop for CursorShowGuard {
     }
 }
 
+/// RAII guard that requests 1ms multimedia timer resolution on Windows on construction,
+/// and restores the default timer period on drop.
+/// On non-Windows platforms, this is a zero-cost no-op.
+#[derive(Debug)]
+pub struct TimerResolutionGuard {
+    _private: (),
+}
+
+impl TimerResolutionGuard {
+    #[must_use]
+    pub fn acquire() -> Self {
+        #[cfg(windows)]
+        #[allow(unsafe_code)]
+        unsafe {
+            #[link(name = "winmm")]
+            extern "system" {
+                fn timeBeginPeriod(uPeriod: u32) -> u32;
+            }
+            let _ = timeBeginPeriod(1);
+        }
+        Self { _private: () }
+    }
+}
+
+impl Drop for TimerResolutionGuard {
+    fn drop(&mut self) {
+        #[cfg(windows)]
+        #[allow(unsafe_code)]
+        unsafe {
+            #[link(name = "winmm")]
+            extern "system" {
+                fn timeEndPeriod(uPeriod: u32) -> u32;
+            }
+            let _ = timeEndPeriod(1);
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

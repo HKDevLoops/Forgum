@@ -2,7 +2,7 @@
 //!
 //! Generates shell-specific hooks that:
 //! 1. Resolve the engine path (baked at init time)
-//! 2. Call `forgum-engine render` with argv flags (no JSON in shell)
+//! 2. Call `forgum render` with argv flags (no JSON in shell)
 //! 3. Sweep dead daemons on precmd
 //!
 //! Supported shells: bash, zsh, fish, pwsh (7+), powershell.exe (5.1), cmd.exe.
@@ -13,7 +13,7 @@ pub use forgum_platform::shell::Shell;
 
 /// Generate a shell hook script.
 ///
-/// `engine_path` is the absolute path to `forgum-engine`, baked in at init time.
+/// `engine_path` is the absolute path to `forgum`, baked in at init time.
 pub fn generate_hook(shell: Shell, engine_path: &str) -> String {
     generate_hook_with_args(shell, engine_path, &[])
 }
@@ -52,7 +52,7 @@ pub fn generate_hook_with_args(shell: Shell, engine_path: &str, render_args: &[S
 
 /// Generate a tmux config block for `forgum tmux install`.
 ///
-/// `engine_path` is the absolute path to `forgum-engine`, baked in at init time.
+/// `engine_path` is the absolute path to `forgum`, baked in at init time.
 pub fn generate_tmux_config(engine_path: &str) -> String {
     format!(
         "# >>> forgum tmux >>>\n\
@@ -166,6 +166,12 @@ forgum-init() {{
 }}
 
 __forgum_exit() {{
+  local state="$__FORGUM_RUNTIME/daemon.json"
+  if [ -f "$state" ]; then
+    local pid; pid=$(awk -F'"' '/pid/{{print $4}}' "$state" 2>/dev/null)
+    [ -n "$pid" ] && kill "$pid" 2>/dev/null
+    rm -f "$state"
+  fi
   printf '\x1b[r\x1b[?25h\x1b[0m'
 }}
 trap '__forgum_exit' EXIT 2>/dev/null
@@ -194,12 +200,15 @@ __forgum_preexec() {{
   __forgum_in_prompt=
   local state="$__FORGUM_RUNTIME/daemon.json"
   if [ -f "$state" ]; then
-    local pid; pid=$(awk -F'"' '/pid/{{print $4}}' "$state" 2>/dev/null)
-    if [ -n "$pid" ]; then
-      kill "$pid" 2>/dev/null
+    local rows; rows=$(awk -F'"' '/ob_y1/{{print $4}}' "$state" 2>/dev/null || echo 0)
+    if [ "$rows" -eq 0 ]; then
+      local pid; pid=$(awk -F'"' '/pid/{{print $4}}' "$state" 2>/dev/null)
+      if [ -n "$pid" ]; then
+        kill "$pid" 2>/dev/null
+      fi
+      rm -f "$state"
+      printf '\x1b7\x1b[r\x1b8'
     fi
-    rm -f "$state"
-    printf '\x1b7\x1b[r\x1b8'
   fi
 }}
 trap '__forgum_preexec' DEBUG 2>/dev/null
@@ -303,6 +312,12 @@ forgum-init() {{
 }}
 
 TRAPEXIT() {{
+  local state="$__FORGUM_RUNTIME/daemon.json"
+  if [ -f "$state" ]; then
+    local pid; pid=$(awk -F'"' '/pid/{{print $4}}' "$state" 2>/dev/null)
+    [ -n "$pid" ] && kill "$pid" 2>/dev/null
+    rm -f "$state"
+  fi
   printf '\x1b[r\x1b[?25h\x1b[0m'
 }}
 
@@ -364,12 +379,15 @@ precmd_functions+=(__forgum_precmd)
 __forgum_preexec() {{
   local state="$__FORGUM_RUNTIME/daemon.json"
   if [ -f "$state" ]; then
-    local pid; pid=$(awk -F'"' '/pid/{{print $4}}' "$state" 2>/dev/null)
-    if [ -n "$pid" ]; then
-      kill "$pid" 2>/dev/null
+    local rows; rows=$(awk -F'"' '/ob_y1/{{print $4}}' "$state" 2>/dev/null || echo 0)
+    if [ "$rows" -eq 0 ]; then
+      local pid; pid=$(awk -F'"' '/pid/{{print $4}}' "$state" 2>/dev/null)
+      if [ -n "$pid" ]; then
+        kill "$pid" 2>/dev/null
+      fi
+      rm -f "$state"
+      printf '\x1b7\x1b[r\x1b8'
     fi
-    rm -f "$state"
-    printf '\x1b7\x1b[r\x1b8'
   fi
 }}
 autoload -Uz add-zsh-hook 2>/dev/null
@@ -429,6 +447,14 @@ function forgum-init
 end
 
 function __forgum_exit --on-event fish_exit
+    set -l state $__forgum_runtime/daemon.json
+    if test -f $state
+        set -l pid (awk -F'"' '/pid/{{print $4}}' $state 2>/dev/null)
+        if test -n "$pid"
+            kill $pid 2>/dev/null
+        end
+        rm -f $state
+    end
     printf '\x1b[r\x1b[?25h\x1b[0m'
 end
 
@@ -449,12 +475,15 @@ end
 function __forgum_preexec --on-event fish_preexec
     set -l state $__forgum_runtime/daemon.json
     if test -f $state
-        set -l pid (awk -F'"' '/pid/{{print $4}}' $state 2>/dev/null)
-        if test -n "$pid"
-            kill $pid 2>/dev/null
+        set -l rows (awk -F'"' '/ob_y1/{{print $4}}' $state 2>/dev/null; or echo 0)
+        if test "$rows" -eq 0
+            set -l pid (awk -F'"' '/pid/{{print $4}}' $state 2>/dev/null)
+            if test -n "$pid"
+                kill $pid 2>/dev/null
+            end
+            rm -f $state
+            printf '\x1b7\x1b[r\x1b8'
         end
-        rm -f $state
-        printf '\x1b7\x1b[r\x1b8'
     end
 end
 
@@ -550,6 +579,14 @@ function forgum-init {{
 }}
 
 Register-EngineEvent -SourceIdentifier ([System.Management.Automation.PsEngineEvent]::Exiting) -Action {{
+    $state = Join-Path $env:TEMP 'Forgum\daemon.json'
+    if (Test-Path $state) {{
+        try {{
+            $info = Get-Content $state -Raw | ConvertFrom-Json
+            if ($info.pid) {{ Stop-Process -Id $info.pid -Force -EA SilentlyContinue }}
+            Remove-Item $state -Force -EA SilentlyContinue
+        }} catch {{ }}
+    }}
     $esc = if ($PSVersionTable.PSVersion.Major -ge 7) {{ '`e' }} else {{ [char]27 }}
     [Console]::Write("$esc[r$esc[?25h$esc[0m")
 }} -EA SilentlyContinue | Out-Null
@@ -581,12 +618,12 @@ if (Get-Command Set-PSReadLineKeyHandler -EA SilentlyContinue) {{
             if (Test-Path $state) {{
                 try {{
                     $info = Get-Content $state -Raw | ConvertFrom-Json
-                    if ($info.pid) {{
+                    if ($info.pid -and (-not $info.ob_y1 -or [int]$info.ob_y1 -eq 0)) {{
                         Stop-Process -Id $info.pid -Force -EA SilentlyContinue
+                        Remove-Item $state -Force -EA SilentlyContinue
+                        [Console]::Write("$esc[r")
                     }}
-                    Remove-Item $state -Force -EA SilentlyContinue
                 }} catch {{ }}
-                [Console]::Write("$esc[r")
             }}
         }}
         [Microsoft.PowerShell.PSConsoleReadLine]::AcceptLine()
@@ -731,6 +768,14 @@ function forgum-init {{
 }}
 
 Register-EngineEvent -SourceIdentifier ([System.Management.Automation.PsEngineEvent]::Exiting) -Action {{
+    $state = Join-Path $env:TEMP 'Forgum\daemon.json'
+    if (Test-Path $state) {{
+        try {{
+            $info = Get-Content $state -Raw | ConvertFrom-Json
+            if ($info.pid) {{ Stop-Process -Id $info.pid -Force -EA SilentlyContinue }}
+            Remove-Item $state -Force -EA SilentlyContinue
+        }} catch {{ }}
+    }}
     $esc = if ($PSVersionTable.PSVersion.Major -ge 7) {{ '`e' }} else {{ [char]27 }}
     [Console]::Write("$esc[r$esc[?25h$esc[0m")
 }} -EA SilentlyContinue | Out-Null
@@ -762,12 +807,12 @@ if (Get-Command Set-PSReadLineKeyHandler -EA SilentlyContinue) {{
             if (Test-Path $state) {{
                 try {{
                     $info = Get-Content $state -Raw | ConvertFrom-Json
-                    if ($info.pid) {{
+                    if ($info.pid -and (-not $info.ob_y1 -or [int]$info.ob_y1 -eq 0)) {{
                         Stop-Process -Id $info.pid -Force -EA SilentlyContinue
+                        Remove-Item $state -Force -EA SilentlyContinue
+                        [Console]::Write("$esc[r")
                     }}
-                    Remove-Item $state -Force -EA SilentlyContinue
                 }} catch {{ }}
-                [Console]::Write("$esc[r")
             }}
         }}
         [Microsoft.PowerShell.PSConsoleReadLine]::AcceptLine()

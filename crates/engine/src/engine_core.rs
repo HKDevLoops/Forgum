@@ -180,10 +180,13 @@ impl SimState {
             env_override,
         );
 
+        let mut scheduler = Scheduler::new(config.fps);
+        scheduler.is_dynamic = config.effect != "static" && config.effect != "none";
+
         Self {
             fb: FrameBuffer::new(cols, rows),
             effect,
-            scheduler: Scheduler::new(config.fps),
+            scheduler,
             frame_count: 0,
             elapsed: 0.0,
             arena: bumpalo::Bump::with_capacity(64 * 1024),
@@ -581,6 +584,12 @@ fn sim_thread(
     shutdown: ShutdownFlag,
     max_frames: u64,
 ) {
+    let sim_start = Instant::now();
+    let wall_clock_limit = if sim.config.duration > 0 {
+        Some(Duration::from_secs(sim.config.duration as u64))
+    } else {
+        None
+    };
     let mut last_frame = Instant::now();
     let mut last_battery_check = Instant::now();
     let mut user_speed: f32 = 1.0;
@@ -591,7 +600,20 @@ fn sim_thread(
         if shutdown.is_shutdown() {
             break;
         }
-        if max_frames > 0 && sim.frame_count >= max_frames {
+        // Strict wall-clock duration limit: ensures --duration N always runs for N wall-clock seconds!
+        if let Some(limit) = wall_clock_limit {
+            if sim_start.elapsed() >= limit {
+                crate::log_info!(
+                    "engine",
+                    "SIM thread reached wall-clock duration limit ({:?}), shutting down",
+                    limit
+                );
+                shutdown.trigger();
+                break;
+            }
+        }
+        // Fallback frame-count termination for duration 0 / explicit max_frames invocations
+        if max_frames > 0 && wall_clock_limit.is_none() && sim.frame_count >= max_frames {
             crate::log_info!(
                 "engine",
                 "SIM thread reached max_frames ({}), shutting down",
@@ -685,13 +707,17 @@ fn sim_thread(
 
         let frame = sim.tick(dt);
 
-        // Send to render thread (bounded — backpressure if render is slow).
-        if frame_tx.send(frame).is_err() {
-            crate::log_warn!(
-                "engine",
-                "SIM thread: render thread dropped receiver, exiting"
-            );
-            break;
+        // Send to render thread (non-blocking so slow terminal I/O doesn't throttle simulation FPS).
+        match frame_tx.try_send(frame) {
+            Ok(()) => {}
+            Err(crossbeam_channel::TrySendError::Full(_)) => {}
+            Err(crossbeam_channel::TrySendError::Disconnected(_)) => {
+                crate::log_warn!(
+                    "engine",
+                    "SIM thread: render thread dropped receiver, exiting"
+                );
+                break;
+            }
         }
 
         // Calibrated sleep: subtract elapsed frame work from target period to eliminate drift

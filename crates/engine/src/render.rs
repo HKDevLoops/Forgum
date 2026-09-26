@@ -84,6 +84,7 @@ pub fn render_loop_foreground(
     let _raw = RawModeGuard::acquire()?;
     let _alt = AltScreenGuard::acquire()?;
     let _cur = CursorShowGuard::acquire()?;
+    let _timer = forgum_platform::TimerResolutionGuard::acquire();
 
     let max_frames = compute_max_frames(config.duration, config.fps);
 
@@ -172,6 +173,7 @@ pub fn render_loop_background(
 
     // Notice: In overlay background mode, we do NOT hide the cursor so the shell prompt
     // cursor remains completely visible and interactive.
+    let _timer = forgum_platform::TimerResolutionGuard::acquire();
     let max_frames = compute_max_frames(config.duration, config.fps);
 
     let cow_foot = effects::find_cow_foot_y(cow_display);
@@ -285,6 +287,7 @@ pub fn render_loop_banner(
     }
 
     let _cur = CursorShowGuard::acquire()?;
+    let _timer = forgum_platform::TimerResolutionGuard::acquire();
 
     let cow_foot = effects::find_cow_foot_y(cow_display);
     let line_count = (cow_foot + 4).max(cow_display.lines().count() + 3).max(6);

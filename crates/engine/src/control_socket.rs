@@ -117,6 +117,17 @@ pub fn new_engine_state_handle() -> EngineStateHandle {
     Arc::new(Mutex::new(SharedEngineState::default()))
 }
 
+/// Create a new shared engine state handle with explicit fps and effect.
+pub fn new_engine_state_handle_with_fps(fps: u16, effect: &str) -> EngineStateHandle {
+    Arc::new(Mutex::new(SharedEngineState {
+        running: true,
+        paused: false,
+        effect: effect.into(),
+        fps: if fps == 0 { 30 } else { fps },
+        speed: 1.0,
+    }))
+}
+
 /// Parse a raw line from the control socket into a `ControlCmd`.
 pub fn parse_cmd(line: &str) -> ControlCmd {
     let trimmed = line.trim();
@@ -177,6 +188,16 @@ impl ControlServer {
         socket_path: PathBuf,
     ) -> Result<(Self, crossbeam_channel::Receiver<ControlCmd>), Box<dyn std::error::Error>> {
         let state = new_engine_state_handle();
+        Self::start_with_state(socket_path, state)
+    }
+
+    /// Bind the control socket with target fps and active effect.
+    pub fn start_with_fps(
+        socket_path: PathBuf,
+        fps: u16,
+        effect: &str,
+    ) -> Result<(Self, crossbeam_channel::Receiver<ControlCmd>), Box<dyn std::error::Error>> {
+        let state = new_engine_state_handle_with_fps(fps, effect);
         Self::start_with_state(socket_path, state)
     }
 
