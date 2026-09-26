@@ -29,7 +29,8 @@ jobs:
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
 
           CLEAN_TAG="${TAG#v}"
-          if [ "${CLEAN_TAG}" != "${VERSION}" ] && [ "${TAG}" != "alpha-${VERSION}" ] && [ "${TAG}" != "${VERSION}" ] && [ "${TAG}" != "alpha-0.0.1" ]; then
+          CLEAN_TAG="${CLEAN_TAG#alpha-}"
+          if [ "${CLEAN_TAG}" != "${VERSION}" ]; then
             echo "::error::Tag ${TAG} does not match Cargo.toml version ${VERSION}"
             exit 1
           fi
@@ -67,6 +68,13 @@ jobs:
           - target: x86_64-unknown-freebsd
             os: ubuntu-latest
             cross: true
+          - target: armv7-unknown-linux-gnueabihf
+            os: ubuntu-latest
+            cross: true
+          - target: riscv64gc-unknown-linux-gnu
+            os: ubuntu-latest
+            cross: true
+            build_only: true
 
     steps:
       - uses: actions/checkout@v4
@@ -102,8 +110,8 @@ jobs:
         if: ${{ runner.os != 'Windows' }}
         run: |
           cd target/${{ matrix.target }}/release
-          tar czf ../../forgum-engine-${{ matrix.target }}.tar.gz forgum-engine forgum ../../../README.md
-          sha256sum ../../forgum-engine-${{ matrix.target }}.tar.gz > ../../forgum-engine-${{ matrix.target }}.sha256
+          tar czf ../../forgum-${{ matrix.target }}.tar.gz forgum ../../../README.md
+          sha256sum ../../forgum-${{ matrix.target }}.tar.gz > ../../forgum-${{ matrix.target }}.sha256
           cd ../../..
 
       # Windows packaging is restricted to the rigorously-tested x86-64 / arm64 targets.
@@ -114,8 +122,8 @@ jobs:
         shell: bash
         run: |
           cd target/${{ matrix.target }}/release
-          tar czf ../../forgum-engine-${{ matrix.target }}.tar.gz forgum-engine.exe forgum.exe ../../../README.md
-          sha256sum ../../forgum-engine-${{ matrix.target }}.tar.gz > ../../forgum-engine-${{ matrix.target }}.sha256
+          tar czf ../../forgum-${{ matrix.target }}.tar.gz forgum.exe ../../../README.md
+          sha256sum ../../forgum-${{ matrix.target }}.tar.gz > ../../forgum-${{ matrix.target }}.sha256
           cd ../../..
 
       # Windows zip artifacts consumed by the winget + scoop manifests.
@@ -135,7 +143,6 @@ jobs:
           esac
 
           TMPDIR=$(mktemp -d)
-          cp "$SRC_DIR/forgum-engine.exe" "$TMPDIR/forgum-engine.exe"
           cp "$SRC_DIR/forgum.exe" "$TMPDIR/forgum.exe"
           cp "$ROOT_DIR/README.md" "$TMPDIR/README.md"
           cd "$TMPDIR"
@@ -150,8 +157,8 @@ jobs:
         with:
           name: release-${{ matrix.target }}
           path: |
-            forgum-engine-${{ matrix.target }}.tar.gz
-            forgum-engine-${{ matrix.target }}.sha256
+            forgum-${{ matrix.target }}.tar.gz
+            forgum-${{ matrix.target }}.sha256
             forgum-*-windows-*.zip
             forgum-*-windows-*.sha256
             # L3 packaging artifacts (built by the `packages` job below, which the

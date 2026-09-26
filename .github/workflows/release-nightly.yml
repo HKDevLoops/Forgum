@@ -72,6 +72,9 @@ jobs:
             os: windows-latest
           - target: aarch64-pc-windows-msvc
             os: windows-latest
+          - target: x86_64-unknown-freebsd
+            os: ubuntu-latest
+            cross: true
     steps:
       - uses: actions/checkout@v4
         with:
@@ -96,6 +99,10 @@ jobs:
       - name: Build (native)
         if: ${{ !matrix.cross }}
         run: cargo build --release --locked --target ${{ matrix.target }} -p forgum-engine --bin forgum
+
+      - name: Test (native)
+        if: ${{ !matrix.cross }}
+        run: cargo test --workspace --verbose
 
       - name: Package Unix Binary
         if: runner.os != 'Windows'
