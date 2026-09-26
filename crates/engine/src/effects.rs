@@ -1139,7 +1139,7 @@ impl WalkEffect {
         let (w, h) = crate::kinematics::ascii_dimensions(&cow_text);
         let mut body =
             crate::kinematics::KinematicBody::new(w, h, crate::kinematics::BoundsMode::Wrap);
-        body.vx = 0.0;
+        body.vx = (dna.speed * 8.0).clamp(4.0, 16.0);
         body.vy = 0.0;
         let palette = crate::color::parse_palette(&dna.palette);
         let instinct = detect_animal_instinct(&cow_text, dna);
@@ -1223,15 +1223,9 @@ impl Effect for WalkEffect {
                     _ => None,
                 };
                 for (x, ch) in line.chars().enumerate() {
-                    let xi = x as i32 + x_off;
-                    let yi = y as i32 + y_off;
-                    if yi >= 0 && xi >= 0 {
-                        let uxi = xi as usize;
-                        let uyi = yi as usize;
-                        if uyi < fb.height && uxi < fb.width {
-                            let cell_fg = resolve_bubble_line_char_fg(line, x, ch);
-                            draw_char_with_hull(fb, uxi, uyi, x, hull_tuple, ch, cell_fg);
-                        }
+                    if y < fb.height && x < fb.width {
+                        let cell_fg = resolve_bubble_line_char_fg(line, x, ch);
+                        draw_char_with_hull(fb, x, y, x, hull_tuple, ch, cell_fg);
                     }
                 }
                 y += 1;
@@ -2495,19 +2489,41 @@ impl Effect for DissolveEffect {
 // ── Shared helpers ─────────────────────────────────────────────────
 
 /// Determine the bounding hull (first and last non-space character column) for a line.
+/// Automatically excludes leading speech/thought bubble tail connectors ('\', '/', 'o')
+/// that are separated from the animal body by whitespace, preventing scenery erasure in the gap.
 #[inline]
 pub(crate) fn find_line_hull(line: &str) -> Option<(usize, usize)> {
-    let mut start = None;
-    let mut end = None;
+    let mut first_col = None;
+    let mut first_ch = None;
+    let mut second_col = None;
+    let mut last_col = None;
+
     for (i, ch) in line.chars().enumerate() {
         if ch != ' ' {
-            if start.is_none() {
-                start = Some(i);
+            if first_col.is_none() {
+                first_col = Some(i);
+                first_ch = Some(ch);
+            } else if second_col.is_none() {
+                second_col = Some(i);
             }
-            end = Some(i);
+            last_col = Some(i);
         }
     }
-    start.zip(end)
+
+    let first = first_col?;
+    let last = last_col?;
+
+    let start = if let (Some(fc), Some(sc), Some(ch)) = (first_col, second_col, first_ch) {
+        if (ch == '\\' || ch == '/' || ch == 'o' || ch == 'O') && sc.saturating_sub(fc) >= 3 {
+            sc
+        } else {
+            first
+        }
+    } else {
+        first
+    };
+
+    Some((start, last))
 }
 
 /// Render a cell respecting bounding-hull occlusion:
@@ -2587,6 +2603,14 @@ pub(crate) fn resolve_fg_palette_char(
             };
             let (r, g, b) = crate::color::natural_creature_color(p, x, y, ch);
             Color { r, g, b, a: 255 }
+        }
+        "custom" | "palette" => {
+            if !palette.is_empty() {
+                let (r, g, b) = crate::color::palette_gradient(palette, x as f32, y as f32, time);
+                Color { r, g, b, a: 255 }
+            } else {
+                Color::WHITE
+            }
         }
         "solid" | "static" | "white" => Color::WHITE,
         "none" => base,
@@ -3614,7 +3638,7 @@ mod tests {
     }
 
     #[test]
-    fn walk_remains_stationary_at_stagnant_position() {
+    fn walk_drives_physical_translation_across_terminal() {
         let dna = CowDna::default();
         let mut effect = WalkEffect::new(COW.to_string(), &dna, 0, "static".to_string());
         let mut fb = FrameBuffer::new(80, 24);
@@ -3624,14 +3648,14 @@ mod tests {
         effect.update(1.0, 80, 24);
         assert_eq!(
             effect.body.screen_x(),
-            0,
-            "walk must remain stationary at stagnant position"
+            8,
+            "walk must drive physical horizontal translation across terminal boundaries"
         );
 
         effect.render(&mut fb, 1.0);
         fb.swap();
 
-        assert_eq!(fb.get(2, 0).ch, '^');
+        assert_eq!(fb.get(10, 0).ch, '^');
     }
 
     #[test]

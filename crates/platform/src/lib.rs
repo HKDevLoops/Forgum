@@ -48,6 +48,7 @@ pub mod sixel;
 pub mod spawn;
 pub mod telemetry;
 pub mod terminal;
+pub mod terminal_theme;
 pub mod uninstaller;
 
 // Built-in 8×8 bitmap font for real glyph rasterization and video capture.
@@ -65,7 +66,7 @@ pub mod platform_windows;
 // Re-exports for ergonomic callers.
 pub use daemon_socket::{DaemonSocket, SocketConnection};
 pub use error::PlatformError;
-pub use guards::{AltScreenGuard, CursorShowGuard, RawModeGuard};
+pub use guards::{AltScreenGuard, CursorShowGuard, RawModeGuard, TimerResolutionGuard};
 pub use mux::{detect_mux, Mux};
 pub use output::{open_output, OutputHandle, OutputTarget};
 pub use package_manager::{
@@ -143,6 +144,7 @@ pub use terminal::{
     terminal_size, terminal_supports_sync, ColorLevel, GraphicsCaps, NativeSplitPlan, SplitMode,
     TerminalCapabilities, TerminalEmulator,
 };
+pub use terminal_theme::{calculate_luminance, detect_terminal_theme, TerminalTheme};
 /// Expand to the contained code only when compiling on a Unix-like target.
 ///
 /// This macro emits a `#[cfg(unix)]` attribute that gates a block, so the

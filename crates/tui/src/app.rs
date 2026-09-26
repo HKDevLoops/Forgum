@@ -373,14 +373,14 @@ pub const COLOR_OPTIONS: &[(&str, &str)] = &[
     ("none", "Pure minimalist high-contrast monochrome ASCII"),
 ];
 
-/// Curated categories for 106 cow mascots.
+/// Curated categories for all 132 cow mascots.
 pub const CATEGORIES: &[(&str, &[&str])] = &[
     (
         "Farm & Domestic",
         &[
             "default", "cat", "cat2", "catfence", "charlie", "corgi", "bunny", "doge", "fat-cow",
-            "goat", "goat2", "hippie", "kitty", "kitten", "meow", "hamster", "mule", "pig", "ram",
-            "rooster", "sheep", "turkey",
+            "goat", "goat2", "hippie", "kitty", "kitten", "meow", "hamster", "lamb", "lamb2",
+            "mule", "pig", "ram", "rooster", "sheep", "turkey",
         ],
     ),
     (
@@ -396,11 +396,16 @@ pub const CATEGORIES: &[(&str, &[&str])] = &[
             "koala",
             "luke-koala",
             "moofasa",
+            "moose",
+            "owl",
             "panther",
             "rhino",
+            "shikato",
             "sloth",
+            "squirrel",
             "telebears",
             "tiger",
+            "tortoise",
             "wolf",
         ],
     ),
@@ -414,9 +419,12 @@ pub const CATEGORIES: &[(&str, &[&str])] = &[
             "ebi_furai",
             "happy-whale",
             "jellyfish",
+            "lobster",
             "octopus",
             "pufferfish",
             "seahorse",
+            "seahorse-big",
+            "smiling-octopus",
             "squid",
             "turtle",
             "walrus",
@@ -438,11 +446,14 @@ pub const CATEGORIES: &[(&str, &[&str])] = &[
             "minotaur",
             "mooghidjirah",
             "moojira",
+            "personality-sphere",
             "pterodactyl",
+            "satanic",
             "sauron",
             "stegosaurus",
             "unipony",
             "vader",
+            "weeping-angel",
             "wizard",
             "yoda",
         ],
@@ -459,13 +470,19 @@ pub const CATEGORIES: &[(&str, &[&str])] = &[
             "hellokitty",
             "hypno",
             "kiss",
+            "lollerskates",
             "mona-lisa",
             "nyan",
             "radioactive-kitty",
             "ren",
             "snoopy",
+            "snoopyhouse",
+            "snoopysleep",
+            "spidercow",
             "stimpy",
             "tux",
+            "tux-big",
+            "tweety-bird",
             "vulpix",
         ],
     ),
@@ -481,15 +498,22 @@ pub const CATEGORIES: &[(&str, &[&str])] = &[
             "fence",
             "hiya",
             "jesus",
+            "king",
+            "knight",
             "kosh",
             "mutilated",
+            "pawn",
+            "periodic-table",
             "queen",
+            "rook",
+            "shrug",
             "skeleton",
             "small",
             "supermilker",
             "surgery",
             "three-eyes",
             "viper",
+            "world",
         ],
     ),
 ];
@@ -4736,94 +4760,11 @@ export extern "forgum" [
         rel_y: usize,
         ch: char,
     ) -> (u8, u8, u8) {
-        if palette.is_empty() {
-            return (255, 255, 255);
-        }
-        if palette.len() == 1 {
-            return palette[0];
-        }
-
-        let c0 = palette[0];
-        let c1 = palette.get(1).copied().unwrap_or(c0);
-        let c2 = palette.get(2).copied().unwrap_or(c1);
-        let c3 = palette.get(3).copied().unwrap_or(c2);
-        let c4 = palette.get(4).copied().unwrap_or(c1);
-
-        // 1. Eyes: signature contrast or specific eye color
-        if matches!(
-            ch,
-            'o' | 'O'
-                | '@'
-                | '^'
-                | '*'
-                | '$'
-                | 'x'
-                | 'X'
-                | '='
-                | '0'
-                | 'e'
-                | '+'
-                | 'v'
-                | 'u'
-                | 'w'
-                | '8'
-                | 'Q'
-                | '•'
-                | '●'
-        ) && (rel_y <= 4 || ch == 'o' || ch == 'O' || ch == '@' || ch == '*')
-        {
-            return c4;
-        }
-
-        // 2. Beak, muzzle, nostrils, snout, udder accents
-        if ch == '.'
-            || ch == ','
-            || ch == 'w'
-            || ch == 'W'
-            || ch == 'v'
-            || ch == 'V'
-            || ch == 'u'
-            || ch == 'U'
-            || ch == ':'
-        {
-            return c3;
-        }
-
-        // 3. Horns, ears, crest, crown (upper rows)
-        if (ch == '^' || ch == '/' || ch == '\\' || ch == '\'' || ch == '`') && rel_y <= 2 {
-            return c1;
-        }
-
-        // 4. Feet, paws, hooves, trotters, bottom row flippers
-        if rel_y >= 3 && (ch == '_' || ch == '-' || ch == '|' || ch == ')') {
-            return c2;
-        }
-
-        // 5. Body markings, spots, stripes, and coat pattern (stable spatial hash)
-        let hash =
-            ((rel_x.wrapping_mul(17) + rel_y.wrapping_mul(31)) ^ (rel_x.wrapping_mul(7))) % 100;
-        let chosen = if hash < 55 {
-            c0
-        } else if hash < 80 {
-            c1
-        } else {
-            c2
-        };
-
-        let (mut r, mut g, mut b) = chosen;
-        if ch != ' ' {
-            let lum = 0.299 * (r as f32) + 0.587 * (g as f32) + 0.114 * (b as f32);
-            if lum < 55.0 {
-                let boost = 55.0 - lum;
-                r = (r as f32 + boost * 0.9).min(255.0) as u8;
-                g = (g as f32 + boost * 0.95).min(255.0) as u8;
-                b = (b as f32 + boost * 1.05).min(255.0) as u8;
-            }
-        }
-        (r, g, b)
+        let theme = forgum_platform::detect_terminal_theme();
+        forgum_platform::biome::natural_creature_color_adaptive(palette, rel_x, rel_y, ch, theme.bg)
     }
 
-    /// Authentic God-given natural color palettes (RGB tuples) for all 106 mascots.
+    /// Authentic God-given natural color palettes (RGB tuples) for all 132 mascots.
     pub fn get_mascot_natural_palette(mascot: &str) -> &'static [(u8, u8, u8)] {
         forgum_platform::biome::get_natural_rgb_palette(mascot)
     }

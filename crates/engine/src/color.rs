@@ -252,72 +252,20 @@ pub fn natural_creature_color(
     rel_y: usize,
     ch: char,
 ) -> (u8, u8, u8) {
-    if palette.is_empty() {
-        return (255, 255, 255);
-    }
-    if palette.len() == 1 {
-        return palette[0];
-    }
+    let theme = forgum_platform::detect_terminal_theme();
+    forgum_platform::biome::natural_creature_color_adaptive(palette, rel_x, rel_y, ch, theme.bg)
+}
 
-    let c0 = palette[0];
-    let c1 = palette.get(1).copied().unwrap_or(c0);
-    let c2 = palette.get(2).copied().unwrap_or(c1);
-    let c3 = palette.get(3).copied().unwrap_or(c2);
-    let c4 = palette.get(4).copied().unwrap_or(c1);
-
-    // 1. Eyes: signature contrast or specific eye color
-    if crate::cow::is_eye_glyph(ch)
-        && (rel_y <= 4 || ch == 'o' || ch == 'O' || ch == '@' || ch == '*')
-    {
-        return c4;
-    }
-
-    // 2. Beak, muzzle, nostrils, snout, udder accents
-    if ch == '.'
-        || ch == ','
-        || ch == 'w'
-        || ch == 'W'
-        || ch == 'v'
-        || ch == 'V'
-        || ch == 'u'
-        || ch == 'U'
-        || ch == ':'
-    {
-        return c3;
-    }
-
-    // 3. Horns, ears, crest, crown (upper rows)
-    if (ch == '^' || ch == '/' || ch == '\\' || ch == '\'' || ch == '`') && rel_y <= 2 {
-        return c1;
-    }
-
-    // 4. Feet, paws, hooves, trotters, bottom row flippers
-    if rel_y >= 3 && (ch == '_' || ch == '-' || ch == '|' || ch == ')') {
-        return c2;
-    }
-
-    // 5. Body markings, spots, stripes, and coat pattern (stable spatial hash)
-    let hash = ((rel_x.wrapping_mul(17) + rel_y.wrapping_mul(31)) ^ (rel_x.wrapping_mul(7))) % 100;
-    let chosen = if hash < 55 {
-        c0
-    } else if hash < 80 {
-        c1
-    } else {
-        c2
-    };
-
-    let (mut r, mut g, mut b) = chosen;
-    // Guarantee that dark fur/skin markings are visible against dark terminal backgrounds
-    if ch != ' ' {
-        let lum = 0.299 * (r as f32) + 0.587 * (g as f32) + 0.114 * (b as f32);
-        if lum < 55.0 {
-            let boost = 55.0 - lum;
-            r = (r as f32 + boost * 0.9).min(255.0) as u8;
-            g = (g as f32 + boost * 0.95).min(255.0) as u8;
-            b = (b as f32 + boost * 1.05).min(255.0) as u8;
-        }
-    }
-    (r, g, b)
+/// Adaptive natural creature color with explicit terminal background RGB.
+#[inline]
+pub fn natural_creature_color_adaptive(
+    palette: &[(u8, u8, u8)],
+    rel_x: usize,
+    rel_y: usize,
+    ch: char,
+    bg_rgb: (u8, u8, u8),
+) -> (u8, u8, u8) {
+    forgum_platform::biome::natural_creature_color_adaptive(palette, rel_x, rel_y, ch, bg_rgb)
 }
 
 // Natural palettes for Forgum mascots

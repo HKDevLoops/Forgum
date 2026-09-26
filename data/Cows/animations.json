@@ -8,7 +8,7 @@
       "#1a1a1a",
       "#2c2c2c",
       "#ffb6c1",
-      "#000000"
+      "#ffffff"
     ]
   },
   "cower": {
@@ -17,10 +17,10 @@
     "speed": 0.8,
     "palette": [
       "#8d6e63",
-      "#ffffff",
-      "#bcaaa4",
-      "#3e2723",
-      "#ffb6c1"
+      "#4e342e",
+      "#d7ccc8",
+      "#ff80ab",
+      "#ffffff"
     ]
   },
   "fat-cow": {
@@ -29,10 +29,10 @@
     "speed": 1.0,
     "palette": [
       "#ffffff",
-      "#212121",
-      "#e0e0e0",
-      "#ffb6c1",
-      "#424242"
+      "#37474f",
+      "#cfd8dc",
+      "#ff80ab",
+      "#ffffff"
     ]
   },
   "supermilker": {
@@ -40,10 +40,10 @@
     "particles": "Pulse",
     "speed": 1.0,
     "palette": [
-      "#90a4ae",
+      "#78909c",
       "#0284c7",
-      "#38bdf8",
-      "#ffb6c1",
+      "#e1f5fe",
+      "#ff80ab",
       "#ffffff"
     ]
   },
@@ -52,11 +52,11 @@
     "particles": null,
     "speed": 1.0,
     "palette": [
-      "#4e342e",
-      "#5d4037",
-      "#795548",
       "#8d6e63",
-      "#3e2723"
+      "#5d4037",
+      "#d7ccc8",
+      "#ff80ab",
+      "#ffffff"
     ]
   },
   "mule": {
@@ -66,9 +66,9 @@
     "palette": [
       "#5c4033",
       "#795548",
-      "#8d6e63",
+      "#f5f5f5",
       "#d7ccc8",
-      "#3e2723"
+      "#ffffff"
     ]
   },
   "sheep": {
@@ -77,10 +77,10 @@
     "speed": 1.0,
     "palette": [
       "#ffffff",
-      "#f5f5f5",
-      "#3e2723",
-      "#ffb6c1",
-      "#9e9e9e"
+      "#e0e0e0",
+      "#cfd8dc",
+      "#ff80ab",
+      "#ffffff"
     ]
   },
   "flaming-sheep": {
@@ -88,11 +88,11 @@
     "particles": "Fire",
     "speed": 0.8,
     "palette": [
-      "#ff5722",
-      "#ff9800",
-      "#ffeb3b",
-      "#3e2723",
-      "#b71c1c"
+      "#ff7043",
+      "#d84315",
+      "#ffe082",
+      "#ff3d00",
+      "#ffd600"
     ]
   },
   "lamb": {
@@ -100,11 +100,11 @@
     "particles": null,
     "speed": 1.0,
     "palette": [
-      "#fafafa",
+      "#ffffff",
       "#f5f5f5",
       "#e0e0e0",
-      "#bdbdbd",
-      "#ffb6c1"
+      "#ff80ab",
+      "#ffffff"
     ]
   },
   "lamb2": {
@@ -112,11 +112,11 @@
     "particles": null,
     "speed": 1.0,
     "palette": [
+      "#ffffff",
       "#f5f5f5",
-      "#eeeeee",
-      "#bdbdbd",
-      "#9e9e9e",
-      "#ffb6c1"
+      "#e0e0e0",
+      "#ff80ab",
+      "#ffffff"
     ]
   },
   "goat": {
@@ -127,8 +127,8 @@
       "#d7ccc8",
       "#8d6e63",
       "#ffffff",
-      "#ffcdd2",
-      "#ffb300"
+      "#ff80ab",
+      "#ffffff"
     ]
   },
   "goat2": {
@@ -136,11 +136,11 @@
     "particles": null,
     "speed": 1.0,
     "palette": [
-      "#8d6e63",
-      "#5d4037",
-      "#d7ccc8",
-      "#ffcdd2",
-      "#212121"
+      "#cfd8dc",
+      "#78909c",
+      "#ffffff",
+      "#ff80ab",
+      "#ffffff"
     ]
   },
   "dolphin": {
@@ -148,11 +148,11 @@
     "particles": "Bubbles",
     "speed": 1.0,
     "palette": [
-      "#546e7a",
-      "#78909c",
-      "#eceff1",
+      "#4fc3f7",
       "#0288d1",
-      "#263238"
+      "#ffffff",
+      "#b3e5fc",
+      "#ffffff"
     ]
   },
   "whale": {
@@ -160,11 +160,11 @@
     "particles": "Bubbles",
     "speed": 1.0,
     "palette": [
-      "#1565c0",
-      "#0d47a1",
-      "#b0bec5",
+      "#0284c7",
+      "#0369a1",
       "#ffffff",
-      "#002171"
+      "#e0f7fa",
+      "#ffffff"
     ]
   },
   "happy-whale": {
@@ -172,11 +172,11 @@
     "particles": "Bubbles",
     "speed": 1.0,
     "palette": [
-      "#039be5",
-      "#4fc3f7",
-      "#e1f5fe",
+      "#0284c7",
+      "#0369a1",
       "#ffffff",
-      "#0277bd"
+      "#e0f7fa",
+      "#ffffff"
     ]
   },
   "docker-whale": {
@@ -184,11 +184,11 @@
     "particles": "Bubbles",
     "speed": 1.0,
     "palette": [
-      "#0288d1",
-      "#29b6f6",
+      "#0284c7",
+      "#0369a1",
       "#ffffff",
-      "#01579b",
-      "#4fc3f7"
+      "#e0f7fa",
+      "#ffffff"
     ]
   },
   "octopus": {
@@ -196,11 +196,11 @@
     "particles": null,
     "speed": 1.0,
     "palette": [
-      "#ad1457",
-      "#e1bee7",
       "#c2185b",
-      "#ffd54f",
-      "#4a148c"
+      "#7b1fa2",
+      "#f8bbd0",
+      "#ff4081",
+      "#ffffff"
     ]
   },
   "smiling-octopus": {
@@ -208,11 +208,11 @@
     "particles": null,
     "speed": 1.0,
     "palette": [
-      "#ab47bc",
-      "#ce93d8",
-      "#f3e5f5",
-      "#e1bee7",
-      "#ffd54f"
+      "#c2185b",
+      "#7b1fa2",
+      "#f8bbd0",
+      "#ff4081",
+      "#ffffff"
     ]
   },
   "jellyfish": {
@@ -221,10 +221,10 @@
     "speed": 1.0,
     "palette": [
       "#ba68c8",
-      "#ce93d8",
       "#80d8ff",
-      "#e1f5fe",
-      "#e040fb"
+      "#f3e5f5",
+      "#ea80fc",
+      "#ffffff"
     ]
   },
   "seahorse": {
@@ -232,11 +232,11 @@
     "particles": "Bubbles",
     "speed": 1.0,
     "palette": [
-      "#ff8f00",
-      "#f06292",
-      "#ffa000",
+      "#ff7043",
       "#ffd54f",
-      "#e65100"
+      "#ffab91",
+      "#fff9c4",
+      "#ffffff"
     ]
   },
   "seahorse-big": {
@@ -244,11 +244,11 @@
     "particles": "Bubbles",
     "speed": 1.0,
     "palette": [
-      "#ffa000",
-      "#ffb300",
+      "#ff7043",
       "#ffd54f",
-      "#ffe082",
-      "#e65100"
+      "#ffab91",
+      "#fff9c4",
+      "#ffffff"
     ]
   },
   "lobster": {
@@ -256,11 +256,11 @@
     "particles": null,
     "speed": 1.0,
     "palette": [
-      "#d32f2f",
-      "#f44336",
-      "#ff8a80",
-      "#b71c1c",
-      "#ffcdd2"
+      "#c62828",
+      "#8e0000",
+      "#ff6f00",
+      "#ff8a65",
+      "#ffffff"
     ]
   },
   "turkey": {
@@ -268,11 +268,11 @@
     "particles": null,
     "speed": 1.0,
     "palette": [
-      "#5d4037",
-      "#c62828",
-      "#0288d1",
-      "#f57f17",
-      "#212121"
+      "#8d6e63",
+      "#d32f2f",
+      "#bcaaa4",
+      "#e53935",
+      "#ffffff"
     ]
   },
   "owl": {
@@ -280,11 +280,11 @@
     "particles": null,
     "speed": 0.8,
     "palette": [
-      "#795548",
+      "#d7ccc8",
       "#8d6e63",
-      "#ffb300",
-      "#ffd54f",
-      "#3e2723"
+      "#ffffff",
+      "#ffa000",
+      "#ffd54f"
     ]
   },
   "golden-eagle": {
@@ -292,11 +292,11 @@
     "particles": null,
     "speed": 1.2,
     "palette": [
-      "#3e2723",
+      "#8d6e63",
+      "#ffc107",
+      "#f5f5f5",
       "#ffb300",
-      "#4e342e",
-      "#fbc02d",
-      "#212121"
+      "#ffe082"
     ]
   },
   "tweety-bird": {
@@ -304,11 +304,11 @@
     "particles": null,
     "speed": 1.2,
     "palette": [
-      "#ffeb3b",
-      "#fff59d",
+      "#ffee58",
       "#ff9800",
-      "#ffb74d",
-      "#00b0ff"
+      "#4fc3f7",
+      "#fff59d",
+      "#ffffff"
     ]
   },
   "pterodactyl": {
@@ -316,11 +316,11 @@
     "particles": null,
     "speed": 1.2,
     "palette": [
-      "#b23b23",
-      "#8d6e63",
-      "#d7ccc8",
-      "#ffb300",
-      "#4e342e"
+      "#bf360c",
+      "#ff7043",
+      "#ffd54f",
+      "#e65100",
+      "#ffffff"
     ]
   },
   "cat": {
@@ -340,11 +340,11 @@
     "particles": null,
     "speed": 1.0,
     "palette": [
-      "#546e7a",
       "#78909c",
+      "#546e7a",
       "#cfd8dc",
-      "#ffb6c1",
-      "#4caf50"
+      "#ff80ab",
+      "#69f0ae"
     ]
   },
   "kitty": {
@@ -353,10 +353,10 @@
     "speed": 1.0,
     "palette": [
       "#e67e22",
-      "#fef3c7",
+      "#6d4c41",
       "#ffffff",
-      "#ff8a80",
-      "#f59e0b"
+      "#ff80ab",
+      "#ffffff"
     ]
   },
   "kitten": {
@@ -376,11 +376,11 @@
     "particles": null,
     "speed": 1.0,
     "palette": [
-      "#1e1e1e",
-      "#5c4033",
-      "#ffffff",
-      "#f8bbd0",
-      "#0288d1"
+      "#455a64",
+      "#263238",
+      "#cfd8dc",
+      "#ff80ab",
+      "#00e676"
     ]
   },
   "catfence": {
@@ -388,11 +388,11 @@
     "particles": null,
     "speed": 1.0,
     "palette": [
-      "#795548",
       "#d35400",
+      "#795548",
       "#ffffff",
-      "#ffb6c1",
-      "#212121"
+      "#ff80ab",
+      "#ffffff"
     ]
   },
   "doge": {
@@ -402,9 +402,9 @@
     "palette": [
       "#e59866",
       "#d35400",
-      "#fdfefe",
-      "#edbb99",
-      "#2c3e50"
+      "#ffffff",
+      "#ff80ab",
+      "#ffffff"
     ]
   },
   "fox": {
@@ -412,11 +412,11 @@
     "particles": null,
     "speed": 1.0,
     "palette": [
-      "#d35400",
+      "#e65100",
+      "#8d6e63",
       "#ffffff",
-      "#212121",
-      "#e67e22",
-      "#f39c12"
+      "#ff80ab",
+      "#ffd54f"
     ]
   },
   "bunny": {
@@ -425,10 +425,10 @@
     "speed": 1.25,
     "palette": [
       "#ffffff",
-      "#fdfefe",
-      "#f7f9f9",
+      "#f5f5f5",
+      "#eceff1",
       "#ffb6c1",
-      "#ffc0cb"
+      "#ffffff"
     ]
   },
   "squirrel": {
@@ -438,9 +438,9 @@
     "palette": [
       "#8d6e63",
       "#a1887f",
-      "#d7ccc8",
-      "#5d4037",
-      "#f5f5f5"
+      "#ffffff",
+      "#ff80ab",
+      "#ffffff"
     ]
   },
   "hedgehog": {
@@ -448,11 +448,11 @@
     "particles": null,
     "speed": 1.0,
     "palette": [
-      "#5c4033",
       "#8d6e63",
-      "#d7ccc8",
-      "#212121",
-      "#a1887f"
+      "#5d4037",
+      "#fff3e0",
+      "#ff80ab",
+      "#ffffff"
     ]
   },
   "koala": {
@@ -460,11 +460,11 @@
     "particles": "Zzz",
     "speed": 0.8,
     "palette": [
-      "#9e9e9e",
-      "#f5f5f5",
-      "#212121",
-      "#558b2f",
-      "#424242"
+      "#90a4ae",
+      "#546e7a",
+      "#ffffff",
+      "#ff80ab",
+      "#ffffff"
     ]
   },
   "luke-koala": {
@@ -472,11 +472,11 @@
     "particles": "Zzz",
     "speed": 0.8,
     "palette": [
-      "#9e9e9e",
-      "#00e5ff",
-      "#f5f5f5",
-      "#d7ccc8",
-      "#212121"
+      "#90a4ae",
+      "#546e7a",
+      "#ffffff",
+      "#ff80ab",
+      "#ffffff"
     ]
   },
   "dragon": {
@@ -484,11 +484,11 @@
     "particles": "Fire",
     "speed": 0.8,
     "palette": [
-      "#b71c1c",
-      "#ff6f00",
-      "#212121",
+      "#e53935",
+      "#ff7043",
       "#ffd600",
-      "#7f0000"
+      "#ff3d00",
+      "#ffd600"
     ]
   },
   "dragon-and-cow": {
@@ -496,11 +496,11 @@
     "particles": "Fire",
     "speed": 0.8,
     "palette": [
-      "#c62828",
-      "#ff8f00",
-      "#ffffff",
-      "#ff1744",
-      "#212121"
+      "#e53935",
+      "#ff7043",
+      "#ffd600",
+      "#ff3d00",
+      "#ffd600"
     ]
   },
   "charizardvice": {
@@ -508,11 +508,11 @@
     "particles": "Fire",
     "speed": 0.8,
     "palette": [
-      "#ff6f00",
-      "#fff8e1",
-      "#00b0ff",
-      "#2e7d32",
-      "#ff1744"
+      "#ef6c00",
+      "#26a69a",
+      "#ffe082",
+      "#ff3d00",
+      "#40c4ff"
     ]
   },
   "ghost": {
@@ -520,11 +520,11 @@
     "particles": "Glitch",
     "speed": 1.0,
     "palette": [
-      "#e0f7fa",
-      "#80deea",
-      "#b2ebf2",
-      "#00e5ff",
-      "#004d40"
+      "#80cbc4",
+      "#4db6ac",
+      "#e0f2f1",
+      "#b2dfdb",
+      "#ffffff"
     ]
   },
   "ghostbusters": {
@@ -532,11 +532,11 @@
     "particles": null,
     "speed": 1.0,
     "palette": [
-      "#e53935",
       "#ffffff",
-      "#212121",
-      "#ffd600",
-      "#00e5ff"
+      "#e53935",
+      "#b0bec5",
+      "#ff80ab",
+      "#ffffff"
     ]
   },
   "weeping-angel": {
@@ -544,11 +544,11 @@
     "particles": null,
     "speed": 1.0,
     "palette": [
-      "#9e9e9e",
-      "#757575",
-      "#bdbdbd",
-      "#616161",
-      "#e0e0e0"
+      "#90a4ae",
+      "#546e7a",
+      "#cfd8dc",
+      "#b0bec5",
+      "#ffffff"
     ]
   },
   "cthulhu-mini": {
@@ -556,11 +556,11 @@
     "particles": null,
     "speed": 1.0,
     "palette": [
+      "#388e3c",
       "#1b5e20",
-      "#6a1b9a",
-      "#ffd600",
-      "#004d40",
-      "#311b92"
+      "#66bb6a",
+      "#a5d6a7",
+      "#ffea00"
     ]
   },
   "daemon": {
@@ -569,10 +569,10 @@
     "speed": 1.2,
     "palette": [
       "#d32f2f",
-      "#212121",
-      "#ffffff",
+      "#7f0000",
+      "#ff5722",
       "#ffd600",
-      "#b71c1c"
+      "#ffd600"
     ]
   },
   "satanic": {
@@ -580,11 +580,11 @@
     "particles": null,
     "speed": 1.0,
     "palette": [
-      "#d32f2f",
-      "#b71c1c",
-      "#212121",
-      "#ff5722",
-      "#000000"
+      "#424242",
+      "#c62828",
+      "#757575",
+      "#ff1744",
+      "#ffd600"
     ]
   },
   "minotaur": {
@@ -592,11 +592,11 @@
     "particles": null,
     "speed": 1.0,
     "palette": [
-      "#4e342e",
-      "#e0e0e0",
-      "#b71c1c",
-      "#ffd700",
-      "#212121"
+      "#795548",
+      "#f5f5f5",
+      "#8d6e63",
+      "#ffc107",
+      "#ff1744"
     ]
   },
   "glados": {
@@ -604,11 +604,11 @@
     "particles": "Glitch",
     "speed": 1.0,
     "palette": [
-      "#f5f5f5",
-      "#212121",
-      "#ffab00",
-      "#00b0ff",
-      "#ff1744"
+      "#eceff1",
+      "#455a64",
+      "#78909c",
+      "#ff1744",
+      "#ffd600"
     ]
   },
   "personality-sphere": {
@@ -616,11 +616,11 @@
     "particles": null,
     "speed": 1.0,
     "palette": [
-      "#03a9f4",
-      "#e0e0e0",
-      "#212121",
-      "#ffab00",
-      "#ffffff"
+      "#ffffff",
+      "#37474f",
+      "#78909c",
+      "#cfd8dc",
+      "#00e5ff"
     ]
   },
   "kosh": {
@@ -628,11 +628,11 @@
     "particles": null,
     "speed": 1.0,
     "palette": [
-      "#00897b",
-      "#26a69a",
-      "#ffd54f",
-      "#004d40",
-      "#80cbc4"
+      "#80cbc4",
+      "#00695c",
+      "#e0f2f1",
+      "#4db6ac",
+      "#ffffff"
     ]
   },
   "snoopy": {
@@ -641,10 +641,10 @@
     "speed": 0.8,
     "palette": [
       "#ffffff",
-      "#1a1a1a",
-      "#d32f2f",
-      "#424242",
-      "#e0e0e0"
+      "#263238",
+      "#e53935",
+      "#ff80ab",
+      "#ffffff"
     ]
   },
   "snoopyhouse": {
@@ -652,11 +652,11 @@
     "particles": null,
     "speed": 0.8,
     "palette": [
-      "#d32f2f",
       "#ffffff",
-      "#212121",
-      "#b71c1c",
-      "#424242"
+      "#263238",
+      "#e53935",
+      "#ff80ab",
+      "#ffffff"
     ]
   },
   "snoopysleep": {
@@ -665,10 +665,10 @@
     "speed": 0.8,
     "palette": [
       "#ffffff",
-      "#212121",
-      "#d32f2f",
-      "#424242",
-      "#90caf9"
+      "#263238",
+      "#e53935",
+      "#ff80ab",
+      "#ffffff"
     ]
   },
   "ren": {
@@ -676,11 +676,11 @@
     "particles": null,
     "speed": 1.0,
     "palette": [
-      "#d7ccc8",
-      "#ffab91",
-      "#d50000",
-      "#ff8a80",
-      "#3e2723"
+      "#ffb74d",
+      "#ff80ab",
+      "#42a5f5",
+      "#ffffff",
+      "#ffffff"
     ]
   },
   "stimpy": {
@@ -688,11 +688,11 @@
     "particles": null,
     "speed": 1.0,
     "palette": [
-      "#e64a19",
-      "#fff3e0",
-      "#1976d2",
-      "#fbe9e7",
-      "#ffb300"
+      "#e65100",
+      "#1e88e5",
+      "#ffffff",
+      "#ff80ab",
+      "#ffffff"
     ]
   },
   "beavis.zen": {
@@ -700,11 +700,11 @@
     "particles": null,
     "speed": 1.0,
     "palette": [
-      "#fbc02d",
-      "#1976d2",
+      "#ffd600",
+      "#1e88e5",
       "#ffcc80",
-      "#e53935",
-      "#37474f"
+      "#78909c",
+      "#ffffff"
     ]
   },
   "nyan": {
@@ -712,11 +712,11 @@
     "particles": "Stars",
     "speed": 1.2,
     "palette": [
-      "#e6aa68",
-      "#ff69b4",
-      "#90a4ae",
-      "#ff1493",
-      "#00e5ff"
+      "#ffe082",
+      "#f48fb1",
+      "#e91e63",
+      "#b0bec5",
+      "#ffffff"
     ]
   },
   "hellokitty": {
@@ -725,10 +725,10 @@
     "speed": 1.0,
     "palette": [
       "#ffffff",
-      "#d50000",
-      "#ffd600",
-      "#1a1a1a",
-      "#f8bbd0"
+      "#e53935",
+      "#fff9c4",
+      "#ff80ab",
+      "#ffffff"
     ]
   },
   "bees": {
@@ -737,10 +737,10 @@
     "speed": 1.2,
     "palette": [
       "#ffb300",
-      "#212121",
-      "#b0bec5",
-      "#ffe082",
-      "#ffd54f"
+      "#263238",
+      "#e0f7fa",
+      "#fff59d",
+      "#ffffff"
     ]
   },
   "spidercow": {
@@ -748,11 +748,11 @@
     "particles": null,
     "speed": 1.0,
     "palette": [
-      "#212121",
+      "#455a64",
       "#d32f2f",
-      "#3b82f6",
       "#ffffff",
-      "#e0e0e0"
+      "#1976d2",
+      "#ffffff"
     ]
   },
   "stegosaurus": {
@@ -760,11 +760,11 @@
     "particles": null,
     "speed": 1.0,
     "palette": [
-      "#2e7d32",
-      "#d84315",
       "#558b2f",
-      "#8d6e63",
-      "#ffb300"
+      "#d84315",
+      "#dcedc8",
+      "#fff9c4",
+      "#ffd54f"
     ]
   },
   "tortoise": {
@@ -773,10 +773,10 @@
     "speed": 1.0,
     "palette": [
       "#558b2f",
-      "#689f38",
-      "#9e9d24",
       "#33691e",
-      "#d7ccc8"
+      "#fff59d",
+      "#689f38",
+      "#ffffff"
     ]
   },
   "turtle": {
@@ -784,11 +784,11 @@
     "particles": null,
     "speed": 1.0,
     "palette": [
-      "#33691e",
-      "#fbc02d",
       "#558b2f",
-      "#fff9c4",
-      "#2e7d32"
+      "#33691e",
+      "#fff59d",
+      "#689f38",
+      "#ffffff"
     ]
   },
   "mona-lisa": {
@@ -796,11 +796,11 @@
     "particles": null,
     "speed": 0.8,
     "palette": [
-      "#4a3b32",
-      "#e8d5c4",
-      "#6b5b45",
-      "#ffd700",
-      "#1f1b18"
+      "#8d6e63",
+      "#5d4037",
+      "#f5f5f5",
+      "#a1887f",
+      "#ffffff"
     ]
   },
   "periodic-table": {
@@ -808,11 +808,11 @@
     "particles": null,
     "speed": 1.0,
     "palette": [
-      "#00e5ff",
-      "#76ff03",
-      "#ffd600",
-      "#ff4081",
-      "#7c4dff"
+      "#00bcd4",
+      "#9c27b0",
+      "#ff9800",
+      "#4caf50",
+      "#ffffff"
     ]
   },
   "world": {
@@ -820,11 +820,11 @@
     "particles": null,
     "speed": 1.0,
     "palette": [
-      "#29b6f6",
-      "#66bb6a",
-      "#ffffff",
       "#0288d1",
-      "#43a047"
+      "#4caf50",
+      "#ffffff",
+      "#81c784",
+      "#ffffff"
     ]
   },
   "king": {
@@ -832,11 +832,11 @@
     "particles": null,
     "speed": 0.8,
     "palette": [
-      "#ffd700",
-      "#e91e63",
+      "#ffd54f",
+      "#bcaaa4",
       "#ffffff",
-      "#212121",
-      "#cfd8dc"
+      "#d7ccc8",
+      "#ffffff"
     ]
   },
   "queen": {
@@ -844,11 +844,11 @@
     "particles": null,
     "speed": 0.8,
     "palette": [
-      "#ffd700",
-      "#880e4f",
+      "#e91e63",
       "#ffffff",
-      "#1565c0",
-      "#c62828"
+      "#fce4ec",
+      "#c2185b",
+      "#ffffff"
     ]
   },
   "knight": {
@@ -856,10 +856,10 @@
     "particles": null,
     "speed": 1.0,
     "palette": [
-      "#b0bec5",
+      "#90a4ae",
+      "#546e7a",
+      "#ffffff",
       "#cfd8dc",
-      "#78909c",
-      "#37474f",
       "#ffffff"
     ]
   },
@@ -869,9 +869,9 @@
     "speed": 1.0,
     "palette": [
       "#78909c",
-      "#90a4ae",
+      "#455a64",
+      "#eceff1",
       "#b0bec5",
-      "#546e7a",
       "#ffffff"
     ]
   },
@@ -880,10 +880,10 @@
     "particles": null,
     "speed": 1.0,
     "palette": [
-      "#cfd8dc",
-      "#eceff1",
-      "#90a4ae",
-      "#78909c",
+      "#d7ccc8",
+      "#8d6e63",
+      "#ffffff",
+      "#bcaaa4",
       "#ffffff"
     ]
   },
@@ -892,11 +892,11 @@
     "particles": "Glitch",
     "speed": 1.0,
     "palette": [
-      "#cfd8dc",
-      "#0284c7",
+      "#80deea",
+      "#00838f",
       "#ffffff",
-      "#ef4444",
-      "#263238"
+      "#ff80ab",
+      "#ffffff"
     ]
   },
   "mutilated": {
@@ -904,10 +904,10 @@
     "particles": null,
     "speed": 1.0,
     "palette": [
-      "#76ff03",
-      "#78909c",
+      "#90a4ae",
+      "#00e5ff",
+      "#e0e0e0",
       "#ff1744",
-      "#212121",
       "#ffffff"
     ]
   },
@@ -916,11 +916,11 @@
     "particles": null,
     "speed": 1.0,
     "palette": [
-      "#1e1e1e",
+      "#455a64",
       "#ffffff",
       "#ffa000",
       "#ffb300",
-      "#212121"
+      "#ffffff"
     ]
   },
   "tux-big": {
@@ -928,11 +928,11 @@
     "particles": null,
     "speed": 1.0,
     "palette": [
+      "#455a64",
       "#ffffff",
-      "#212121",
-      "#ff9800",
-      "#ffa726",
-      "#f57c00"
+      "#ffa000",
+      "#ffb300",
+      "#ffffff"
     ]
   },
   "armadillo": {
@@ -940,11 +940,11 @@
     "particles": null,
     "speed": 1.0,
     "palette": [
+      "#a1887f",
       "#8d6e63",
-      "#d7ccc8",
-      "#bcaaa4",
-      "#5d4037",
-      "#3e2723"
+      "#f5f5f5",
+      "#ff80ab",
+      "#ffffff"
     ]
   },
   "atat": {
@@ -956,7 +956,7 @@
       "#546e7a",
       "#cfd8dc",
       "#ff1744",
-      "#263238"
+      "#ffffff"
     ]
   },
   "bearface": {
@@ -964,11 +964,11 @@
     "particles": null,
     "speed": 0.8,
     "palette": [
-      "#4e342e",
       "#8d6e63",
+      "#5d4037",
       "#d7ccc8",
-      "#212121",
-      "#ffb300"
+      "#ff80ab",
+      "#ffffff"
     ]
   },
   "bill-the-cat": {
@@ -976,11 +976,11 @@
     "particles": null,
     "speed": 1.0,
     "palette": [
-      "#e67e22",
-      "#f39c12",
+      "#f57f17",
+      "#d32f2f",
+      "#ffffff",
       "#ff80ab",
-      "#ffeb3b",
-      "#d32f2f"
+      "#ffffff"
     ]
   },
   "bud-frogs": {
@@ -988,11 +988,11 @@
     "particles": null,
     "speed": 1.0,
     "palette": [
-      "#2e7d32",
       "#4caf50",
-      "#fbc02d",
-      "#5d4037",
-      "#ffd600"
+      "#2e7d32",
+      "#aed581",
+      "#ffeb3b",
+      "#ffd54f"
     ]
   },
   "charlie": {
@@ -1000,11 +1000,11 @@
     "particles": null,
     "speed": 1.0,
     "palette": [
-      "#6d4c41",
-      "#ffffff",
-      "#d7ccc8",
-      "#ffb6c1",
-      "#3e2723"
+      "#8d6e63",
+      "#5d4037",
+      "#f5f5f5",
+      "#ff80ab",
+      "#ffffff"
     ]
   },
   "claw-arm": {
@@ -1012,11 +1012,11 @@
     "particles": "Pulse",
     "speed": 1.0,
     "palette": [
-      "#90a4ae",
-      "#37474f",
-      "#ff9800",
-      "#00e5ff",
-      "#212121"
+      "#78909c",
+      "#455a64",
+      "#ffc107",
+      "#ff1744",
+      "#ffffff"
     ]
   },
   "cowfee": {
@@ -1024,11 +1024,11 @@
     "particles": null,
     "speed": 0.8,
     "palette": [
-      "#3e2723",
+      "#8d6e63",
+      "#5d4037",
       "#fff8e1",
-      "#d4a373",
-      "#6d4c41",
-      "#ffb6c1"
+      "#ff80ab",
+      "#ffffff"
     ]
   },
   "ebi_furai": {
@@ -1036,11 +1036,11 @@
     "particles": null,
     "speed": 1.0,
     "palette": [
-      "#d97706",
-      "#b45309",
-      "#ffffff",
-      "#ef4444",
-      "#fef3c7"
+      "#ff9800",
+      "#ffb74d",
+      "#e53935",
+      "#fff3e0",
+      "#ffffff"
     ]
   },
   "elephant-in-snake": {
@@ -1048,11 +1048,11 @@
     "particles": null,
     "speed": 0.8,
     "palette": [
-      "#558b2f",
-      "#78909c",
-      "#2e7d32",
-      "#cfd8dc",
-      "#ffd600"
+      "#90a4ae",
+      "#43a047",
+      "#fffde7",
+      "#ffb6c1",
+      "#ffffff"
     ]
   },
   "elephant": {
@@ -1060,11 +1060,11 @@
     "particles": null,
     "speed": 1.0,
     "palette": [
-      "#78909c",
-      "#455a64",
-      "#cfd8dc",
+      "#90a4ae",
+      "#546e7a",
       "#fffde7",
-      "#263238"
+      "#ffb6c1",
+      "#ffffff"
     ]
   },
   "elephant2": {
@@ -1072,11 +1072,11 @@
     "particles": null,
     "speed": 1.0,
     "palette": [
-      "#607d8b",
-      "#37474f",
-      "#b0bec5",
+      "#90a4ae",
+      "#546e7a",
       "#fffde7",
-      "#212121"
+      "#ffb6c1",
+      "#ffffff"
     ]
   },
   "eyes": {
@@ -1084,11 +1084,11 @@
     "particles": "Pulse",
     "speed": 1.0,
     "palette": [
+      "#9c27b0",
+      "#00e5ff",
       "#ffffff",
-      "#0288d1",
-      "#000000",
-      "#76ff03",
-      "#9c27b0"
+      "#e1bee7",
+      "#ffffff"
     ]
   },
   "fat-banana": {
@@ -1096,11 +1096,11 @@
     "particles": null,
     "speed": 1.0,
     "palette": [
-      "#ffd600",
-      "#ffea00",
-      "#5d4037",
-      "#64dd17",
-      "#fff9c4"
+      "#fdd835",
+      "#8d6e63",
+      "#fff9c4",
+      "#c0ca33",
+      "#ffffff"
     ]
   },
   "fence": {
@@ -1108,11 +1108,11 @@
     "particles": null,
     "speed": 1.0,
     "palette": [
-      "#795548",
       "#8d6e63",
-      "#558b2f",
-      "#3e2723",
-      "#a1887f"
+      "#5d4037",
+      "#d7ccc8",
+      "#a1887f",
+      "#ffffff"
     ]
   },
   "hippie": {
@@ -1124,7 +1124,7 @@
       "#00e5ff",
       "#ffff00",
       "#76ff03",
-      "#d500f9"
+      "#ffffff"
     ]
   },
   "hiya": {
@@ -1132,11 +1132,11 @@
     "particles": null,
     "speed": 1.0,
     "palette": [
-      "#ffeb3b",
+      "#ffb74d",
+      "#ff7043",
       "#ffffff",
-      "#ff4081",
-      "#e91e63",
-      "#ff9800"
+      "#ff80ab",
+      "#ffffff"
     ]
   },
   "hypno": {
@@ -1144,11 +1144,11 @@
     "particles": "Pulse",
     "speed": 1.0,
     "palette": [
-      "#000000",
-      "#ffffff",
-      "#e040fb",
+      "#455a64",
       "#00e5ff",
-      "#76ff03"
+      "#ffffff",
+      "#7c4dff",
+      "#ffffff"
     ]
   },
   "kiss": {
@@ -1156,11 +1156,11 @@
     "particles": null,
     "speed": 1.0,
     "palette": [
-      "#ffffff",
-      "#000000",
-      "#d50000",
-      "#424242",
-      "#757575"
+      "#e91e63",
+      "#ff4081",
+      "#fce4ec",
+      "#d81b60",
+      "#ffffff"
     ]
   },
   "lollerskates": {
@@ -1168,11 +1168,11 @@
     "particles": null,
     "speed": 1.0,
     "palette": [
-      "#00e676",
-      "#00b0ff",
-      "#ffea00",
       "#ff4081",
-      "#7c4dff"
+      "#00e5ff",
+      "#ffff00",
+      "#76ff03",
+      "#ffffff"
     ]
   },
   "moofasa": {
@@ -1181,10 +1181,10 @@
     "speed": 0.8,
     "palette": [
       "#d4a373",
-      "#5c4033",
-      "#faedcd",
-      "#1a1a1a",
-      "#ffb300"
+      "#795548",
+      "#fff8e1",
+      "#ff80ab",
+      "#ffd54f"
     ]
   },
   "mooghidjirah": {
@@ -1192,11 +1192,11 @@
     "particles": null,
     "speed": 0.8,
     "palette": [
-      "#ffd700",
-      "#c62828",
-      "#ff6f00",
-      "#ad1457",
-      "#212121"
+      "#388e3c",
+      "#1b5e20",
+      "#c8e6c9",
+      "#00e5ff",
+      "#ffd600"
     ]
   },
   "moojira": {
@@ -1204,11 +1204,11 @@
     "particles": null,
     "speed": 0.8,
     "palette": [
+      "#388e3c",
       "#1b5e20",
+      "#c8e6c9",
       "#00e5ff",
-      "#2e7d32",
-      "#ff1744",
-      "#212121"
+      "#ffd600"
     ]
   },
   "shikato": {
@@ -1216,11 +1216,11 @@
     "particles": null,
     "speed": 0.8,
     "palette": [
-      "#9e9e9e",
-      "#e0e0e0",
-      "#212121",
-      "#bdbdbd",
-      "#757575"
+      "#d7ccc8",
+      "#8d6e63",
+      "#ffffff",
+      "#ff80ab",
+      "#ffffff"
     ]
   },
   "shrug": {
@@ -1229,10 +1229,10 @@
     "speed": 1.0,
     "palette": [
       "#ffffff",
-      "#e0e0e0",
-      "#bdbdbd",
-      "#9e9e9e",
-      "#212121"
+      "#cfd8dc",
+      "#b0bec5",
+      "#90a4ae",
+      "#ffffff"
     ]
   },
   "skeleton": {
@@ -1241,10 +1241,10 @@
     "speed": 1.0,
     "palette": [
       "#f5f5f5",
-      "#e0e0e0",
-      "#212121",
-      "#d7ccc8",
-      "#9e9e9e"
+      "#78909c",
+      "#ffffff",
+      "#b0bec5",
+      "#ffffff"
     ]
   },
   "small": {
@@ -1253,10 +1253,10 @@
     "speed": 1.0,
     "palette": [
       "#ffffff",
-      "#262626",
-      "#ffb6c1",
-      "#424242",
-      "#e0e0e0"
+      "#263238",
+      "#e0e0e0",
+      "#ff80ab",
+      "#ffffff"
     ]
   },
   "wizard": {
@@ -1264,10 +1264,10 @@
     "particles": "Stars",
     "speed": 1.0,
     "palette": [
-      "#1a237e",
-      "#aa00ff",
-      "#e0e0e0",
-      "#ffd700",
+      "#3949ab",
+      "#eceff1",
+      "#fdd835",
+      "#8d6e63",
       "#00e5ff"
     ]
   },
@@ -1277,10 +1277,10 @@
     "speed": 1.25,
     "palette": [
       "#d4a373",
-      "#faedcd",
-      "#e76f51",
-      "#ffb6c1",
-      "#3e2723"
+      "#8d6e63",
+      "#fff8e1",
+      "#ff80ab",
+      "#ffffff"
     ]
   },
   "corgi": {
@@ -1288,11 +1288,11 @@
     "particles": null,
     "speed": 1.25,
     "palette": [
+      "#e59866",
       "#d35400",
       "#ffffff",
-      "#e59866",
-      "#ffb6c1",
-      "#212121"
+      "#ff80ab",
+      "#ffffff"
     ]
   },
   "pig": {
@@ -1302,9 +1302,9 @@
     "palette": [
       "#ffb6c1",
       "#ff80ab",
-      "#f8bbd0",
-      "#ff4081",
-      "#c2185b"
+      "#fce4ec",
+      "#ec407a",
+      "#ffffff"
     ]
   },
   "ram": {
@@ -1314,9 +1314,9 @@
     "palette": [
       "#f5f5f5",
       "#9e9e9e",
-      "#e0e0e0",
-      "#757575",
-      "#212121"
+      "#ffffff",
+      "#bcaaa4",
+      "#ffffff"
     ]
   },
   "rooster": {
@@ -1324,11 +1324,11 @@
     "particles": null,
     "speed": 1.0,
     "palette": [
-      "#d32f2f",
-      "#1a237e",
-      "#e65100",
+      "#e53935",
+      "#2e7d32",
       "#fbc02d",
-      "#ffb300"
+      "#ff9800",
+      "#ffffff"
     ]
   },
   "panther": {
@@ -1336,11 +1336,11 @@
     "particles": null,
     "speed": 1.0,
     "palette": [
-      "#18181b",
-      "#27272a",
-      "#76ff03",
-      "#3f3f46",
-      "#ffffff"
+      "#424242",
+      "#263238",
+      "#cfd8dc",
+      "#ff80ab",
+      "#00e676"
     ]
   },
   "rhino": {
@@ -1350,9 +1350,9 @@
     "palette": [
       "#78909c",
       "#546e7a",
-      "#cfd8dc",
-      "#8d6e63",
-      "#263238"
+      "#fffde7",
+      "#b0bec5",
+      "#ffffff"
     ]
   },
   "sloth": {
@@ -1360,11 +1360,11 @@
     "particles": null,
     "speed": 0.8,
     "palette": [
-      "#6d6854",
-      "#e0d7c6",
-      "#3e2723",
       "#8d6e63",
-      "#2e7d32"
+      "#558b2f",
+      "#d7ccc8",
+      "#3e2723",
+      "#ffffff"
     ]
   },
   "telebears": {
@@ -1372,11 +1372,11 @@
     "particles": null,
     "speed": 1.0,
     "palette": [
-      "#3b82f6",
-      "#60a5fa",
-      "#ffffff",
-      "#ffd54f",
-      "#1d4ed8"
+      "#1565c0",
+      "#ffb300",
+      "#e3f2fd",
+      "#ff80ab",
+      "#ffffff"
     ]
   },
   "tiger": {
@@ -1385,10 +1385,10 @@
     "speed": 1.0,
     "palette": [
       "#e65100",
-      "#212121",
-      "#fff8e1",
-      "#ff8a80",
-      "#ff9800"
+      "#263238",
+      "#ffffff",
+      "#ff80ab",
+      "#69f0ae"
     ]
   },
   "wolf": {
@@ -1396,11 +1396,11 @@
     "particles": null,
     "speed": 1.0,
     "palette": [
-      "#78909c",
+      "#90a4ae",
+      "#546e7a",
+      "#ffffff",
       "#37474f",
-      "#eceff1",
-      "#ffb300",
-      "#263238"
+      "#ffd54f"
     ]
   },
   "duck": {
@@ -1408,11 +1408,11 @@
     "particles": null,
     "speed": 1.2,
     "palette": [
-      "#1b5e20",
+      "#2e7d32",
       "#795548",
-      "#b0bec5",
-      "#fbc02d",
-      "#ff6f00"
+      "#cfd8dc",
+      "#ff9800",
+      "#ffffff"
     ]
   },
   "pufferfish": {
@@ -1420,11 +1420,11 @@
     "particles": "Pulse",
     "speed": 1.0,
     "palette": [
-      "#fbc02d",
-      "#5d4037",
-      "#fff9c4",
-      "#2e7d32",
-      "#ffeb3b"
+      "#ffb74d",
+      "#6d4c41",
+      "#fffde7",
+      "#ffe082",
+      "#ffffff"
     ]
   },
   "squid": {
@@ -1432,11 +1432,11 @@
     "particles": null,
     "speed": 1.0,
     "palette": [
-      "#b71c1c",
-      "#ff80ab",
-      "#0284c7",
-      "#ffd54f",
-      "#311b92"
+      "#00bcd4",
+      "#3f51b5",
+      "#e0f7fa",
+      "#64ffda",
+      "#ffffff"
     ]
   },
   "walrus": {
@@ -1444,11 +1444,11 @@
     "particles": null,
     "speed": 0.8,
     "palette": [
-      "#6d4c41",
-      "#fffde7",
       "#8d6e63",
-      "#a1887f",
-      "#3e2723"
+      "#5d4037",
+      "#fffde7",
+      "#ff80ab",
+      "#ffffff"
     ]
   },
   "mech-and-cow": {
@@ -1456,11 +1456,11 @@
     "particles": null,
     "speed": 1.0,
     "palette": [
+      "#78909c",
+      "#455a64",
+      "#e0e0e0",
       "#0284c7",
-      "#e0f2fe",
-      "#ffffff",
-      "#f59e0b",
-      "#0369a1"
+      "#ffffff"
     ]
   },
   "sauron": {
@@ -1468,11 +1468,11 @@
     "particles": "Pulse",
     "speed": 1.0,
     "palette": [
-      "#1a1a1a",
-      "#ff1744",
-      "#ff6d00",
       "#424242",
-      "#ffea00"
+      "#616161",
+      "#9e9e9e",
+      "#ff3d00",
+      "#ffd600"
     ]
   },
   "unipony": {
@@ -1481,10 +1481,10 @@
     "speed": 1.0,
     "palette": [
       "#ffffff",
-      "#38bdf8",
-      "#e879f9",
-      "#ffd700",
-      "#ff80ab"
+      "#e1bee7",
+      "#ffd54f",
+      "#ff80ab",
+      "#ffffff"
     ]
   },
   "vader": {
@@ -1492,11 +1492,11 @@
     "particles": null,
     "speed": 0.8,
     "palette": [
-      "#121212",
-      "#212121",
-      "#d50000",
-      "#2979ff",
-      "#757575"
+      "#424242",
+      "#e0e0e0",
+      "#616161",
+      "#303030",
+      "#ff1744"
     ]
   },
   "yoda": {
@@ -1504,11 +1504,11 @@
     "particles": "Stars",
     "speed": 1.0,
     "palette": [
+      "#7cb342",
       "#558b2f",
       "#d7ccc8",
-      "#bcaaa4",
-      "#8bc34a",
-      "#33691e"
+      "#ffb6c1",
+      "#ffd54f"
     ]
   },
   "radioactive-kitty": {
@@ -1517,9 +1517,9 @@
     "speed": 1.0,
     "palette": [
       "#76ff03",
-      "#212121",
-      "#c6ff00",
       "#00e676",
+      "#b2ff59",
+      "#ff80ab",
       "#ffff00"
     ]
   },
@@ -1530,9 +1530,9 @@
     "palette": [
       "#d35400",
       "#ff9800",
-      "#ffffff",
+      "#fff3e0",
       "#e65100",
-      "#5d4037"
+      "#ffffff"
     ]
   },
   "apt": {
@@ -1540,11 +1540,11 @@
     "particles": null,
     "speed": 1.0,
     "palette": [
-      "#e11d48",
+      "#d32f2f",
       "#ffffff",
-      "#be123c",
-      "#212121",
-      "#60a5fa"
+      "#e57373",
+      "#ff80ab",
+      "#ffffff"
     ]
   },
   "jesus": {
@@ -1552,11 +1552,11 @@
     "particles": null,
     "speed": 1.0,
     "palette": [
-      "#fff8e1",
-      "#b71c1c",
-      "#ffd600",
+      "#f5f5f5",
       "#8d6e63",
-      "#f5f5f5"
+      "#e0e0e0",
+      "#ffb6c1",
+      "#ffd54f"
     ]
   },
   "three-eyes": {
@@ -1564,11 +1564,11 @@
     "particles": null,
     "speed": 0.8,
     "palette": [
-      "#2e7d32",
       "#76ff03",
       "#00e676",
-      "#ffb6c1",
-      "#1b5e20"
+      "#b2ff59",
+      "#ff80ab",
+      "#00e5ff"
     ]
   },
   "viper": {
@@ -1576,11 +1576,11 @@
     "particles": null,
     "speed": 1.0,
     "palette": [
+      "#4caf50",
       "#2e7d32",
-      "#84cc16",
-      "#d84315",
-      "#ffd600",
-      "#1b5e20"
+      "#c8e6c9",
+      "#ff1744",
+      "#ffd54f"
     ]
   }
 }

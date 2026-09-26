@@ -10,7 +10,7 @@ use std::collections::HashSet;
 use tempfile::tempdir;
 
 #[test]
-fn test_all_106_mascots_in_categories_are_embedded_and_distinct() {
+fn test_all_132_mascots_in_categories_are_embedded_and_distinct() {
     let empty_dir = tempdir().expect("create temporary directory");
     let mut all_category_mascots = Vec::new();
     let mut unique_mascots = HashSet::new();
@@ -24,8 +24,8 @@ fn test_all_106_mascots_in_categories_are_embedded_and_distinct() {
 
     assert_eq!(
         unique_mascots.len(),
-        106,
-        "CATEGORIES must contain exactly 106 unique mascots"
+        132,
+        "CATEGORIES must contain exactly 132 unique mascots"
     );
 
     // Get the baseline default cow art for comparison
