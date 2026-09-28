@@ -440,7 +440,6 @@ fi
 
 mkdir -p "$INSTALL_DIR"
 BIN_PATH="$INSTALL_DIR/forgum"
-LEGACY_PATH="$INSTALL_DIR/forgum-engine"
 
 # --- detect existing package manager installations & shadow binaries --------
 EXISTING_PM=""
@@ -582,11 +581,9 @@ esac
 # --- install or compile pipeline --------------------------------------------
 if [ "$BUILD_FROM_SOURCE" -eq 0 ] && [ -f "target/release/forgum" ]; then
   install -m 0755 "target/release/forgum" "$BIN_PATH"
-  ln -sf "$BIN_PATH" "$LEGACY_PATH"
   echo -e "\033[32m>> Installed from local release build: $BIN_PATH\033[0m"
 elif [ "$BUILD_FROM_SOURCE" -eq 0 ] && [ -f "target/debug/forgum" ]; then
   install -m 0755 "target/debug/forgum" "$BIN_PATH"
-  ln -sf "$BIN_PATH" "$LEGACY_PATH"
   echo -e "\033[32m>> Installed from local debug build: $BIN_PATH\033[0m"
 else
   TMP="$(mktemp -d 2>/dev/null || mktemp -d -t 'forgum')"
@@ -649,7 +646,6 @@ else
           else
             run_elevated install -m 0755 "$EXTRACTED" "$BIN_PATH"
           fi
-          ln -sf "$BIN_PATH" "$LEGACY_PATH" 2>/dev/null || true
           echo -e "\033[32m>> Successfully installed prebuilt binary: $BIN_PATH\033[0m"
         else
           echo -e "\033[33m>> Prebuilt binary incompatible with host C library (GLIBC/musl mismatch). Falling back to source build...\033[0m"
@@ -669,19 +665,16 @@ else
       echo -e "\033[36m>> Building local workspace (--bin forgum)...\033[0m"
       cargo build --release --bin forgum
       install -m 0755 "target/release/forgum" "$BIN_PATH"
-      ln -sf "$BIN_PATH" "$LEGACY_PATH"
     else
       echo -e "\033[36m>> Fetching latest source from https://github.com/${REPO}.git...\033[0m"
       BUILD_DIR="$TMP/src"
       if git clone --depth 1 "https://github.com/${REPO}.git" "$BUILD_DIR" 2>/dev/null; then
         cargo build --release --manifest-path "$BUILD_DIR/Cargo.toml" --bin forgum
         install -m 0755 "$BUILD_DIR/target/release/forgum" "$BIN_PATH"
-        ln -sf "$BIN_PATH" "$LEGACY_PATH"
       else
         echo -e "\033[36m>> Compiling via cargo install --git...\033[0m"
         cargo install --git "https://github.com/${REPO}.git" --bin forgum --root "$TMP/cargo-bin" --force
         install -m 0755 "$TMP/cargo-bin/bin/forgum" "$BIN_PATH"
-        ln -sf "$BIN_PATH" "$LEGACY_PATH"
       fi
     fi
     echo -e "\033[32m>> Compilation and installation complete: $BIN_PATH\033[0m"

@@ -95,7 +95,6 @@ if (-not (Test-Path -LiteralPath $installDir)) {
     New-Item -ItemType Directory -Path $installDir -Force | Out-Null
 }
 $binPath = Join-Path $installDir 'forgum.exe'
-$legacyPath = Join-Path $installDir 'forgum-engine.exe'
 
 # --- detect existing package manager installations & shadow binaries --------
 $existingInstallations = @()
@@ -261,11 +260,9 @@ $localDebug = Join-Path $PWD 'target\debug\forgum.exe'
 $localRelease = Join-Path $PWD 'target\release\forgum.exe'
 if (Test-Path -LiteralPath $localRelease) {
     Copy-Item -LiteralPath $localRelease -Destination $binPath -Force
-    Copy-Item -LiteralPath $localRelease -Destination $legacyPath -Force
     Write-Host ">> Installed from local release build: $binPath" -ForegroundColor Green
 } elseif (Test-Path -LiteralPath $localDebug) {
     Copy-Item -LiteralPath $localDebug -Destination $binPath -Force
-    Copy-Item -LiteralPath $localDebug -Destination $legacyPath -Force
     Write-Host ">> Installed from local debug build: $binPath" -ForegroundColor Green
 } else {
     $targetArch = switch ($arch) {
@@ -336,7 +333,6 @@ if (Test-Path -LiteralPath $localRelease) {
         }
 
         Copy-Item -LiteralPath $extracted -Destination $binPath -Force
-        Copy-Item -LiteralPath $extracted -Destination $legacyPath -Force
         Write-Host ">> Successfully installed prebuilt binary: $binPath" -ForegroundColor Green
     } catch {
         if (Get-Command cargo -ErrorAction SilentlyContinue) {
@@ -344,13 +340,11 @@ if (Test-Path -LiteralPath $localRelease) {
             if (Test-Path -LiteralPath (Join-Path $PWD 'Cargo.toml')) {
                 cargo build --release -p forgum-engine --bin forgum
                 Copy-Item -LiteralPath 'target\release\forgum.exe' -Destination $binPath -Force
-                Copy-Item -LiteralPath 'target\release\forgum.exe' -Destination $legacyPath -Force
             } else {
                 cargo install --git "https://github.com/$Repo.git" --bin forgum --root (Join-Path $HOME '.local') --force
                 $cargoBin = Join-Path $HOME '.local\bin\forgum.exe'
                 if (Test-Path -LiteralPath $cargoBin) {
                     Copy-Item -LiteralPath $cargoBin -Destination $binPath -Force
-                    Copy-Item -LiteralPath $cargoBin -Destination $legacyPath -Force
                 }
             }
             Write-Host ">> Installed via Cargo: $binPath" -ForegroundColor Green

@@ -43,6 +43,15 @@ pub fn run() -> ExitCode {
                 None => "Box<Any>",
             },
         };
+        // Broken pipe (Unix SIGPIPE or Windows error 232 ERROR_NO_DATA) is standard
+        // pipeline termination when consumer closes early (e.g. `forgum ... | head`).
+        if msg.contains("Broken pipe")
+            || msg.contains("pipe is being closed")
+            || msg.contains("os error 232")
+            || msg.contains("os error 32")
+        {
+            std::process::exit(0);
+        }
         let location = info
             .location()
             .map(|l| format!("{}:{}:{}", l.file(), l.line(), l.column()))
