@@ -1019,7 +1019,8 @@ impl Effect for FloatEffect {
 // ── Walk / Trot ────────────────────────────────────────────────────
 
 /// Bottom-row leg character swap with dynamic pillar detection, whitespace preservation,
-/// and physical kinematic traversal across the terminal pasture.
+/// physical forward-facing kinematic traversal across the terminal pasture,
+/// and synchronized speech/thought bubble translation.
 #[derive(Debug)]
 pub struct WalkEffect {
     cow_text: String,
@@ -1137,6 +1138,13 @@ impl WalkEffect {
         }
 
         let (w, h) = crate::kinematics::ascii_dimensions(&cow_text);
+
+        let _faces_left = match (eye_pos, tail_pos) {
+            (Some((_, eye_col)), Some((_, tail_col))) => eye_col <= tail_col,
+            (Some((_, eye_col)), None) => eye_col <= w / 2,
+            _ => true,
+        };
+
         let mut body =
             crate::kinematics::KinematicBody::new(w, h, crate::kinematics::BoundsMode::Wrap);
         body.vx = (dna.speed * 8.0).clamp(4.0, 16.0);
@@ -1206,11 +1214,18 @@ impl Effect for WalkEffect {
             // Bounding hull for occlusion masking (zero-allocation scan)
             let hull = find_line_hull(line);
 
+            // Speech/thought bubble: shifts synchronously with the walking mascot
             if y < self.cow_start_line {
                 for (x, ch) in line.chars().enumerate() {
-                    if y < fb.height && x < fb.width {
-                        let cell_fg = resolve_bubble_line_char_fg(line, x, ch);
-                        draw_char_with_hull(fb, x, y, x, hull, ch, cell_fg);
+                    let xi = x as i32 + x_off;
+                    let yi = y as i32 + y_off;
+                    if yi >= 0 && xi >= 0 {
+                        let uxi = xi as usize;
+                        let uyi = yi as usize;
+                        if uyi < fb.height && uxi < fb.width {
+                            let cell_fg = resolve_bubble_line_char_fg(line, x, ch);
+                            draw_char_with_hull(fb, uxi, uyi, x, hull, ch, cell_fg);
+                        }
                     }
                 }
                 y += 1;
@@ -4522,6 +4537,12 @@ mod tests {
             eff.render(&mut fb1, 0.5);
             fb1.swap();
 
+            let x_shift = if effect_name == "walk" || effect_name == "default" {
+                4
+            } else {
+                0
+            };
+
             // The speech/thought bubble top border is at row 0:
             // It MUST remain at row 0 in both frames with no hopping or shifting
             assert_eq!(
@@ -4530,22 +4551,24 @@ mod tests {
                 "{effect_name}: bubble top border at (2,0) must be '_' at t=0"
             );
             assert_eq!(
-                fb1.get(2, 0).ch,
+                fb1.get(2 + x_shift, 0).ch,
                 '_',
-                "{effect_name}: bubble top border at (2,0) must be '_' at t=0.5 (must not hop or shift)"
+                "{effect_name}: bubble top border at ({},0) must be '_' at t=0.5",
+                2 + x_shift
             );
 
             // Row 1 contains bubble content "( Forgum In-Place Animation )"
-            // The opening '(' must stay firmly at (0, 1)
+            // The opening '(' must stay firmly at (0, 1) for stationary effects or move with walk
             assert_eq!(
                 fb0.get(0, 1).ch,
                 '(',
                 "{effect_name}: bubble border at (0,1) must be '(' at t=0"
             );
             assert_eq!(
-                fb1.get(0, 1).ch,
+                fb1.get(0 + x_shift, 1).ch,
                 '(',
-                "{effect_name}: bubble border at (0,1) must be '(' at t=0.5 (must not skew or move)"
+                "{effect_name}: bubble border at ({},1) must be '(' at t=0.5",
+                0 + x_shift
             );
 
             // The 'F' in "Forgum" must stay at (2, 1) and NOT be corrupted or moved
@@ -4555,9 +4578,10 @@ mod tests {
                 "{effect_name}: bubble text at (2,1) must be 'F' at t=0"
             );
             assert_eq!(
-                fb1.get(2, 1).ch,
+                fb1.get(2 + x_shift, 1).ch,
                 'F',
-                "{effect_name}: bubble text at (2,1) must be 'F' at t=0.5"
+                "{effect_name}: bubble text at ({},1) must be 'F' at t=0.5",
+                2 + x_shift
             );
         }
     }

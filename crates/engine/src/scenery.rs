@@ -1630,25 +1630,28 @@ pub fn render_environment(
 
     match style {
         EnvironmentStyle::Pasture => {
-            // Floating clouds in upper sky above the mountains
-            let cloud_fg = Color::rgb(255, 255, 255);
-            let cloud_x = ((time * 2.0) as usize) % width.max(1);
+            // A single glorious golden sun placed high in the daytime sky
+            let sun_fg = Color::rgb(255, 214, 0);
+            let sun_x = width.saturating_sub(10);
             let sky_y = (ground_y / 5).clamp(1, fb.height.saturating_sub(1));
-            if sky_y < fb.height {
-                let s = "(   )";
-                for (i, ch) in s.chars().enumerate() {
-                    let x = (cloud_x + i) % width;
-                    let _ = fb.set(x, sky_y, Cell::new(ch, cloud_fg));
-                }
+            if sun_x < width && sky_y < fb.height {
+                let _ = fb.set(sun_x, sky_y, Cell::new('☼', sun_fg));
             }
-            if ground_y >= 12 {
-                let cloud_x2 = ((time * 1.4 + 28.0) as usize) % width.max(1);
-                let sky_y2 = (ground_y / 3).clamp(1, fb.height.saturating_sub(1));
-                if sky_y2 < fb.height && sky_y2 != sky_y {
-                    let s2 = "(      )";
-                    for (i, ch) in s2.chars().enumerate() {
-                        let x = (cloud_x2 + i) % width;
-                        let _ = fb.set(x, sky_y2, Cell::new(ch, cloud_fg));
+
+            // Gentle drifting white clouds (fluffy shapes that never split or look like duplicate orbs)
+            let cloud_fg = Color::rgb(240, 245, 255);
+            let cloud_pattern = ".--.";
+            let c_span = width + 8;
+            let c_pos = ((time * 1.2) as usize) % c_span.max(1);
+            if c_pos >= 4 {
+                let start_x = c_pos - 4;
+                let c_y = (ground_y / 4).clamp(1, fb.height.saturating_sub(1));
+                if c_y < fb.height && c_y != sky_y {
+                    for (i, ch) in cloud_pattern.chars().enumerate() {
+                        let x = start_x + i;
+                        if x < width && x != sun_x {
+                            let _ = fb.set(x, c_y, Cell::new(ch, cloud_fg));
+                        }
                     }
                 }
             }

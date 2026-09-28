@@ -89,6 +89,8 @@ impl KinematicBody {
                 self.x += self.vx * dt;
                 self.y += self.vy * dt;
 
+                self.facing_right = self.vx >= 0.0;
+
                 let entity_w = self.width as f32;
                 let term_w = cols as f32;
 

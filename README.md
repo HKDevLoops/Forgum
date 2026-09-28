@@ -39,7 +39,45 @@
 
 ---
 
-## 🚀 Celestial Quickstart & Installation
+## 📑 Table of Contents
+
+- [🚀 Installation & Quickstart](#-installation--quickstart)
+  - [📦 1-Command Quick Install](#-1-command-quick-install)
+  - [🌐 Multi-Channel Package Managers](#-multi-channel-package-managers)
+  - [🩺 Maintenance & Doctor](#-maintenance--doctor)
+  - [🌌 Clean Uninstallation (Soft vs. Purge)](#-clean-uninstallation-soft-vs-purge)
+- [📖 The Story Behind Forgum: From Static Mascots to Kinetic Art](#-the-story-behind-forgum-from-static-mascots-to-kinetic-art)
+  - [🌿 Modernizing Terminal Mascots with Thoughtful Engineering](#-modernizing-terminal-mascots-with-thoughtful-engineering)
+- [🚀 Quickstart (3 commands)](#-quickstart-3-commands)
+- [🎪 The Forgum Farm — A Tour in Animal Voices](#-the-forgum-farm--a-tour-in-animal-voices)
+- [📊 Complete CLI Command & Argument Reference](#-complete-cli-command--argument-reference-structured-tables)
+  - [1. Subcommands Reference Table](#1-subcommands-reference-table)
+  - [2. Primary Render & Simulation Flags](#2-primary-render--simulation-flags)
+  - [3. Procedural Mountain Styles](#3-procedural-mountain-styles)
+  - [4. Procedural Road Styles](#4-procedural-road-styles)
+  - [5. Mascot Kinematic Taxonomy](#5-mascot-kinematic-taxonomy)
+  - [6. Expressions & Mood Modifiers](#6-expressions--mood-modifiers)
+  - [7. Color Modes & Palette Engine](#7-color-modes--palette-engine)
+  - [8. Configuration Schema Reference](#8-unified-configuration-schema-17-keys-table)
+  - [9. Multi-Platform & Hardware Compatibility](#9-multi-platform-hardware-architecture--zero-ghosting-matrix-table)
+- [🧮 Under The Hood: Kinematics & Nature Mathematics](#-under-the-hood-kinematics--nature-mathematics)
+- [🐚 Shell Integration & Ecosystem](#-shell-integration--ecosystem)
+  - [⚡ One-Command Automatic Setup](#-one-command-automatic-setup)
+  - [📋 Universal 15-Shell Reference Table](#-universal-15-shell-reference-table)
+  - [🌟 Awesome-Shell & Multiplexer Matrix](#-awesome-shell--multiplexer-matrix)
+- [🖥️ Terminal Compatibility](#-terminal-compatibility)
+- [🩺 Check Your Pasture's Health (`checkhealth`)](#-check-your-pastures-health-checkhealth)
+- [⚙️ Config File Location & Multi-Format Support](#️-config-file-location--multi-format-support)
+- [🪵 Structured Logs & Diagnostics](#-structured-logs--diagnostics)
+- [✨ Forgum Configurator (Interactive TUI)](#-forgum-configurator-interactive-tui--full-scripting-parity)
+- [🎨 Preloaded Themes & Kinematic Motion](#-preloaded-themes--kinematic-motion)
+- [🍀 Fortune](#-fortune)
+- [📚 Further Reading](#-further-reading)
+- [📜 License](#-license)
+
+---
+
+## 🚀 Installation & Quickstart
 
 Forgum features a celestial, **Omarchy and Celestial Shell-inspired Terminal UI Wizard** with rich TrueColor ASCII art, automatic shell detection, and transparent privacy permission controls.
 
@@ -50,7 +88,7 @@ Forgum features a celestial, **Omarchy and Celestial Shell-inspired Terminal UI 
   ╰───────────────────────────────╯   Zero Surveillance · Transparent Consent · 100% Offline
 ```
 
-### 📦 1-Command Installation
+### 📦 1-Command Quick Install
 
 #### Windows (PowerShell 5.1 / PowerShell 7+):
 ```powershell
@@ -102,35 +140,15 @@ Forgum is packaged and distributed across every major operating system, architec
 | **Void Linux** | **XBPS** | `xbps-install -S forgum` | `xbps-install -Su forgum` |
 | **FreeBSD** | **pkg** | `pkg install forgum` | `pkg upgrade forgum` |
 | **macOS** | **MacPorts** | `sudo port install forgum` | `sudo port upgrade forgum` |
-| **Universal** | **Cargo (Rust)** | `cargo install forgum-cli` | `cargo install --force forgum-cli` |
+| **Universal** | **Cargo (Rust)** | `cargo install --path crates/engine --bin forgum` | `cargo install --force --path crates/engine --bin forgum` |
+
+> [!TIP]
+> **Universal Shell Integration & Completions**: For automated prompt hooks, tab completion scripts, and multiplexer setup across all 15 supported shells, see [🐚 Shell Integration & Ecosystem](#-shell-integration--ecosystem).
+
 
 ---
 
-### 🐚 Universal 15-Shell Integration Matrix
-
-Forgum natively supports all 15 major terminal shells. Add the one-line hook or run completions:
-
-| Shell | Shell Prompt Hook (`forgum init <shell>`) | Completions Generator (`forgum completions <shell>`) |
-| :--- | :--- | :--- |
-| **PowerShell 7+ (`pwsh`)** | `forgum init pwsh &#124; Out-String &#124; Invoke-Expression` | `forgum completions pwsh` |
-| **Windows PowerShell 5.1** | `forgum init powershell &#124; Out-String &#124; Invoke-Expression` | `forgum completions powershell` |
-| **Bash** | `eval "$(forgum init bash)"` | `forgum completions bash` |
-| **Zsh** | `eval "$(forgum init zsh)"` | `forgum completions zsh` |
-| **Fish** | `forgum init fish &#124; source` | `forgum completions fish` |
-| **Nushell** | `forgum init nushell &#124; save -f ~/.config/nushell/forgum.nu; use ~/.config/nushell/forgum.nu *` | `forgum completions nu` |
-| **Elvish** | `eval (forgum init elvish &#124; slurp)` | `forgum completions elvish` |
-| **Cmd (`cmd.exe`)** | `forgum init cmd > %TEMP%\forgum_cmd.cmd && call %TEMP%\forgum_cmd.cmd` | N/A (doskey alias) |
-| **Carapace** | Sourced via Carapace engine | `forgum completions carapace` |
-| **Xonsh** | `exec($(forgum init xonsh))` | `forgum completions xonsh` |
-| **Tcsh (`csh`)** | <code>eval &#96;forgum init tcsh&#96;</code> | `forgum completions tcsh` |
-| **Ksh (`ksh93/mksh`)** | `eval "$(forgum init ksh)"` | `forgum completions ksh` |
-| **Ion** | `eval (forgum init ion)` | `forgum completions ion` |
-| **Oil (`osh/ysh`)** | `eval "$(forgum init oil)"` | `forgum completions oil` |
-| **Yash** | `eval "$(forgum init yash)"` | `forgum completions yash` |
-
----
-
-### 🩺 Multi-Channel Maintenance & Doctor
+### 🩺 Maintenance & Doctor
 
 Keep Forgum healthy, updated, and diagnosed with built-in commands:
 
@@ -150,7 +168,7 @@ forgum logs --diagnose
 
 ---
 
-## 🌌 Clean Uninstallation (Two Distinct Methods)
+### 🌌 Clean Uninstallation (Soft vs. Purge)
 
 Forgum guarantees total respect for your system with **two distinct, user-directed uninstallation methods**:
 
@@ -232,138 +250,6 @@ Forgum runs unobtrusively *above* your active shell prompt. Whether a dragon gli
 | 🔒 **Global File Locks:** Risk of contention across multiple shell instances. | 🪟 **Pane-Level Session Isolation:** Independent session routing across `tmux`, `zellij`, `wezterm`, `kitty`, and Windows Terminal. | Concurrent execution across terminal panes without contention.        |
 | 🛑 **Raw Mode Signal Delays:** Signal propagation can lag in raw terminal mode. | ⏱️ **Sub-Millisecond Signal Handling:** Non-blocking event loops poll and respond to `Ctrl+C`, `'q'`, and `Esc` within milliseconds.  | Clean, prompt terminal restoration upon exit or interruption.         |
 | ⚙️ **Manual Configuration Files:** Requires manual editing of syntax dotfiles. | 🎨 **Interactive TUI & 15 Curated Themes:** Built-in settings explorer with presets (`matrix`, `cyberpunk`, `forest`, `zen`, etc.). | Zero-configuration by default, with complete interactive control.     |
-
----
-
-## 🧮 The Engine Under the Hood: Discrete Kinetic Calculus & Nature Mathematics
-
-Forgum's motion and procedural scenery are driven by continuous classical kinematics and deterministic computational geometry running at up to 120 FPS:
-
-### 1. Continuous Kinematic Integration
-Every frame, the physics pipeline evaluates floating-point position $\vec{P}(t)$, velocity $\vec{V}(t)$, and acceleration $\vec{A}(t)$ using deterministic time-delta $\Delta t$:
-
-$$\vec{P}(t + \Delta t) = \vec{P}(t) + \vec{V}(t)\Delta t + \frac{1}{2}\vec{A}(t)\Delta t^2$$
-
-$$\vec{V}(t + \Delta t) = \vec{V}(t) + \vec{A}(t)\Delta t$$
-
-Sub-character coordinates are projected onto discrete monospace grid cell quanta via midpoint quantization:
-
-$$x_{\text{col}} = \lfloor P_x \rceil, \quad y_{\text{row}} = \lfloor P_y \rceil$$
-
-### 2. Stride-Velocity Coupling
-In `WalkEffect`, hoof stride frequency $\omega_{\text{stride}}$ is geometrically locked to instantaneous horizontal ground velocity $\vec{V}_x$ and stride wavelength $\lambda_{\text{step}}$:
-
-$$\phi_{\text{stride}}(t) = \left( \frac{|P_x(t)|}{\lambda_{\text{step}}} \right) \pmod{1.0}$$
-
-$$\text{LegState}(t) = \begin{cases} (\text{'╱'}, \text{'╲'}), & \text{if } \text{SmoothStep}(\phi_{\text{stride}}) > 0.5 \\ (\text{'╲'}, \text{'╱'}), & \text{otherwise} \end{cases}$$
-
-When the mascot advances, its legs step in exact geometric lockstep with the ground beneath it. If ground velocity halts, leg oscillation ceases immediately.
-
-### 3. Harmonic 2D Lissajous Orbital Drift (`float`)
-Aquatic and celestial mascots (`dolphin`, `nyan`, `happy-whale`) follow orthogonal dual-frequency phase-shifted harmonic oscillations producing 2D Lissajous trajectories:
-
-$$X(t) = X_{\text{anchor}} + A_x \cdot \sin(\omega_x t + \delta_x), \quad Y(t) = Y_{\text{anchor}} + A_y \cdot \cos(\omega_y t + \delta_y)$$
-
-$$\text{with } \frac{\omega_x}{\omega_y} \in \mathbb{Q}, \quad \delta = \delta_x - \delta_y = \frac{\pi}{4}$$
-
-This models organic, undulating buoyancy drift across terminal boundaries without sharp directional jerks.
-
-### 4. Sinusoidal Ballistic Flight Trajectories (`fly`)
-Airborne creatures (`dragon`, `golden-eagle`, `pterodactyl`) follow continuous flight paths modulated by dual-harmonic altitude swoops:
-
-$$X(t) = (X_0 + V_x \cdot t) \pmod{W_{\text{term}} + W_{\text{critter}}} - W_{\text{critter}}$$
-
-$$Y(t) = Y_{\text{cruise}} + A_1 \cdot \sin(2\pi f_1 t) + A_2 \cdot \cos(4\pi f_2 t + \phi)$$
-
-Wing flap cadence dynamically scales proportionally to vertical climb gradient $|\frac{dY}{dt}|$, harmonizing with avian bio-mechanics.
-
-### 5. Nature Mathematics: Mountain Elevation & Deterministic Peak Count
-Procedural alpine peaks, mesas, and volcanic calderas are generated deterministically per column $x$ using multi-harmonic sinusoidal superposition:
-
-$$H(x) = H_{\text{base}} \cdot \left[ 1 + \sum_{k=1}^{K} A_k \cdot \left| \sin\left( \frac{2\pi k}{\lambda} x_{\text{world}} + \phi_k \right) \right|^\gamma \right]$$
-
-The peak count $N_{\text{peaks}}$ scales mathematically with viewport width $W$ and the Golden Ratio ($\Phi \approx 1.6180339887$):
-
-$$N_{\text{peaks}} = \mathrm{clamp}\left(\left\lfloor \frac{W}{\lambda \cdot (\Phi / 2)} \right\rceil, 1, 12\right)$$
-
-- **Alpine Peaks & Glaciers**: Power-pinched exponent $\gamma = 1.85$ sculpts sharp glacial horn peaks separated by broad cirque valleys.
-- **Plateaus & Mesas**: Hyperbolic tangent saturation $H(x) \propto \tanh(3 \sin(\omega x))$ produces flat-topped mesas with sheer vertical escarpments.
-- **Volcanic Cones**: Lorentzian distribution $\frac{A}{1 + (x/\sigma)^2}$ coupled with a central inverted caldera basin models volcanic topography.
-
-### 6. Biological Flora Spacing & Stature-Scaled Canopy
-Procedural trees and midground vegetation mimic natural botanical stands using Fibonacci / Golden Ratio phyllotaxis spacing ($\Phi^{-1} \approx 0.61803398875$):
-
-$$d(k) = \max\left(0.7 \cdot d_{\min}, \; d_{\min} + \{k \cdot \Phi^{-1}\} \cdot d_{\text{var}} + \frac{d_{\text{var}}}{4} \cos\left(2\pi \{k \cdot \Phi^{-2}\}\right)\right)$$
-
-- **Root Exclusion & Grove Clustering**: The cosine modulation alternates between clustered groves (stands) and open clearings while enforcing minimum biological root spacing.
-- **Stature-Relative Canopy Scaling**: Tree height $H_{\text{tree}}$ is proportioned with respect to the mascot's physical height $H_{\text{animal}}$ and locomotion kinematics:
-  $$H_{\text{tree}} = H_{\text{animal}} \cdot M_{\text{anim}} \cdot \left(1 + 0.22 \sin(2.4 k) + 0.12 \cos(1.6 k)\right)$$
-  Walking creatures are framed naturally within glades ($M_{\text{anim}} = 1.25$), while airborne mascots (`Fly`, `Float`) scale tree canopies down ($M_{\text{anim}} = 0.80$) so creatures glide gracefully above the foliage.
-- **Ecological Mixed Stands**: Low-discrepancy Weyl sequences determine species sequencing (Oak, Pine, Acacia, Snow Fir, Dead Tree, Birch, Palm) across diverse ecological biomes.
-
-### 7. Procedural Road Roughness & Surface Friction
-Ground and trail baselines compute multi-harmonic surface roughness $R(x, t) \in [0.0, 1.0]$:
-
-$$R(x, t) = 0.5 + 0.28 \sin\left(\frac{2\pi x}{7} + 2t\right) + 0.14 \cos\left(\frac{2\pi x}{3} + 3.5t\right) + 0.08 \sin\left(\frac{2\pi x}{13} + t\right)$$
-
-This modulates physical particulate states across terrain styles — simulating scattered soil grains on dirt trails, cobblestone mortar joints, magma bubbling vents, and glacial ice fissures.
-
-### 8. Convex Hull Silhouette Occlusion Masking
-To prevent background mountain lines, stars, and procedural trees from bleeding through the interior body of ASCII mascots, the compositor calculates scanline bounding hulls:
-
-$$\Omega_{\text{hull}}(y) = \left[ \min \{x \mid \text{Glyph}(x, y) \neq \text{' '}\}, \; \max \{x \mid \text{Glyph}(x, y) \neq \text{' '}\} \right]$$
-
-Cells within the hull silhouette that lack mascot artwork are committed to the depth buffer as opaque masking cells, preserving the animal's solid visual form over scrolling backgrounds.
-
-### 9. Multi-Tier Differential Parallax Kinematics
-Depth perception across the 2D monospace grid is achieved through differential layer velocity scaling:
-
-$$v_{\text{sky}} = 0.05 \cdot v_0, \quad v_{\text{mountain}} = 0.15 \cdot v_0, \quad v_{\text{trees}} = 0.60 \cdot v_0, \quad v_{\text{road}} = 1.00 \cdot v_0$$
-
-### 10. Chromatic Manifolds in Continuous HSV Space (`lolcat` & `rainbow`)
-TrueColor gradients evaluate continuous cylindrical HSV manifolds mapped dynamically to 24-bit TrueColor RGB:
-
-$$\text{Hue}(x, y, t) = \left( \omega_t \cdot t + k_x \cdot x + k_y \cdot y \right) \pmod{360^\circ}$$
-
-$$R, G, B = \mathcal{F}_{\text{trig}}(\text{Hue}(x, y, t), \; S=0.92, \; V=0.98)$$
-
-### 11. Lightweight Memory Architecture (< 100MB RAM Mandate)
-Forgum enforces a strict memory ceiling across all execution modes:
-- The entire render pipeline operates under **100MB of resident RAM**.
-- In multi-threaded benchmarking (8 concurrent simulation and rendering threads generating 200 frames each), resident set size measures **~13MB RAM**.
-- All mathematical evaluations operate exclusively on zero-allocation stack primitives and pre-allocated double buffers, avoiding runtime heap allocation during active rendering.
-
-### 12. Built-in Image to ASCII Art Converter & Mascot Integration
-Forgum includes a built-in image conversion engine that translates image files (PNG, JPEG, WebP, BMP, GIF) into monospace ASCII art and living mascots:
-- **Aspect Ratio Geometry**: Applies a vertical factor of 0.5 to compensate for typical 1:2 monospace terminal font cell dimensions, preserving true circular and rectilinear geometry.
-- **ITU-R BT.601 Luminance**: Maps pixel luminance to standard, detailed, or block element ramps with TrueColor 24-bit RGB ANSI escapes.
-- **Dynamic Scene Mascots**: Use any image as a living mascot on the fly with `forgum render --image ./cat.png` or `forgum say --image ./logo.png <command>`, or export directly into standard `.cow` files with automated speech bubble pointers via `forgum image <file> --save-cow <name>`.
-
-### 13. Terminal Viewport Reservation & DECSTBM Split-Scroll Multitasking
-Forgum supports dynamic screen partitioning using standard DEC Set Top and Bottom Margins (DECSTBM):
-- **Reserved Animation Header**: Fixes the top $K$ rows for physical creature kinematics and procedural nature horizons updating at 30/60 FPS.
-- **Simultaneous Shell Workspace**: Sets scrolling margins to lines $(K+1) \dots N$, allowing the user to simultaneously execute commands, view build outputs, and type at the prompt without visual interference or cursor flicker.
-- **Width Consciousness & Resolution Scalability**: Adapts dynamically across compact (80 cols), standard (120 cols), and ultrawide (160+ cols) viewports, automatically adjusting mountain peaks, tree stands, and safe prompt headroom upon terminal resize.
-
----
-
-## ⚡ Quick install
-
-| Platform / pkg mgr    | Command                                         |
-| :-------------------- | :---------------------------------------------- |
-| Ubuntu / Debian (apt) | `sudo apt install ./forgum_*.deb`               |
-| Kali Linux (apt)      | `sudo apt install ./forgum_*.deb`               |
-| Fedora (dnf)          | `sudo dnf install ./forgum-*.rpm`               |
-| openSUSE (zypper)     | `sudo zypper install ./forgum-*.rpm`            |
-| Nix (Flake / Nixpkgs) | `nix profile install github:HKDevLoops/Forgum`  |
-| Windows (winget)      | `winget install HKDevLoops.Forgum`              |
-| Windows (scoop)       | `scoop bucket add extras; scoop install forgum` |
-| Windows (choco)       | `choco install forgum`                          |
-| macOS (Homebrew)      | `brew install forgum`                           |
-| Any (cargo)           | `cargo install --path crates/engine --bin forgum` |
-
-> Community-maintained lanes — install at your own risk.
-> The official build is `cargo build --workspace`.
 
 ---
 
@@ -640,47 +526,7 @@ forgum config list
 
 ---
 
-### 8. Shell Integration & Completion Specifications Table (All 15 Shells Supported)
-
-| Shell | Hook Syntax | Completion Install Command | Default Target Path | Interactive Completion Features |
-| :--- | :--- | :--- | :--- | :--- |
-| **Bash** | `eval "$(forgum init bash)"` | `forgum completions bash > ~/.bash_completion` | `~/.config/forgum/completions/forgum.bash` | Tab completion, flag descriptions, subcommand listing. |
-| **Zsh** | `eval "$(forgum init zsh)"` | `forgum completions zsh > ~/.zsh/completion/_forgum` | `~/.zsh/completions/_forgum` | Full `compdef`, `zsh-autosuggestions` support, colored menus. |
-| **Fish** | `forgum init fish &#124; source` | `forgum completions fish > ~/.config/fish/completions/forgum.fish` | `~/.config/fish/completions/forgum.fish` | Real-time inline autosuggestions, argument descriptions. |
-| **PowerShell 7+** | `forgum init pwsh &#124; Out-String &#124; Invoke-Expression` | `forgum completions pwsh &#124; Out-File $PROFILE` | `$env:LOCALAPPDATA/forgum/completions/forgum.ps1` | `Register-ArgumentCompleter`, parameter validation, fzf-compatible. |
-| **Windows PowerShell**| `forgum init powershell &#124; Out-String &#124; Invoke-Expression`| Same as pwsh | `$env:LOCALAPPDATA/forgum/completions/forgum.ps1` | Backward-compatible with PS 5.1 on Windows 10/11. |
-| **Carapace** | `carapace forgum` | `forgum completions carapace` | `~/.config/carapace/specs/forgum.yaml` | Cross-shell multi-terminal completion provider specification. |
-| **Nushell** | `use forgum.nu *` | `forgum completions nu > ~/.config/nushell/forgum.nu` | `~/.config/nushell/completions/forgum.nu` | Structured records, typed argument flags, modern Nu engine. |
-| **Elvish** | `eval (forgum init elvish)` | `forgum completions elvish > ~/.config/elvish/lib/forgum.elv` | `~/.config/elvish/lib/forgum.elv` | Functional shell completions and namespace isolation. |
-| **Xonsh** | `exec($(forgum init xonsh))` | `forgum completions xonsh > ~/.xonshrc` | `~/.config/xonsh/completions/forgum.py` | Pythonic shell integration, dynamic docstrings and argument parsing. |
-| **Tcsh** | <code>eval &#96;forgum init tcsh&#96;</code> | `forgum completions tcsh > ~/.cshrc` | `~/.tcshrc` | C-shell history and auto-logout hook integration. |
-| **Ksh** | `eval "$(forgum init ksh)"` | `forgum completions ksh > ~/.kshrc` | `~/.kshrc` | KornShell 93 alias and keybinding completions. |
-| **Ion** | `eval $(forgum init ion)` | `forgum completions ion > ~/.config/ion/initrc` | `~/.config/ion/initrc` | Redox OS native shell integration with type safety. |
-| **Oil / YSH** | `eval "$(forgum init oil)"` | `forgum completions oil > ~/.config/oil/yshrc` | `~/.config/oil/yshrc` | Modern oil-shell / YSH expression evaluator integration. |
-| **Yash** | `eval "$(forgum init yash)"` | `forgum completions yash > ~/.yashrc` | `~/.yashrc` | POSIX-compliant yet modern Yash completion engine. |
-| **Cmd.exe** | `call "%TEMP%\forgum-cmd.cmd"` | *(not applicable)* | Registry `AutoRun` snippet | Prompt command hook utilizing `forgum sweep`. |
-
----
-
-### 🌟 Awesome-Shell Ecosystem & Modern Terminal Multiplexer Matrix
-
-Forgum is engineered for seamless native interoperability with the top terminal utilities, multiplexers, and prompt engines from [`alebcay/awesome-shell`](https://github.com/alebcay/awesome-shell):
-
-| Tool / CLI | Category | Integration Method | Forgum Capability |
-| :--- | :--- | :--- | :--- |
-| **tmux** | Terminal Multiplexer | `forgum status-line`, `forgum tmux popup` | Zero-flicker DCS pass-through (`\x1bPtmux;\x1b...`), real-time status-right daemon updates. |
-| **zellij** | Modern Multiplexer | `forgum init zellij` | Native plugin pane rendering, floating terminal mascot keeping tabs on workspace status. |
-| **starship** | Cross-Shell Prompt | `forgum init starship` | Custom starship prompt module emitting ANSI mascots and fortune cookies above your prompt. |
-| **fzf** | Fuzzy Finder | `forgum list animals &#124; fzf --preview 'forgum -c {} --text "Preview"'` | Interactive instant mascot selection with high-speed ANSI previewing. |
-| **bat** | Syntax Highlighter | Piped output `forgum --text-only &#124; bat` | Color-aware pager formatting with automated background ANSI strip detection. |
-| **thefuck** | Command Corrector | Custom rule `forgum-rules.py` | Automatically repairs mistyped mascots or unknown CLI flags to the closest match. |
-| **navi** | Interactive Cheatsheet| `forgum init navi` | Pre-built cheatsheets for every CLI command, effect, and environment combo. |
-| **byobu** | Multiplexer Wrapper | `forgum init byobu` | Background status monitor notifying when long-running compiler tasks complete. |
-| **wezterm** | GPU Terminal | Lua config snippet | Seamless background pane rendering with TrueColor GPU shader synchronization. |
-
----
-
-### 9. Unified Configuration Schema (17 Keys) Table
+### 8. Unified Configuration Schema (17 Keys) Table
 
 | Config Key | Data Type | Default Value | Valid Range / Options | CLI Mapping | Description |
 | :--- | :--- | :--- | :--- | :--- | :--- |
@@ -704,7 +550,7 @@ Forgum is engineered for seamless native interoperability with the top terminal 
 
 ---
 
-### 10. Multi-Platform, Hardware Architecture & Zero-Ghosting Matrix Table
+### 9. Multi-Platform, Hardware Architecture & Zero-Ghosting Matrix Table
 
 | Platform / OS | CPU Architecture | Tested Terminals | Ghosting Prevention Mechanism | Terminal Resize Resilience |
 | :--- | :--- | :--- | :--- | :--- |
@@ -716,13 +562,13 @@ Forgum is engineered for seamless native interoperability with the top terminal 
 
 ---
 
-## ⚡ Under The Hood: The Physics, Kinematics & Mathematical Algorithms of Forgum
+## 🧮 Under The Hood: Kinematics & Nature Mathematics
 
 > *Most terminal tools just print static text. Forgum treats your terminal emulator as a high-frequency discrete physics simulation canvas.*
 
-Behind every swaying tail, glowing dragon breath, and floating space kitten lies an industrial-grade mathematical engine implemented in pure, safe Rust. Here is how Forgum pushes tens of thousands of colored terminal cells at a locked 60 FPS without touching a GPU shader pipeline:
+Behind every swaying tail, glowing dragon breath, and walking creature lies an industrial-grade mathematical engine implemented in pure, safe Rust. Forgum pushes tens of thousands of colored terminal cells at a locked 60 FPS without touching a GPU shader pipeline:
 
-```
+```text
   ┌───────────────────────────────────────────────────────────────────────────────────┐
   │                            CONTINUOUS PHASE MANIFOLD                              │
   │                                                                                   │
@@ -740,71 +586,110 @@ Behind every swaying tail, glowing dragon breath, and floating space kitten lies
 ```
 
 ### 1. Newtonian Kinematics & Sub-Millisecond Delta-Time Pacing
-Forgum bypasses simple frame counting in favor of continuous physical time integration:
-$$\Delta t = t_n - t_{n-1}, \quad \vec{x}(t + \Delta t) = \vec{x}(t) + \vec{v}(t)\Delta t + \frac{1}{2}\vec{a}(t)\Delta t^2$$
-Using platform-native monotonic timers (`std::time::Instant` with sub-microsecond resolution on Windows QPC and Linux `CLOCK_MONOTONIC`), animations never stutter or hitch even under heavy system load. When the terminal is throttled, Forgum's velocity Verlet solvers compute exact time deltas, preventing drift and phase de-synchronization.
+Forgum integrates continuous physical time deltas evaluated via platform-native monotonic timers (`std::time::Instant` with sub-microsecond resolution on Windows QPC and Linux `CLOCK_MONOTONIC`):
+$$\Delta t = t_n - t_{n-1}, \quad \vec{P}(t + \Delta t) = \vec{P}(t) + \vec{V}(t)\Delta t + \frac{1}{2}\vec{A}(t)\Delta t^2$$
+Sub-character coordinates are projected onto discrete monospace grid cell quanta via midpoint quantization ($x_{\text{col}} = \lfloor P_x \rceil, y_{\text{row}} = \lfloor P_y \rceil$).
 
-### 2. Anti-Moonwalk Phase-Coupled Ground Invariant
-In naive ASCII animation, a walking creature's feet slide unnaturally across the road (the infamous "moonwalk bug"). Forgum implements exact stride-to-ground kinematic coupling:
-$$v_{\text{walk}}(t) = \omega \cdot R \cdot \cos(\omega t + \phi)$$
-The mascot's ground displacement velocity is strictly matched to the procedural road advancement speed. Each foot contact phase satisfies zero relative slip velocity during the stance phase:
-$$\vec{v}_{\text{contact}} = \vec{v}_{\text{body}} - \omega \times \vec{r}_{\text{leg}} = 0$$
-When the feet lift during the swing phase, a cubic Hermite spline smoothly accelerates the leg forward to prepare for the next contact step.
+### 2. Stride-Velocity Coupling & Anti-Moonwalk Phase Invariant
+In naive ASCII animation, a walking creature's feet slide unnaturally across the road (the "moonwalk bug"). Forgum mathematically couples leg stride cadence to ground velocity and stride wavelength:
+$$\omega_{\text{stride}} = \frac{v_{\text{walk}}}{\lambda_{\text{step}}}, \quad \phi_{\text{stride}}(t) = \left( \frac{|P_x(t)|}{\lambda_{\text{step}}} \right) \pmod{1.0}$$
+During stance phase, relative contact velocity satisfies $\vec{v}_{\text{contact}} = \vec{v}_{\text{body}} - \omega \times \vec{r}_{\text{leg}} = 0$. When the creature halts, leg oscillation ceases instantly.
 
-### 3. Multi-Harmonic Fourier Horizon Synthesis
-Rather than using static pre-drawn mountain backdrops, Forgum dynamically synthesizes unique procedural landscapes in real time using multi-frequency Fourier sums with $1/f^\alpha$ fractal decay:
-$$H(x, t) = \sum_{k=1}^{N} \frac{A_k}{k^\alpha} \sin\left(\frac{2\pi k x}{\lambda} + \omega_k t + \phi_k\right) + \sum_{m=1}^{M} B_m \cdot \text{Perlin}\left(\frac{x}{\Lambda_m}\right)$$
-- **Alpine Peaks:** High-frequency odd harmonics with $L_1$ norm sharp peak folding ($|H(x)|$).
-- **Rolling Pastoral Hills:** Pure fundamental sine wave filtered with quadratic bezier smoothing.
-- **Volcanic Calderas:** Exponential crater depression functions $C(x) = -A e^{-(x - x_0)^2 / 2\sigma^2}$ coupled with particle spark emitters.
+### 3. Harmonic Lissajous Orbitals & Sinusoidal Flight Trajectories
+- **Orbital Drift (`float`)**: Aquatic and celestial mascots follow orthogonal dual-frequency phase-shifted harmonic oscillations ($X(t) = X_0 + A_x \sin(\omega_x t + \delta_x), Y(t) = Y_0 + A_y \cos(\omega_y t + \delta_y)$), modeling organic buoyancy without sharp directional jerks.
+- **Flight Trajectories (`fly`)**: Airborne creatures follow continuous flight paths modulated by dual-harmonic altitude swoops with wing flap cadence dynamically scaling with vertical climb gradient $|\frac{dY}{dt}|$.
 
-### 4. Bounding-Hull Silhouette Occlusion & Zero-Bleed Depth Buffer
-In traditional terminal ASCII, spaces inside an animal's body are transparent, causing background mountains, stars, and trees to bleed through the mascot's ribcage. Forgum solves this with a **linear bounding-hull silhouette occlusion algorithm**:
-$$\text{Hull}(y) = \left[ \min_{x} \{ x \mid \text{Cell}(x, y) \neq \text{' '} \}, \; \max_{x} \{ x \mid \text{Cell}(x, y) \neq \text{' '} \} \right]$$
-For every scanline of the mascot, all cells within $[\text{Hull}_{\text{start}}, \text{Hull}_{\text{end}}]$ write opaque space cells into the foreground depth layer, masking the background scenery while preserving complete transparency outside the animal's physical silhouette.
+### 4. Nature Mathematics: Mountain Elevation & Golden Ratio Peak Count
+Procedural alpine peaks, mesas, and volcanic calderas are generated deterministically per column $x$ using multi-harmonic sinusoidal superposition:
+$$H(x) = H_{\text{base}} \cdot \left[ 1 + \sum_{k=1}^{K} A_k \cdot \left| \sin\left( \frac{2\pi k}{\lambda} x_{\text{world}} + \phi_k \right) \right|^\gamma \right]$$
+The peak count $N_{\text{peaks}}$ scales mathematically with viewport width $W$ and the Golden Ratio ($\Phi \approx 1.6180339887$):
+$$N_{\text{peaks}} = \mathrm{clamp}\left(\left\lfloor \frac{W}{\lambda \cdot (\Phi / 2)} \right\rceil, 1, 12\right)$$
+- **Alpine Peaks**: Power-pinched exponent $\gamma = 1.85$ sculpts sharp glacial horn peaks separated by broad cirque valleys.
+- **Plateaus & Mesas**: Hyperbolic tangent saturation $H(x) \propto \tanh(3 \sin(\omega x))$ produces flat-topped mesas with sheer vertical escarpments.
+- **Volcanic Cones**: Lorentzian distribution $\frac{A}{1 + (x/\sigma)^2}$ with a central inverted caldera basin models volcanic topography.
 
-### 5. Lissajous Orbitals & Micro-Turbulent Float Kinematics
-For floating and flying mascots (such as `ghost`, `nyan`, `squid`, `pterodactyl`, `yoda`), Forgum computes 2D Lissajous phase-space orbits perturbed by micro-turbulent Perlin noise:
-$$x(t) = A_x \sin(a \cdot t + \delta), \quad y(t) = A_y \sin(b \cdot t), \quad \theta(t) = \arctan2(\dot{y}, \dot{x})$$
-This yields natural, lifelike buoyancy and aerodynamic pitch rotation matching the creature's direction of flight.
+### 5. Fibonacci Biological Flora Spacing & Stature-Scaled Canopy
+Procedural trees and midground vegetation mimic natural botanical stands using Fibonacci / Golden Ratio phyllotaxis spacing ($\Phi^{-1} \approx 0.61803398875$):
+$$d(k) = \max\left(0.7 \cdot d_{\min}, \; d_{\min} + \{k \cdot \Phi^{-1}\} \cdot d_{\text{var}} + \frac{d_{\text{var}}}{4} \cos\left(2\pi \{k \cdot \Phi^{-2}\}\right)\right)$$
+Tree height $H_{\text{tree}}$ is proportioned relative to the mascot's physical height $H_{\text{animal}}$ ($H_{\text{tree}} = H_{\text{animal}} \cdot M_{\text{anim}} \cdot (1 + 0.22 \sin(2.4k) + 0.12 \cos(1.6k))$). Walking creatures are framed naturally within glades ($M=1.25$), while airborne creatures glide gracefully above foliage ($M=0.80$).
 
-### 6. Continuous 24-Bit HSV Chromatic Manifolds
-Forget jerky 8-color terminal flashing. Forgum features a continuous lolcat chromatic dispersion wave computed directly in normalized HSV cylindrical coordinates:
+### 6. Bounding-Hull Silhouette Occlusion Masking (Zero Scenery Bleed-Through)
+To prevent background mountains, stars, and trees from bleeding through the interior body of ASCII mascots, the compositor evaluates scanline bounding hulls:
+$$\Omega_{\text{hull}}(y) = \left[ \min \{x \mid \text{Glyph}(x, y) \neq \text{' '}\}, \; \max \{x \mid \text{Glyph}(x, y) \neq \text{' '}\} \right]$$
+Cells within the hull silhouette that lack mascot artwork are committed to the depth buffer as opaque masking cells, preserving the animal's solid visual form over scrolling backgrounds.
+
+### 7. Continuous 24-Bit HSV Chromatic Manifolds
+Forgum replaces discrete 8-color jumping with a continuous lolcat chromatic dispersion wave computed directly in normalized cylindrical HSV space:
 $$\text{Hue}(x, y, t) = \left( \frac{x \cdot \Delta x_{\text{freq}} + y \cdot \Delta y_{\text{freq}}}{\lambda} + \frac{t}{T_{\text{period}}} \right) \bmod 1.0$$
-$$\begin{pmatrix} R \\ G \\ B \end{pmatrix} = \text{HSV}\to\text{RGB}\left(\text{Hue}(x, y, t), \; S_{\text{sat}}, \; V_{\text{val}}\right)$$
-The resulting RGB values are rendered with direct 24-bit TrueColor ANSI escape codes (`\x1b[38;2;R;G;Bm`), creating butter-smooth, iridescent color waves rippling across the ASCII art.
+$$\begin{pmatrix} R \\ G \\ B \end{pmatrix} = \text{HSV}\to\text{RGB}\left(\text{Hue}(x, y, t), \; S=0.92, \; V=0.98\right)$$
+Emitted as direct 24-bit TrueColor ANSI escape codes (`\x1b[38;2;R;G;Bm`).
+
+### 8. Strict Lightweight Memory Architecture (< 100MB RAM Mandate)
+Forgum enforces a strict memory ceiling across all execution modes:
+- The entire render pipeline operates under **100MB of resident RAM**.
+- In multi-threaded benchmarking (8 concurrent simulation and rendering threads generating 200 frames each), resident set size measures **~13MB RAM**.
+- All mathematical evaluations operate exclusively on zero-allocation stack primitives and pre-allocated double buffers, avoiding runtime heap allocation during active rendering.
+
+### 9. Terminal Viewport Reservation & DECSTBM Split-Scroll Multitasking
+Forgum supports dynamic screen partitioning using standard DEC Set Top and Bottom Margins (DECSTBM):
+- **Reserved Animation Header**: Fixes the top $K$ rows for physical creature kinematics and procedural nature horizons updating at 30/60 FPS.
+- **Simultaneous Shell Workspace**: Sets scrolling margins to lines $(K+1) \dots N$, allowing the user to simultaneously execute commands, view build outputs, and type at the prompt without visual interference or cursor flicker.
+
+> 📖 **Deep Dive**: For formal mathematical derivations, benchmark scripts, and architecture schematics, see [`ADVANCED.md`](ADVANCED.md).
 
 ---
 
-## 🐚 Shell Integration
+## 🐚 Shell Integration & Ecosystem
 
-Forgum hooks into your shell so the cow shows up automatically. The easiest path:
+Forgum hooks into your terminal shell so your living mascot and procedural pasture render seamlessly and unobtrusively above your prompt.
+
+### ⚡ One-Command Automatic Setup
+
+To automatically detect your active shell and inject the isolated, non-destructive prompt hook:
 
 ```bash
-forgum init <shell>
+forgum init --install
+# Or specify your shell explicitly:
+forgum init <shell> --install
 ```
 
-…where `<shell>` is one of `bash`, `zsh`, `fish`, `pwsh`, `powershell`, `cmd`, `elvish`, `nushell`, `carapace`, `xonsh`, `tcsh`, `ksh`, `ion`, `oil`, `yash`.
+All injected shell hooks strictly maintain standard marker isolation (`# >>> forgum >>>` ... `# <<< forgum <<<`), never pollute shell startup latency, and can be cleanly uninstalled at any time.
 
-### Manual integration
+### 📋 Universal 15-Shell Reference Table
 
-| Shell                | Manual snippet                                                             |
-| :------------------- | :------------------------------------------------------------------------- |
-| bash                 | Add `eval "$(forgum init bash)"` to `~/.bashrc`                            |
-| zsh                  | Add `eval "$(forgum init zsh)"` to `~/.zshrc`                              |
-| fish                 | `forgum init fish &#124; source` in `~/.config/fish/config.fish`               |
-| pwsh (PowerShell 7+) | `forgum init pwsh &#124; Out-String &#124; Invoke-Expression` in `$PROFILE`        |
-| powershell (5.1)     | Same as pwsh, in Windows PowerShell's `$PROFILE`                           |
-| xonsh                | `exec($(forgum init xonsh))` in `~/.xonshrc`                               |
-| tcsh                 | <code>eval &#96;forgum init tcsh&#96;</code> in `~/.cshrc`                                  |
-| ksh                  | `eval "$(forgum init ksh)"` in `~/.kshrc`                                  |
-| ion                  | `eval $(forgum init ion)` in `~/.config/ion/initrc`                        |
-| oil / YSH            | `eval "$(forgum init oil)"` in `~/.config/oil/yshrc`                       |
-| yash                 | `eval "$(forgum init yash)"` in `~/.yashrc`                                |
-| nushell              | `use forgum.nu *` in `~/.config/nushell/config.nu`                         |
-| elvish               | `eval (forgum init elvish)` in `~/.config/elvish/rc.elv`                   |
-| carapace             | `carapace forgum` in carapace config                                       |
-| cmd                  | `forgum init cmd` prints a registry/AutoRun snippet                        |
+| Shell | Automated Hook Injection | Tab Completion Setup | Target Profile Path |
+| :--- | :--- | :--- | :--- |
+| **PowerShell 7+ (`pwsh`)** | `forgum init pwsh --install` | `forgum completions pwsh &#124; Out-File $PROFILE` | `$PROFILE` |
+| **Windows PowerShell 5.1** | `forgum init powershell --install` | `forgum completions powershell &#124; Out-File $PROFILE` | `$PROFILE` |
+| **Bash** | `forgum init bash --install` | `forgum completions bash > ~/.bash_completion` | `~/.bashrc` |
+| **Zsh** | `forgum init zsh --install` | `forgum completions zsh > ~/.zsh/completions/_forgum` | `~/.zshrc` |
+| **Fish** | `forgum init fish --install` | `forgum completions fish > ~/.config/fish/completions/forgum.fish` | `~/.config/fish/config.fish` |
+| **Nushell** | `forgum init nushell --install` | `forgum completions nu > ~/.config/nushell/completions/forgum.nu` | `~/.config/nushell/config.nu` |
+| **Elvish** | `forgum init elvish --install` | `forgum completions elvish > ~/.config/elvish/lib/forgum.elv` | `~/.config/elvish/rc.elv` |
+| **Cmd (`cmd.exe`)** | `forgum init cmd --install` | *(not applicable / doskey alias)* | Registry `AutoRun` / `AutoRun.cmd` |
+| **Carapace** | `forgum init carapace --install`| `forgum completions carapace` | `~/.config/carapace/specs/forgum.yaml` |
+| **Xonsh** | `forgum init xonsh --install` | `forgum completions xonsh > ~/.xonshrc` | `~/.xonshrc` |
+| **Tcsh (`csh`)** | `forgum init tcsh --install` | `forgum completions tcsh > ~/.cshrc` | `~/.cshrc` |
+| **Ksh (`ksh93/mksh`)** | `forgum init ksh --install` | `forgum completions ksh > ~/.kshrc` | `~/.kshrc` |
+| **Ion** | `forgum init ion --install` | `forgum completions ion > ~/.config/ion/initrc` | `~/.config/ion/initrc` |
+| **Oil (`osh/ysh`)** | `forgum init oil --install` | `forgum completions oil > ~/.config/oil/yshrc` | `~/.config/oil/yshrc` |
+| **Yash** | `forgum init yash --install` | `forgum completions yash > ~/.yashrc` | `~/.yashrc` |
+
+### 🌟 Awesome-Shell & Multiplexer Matrix
+
+Forgum provides native interoperability with terminal multiplexers and utilities from [`alebcay/awesome-shell`](https://github.com/alebcay/awesome-shell):
+
+| Tool / CLI | Category | Integration Command / Hook | Forgum Capability |
+| :--- | :--- | :--- | :--- |
+| **tmux** | Terminal Multiplexer | `forgum tmux install >> ~/.tmux.conf` | Zero-flicker DCS pass-through (`\x1bPtmux;\x1b...`), real-time status-right daemon updates. |
+| **zellij** | Modern Multiplexer | `forgum tmux zellij` | Native plugin pane rendering, floating terminal mascot keeping tabs on workspace status. |
+| **wezterm** | GPU Terminal | `forgum tmux wezterm` | Lua status line generator and GPU shader synchronization. |
+| **starship** | Cross-Shell Prompt | `forgum init starship` | Custom starship prompt module emitting ANSI mascots and fortune cookies above prompt. |
+| **fzf** | Fuzzy Finder | `forgum list animals &#124; fzf --preview 'forgum -c {} --text "Preview"'` | Interactive instant mascot selection with high-speed ANSI previewing. |
+| **bat** | Syntax Highlighter | `forgum --text-only &#124; bat` | Color-aware pager formatting with automated background ANSI strip detection. |
+| **thefuck** | Command Corrector | Custom rule `forgum-rules.py` | Automatically repairs mistyped mascots or unknown CLI flags to the closest match. |
+| **navi** | Interactive Cheatsheet| `forgum init navi` | Pre-built cheatsheets for every CLI command, effect, and environment combination. |
+| **byobu** | Multiplexer Wrapper | `forgum init byobu` | Background status monitor notifying when long-running compiler tasks complete. |
 
 ---
 
