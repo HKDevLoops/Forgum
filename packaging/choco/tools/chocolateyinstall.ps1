@@ -3,7 +3,7 @@
 
 $ErrorActionPreference = 'Stop'
 $packageName = 'forgum'
-$version     = '0.4.0'
+$version     = '0.0.2-beta'
 $url64       = "https://github.com/HKDevLoops/Forgum/releases/download/v$version/forgum-$version-windows-x64.zip"
 $urlArm64    = "https://github.com/HKDevLoops/Forgum/releases/download/v$version/forgum-$version-windows-arm64.zip"
 $toolsDir    = "$(Split-Path -parent $MyInvocation.MyCommand.Definition)"

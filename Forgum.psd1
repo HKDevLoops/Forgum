@@ -1,6 +1,6 @@
 @{
     RootModule        = 'Forgum.psm1'
-    ModuleVersion     = '0.0.1'
+    ModuleVersion     = '0.0.2'
     GUID              = 'b5f8e9d3-4a72-4f5d-9e6f-2c4e1b8a3d9f'
     Author            = 'harish2222 (HKDevLoops)'
     CompanyName       = 'HKDevLoops'

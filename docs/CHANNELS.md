@@ -48,7 +48,7 @@ Forgum provides three distinct release branches to suit different stability and 
 
 | Channel | Recommended Audience | Release Cadence | Target Branch | Update Command |
 | :--- | :--- | :--- | :--- | :--- |
-| **`main`** (Stable) | All users, default installations | Semantic version tags (`v0.4.1`) | `main` | `forgum update --channel stable` |
+| **`main`** (Stable) | All users, default installations | Semantic version tags (`v0.0.2-beta`) | `main` | `forgum update --channel stable` |
 | **`nightly`** (Early Access) | Testers, power users, theme creators | Daily rolling release | `nightly` | `forgum update --channel nightly` |
 | **`dev`** (Bleeding Edge) | Maintainers & active PR contributors | On git commit | `dev` | `forgum channel set dev` |
 
@@ -70,7 +70,7 @@ forgum status
 Active Channel:      stable (main)
 Installation Source: Standalone Binary
 Binary Location:     C:\Users\haris\AppData\Local\Forgum\forgum.exe
-Version:             0.0.1-alpha.1
+Version:             0.0.2-beta
 ```
 
 ### Switch to Nightly Channel

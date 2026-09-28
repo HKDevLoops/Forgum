@@ -1,16 +1,16 @@
 {
-    "version": "0.4.0",
+    "version": "0.0.2-beta",
     "description": "Cross-platform ANSI animation mascot and shell integration engine",
     "homepage": "https://github.com/HKDevLoops/Forgum",
     "license": "MIT",
     "architecture": {
         "64bit": {
-            "url": "https://github.com/HKDevLoops/Forgum/releases/download/v0.4.0/forgum-0.4.0-windows-x64.zip",
+            "url": "https://github.com/HKDevLoops/Forgum/releases/download/v0.0.2-beta/forgum-0.0.2-beta-windows-x64.zip",
             "hash": "sha256:PLACEHOLDER_HASH_X64",
             "bin": "forgum.exe"
         },
         "arm64": {
-            "url": "https://github.com/HKDevLoops/Forgum/releases/download/v0.4.0/forgum-0.4.0-windows-arm64.zip",
+            "url": "https://github.com/HKDevLoops/Forgum/releases/download/v0.0.2-beta/forgum-0.0.2-beta-windows-arm64.zip",
             "hash": "sha256:PLACEHOLDER_HASH_ARM64",
             "bin": "forgum.exe"
         }

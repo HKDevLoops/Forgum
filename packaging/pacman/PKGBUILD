@@ -3,7 +3,7 @@
 
 # Maintainer: harish2222 (HKDevLoops) <harish2222@users.noreply.github.com>
 pkgname=forgum
-pkgver=0.4.0
+pkgver=0.0.2.beta
 pkgrel=1
 pkgdesc="Cross-platform cowsay+fortune+lolcat with a Rust ANSI animation engine"
 arch=('x86_64' 'aarch64')

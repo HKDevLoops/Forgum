@@ -4,7 +4,7 @@
 # ║   Ready-made scenes to get you started — copy, paste, and enjoy.       ║
 # ╚══════════════════════════════════════════════════════════════════════════╝
 
-These sample `SceneConfig` files validate against the **v0.4.0** schema.
+These sample `SceneConfig` files validate against the **v0.0.2-beta** schema.
 The schema uses `#[serde(deny_unknown_fields)]`, so every key must be exactly
 one of the 12 known fields:
 

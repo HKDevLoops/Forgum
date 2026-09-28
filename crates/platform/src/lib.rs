@@ -31,7 +31,7 @@
 //! cfg_windows! { /* windows-only code */ }
 //! ```
 
-#![doc(html_root_url = "https://docs.rs/forgum-platform/0.4.0")]
+#![doc(html_root_url = "https://docs.rs/forgum-platform/0.0.2-beta")]
 
 pub mod biome;
 pub mod daemon_socket;

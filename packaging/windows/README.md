@@ -34,7 +34,7 @@ author a Burn `Bundle` in a separate `.wxs` that references `forgum.msi` as a
 
 ## 📁 Portable zip
 
-The per-machine MSI is for installed use. The portable `forgum-0.4.0-windows-*.zip`
+The per-machine MSI is for installed use. The portable `forgum-0.0.2-beta-windows-*.zip`
 is still produced for Scoop and manual/portable usage.
 
 ---
