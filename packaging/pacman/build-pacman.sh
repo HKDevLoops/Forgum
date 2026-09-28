@@ -23,11 +23,12 @@ mkdir -p "${PKG_DIR}/src"
 # Generate a CI-local PKGBUILD that installs the already-built binary instead of
 # downloading a release tarball (which does not exist for arbitrary commits).
 VERSION="$(grep -m1 '^version' "${REPO_ROOT}/Cargo.toml" | sed -E 's/.*"([^"]+)".*/\1/')"
+PKGVER="$(echo "${VERSION}" | tr '-' '.' | sed 's/\.alpha\./\.alpha/')"
 cat > "${PKG_DIR}/PKGBUILD" <<EOF
 # Auto-generated for CI. Builds from the local checkout.
 # Maintainer: harish2222 (HKDevLoops) <harish2222@users.noreply.github.com>
 pkgname=forgum
-pkgver=${VERSION}
+pkgver=${PKGVER}
 pkgrel=1
 pkgdesc="Cross-platform cowsay+fortune+lolcat with a Rust ANSI animation engine"
 arch=('x86_64' 'aarch64')
