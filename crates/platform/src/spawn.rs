@@ -455,7 +455,7 @@ pub fn find_forgum_pids() -> Vec<u32> {
                     let wide: &[u16] = &entry.szExeFile;
                     let len = wide.iter().position(|&c| c == 0).unwrap_or(wide.len());
                     let name = String::from_utf16_lossy(&wide[..len]).to_lowercase();
-                    if name.starts_with("forgum") {
+                    if name == "forgum.exe" || name == "forgum-engine.exe" || name == "forgum" {
                         pids.push(entry.th32ProcessID);
                     }
                 }
@@ -485,7 +485,7 @@ pub fn find_forgum_pids() -> Vec<u32> {
                     let comm_path = entry.path().join("comm");
                     if let Ok(comm) = std::fs::read_to_string(&comm_path) {
                         let comm_lower = comm.trim().to_lowercase();
-                        if comm_lower.contains("forgum") {
+                        if comm_lower == "forgum" || comm_lower == "forgum-engine" {
                             pids.push(pid);
                         }
                     }

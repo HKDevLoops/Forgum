@@ -2356,11 +2356,13 @@ fn handle_stop_command(all: bool, force: bool) -> ExitCode {
     // Clean daemon state for current session
     daemon::cleanup_daemon_state(&session_id);
 
-    // 2. Scan OS process table for any unlisted / orphaned forgum processes
-    let unlisted = forgum_platform::find_forgum_pids();
-    for pid in unlisted {
-        if (all || !known_pids.contains(&pid)) && forgum_platform::kill_process(pid) {
-            stopped_count += 1;
+    // 2. Scan OS process table for any unlisted / orphaned forgum processes (only when --all requested)
+    if all {
+        let unlisted = forgum_platform::find_forgum_pids();
+        for pid in unlisted {
+            if !known_pids.contains(&pid) && forgum_platform::kill_process(pid) {
+                stopped_count += 1;
+            }
         }
     }
 
