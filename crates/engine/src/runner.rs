@@ -2271,13 +2271,9 @@ fn handle_update_command(check: bool, channel_flag: Option<&str>) -> ExitCode {
                 "Forgum v{version} is running as a Standalone Binary.\n\
                  Target stream for channel {channel}:\n\
                  {channel_stream}\n\n\
-                 Instant update commands for testers and contributors:\n\
+                 Instant update commands via celestial installer scripts:\n\
                    PowerShell: irm https://raw.githubusercontent.com/HKDevLoops/Forgum/{channel_name}/install.ps1 | iex\n\
-                   Bash/Zsh:   curl -fsSL https://raw.githubusercontent.com/HKDevLoops/Forgum/{channel_name}/install.sh | bash -s -- --channel {channel_name}\n\n\
-                 To install or update via an official package manager:\n\
-                   Scoop:  scoop update forgum\n\
-                   WinGet: winget upgrade HKDevLoops.Forgum\n\
-                   Brew:   brew upgrade forgum"
+                   Bash/Zsh:   curl -fsSL https://raw.githubusercontent.com/HKDevLoops/Forgum/{channel_name}/install.sh | bash -s -- --channel {channel_name}"
             );
             ExitCode::SUCCESS
         }

@@ -4,6 +4,7 @@
 
 # --- Rust Build Outputs & Artifacts ---
 /target/
+/target-linux/
 **/*.rs.bk
 Cargo.lock.bak
 *.pdb

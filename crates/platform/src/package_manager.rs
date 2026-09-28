@@ -11,21 +11,37 @@ use crate::error::PlatformError;
 /// Known package managers supported by Forgum.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 pub enum PackageManager {
+    #[serde(alias = "scoop")]
     Scoop,
+    #[serde(alias = "winget")]
     Winget,
+    #[serde(alias = "chocolatey")]
     Chocolatey,
+    #[serde(alias = "homebrew")]
     Homebrew,
+    #[serde(alias = "pacman")]
     Pacman,
+    #[serde(alias = "apt")]
     Apt,
+    #[serde(alias = "dnf")]
     Dnf,
+    #[serde(alias = "zypper")]
     Zypper,
+    #[serde(alias = "nix")]
     Nix,
+    #[serde(alias = "apk")]
     Apk,
+    #[serde(alias = "xbps")]
     Xbps,
+    #[serde(alias = "gentoo")]
     Gentoo,
+    #[serde(alias = "macports")]
     MacPorts,
+    #[serde(alias = "freebsdpkg")]
     FreeBsdPkg,
+    #[serde(alias = "cargo")]
     Cargo,
+    #[serde(rename = "standalone", alias = "DirectBinary", alias = "direct_binary")]
     DirectBinary,
 }
 
@@ -516,6 +532,7 @@ pub struct Receipt {
     pub channel: ReleaseChannel,
     pub version: String,
     pub bin_path: PathBuf,
+    #[serde(alias = "installed_at", default)]
     pub timestamp: u64,
 }
 
@@ -1264,6 +1281,30 @@ mod tests {
         assert_eq!(parsed.channel, ReleaseChannel::Nightly);
         assert_eq!(parsed.installer_source, PackageManager::DirectBinary);
         assert_eq!(parsed.version, "0.4.0");
+    }
+
+    #[test]
+    fn installer_script_receipt_compatibility() {
+        let script_receipt_json = r#"{
+  "installer_source": "standalone",
+  "channel": "dev",
+  "version": "0.4.0",
+  "bin_path": "/home/hkdevs/.local/bin/forgum",
+  "installed_at": 1790595540,
+  "platform": "linux",
+  "arch": "x86_64",
+  "is_wsl": 0,
+  "distro": "opensuse-leap",
+  "package_manager": "zypper",
+  "auto_update": true
+}"#;
+
+        let parsed: Receipt = serde_json::from_str(script_receipt_json)
+            .expect("must parse install.sh receipt without error");
+        assert_eq!(parsed.installer_source, PackageManager::DirectBinary);
+        assert_eq!(parsed.channel, ReleaseChannel::Dev);
+        assert_eq!(parsed.version, "0.4.0");
+        assert_eq!(parsed.timestamp, 1790595540);
     }
 
     #[test]

@@ -488,6 +488,8 @@ pub const ALL_FORGUM_MARKER_PAIRS: &[(&str, &str)] = &[
     ("# >>> forgum screen >>>", "# <<< forgum screen <<<"),
     ("# >>> forgum starship >>>", "# <<< forgum starship <<<"),
     ("# >>> forgum byobu >>>", "# <<< forgum byobu <<<"),
+    ("# >>> forgum path >>>", "# <<< forgum path <<<"),
+    ("rem >>> forgum path >>>", "rem <<< forgum path <<<"),
 ];
 
 /// Remove a delimited block from configuration file content.
