@@ -396,7 +396,8 @@ fn test_all_132_mascots_palettes_match_biome() {
     let cows_json_path = root.join("data").join("Cows").join("animations.json");
 
     let data_str = std::fs::read_to_string(&data_json_path).expect("read data/animations.json");
-    let cows_str = std::fs::read_to_string(&cows_json_path).expect("read data/Cows/animations.json");
+    let cows_str =
+        std::fs::read_to_string(&cows_json_path).expect("read data/Cows/animations.json");
 
     let data_map: serde_json::Map<String, serde_json::Value> =
         serde_json::from_str(&data_str).expect("parse data/animations.json");
@@ -404,7 +405,11 @@ fn test_all_132_mascots_palettes_match_biome() {
         serde_json::from_str(&cows_str).expect("parse data/Cows/animations.json");
 
     let all_mascots = forgum_platform::biome::get_all_mascots();
-    assert_eq!(all_mascots.len(), 132, "Expected exactly 132 mascots in biome registry");
+    assert_eq!(
+        all_mascots.len(),
+        132,
+        "Expected exactly 132 mascots in biome registry"
+    );
 
     for info in all_mascots {
         let name = info.name;
@@ -419,7 +424,11 @@ fn test_all_132_mascots_palettes_match_biome() {
             .iter()
             .map(|v| v.as_str().unwrap())
             .collect();
-        assert_eq!(d_pal.as_slice(), expected.as_slice(), "data/animations.json mismatch for {name}");
+        assert_eq!(
+            d_pal.as_slice(),
+            expected.as_slice(),
+            "data/animations.json mismatch for {name}"
+        );
 
         let c_entry = cows_map
             .get(name)
@@ -430,7 +439,10 @@ fn test_all_132_mascots_palettes_match_biome() {
             .iter()
             .map(|v| v.as_str().unwrap())
             .collect();
-        assert_eq!(c_pal.as_slice(), expected.as_slice(), "data/Cows/animations.json mismatch for {name}");
+        assert_eq!(
+            c_pal.as_slice(),
+            expected.as_slice(),
+            "data/Cows/animations.json mismatch for {name}"
+        );
     }
 }
-

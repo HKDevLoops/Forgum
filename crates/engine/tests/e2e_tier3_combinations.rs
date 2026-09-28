@@ -48,17 +48,29 @@ fn t3_combo_split_scroll_and_biological_palettes() {
     // 1. Dynamic reservation for tall mascot dragon (22 lines) on 100x50 terminal
     let (cols, rows) = compute_reserved_dimensions(100, 50, 22, &config);
     assert_eq!(cols, 100);
-    assert_eq!(rows, 22, "Dragon reserves full 22 lines in split-scroll mode");
+    assert_eq!(
+        rows, 22,
+        "Dragon reserves full 22 lines in split-scroll mode"
+    );
 
     // 2. Validate biological palette slots for dragon
-    let dragon = ALL_MASCOTS.iter().find(|m| m.name == "dragon").expect("dragon in biome");
+    let dragon = ALL_MASCOTS
+        .iter()
+        .find(|m| m.name == "dragon")
+        .expect("dragon in biome");
     assert_eq!(dragon.natural_palette.len(), 5);
 
     // 3. Adapt palette for dark terminal background
     let dark_bg = (12, 12, 12);
     let coat_color = natural_creature_color_adaptive(&dragon.natural_rgb, 0, 0, '#', dark_bg);
-    let lum = 0.299 * (coat_color.0 as f32) + 0.587 * (coat_color.1 as f32) + 0.114 * (coat_color.2 as f32);
-    assert!(lum >= 70.0, "Coat color adapted for dark background must remain visible: lum={}", lum);
+    let lum = 0.299 * (coat_color.0 as f32)
+        + 0.587 * (coat_color.1 as f32)
+        + 0.114 * (coat_color.2 as f32);
+    assert!(
+        lum >= 70.0,
+        "Coat color adapted for dark background must remain visible: lum={}",
+        lum
+    );
 }
 
 // =========================================================================
@@ -84,7 +96,10 @@ fn t3_combo_high_fps_and_particle_time_decoupling() {
     let sched = Scheduler::new(240);
     let dt = sched.frame_period();
     let dt_secs = dt.as_secs_f32();
-    assert!(dt_secs > 0.004 && dt_secs < 0.005, "dt per frame at 240 FPS should be ~4.16ms");
+    assert!(
+        dt_secs > 0.004 && dt_secs < 0.005,
+        "dt per frame at 240 FPS should be ~4.16ms"
+    );
 
     // Verify particle emission configuration
     let json = r#"{"phoenix": {"base": "Float", "particles": "Fire", "speed": 1.2}}"#;
@@ -148,17 +163,30 @@ fn t3_combo_resilient_parse_and_catalog_fallback() {
     // Resilient loader does not abort catalog loading; it falls back to biological defaults
     let loaded = load_animations(tmp.path());
     assert!(loaded.contains_key("healthy_cow"));
-    assert!(loaded.contains_key("dragon"), "Corrupted canonical mascot falls back gracefully to biological default");
+    assert!(
+        loaded.contains_key("dragon"),
+        "Corrupted canonical mascot falls back gracefully to biological default"
+    );
 
     // Broken mascot receives fallback Walk animation and biological palette
     let fallback = &loaded["dragon"];
-    assert_eq!(fallback.base, BaseAnim::Walk, "Fallback mascot defaults to Walk animation");
-    assert!(!fallback.palette.is_empty(), "Fallback mascot receives biological palette");
+    assert_eq!(
+        fallback.base,
+        BaseAnim::Walk,
+        "Fallback mascot defaults to Walk animation"
+    );
+    assert!(
+        !fallback.palette.is_empty(),
+        "Fallback mascot receives biological palette"
+    );
 
     // Healthy mascot with empty palette automatically receives biological fallback
     let cow = &loaded["healthy_cow"];
     assert_eq!(cow.base, BaseAnim::Breathe);
-    assert!(!cow.palette.is_empty(), "Fallback to biological palette for healthy cow");
+    assert!(
+        !cow.palette.is_empty(),
+        "Fallback to biological palette for healthy cow"
+    );
 }
 
 // =========================================================================
@@ -274,11 +302,8 @@ fn t3_combo_shell_hooks_marker_isolation_and_uninstall() {
         "export PATH=$HOME/bin:$PATH\n{}\nalias ll='ls -lah'\n",
         bash_hook
     );
-    let (cleaned, removed) = remove_delimited_block(
-        &mock_bashrc,
-        "# >>> forgum (bash) >>>",
-        "# <<< forgum <<<",
-    );
+    let (cleaned, removed) =
+        remove_delimited_block(&mock_bashrc, "# >>> forgum (bash) >>>", "# <<< forgum <<<");
     assert!(removed, "Delimited block must be excised");
     assert!(!cleaned.contains("forgum"));
     assert!(cleaned.contains("export PATH"));
@@ -299,7 +324,10 @@ fn t3_combo_shell_hooks_marker_isolation_and_uninstall() {
         errors: vec![],
     };
     assert_eq!(soft_report.mode, UninstallMode::Soft);
-    assert!(!soft_report.config_removed, "Soft uninstall preserves user configurations");
+    assert!(
+        !soft_report.config_removed,
+        "Soft uninstall preserves user configurations"
+    );
 
     let purge_report = UninstallReport {
         mode: UninstallMode::Purge,
@@ -315,5 +343,8 @@ fn t3_combo_shell_hooks_marker_isolation_and_uninstall() {
         errors: vec![],
     };
     assert_eq!(purge_report.mode, UninstallMode::Purge);
-    assert!(purge_report.config_removed && purge_report.logs_removed, "Purge removes all directories");
+    assert!(
+        purge_report.config_removed && purge_report.logs_removed,
+        "Purge removes all directories"
+    );
 }

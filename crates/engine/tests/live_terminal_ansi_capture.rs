@@ -1,7 +1,9 @@
 //! Integration test verifying terminal theme detection and background-adaptive contrast.
 
 use forgum_platform::biome::natural_creature_color_adaptive;
-use forgum_platform::terminal_theme::{calculate_luminance, detect_terminal_theme, parse_hex_color};
+use forgum_platform::terminal_theme::{
+    calculate_luminance, detect_terminal_theme, parse_hex_color,
+};
 
 #[test]
 fn test_terminal_theme_detection_and_invariants() {
@@ -26,7 +28,13 @@ fn test_adaptive_color_contrasts_against_light_terminals() {
     let bg_lum = calculate_luminance(light_bg.0, light_bg.1, light_bg.2) as f32;
 
     // Default Holstein cow coat is normally pure white (#ffffff)
-    let white_palette = [(255, 255, 255), (26, 26, 26), (44, 44, 44), (255, 182, 193), (255, 255, 255)];
+    let white_palette = [
+        (255, 255, 255),
+        (26, 26, 26),
+        (44, 44, 44),
+        (255, 182, 193),
+        (255, 255, 255),
+    ];
 
     let adapted_body = natural_creature_color_adaptive(&white_palette, 10, 5, '(', light_bg);
     let adapted_lum = calculate_luminance(adapted_body.0, adapted_body.1, adapted_body.2) as f32;
@@ -53,7 +61,13 @@ fn test_adaptive_color_contrasts_against_dark_terminals() {
     let dark_bg = (30, 30, 46); // lum ~ 32
 
     // Dark panther palette
-    let panther_palette = [(18, 18, 24), (33, 33, 40), (45, 45, 55), (255, 182, 193), (255, 235, 59)];
+    let panther_palette = [
+        (18, 18, 24),
+        (33, 33, 40),
+        (45, 45, 55),
+        (255, 182, 193),
+        (255, 235, 59),
+    ];
 
     let adapted_body = natural_creature_color_adaptive(&panther_palette, 10, 5, '(', dark_bg);
     let body_lum = calculate_luminance(adapted_body.0, adapted_body.1, adapted_body.2);

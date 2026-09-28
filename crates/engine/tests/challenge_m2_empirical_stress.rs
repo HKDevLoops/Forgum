@@ -41,7 +41,11 @@ fn binary_path() -> PathBuf {
     if p.file_name().is_some_and(|n| n == "deps") {
         p.pop();
     }
-    let name = if cfg!(windows) { "forgum.exe" } else { "forgum" };
+    let name = if cfg!(windows) {
+        "forgum.exe"
+    } else {
+        "forgum"
+    };
     p.push(name);
     p
 }
@@ -55,7 +59,13 @@ fn challenge_tall_and_wide_mascots_anatomy_measurements() {
     let d = data_dir();
     assert!(d.exists(), "data directory must exist at {:?}", d);
 
-    let mascots = ["dragon", "charizardvice", "elephant", "dragon-and-cow", "moojira"];
+    let mascots = [
+        "dragon",
+        "charizardvice",
+        "elephant",
+        "dragon-and-cow",
+        "moojira",
+    ];
 
     for name in mascots {
         let cow_name = cow::resolve_cow_name(name, &d);
@@ -65,7 +75,11 @@ fn challenge_tall_and_wide_mascots_anatomy_measurements() {
         let composed = cow::compose_scene_with_mode(&cow_raw, "Milestone 2 Geometry Test", false);
         let cow_foot = effects::find_cow_foot_y(&composed);
         let line_count = (cow_foot + 4).max(composed.lines().count() + 3).max(6);
-        let mascot_cols = composed.lines().map(cow::str_display_width).max().unwrap_or(0);
+        let mascot_cols = composed
+            .lines()
+            .map(cow::str_display_width)
+            .max()
+            .unwrap_or(0);
 
         eprintln!(
             "Mascot '{}': composed_lines={}, foot_y={}, line_count={}, max_cols={}",
@@ -85,7 +99,13 @@ fn challenge_tall_and_wide_mascots_anatomy_measurements() {
 #[test]
 fn challenge_dynamic_geometry_across_target_viewports() {
     let d = data_dir();
-    let mascots = ["dragon", "charizardvice", "elephant", "dragon-and-cow", "moojira"];
+    let mascots = [
+        "dragon",
+        "charizardvice",
+        "elephant",
+        "dragon-and-cow",
+        "moojira",
+    ];
     let viewports = [
         (40, 12, "40x12 compact"),
         (80, 24, "80x24 standard"),
@@ -106,7 +126,11 @@ fn challenge_dynamic_geometry_across_target_viewports() {
         let composed = cow::compose_scene_with_mode(&cow_raw, "Prompt Headroom Invariant", false);
         let cow_foot = effects::find_cow_foot_y(&composed);
         let line_count = (cow_foot + 4).max(composed.lines().count() + 3).max(6);
-        let mascot_cols = composed.lines().map(cow::str_display_width).max().unwrap_or(0);
+        let mascot_cols = composed
+            .lines()
+            .map(cow::str_display_width)
+            .max()
+            .unwrap_or(0);
 
         for &(total_cols, total_rows, label) in &viewports {
             let (reserved_cols, reserved_rows) = compute_reserved_dimensions_with_cols(
@@ -140,7 +164,9 @@ fn challenge_dynamic_geometry_across_target_viewports() {
                 assert!(
                     prompt_headroom >= 4,
                     "Prompt headroom was {} (< 4) for mascot '{}' on {}",
-                    prompt_headroom, name, label
+                    prompt_headroom,
+                    name,
+                    label
                 );
             }
 
@@ -169,7 +195,13 @@ fn challenge_dynamic_geometry_across_target_viewports() {
 #[test]
 fn challenge_bounded_split_mode_column_reservation() {
     let d = data_dir();
-    let mascots = ["dragon", "charizardvice", "elephant", "dragon-and-cow", "moojira"];
+    let mascots = [
+        "dragon",
+        "charizardvice",
+        "elephant",
+        "dragon-and-cow",
+        "moojira",
+    ];
 
     let bounded_config = SceneConfig {
         split_scroll: true,
@@ -183,7 +215,11 @@ fn challenge_bounded_split_mode_column_reservation() {
         let composed = cow::compose_scene_with_mode(&cow_raw, "Bounded Split", false);
         let cow_foot = effects::find_cow_foot_y(&composed);
         let line_count = (cow_foot + 4).max(composed.lines().count() + 3).max(6);
-        let mascot_cols = composed.lines().map(cow::str_display_width).max().unwrap_or(0);
+        let mascot_cols = composed
+            .lines()
+            .map(cow::str_display_width)
+            .max()
+            .unwrap_or(0);
 
         let (res_cols, _) = compute_reserved_dimensions_with_cols(
             120,
@@ -208,8 +244,19 @@ fn challenge_native_multiplexer_split_planning() {
     use forgum_platform::terminal::TerminalEmulator;
 
     let d = data_dir();
-    let mascots = ["dragon", "charizardvice", "elephant", "dragon-and-cow", "moojira"];
-    let test_args = vec!["forgum".to_string(), "render".to_string(), "--text".to_string(), "hi".to_string()];
+    let mascots = [
+        "dragon",
+        "charizardvice",
+        "elephant",
+        "dragon-and-cow",
+        "moojira",
+    ];
+    let test_args = vec![
+        "forgum".to_string(),
+        "render".to_string(),
+        "--text".to_string(),
+        "hi".to_string(),
+    ];
 
     for name in mascots {
         let cow_name = cow::resolve_cow_name(name, &d);
@@ -217,50 +264,76 @@ fn challenge_native_multiplexer_split_planning() {
         let composed = cow::compose_scene_with_mode(&cow_raw, "Multiplexer Test", false);
         let cow_foot = effects::find_cow_foot_y(&composed);
         let line_count = (cow_foot + 4).max(composed.lines().count() + 3).max(6);
-        let mascot_cols = composed.lines().map(cow::str_display_width).max().unwrap_or(0);
+        let mascot_cols = composed
+            .lines()
+            .map(cow::str_display_width)
+            .max()
+            .unwrap_or(0);
 
         // In 120x35 viewport, compute reserved rows
-        let config = SceneConfig { split_scroll: true, ..Default::default() };
-        let (_, dyn_rows) = compute_reserved_dimensions_with_cols(120, 35, line_count, mascot_cols, &config);
+        let config = SceneConfig {
+            split_scroll: true,
+            ..Default::default()
+        };
+        let (_, dyn_rows) =
+            compute_reserved_dimensions_with_cols(120, 35, line_count, mascot_cols, &config);
 
         // 1. Tmux plan
-        let tmux_mux = Mux::Tmux { pane: "0".to_string(), session: "test".to_string() };
+        let tmux_mux = Mux::Tmux {
+            pane: "0".to_string(),
+            session: "test".to_string(),
+        };
         let plan_tmux = forgum_platform::plan_native_split(
             TerminalEmulator::GenericVt,
             &tmux_mux,
             dyn_rows,
             0.35,
             &test_args,
-        ).expect("Tmux plan must be generated");
+        )
+        .expect("Tmux plan must be generated");
 
         assert_eq!(plan_tmux.target, "tmux");
         assert_eq!(plan_tmux.program, "tmux");
         // Must contain -l <dyn_rows>
-        let l_idx = plan_tmux.args.iter().position(|a| a == "-l").expect("Tmux args must have -l");
-        assert_eq!(plan_tmux.args[l_idx + 1], dyn_rows.to_string(), "Tmux split lines must match dyn_rows");
+        let l_idx = plan_tmux
+            .args
+            .iter()
+            .position(|a| a == "-l")
+            .expect("Tmux args must have -l");
+        assert_eq!(
+            plan_tmux.args[l_idx + 1],
+            dyn_rows.to_string(),
+            "Tmux split lines must match dyn_rows"
+        );
 
         // 2. Zellij plan
-        let zellij_mux = Mux::Zellij { tab: "test".to_string() };
+        let zellij_mux = Mux::Zellij {
+            tab: "test".to_string(),
+        };
         let plan_zellij = forgum_platform::plan_native_split(
             TerminalEmulator::GenericVt,
             &zellij_mux,
             dyn_rows,
             0.35,
             &test_args,
-        ).expect("Zellij plan must be generated");
+        )
+        .expect("Zellij plan must be generated");
 
         assert_eq!(plan_zellij.target, "zellij");
         assert_eq!(plan_zellij.program, "zellij");
 
         // 3. WezTerm plan
-        let wezterm_mux = Mux::WezTerm { tab: "1".to_string() };
+        let wezterm_mux = Mux::WezTerm {
+            tab: "1".to_string(),
+        };
         let plan_wezterm = forgum_platform::plan_native_split(
             TerminalEmulator::WezTerm,
             &wezterm_mux,
             dyn_rows,
             0.35,
             &test_args,
-        ).expect("WezTerm plan must be generated");
+        )
+        .expect("WezTerm plan must be generated");
 
         assert_eq!(plan_wezterm.target, "wezterm");
         assert_eq!(plan_wezterm.program, "wezterm");
@@ -318,16 +391,26 @@ fn challenge_timing_invariants_empirical_cli() {
             fps, elapsed, elapsed_ms, status
         );
 
-        assert!(status.success(), "forgum render failed with status {:?}", status);
+        assert!(
+            status.success(),
+            "forgum render failed with status {:?}",
+            status
+        );
         assert!(
             elapsed_ms >= min_allowed_ms,
             "Execution ended too quickly for {} FPS: {}ms < min {}ms (-{}ms drift)",
-            fps, elapsed_ms, min_allowed_ms, min_allowed_ms - elapsed_ms
+            fps,
+            elapsed_ms,
+            min_allowed_ms,
+            min_allowed_ms - elapsed_ms
         );
         assert!(
             elapsed_ms <= max_allowed_ms,
             "Execution took too long for {} FPS: {}ms > max {}ms (+{}ms drift)",
-            fps, elapsed_ms, max_allowed_ms, elapsed_ms - max_allowed_ms
+            fps,
+            elapsed_ms,
+            max_allowed_ms,
+            elapsed_ms - max_allowed_ms
         );
     }
 }

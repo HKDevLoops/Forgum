@@ -11,9 +11,7 @@ use std::time::Duration;
 use forgum_engine::dna::{
     get_dna, load_embedded_animations, BaseAnim, CowDna, ParticleDna, ParticleType,
 };
-use forgum_engine::effects::{
-    create_scene_effect, Effect, FlyEffect, StaticEffect, WalkEffect,
-};
+use forgum_engine::effects::{create_scene_effect, Effect, FlyEffect, StaticEffect, WalkEffect};
 use forgum_engine::framebuffer::{Cell, Color, FrameBuffer};
 use forgum_engine::particles::{Particle, ParticlePool};
 use forgum_engine::scenery::{render_scenery, EnvironmentStyle, MountainStyle, RoadStyle};
@@ -177,7 +175,10 @@ fn challenge_occlusion_walk_effect_kinematic_translation() {
                 );
             }
         }
-        assert!(found_cow, "WalkEffect step {step}: cow must be visible on screen");
+        assert!(
+            found_cow,
+            "WalkEffect step {step}: cow must be visible on screen"
+        );
     }
 }
 
@@ -471,9 +472,7 @@ fn challenge_memory_ceiling_under_heavy_animation_and_high_fps() {
     let f200_mb = mem_at_frame_200 as f64 / (1024.0 * 1024.0);
     let f2400_mb = mem_at_frame_2400 as f64 / (1024.0 * 1024.0);
 
-    println!(
-        "Milestone 2 Heavy Animation Memory Profile (2400 frames @ 240FPS, 160x50):"
-    );
+    println!("Milestone 2 Heavy Animation Memory Profile (2400 frames @ 240FPS, 160x50):");
     println!("  Peak RAM: {:.2} MB", peak_mb);
     println!("  Frame 200 RAM: {:.2} MB", f200_mb);
     println!("  Frame 2400 RAM: {:.2} MB", f2400_mb);
@@ -545,7 +544,8 @@ fn challenge_parallel_heavy_simulations_memory_strictly_under_100mb() {
   /|   |\\  \n\
    d   b   ";
             let eff_name = if t_id % 2 == 0 { "walk" } else { "fly" };
-            let effect = create_scene_effect(eff_name, cow_art.to_string(), dna, t_id as u32, "plain");
+            let effect =
+                create_scene_effect(eff_name, cow_art.to_string(), dna, t_id as u32, "plain");
             let mut fb = FrameBuffer::new(120, 40);
             let cow_foot_y = forgum_engine::effects::find_cow_foot_y(cow_art);
 
@@ -577,7 +577,10 @@ fn challenge_parallel_heavy_simulations_memory_strictly_under_100mb() {
 
     let peak_bytes = peak_mem_atomic.load(Ordering::Relaxed);
     let peak_mb = peak_bytes as f64 / (1024.0 * 1024.0);
-    println!("6 Concurrent SimState Threads Peak Memory: {:.2} MB", peak_mb);
+    println!(
+        "6 Concurrent SimState Threads Peak Memory: {:.2} MB",
+        peak_mb
+    );
 
     let limit_bytes = 100 * 1024 * 1024;
     assert!(

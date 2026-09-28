@@ -36,8 +36,14 @@ fn challenge_132_mascots_loadable_and_match_biome_palettes() {
     );
 
     // 1. Check data/Cows/animations.json
-    let cows_anim_path = repo_root().join("data").join("Cows").join("animations.json");
-    assert!(cows_anim_path.exists(), "data/Cows/animations.json must exist");
+    let cows_anim_path = repo_root()
+        .join("data")
+        .join("Cows")
+        .join("animations.json");
+    assert!(
+        cows_anim_path.exists(),
+        "data/Cows/animations.json must exist"
+    );
     let cows_anim_str = fs::read_to_string(&cows_anim_path).expect("read Cows/animations.json");
     let cows_catalog = parse_animations_json_str(&cows_anim_str, Some(&cows_anim_path))
         .expect("parse Cows/animations.json");
@@ -89,8 +95,7 @@ fn challenge_132_mascots_loadable_and_match_biome_palettes() {
         );
         let cows_dna = &cows_catalog[name];
         assert_eq!(
-            cows_dna.palette,
-            mascot.natural_palette,
+            cows_dna.palette, mascot.natural_palette,
             "Palette mismatch for '{name}' in Cows/animations.json"
         );
 
@@ -101,8 +106,7 @@ fn challenge_132_mascots_loadable_and_match_biome_palettes() {
         );
         let root_dna = &root_catalog[name];
         assert_eq!(
-            root_dna.palette,
-            mascot.natural_palette,
+            root_dna.palette, mascot.natural_palette,
             "Palette mismatch for '{name}' in animations.json"
         );
     }
@@ -115,27 +119,25 @@ fn challenge_132_mascots_loadable_and_match_biome_palettes() {
 #[test]
 fn challenge_deserialization_corrupted_json_syntax_never_panics() {
     let adversarial_syntaxes = vec![
-        "",                                    // Empty string
-        "   \t\r\n   ",                       // Whitespace only
-        "{",                                   // Unterminated object
-        "}",                                   // Stray close brace
-        "{\"cow\": ",                          // Incomplete key-value
-        "{\"cow\": {\"base\": \"Walk\"",       // Unclosed nested object
-        "{\"cow\": {\"base\": \"Walk\"},}",    // Trailing comma
-        "{\"cow\": {\"speed\": 1.0}} \0 extra",// Null byte in content
-        "\"just a bare string\"",              // Non-object primitive string
-        "12345",                               // Non-object primitive number
-        "[1, 2, 3]",                           // Non-object array
-        "null",                                // Primitive null
-        "true",                                // Primitive boolean
+        "",                                      // Empty string
+        "   \t\r\n   ",                          // Whitespace only
+        "{",                                     // Unterminated object
+        "}",                                     // Stray close brace
+        "{\"cow\": ",                            // Incomplete key-value
+        "{\"cow\": {\"base\": \"Walk\"",         // Unclosed nested object
+        "{\"cow\": {\"base\": \"Walk\"},}",      // Trailing comma
+        "{\"cow\": {\"speed\": 1.0}} \0 extra",  // Null byte in content
+        "\"just a bare string\"",                // Non-object primitive string
+        "12345",                                 // Non-object primitive number
+        "[1, 2, 3]",                             // Non-object array
+        "null",                                  // Primitive null
+        "true",                                  // Primitive boolean
         "{\"a\": {\"b\": {\"c\": {\"d\": 1}}}}", // Deeply nested structure
     ];
 
     for (i, input) in adversarial_syntaxes.iter().enumerate() {
         // Must never panic
-        let res = std::panic::catch_unwind(|| {
-            parse_animations_json_str(input, None)
-        });
+        let res = std::panic::catch_unwind(|| parse_animations_json_str(input, None));
         assert!(
             res.is_ok(),
             "Input {i} caused a panic in parse_animations_json_str: {:?}",
@@ -147,9 +149,7 @@ fn challenge_deserialization_corrupted_json_syntax_never_panics() {
         let anim_file = tmp.path().join("animations.json");
         fs::write(&anim_file, input).expect("write file");
 
-        let load_res = std::panic::catch_unwind(|| {
-            load_animations(tmp.path())
-        });
+        let load_res = std::panic::catch_unwind(|| load_animations(tmp.path()));
         assert!(
             load_res.is_ok(),
             "Input {i} caused a panic in load_animations: {:?}",
@@ -231,8 +231,8 @@ fn challenge_deserialization_wrong_types_never_panics_and_preserves_survivors() 
         // Insert the corrupted entry
         map.insert("corrupted_record".to_string(), payload.clone());
 
-        let json_str = serde_json::to_string(&serde_json::Value::Object(map))
-            .expect("serialize json");
+        let json_str =
+            serde_json::to_string(&serde_json::Value::Object(map)).expect("serialize json");
 
         let catalog = parse_animations_json_str(&json_str, None)
             .unwrap_or_else(|e| panic!("Case {idx} should not fail catalog parse: {e}"));
@@ -275,7 +275,10 @@ fn challenge_deserialization_wrong_types_never_panics_and_preserves_survivors() 
 
 #[test]
 fn challenge_massive_corruption_preserves_all_uncorrupted_mascots() {
-    let cows_anim_path = repo_root().join("data").join("Cows").join("animations.json");
+    let cows_anim_path = repo_root()
+        .join("data")
+        .join("Cows")
+        .join("animations.json");
     let content = fs::read_to_string(&cows_anim_path).expect("read baseline animations.json");
     let mut raw_map: serde_json::Value =
         serde_json::from_str(&content).expect("parse valid baseline JSON");
@@ -357,8 +360,8 @@ fn challenge_audit_corrupt_poison_heuristic_anomaly() {
         }
     }"##;
 
-    let catalog = parse_animations_json_str(test_json, None)
-        .expect("parse_animations_json_str must succeed");
+    let catalog =
+        parse_animations_json_str(test_json, None).expect("parse_animations_json_str must succeed");
 
     // Valid doge must always be present
     assert!(catalog.contains_key("valid_doge"));
@@ -440,17 +443,28 @@ fn challenge_audit_existing_unit_test_failures() {
 #[test]
 fn challenge_fallback_loaders_and_kinematics() {
     let embedded = load_embedded_animations();
-    assert_eq!(embedded.len(), 132, "Embedded animations must contain 132 mascots");
+    assert_eq!(
+        embedded.len(),
+        132,
+        "Embedded animations must contain 132 mascots"
+    );
 
     let synthesized = synthesize_biome_catalog();
-    assert_eq!(synthesized.len(), 132, "Synthesized biome catalog must contain 132 mascots");
+    assert_eq!(
+        synthesized.len(),
+        132,
+        "Synthesized biome catalog must contain 132 mascots"
+    );
 
     let tmp = tempdir().expect("tempdir");
     let loaded = load_animations_or_embedded(tmp.path());
-    assert_eq!(loaded.len(), 132, "load_animations_or_embedded on empty dir must load embedded");
+    assert_eq!(
+        loaded.len(),
+        132,
+        "load_animations_or_embedded on empty dir must load embedded"
+    );
 
     let p0 = instance_phase(1234, 0);
     let p1 = instance_phase(1234, 1);
     assert_ne!(p0, p1, "Instance phases must differ across instance IDs");
 }
-

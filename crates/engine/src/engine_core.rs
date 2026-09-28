@@ -1342,8 +1342,9 @@ pub fn run_engine_overlay(
         if w != cur_total_cols || h != cur_total_rows {
             cur_total_cols = w;
             cur_total_rows = h;
-            let (new_cols, new_rows) =
-                crate::render::compute_reserved_dimensions_with_cols(w, h, req_lines, req_cols, &config);
+            let (new_cols, new_rows) = crate::render::compute_reserved_dimensions_with_cols(
+                w, h, req_lines, req_cols, &config,
+            );
             let session_id = forgum_platform::detect_session_id();
             let socket_path = forgum_platform::control_socket_path(&session_id);
             let _ = crate::daemon::write_daemon_state(

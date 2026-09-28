@@ -29,7 +29,11 @@ pub fn format_clear_line(row: usize) -> String {
 }
 
 /// Emit DECSTBM scroll margins to `out` with cursor preservation.
-pub fn set_decstbm_margins<W: Write>(out: &mut W, top: usize, bottom: usize) -> std::io::Result<()> {
+pub fn set_decstbm_margins<W: Write>(
+    out: &mut W,
+    top: usize,
+    bottom: usize,
+) -> std::io::Result<()> {
     write!(out, "\x1b7\x1b[{top};{bottom}r\x1b8")?;
     out.flush()
 }

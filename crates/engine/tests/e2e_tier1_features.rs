@@ -16,8 +16,8 @@ use forgum_engine::scheduler::Scheduler;
 use forgum_platform::biome::{natural_creature_color_adaptive, ALL_MASCOTS};
 use forgum_platform::guards::{AltScreenGuard, CursorShowGuard, RawModeGuard};
 use forgum_platform::shell::{
-    remove_delimited_block, update_delimited_block, ALL_FORGUM_MARKER_PAIRS,
-    HOOK_MARKER_BEGIN, HOOK_MARKER_END,
+    remove_delimited_block, update_delimited_block, ALL_FORGUM_MARKER_PAIRS, HOOK_MARKER_BEGIN,
+    HOOK_MARKER_END,
 };
 use forgum_platform::signal::ShutdownFlag;
 use forgum_platform::uninstaller::{UninstallMode, UninstallReport};
@@ -38,7 +38,11 @@ fn argv(parts: &[&str]) -> Vec<String> {
 
 #[test]
 fn t1_f01_test01_all_132_mascots_defined_in_biome() {
-    assert_eq!(ALL_MASCOTS.len(), 132, "Biome registry must define exactly 132 mascots");
+    assert_eq!(
+        ALL_MASCOTS.len(),
+        132,
+        "Biome registry must define exactly 132 mascots"
+    );
 }
 
 #[test]
@@ -50,7 +54,10 @@ fn t1_f01_test02_cow_art_files_count_in_catalog() {
             .filter_map(|e| e.ok())
             .filter(|e| e.path().extension().is_some_and(|ext| ext == "cow"))
             .count();
-        assert_eq!(count, 132, "data/Cows must contain exactly 132 physical .cow files");
+        assert_eq!(
+            count, 132,
+            "data/Cows must contain exactly 132 physical .cow files"
+        );
     }
 }
 
@@ -73,10 +80,21 @@ fn t1_f01_test03_cows_animations_json_contains_all_mascots() {
 
 #[test]
 fn t1_f01_test04_cat2_palette_has_five_slots() {
-    let cat2 = ALL_MASCOTS.iter().find(|m| m.name == "cat2").expect("cat2 must exist");
-    assert_eq!(cat2.natural_palette.len(), 5, "cat2 must have 5 biological palette slots");
+    let cat2 = ALL_MASCOTS
+        .iter()
+        .find(|m| m.name == "cat2")
+        .expect("cat2 must exist");
+    assert_eq!(
+        cat2.natural_palette.len(),
+        5,
+        "cat2 must have 5 biological palette slots"
+    );
     for slot in cat2.natural_palette.iter() {
-        assert!(slot.starts_with('#'), "Palette slot must start with #: {}", slot);
+        assert!(
+            slot.starts_with('#'),
+            "Palette slot must start with #: {}",
+            slot
+        );
         assert_eq!(slot.len(), 7, "Hex color must be #RRGGBB: {}", slot);
     }
 }
@@ -118,9 +136,18 @@ fn t1_f02_test01_single_corrupt_entry_does_not_poison_catalog() {
     }"##;
     fs::write(tmp.path().join("animations.json"), json_content).expect("write json");
     let loaded = load_animations(tmp.path());
-    assert!(loaded.contains_key("valid_cow"), "valid_cow must load despite corrupt sibling");
-    assert!(loaded.contains_key("another_valid"), "another_valid must load despite corrupt sibling");
-    assert!(!loaded.contains_key("corrupt_cow"), "corrupt entry must be cleanly skipped");
+    assert!(
+        loaded.contains_key("valid_cow"),
+        "valid_cow must load despite corrupt sibling"
+    );
+    assert!(
+        loaded.contains_key("another_valid"),
+        "another_valid must load despite corrupt sibling"
+    );
+    assert!(
+        !loaded.contains_key("corrupt_cow"),
+        "corrupt entry must be cleanly skipped"
+    );
 }
 
 #[test]
@@ -128,7 +155,10 @@ fn t1_f02_test02_empty_json_file_returns_empty_map_without_panic() {
     let tmp = tempdir().expect("tempdir");
     fs::write(tmp.path().join("animations.json"), "{}").expect("write json");
     let loaded = load_animations(tmp.path());
-    assert!(loaded.is_empty(), "Empty JSON object should yield empty catalog");
+    assert!(
+        loaded.is_empty(),
+        "Empty JSON object should yield empty catalog"
+    );
 }
 
 #[test]
@@ -144,7 +174,10 @@ fn t1_f02_test03_missing_palette_in_record_populates_natural() {
     let loaded = load_animations(tmp.path());
     assert!(loaded.contains_key("default"));
     let cow = &loaded["default"];
-    assert!(!cow.palette.is_empty(), "Empty palette should auto-populate from biological default");
+    assert!(
+        !cow.palette.is_empty(),
+        "Empty palette should auto-populate from biological default"
+    );
 }
 
 #[test]
@@ -170,7 +203,10 @@ fn t1_f02_test04_malformed_particles_field_recovers_to_default() {
 fn t1_f02_test05_missing_file_returns_empty_map_without_panic() {
     let tmp = tempdir().expect("tempdir");
     let loaded = load_animations(tmp.path());
-    assert!(loaded.is_empty(), "Missing animations.json returns empty map gracefully");
+    assert!(
+        loaded.is_empty(),
+        "Missing animations.json returns empty map gracefully"
+    );
 }
 
 // =========================================================================
@@ -208,19 +244,33 @@ fn t1_f03_test02_palette_slots_have_valid_hex_format() {
 #[test]
 fn t1_f03_test03_dark_background_contrast_adaptation() {
     let dark_bg = (10, 10, 10);
-    let def = ALL_MASCOTS.iter().find(|m| m.name == "default").expect("default mascot");
+    let def = ALL_MASCOTS
+        .iter()
+        .find(|m| m.name == "default")
+        .expect("default mascot");
     let color = natural_creature_color_adaptive(&def.natural_rgb, 0, 0, '#', dark_bg);
     let lum = 0.299 * (color.0 as f32) + 0.587 * (color.1 as f32) + 0.114 * (color.2 as f32);
-    assert!(lum >= 70.0, "Dark terminal background must guarantee minimum coat contrast: lum={}", lum);
+    assert!(
+        lum >= 70.0,
+        "Dark terminal background must guarantee minimum coat contrast: lum={}",
+        lum
+    );
 }
 
 #[test]
 fn t1_f03_test04_light_background_contrast_adaptation() {
     let light_bg = (245, 245, 245);
-    let sheep = ALL_MASCOTS.iter().find(|m| m.name == "sheep").unwrap_or(&ALL_MASCOTS[0]);
+    let sheep = ALL_MASCOTS
+        .iter()
+        .find(|m| m.name == "sheep")
+        .unwrap_or(&ALL_MASCOTS[0]);
     let color = natural_creature_color_adaptive(&sheep.natural_rgb, 0, 0, '#', light_bg);
     let lum = 0.299 * (color.0 as f32) + 0.587 * (color.1 as f32) + 0.114 * (color.2 as f32);
-    assert!(lum < 235.0, "Light terminal background must darken pale coats for visibility: lum={}", lum);
+    assert!(
+        lum < 235.0,
+        "Light terminal background must darken pale coats for visibility: lum={}",
+        lum
+    );
 }
 
 #[test]
@@ -245,19 +295,22 @@ fn t1_f03_test05_custom_palette_cli_override_flag() {
 
 #[test]
 fn t1_f04_test01_fps_cli_flag_parses_240_fps() {
-    let cli = Cli::try_parse_from(argv(&["forgum", "render", "--fps", "240"])).expect("parse 240 fps");
+    let cli =
+        Cli::try_parse_from(argv(&["forgum", "render", "--fps", "240"])).expect("parse 240 fps");
     assert_eq!(cli.fps, Some(240));
 }
 
 #[test]
 fn t1_f04_test02_fps_cli_flag_parses_60_fps() {
-    let cli = Cli::try_parse_from(argv(&["forgum", "render", "--fps", "60"])).expect("parse 60 fps");
+    let cli =
+        Cli::try_parse_from(argv(&["forgum", "render", "--fps", "60"])).expect("parse 60 fps");
     assert_eq!(cli.fps, Some(60));
 }
 
 #[test]
 fn t1_f04_test03_fps_cli_flag_parses_30_fps() {
-    let cli = Cli::try_parse_from(argv(&["forgum", "render", "--fps", "30"])).expect("parse 30 fps");
+    let cli =
+        Cli::try_parse_from(argv(&["forgum", "render", "--fps", "30"])).expect("parse 30 fps");
     assert_eq!(cli.fps, Some(30));
 }
 
@@ -267,7 +320,11 @@ fn t1_f04_test04_scheduler_calculates_correct_period_for_240_fps() {
     let period = sched.frame_period();
     let micros = period.as_micros();
     // 1,000,000 / 240 ≈ 4,166 µs
-    assert!(micros >= 4100 && micros <= 4200, "240 FPS period should be ~4166us, got: {}", micros);
+    assert!(
+        micros >= 4100 && micros <= 4200,
+        "240 FPS period should be ~4166us, got: {}",
+        micros
+    );
 }
 
 #[test]
@@ -287,21 +344,30 @@ fn t1_f04_test05_scheduler_calculates_correct_period_for_60_fps() {
 fn t1_f05_test01_particle_dna_shorthand_fire() {
     let json = r#"{"test": {"particles": "Fire"}}"#;
     let map: HashMap<String, CowDna> = serde_json::from_str(json).expect("deserialize Fire");
-    assert_eq!(map["test"].particles.r#type, forgum_engine::dna::ParticleType::Fire);
+    assert_eq!(
+        map["test"].particles.r#type,
+        forgum_engine::dna::ParticleType::Fire
+    );
 }
 
 #[test]
 fn t1_f05_test02_particle_dna_shorthand_bubbles() {
     let json = r#"{"test": {"particles": "Bubbles"}}"#;
     let map: HashMap<String, CowDna> = serde_json::from_str(json).expect("deserialize Bubbles");
-    assert_eq!(map["test"].particles.r#type, forgum_engine::dna::ParticleType::Bubbles);
+    assert_eq!(
+        map["test"].particles.r#type,
+        forgum_engine::dna::ParticleType::Bubbles
+    );
 }
 
 #[test]
 fn t1_f05_test03_particle_dna_shorthand_stars() {
     let json = r#"{"test": {"particles": "Stars"}}"#;
     let map: HashMap<String, CowDna> = serde_json::from_str(json).expect("deserialize Stars");
-    assert_eq!(map["test"].particles.r#type, forgum_engine::dna::ParticleType::Stars);
+    assert_eq!(
+        map["test"].particles.r#type,
+        forgum_engine::dna::ParticleType::Stars
+    );
 }
 
 #[test]
@@ -316,7 +382,10 @@ fn t1_f05_test05_particle_dna_full_struct() {
     let json = r#"{"test": {"particles": {"type": "Fire", "rate": 20, "life": [0.5, 1.5]}}}"#;
     let map: HashMap<String, CowDna> = serde_json::from_str(json).expect("deserialize full");
     assert_eq!(map["test"].particles.rate, 20);
-    assert_eq!(map["test"].particles.r#type, forgum_engine::dna::ParticleType::Fire);
+    assert_eq!(
+        map["test"].particles.r#type,
+        forgum_engine::dna::ParticleType::Fire
+    );
 }
 
 // =========================================================================
@@ -326,13 +395,15 @@ fn t1_f05_test05_particle_dna_full_struct() {
 
 #[test]
 fn t1_f06_test01_cli_duration_flag_parses_positive_integer() {
-    let cli = Cli::try_parse_from(argv(&["forgum", "render", "--duration", "5"])).expect("parse duration");
+    let cli = Cli::try_parse_from(argv(&["forgum", "render", "--duration", "5"]))
+        .expect("parse duration");
     assert_eq!(cli.duration, Some(5));
 }
 
 #[test]
 fn t1_f06_test02_cli_duration_flag_parses_large_integer() {
-    let cli = Cli::try_parse_from(argv(&["forgum", "render", "--duration", "3600"])).expect("parse duration");
+    let cli = Cli::try_parse_from(argv(&["forgum", "render", "--duration", "3600"]))
+        .expect("parse duration");
     assert_eq!(cli.duration, Some(3600));
 }
 
@@ -367,7 +438,10 @@ fn t1_f07_test01_dragon_tall_mascot_reserves_sufficient_rows() {
     let config = SceneConfig::default();
     // dragon has 22 lines. On 100x60 viewport, allocate 22 lines
     let (_, rows) = compute_reserved_dimensions(100, 60, 22, &config);
-    assert_eq!(rows, 22, "Dragon (22 lines) should reserve exactly 22 rows on 60-row terminal");
+    assert_eq!(
+        rows, 22,
+        "Dragon (22 lines) should reserve exactly 22 rows on 60-row terminal"
+    );
 }
 
 #[test]
@@ -375,7 +449,10 @@ fn t1_f07_test02_charizard_tall_mascot_reserves_sufficient_rows() {
     let config = SceneConfig::default();
     // charizard has 41 lines. On 120x60 viewport, allocate 41 lines
     let (_, rows) = compute_reserved_dimensions(120, 60, 41, &config);
-    assert_eq!(rows, 41, "Charizard (41 lines) should reserve exactly 41 rows on 60-row terminal");
+    assert_eq!(
+        rows, 41,
+        "Charizard (41 lines) should reserve exactly 41 rows on 60-row terminal"
+    );
 }
 
 #[test]
@@ -383,7 +460,10 @@ fn t1_f07_test03_elephant_tall_mascot_reserves_sufficient_rows() {
     let config = SceneConfig::default();
     // elephant has 28 lines. On 120x80 viewport, allocate 28 lines
     let (_, rows) = compute_reserved_dimensions(120, 80, 28, &config);
-    assert_eq!(rows, 28, "Elephant (28 lines) should reserve exactly 28 rows on 80-row terminal");
+    assert_eq!(
+        rows, 28,
+        "Elephant (28 lines) should reserve exactly 28 rows on 80-row terminal"
+    );
 }
 
 #[test]
@@ -391,7 +471,10 @@ fn t1_f07_test04_prompt_headroom_preserved_on_constrained_viewport() {
     let config = SceneConfig::default();
     // On 80x24 terminal with charizard (41 lines), total_rows.saturating_sub(4) = 20
     let (_, rows) = compute_reserved_dimensions(80, 24, 41, &config);
-    assert_eq!(rows, 20, "Prompt headroom must clamp reservation to 20 rows on 24-row terminal");
+    assert_eq!(
+        rows, 20,
+        "Prompt headroom must clamp reservation to 20 rows on 24-row terminal"
+    );
 }
 
 #[test]
@@ -402,7 +485,10 @@ fn t1_f07_test05_bounded_split_mode_column_reservation() {
     };
     // mascot_cols = 35 -> (35 + 4).min(100).max(20) = 39
     let (cols, _) = compute_reserved_dimensions_with_cols(100, 50, 10, 35, &config);
-    assert_eq!(cols, 39, "Bounded split mode must reserve mascot_cols + 4 padding");
+    assert_eq!(
+        cols, 39,
+        "Bounded split mode must reserve mascot_cols + 4 padding"
+    );
 }
 
 // =========================================================================
@@ -430,8 +516,13 @@ fn t1_f08_test02_framebuffer_resize_preserves_bounds() {
 
 #[test]
 fn t1_f08_test03_nyan_cat_mascot_exists_in_catalog() {
-    let has_nyan = ALL_MASCOTS.iter().any(|m| m.name == "nyancat" || m.name == "cat2");
-    assert!(has_nyan, "Nyan cat or feline mascot must be present in mascot catalog");
+    let has_nyan = ALL_MASCOTS
+        .iter()
+        .any(|m| m.name == "nyancat" || m.name == "cat2");
+    assert!(
+        has_nyan,
+        "Nyan cat or feline mascot must be present in mascot catalog"
+    );
 }
 
 #[test]
@@ -460,20 +551,25 @@ fn t1_f09_test01_mountain_elevation_harmonic_determinism() {
     };
     let h1 = calc_elev(5.0, 50.0);
     let h2 = calc_elev(5.0, 50.0);
-    assert_eq!(h1, h2, "Harmonic mountain elevation must be strictly deterministic");
+    assert_eq!(
+        h1, h2,
+        "Harmonic mountain elevation must be strictly deterministic"
+    );
 }
 
 #[test]
 fn t1_f09_test02_fibonacci_phyllotaxis_golden_ratio_value() {
     let phi = 1.6180339887_f64;
-    assert!((phi - 1.6180339887).abs() < 1e-6, "Golden ratio constant must be precise");
+    assert!(
+        (phi - 1.6180339887).abs() < 1e-6,
+        "Golden ratio constant must be precise"
+    );
 }
 
 #[test]
 fn t1_f09_test03_road_surface_roughness_stack_calculation() {
-    let roughness = |x: usize| -> f32 {
-        ((x as f32 * 0.3).sin() * 0.5) + ((x as f32 * 0.7).cos() * 0.2)
-    };
+    let roughness =
+        |x: usize| -> f32 { ((x as f32 * 0.3).sin() * 0.5) + ((x as f32 * 0.7).cos() * 0.2) };
     for x in 0..100 {
         let r = roughness(x);
         assert!(r >= -1.0 && r <= 1.0, "Road roughness must be bounded");
@@ -484,7 +580,10 @@ fn t1_f09_test03_road_surface_roughness_stack_calculation() {
 fn t1_f09_test04_framebuffer_allocation_size_under_limit() {
     let fb = FrameBuffer::new(200, 50);
     let bytes = 200 * 50 * std::mem::size_of::<Cell>();
-    assert!(bytes < 1_000_000, "Framebuffer buffer size must be well under 1MB");
+    assert!(
+        bytes < 1_000_000,
+        "Framebuffer buffer size must be well under 1MB"
+    );
     assert_eq!(fb.width, 200);
     assert_eq!(fb.height, 50);
 }
@@ -509,7 +608,10 @@ fn t1_f10_test01_cell_partial_eq_ignores_dirty_flag_bug_e1() {
     use forgum_engine::framebuffer::Color;
     let c1 = Cell::new('A', Color::WHITE);
     let c2 = Cell::new('A', Color::WHITE);
-    assert_eq!(c1, c2, "BUG-E1: Cell PartialEq must ensure visual equivalence");
+    assert_eq!(
+        c1, c2,
+        "BUG-E1: Cell PartialEq must ensure visual equivalence"
+    );
 }
 
 #[test]
@@ -518,7 +620,10 @@ fn t1_f10_test02_duration_zero_unbounded_mode_bug_b2() {
         duration: 0,
         ..Default::default()
     };
-    assert_eq!(config.duration, 0, "BUG-B2: duration=0 must be preserved for infinite mode");
+    assert_eq!(
+        config.duration, 0,
+        "BUG-B2: duration=0 must be preserved for infinite mode"
+    );
 }
 
 #[test]
@@ -532,7 +637,8 @@ fn t1_f10_test03_raii_guard_types_exist_bug_t2() {
 fn t1_f10_test04_shutdown_flag_atomic_signal_bug_t1() {
     let flag = ShutdownFlag::new();
     assert!(!flag.is_shutdown(), "ShutdownFlag starts false");
-    flag.shutdown_handle().store(true, std::sync::atomic::Ordering::Relaxed);
+    flag.shutdown_handle()
+        .store(true, std::sync::atomic::Ordering::Relaxed);
     assert!(flag.is_shutdown(), "ShutdownFlag sets atomically to true");
 }
 
@@ -541,7 +647,10 @@ fn t1_f10_test05_cli_arg_parsing_unknown_flag_fails_with_code_64() {
     let res = parse_args(argv(&["forgum", "--nonexistent-flag-xyz"]));
     assert!(res.is_err());
     let err = res.unwrap_err();
-    assert_eq!(err.exit_code, 64, "Unknown CLI flag must return exit code 64");
+    assert_eq!(
+        err.exit_code, 64,
+        "Unknown CLI flag must return exit code 64"
+    );
 }
 
 // =========================================================================
@@ -740,21 +849,36 @@ fn t1_f14_test05_natural_palette_matches_natural_rgb() {
 #[test]
 fn t1_f15_test01_bash_hook_contains_cli_args() {
     let hook = generate_hook(Shell::Bash, "/usr/bin/forgum");
-    assert!(hook.contains("/usr/bin/forgum"), "Bash hook must embed engine path");
-    assert!(hook.contains("# >>> forgum (bash) >>>"), "Bash hook must contain begin marker");
-    assert!(hook.contains("# <<< forgum <<<"), "Bash hook must contain end marker");
+    assert!(
+        hook.contains("/usr/bin/forgum"),
+        "Bash hook must embed engine path"
+    );
+    assert!(
+        hook.contains("# >>> forgum (bash) >>>"),
+        "Bash hook must contain begin marker"
+    );
+    assert!(
+        hook.contains("# <<< forgum <<<"),
+        "Bash hook must contain end marker"
+    );
 }
 
 #[test]
 fn t1_f15_test02_zsh_hook_contains_precmd_functions() {
     let hook = generate_hook(Shell::Zsh, "/usr/bin/forgum");
-    assert!(hook.contains("precmd_functions"), "Zsh hook must register precmd");
+    assert!(
+        hook.contains("precmd_functions"),
+        "Zsh hook must register precmd"
+    );
 }
 
 #[test]
 fn t1_f15_test03_fish_hook_uses_event_handlers() {
     let hook = generate_hook(Shell::Fish, "/usr/bin/forgum");
-    assert!(hook.contains("fish_prompt"), "Fish hook must bind prompt event");
+    assert!(
+        hook.contains("fish_prompt"),
+        "Fish hook must bind prompt event"
+    );
 }
 
 #[test]
@@ -825,13 +949,19 @@ fn t1_f16_test05_cmd_rem_marker_pair_recognized() {
 #[test]
 fn t1_f17_test01_bash_hook_uses_in_process_file_test() {
     let hook = generate_hook(Shell::Bash, "/usr/bin/forgum");
-    assert!(hook.contains("-f"), "Bash hook must test state file existence with [ -f ]");
+    assert!(
+        hook.contains("-f"),
+        "Bash hook must test state file existence with [ -f ]"
+    );
 }
 
 #[test]
 fn t1_f17_test02_fish_hook_uses_test_f() {
     let hook = generate_hook(Shell::Fish, "/usr/bin/forgum");
-    assert!(hook.contains("test -f"), "Fish hook must use native test -f");
+    assert!(
+        hook.contains("test -f"),
+        "Fish hook must use native test -f"
+    );
 }
 
 #[test]
@@ -843,13 +973,19 @@ fn t1_f17_test03_pwsh_hook_uses_test_path() {
 #[test]
 fn t1_f17_test04_no_subshell_grep_in_bash_prompt() {
     let hook = generate_hook(Shell::Bash, "/usr/bin/forgum");
-    assert!(!hook.contains("| grep"), "Bash hook prompt hot path must not pipe to grep");
+    assert!(
+        !hook.contains("| grep"),
+        "Bash hook prompt hot path must not pipe to grep"
+    );
 }
 
 #[test]
 fn t1_f17_test05_no_subshell_sed_in_zsh_prompt() {
     let hook = generate_hook(Shell::Zsh, "/usr/bin/forgum");
-    assert!(!hook.contains("| sed"), "Zsh hook prompt hot path must not pipe to sed");
+    assert!(
+        !hook.contains("| sed"),
+        "Zsh hook prompt hot path must not pipe to sed"
+    );
 }
 
 // =========================================================================
@@ -885,7 +1021,10 @@ fn t1_f18_test03_uninstall_report_structure() {
         errors: vec![],
     };
     assert_eq!(report.mode, UninstallMode::Soft);
-    assert!(!report.config_removed, "Soft uninstall must preserve config");
+    assert!(
+        !report.config_removed,
+        "Soft uninstall must preserve config"
+    );
 }
 
 #[test]
@@ -903,7 +1042,10 @@ fn t1_f18_test04_purge_report_indicates_config_removal() {
         logs: vec![],
         errors: vec![],
     };
-    assert!(report.config_removed, "Purge uninstall marks config removed");
+    assert!(
+        report.config_removed,
+        "Purge uninstall marks config removed"
+    );
     assert!(report.logs_removed, "Purge uninstall marks logs removed");
 }
 
@@ -911,7 +1053,11 @@ fn t1_f18_test04_purge_report_indicates_config_removal() {
 fn t1_f18_test05_uninstall_cli_subcommand_help() {
     let res = parse_args(argv(&["forgum", "uninstall", "--help"]));
     assert!(res.is_err());
-    assert_eq!(res.unwrap_err().exit_code, 0, "uninstall --help should exit with code 0");
+    assert_eq!(
+        res.unwrap_err().exit_code,
+        0,
+        "uninstall --help should exit with code 0"
+    );
 }
 
 // =========================================================================
@@ -929,13 +1075,19 @@ fn t1_f19_test01_max_stdin_bound_is_4mb() {
 fn t1_f19_test02_malformed_json_deserialization_fails() {
     let malformed = "{ unquoted_key: 123 ";
     let res: Result<SceneConfig, _> = serde_json::from_str(malformed);
-    assert!(res.is_err(), "BUG-D5: Malformed JSON must fail deserialization");
+    assert!(
+        res.is_err(),
+        "BUG-D5: Malformed JSON must fail deserialization"
+    );
 }
 
 #[test]
 fn t1_f19_test03_cli_file_flag_requires_value() {
     let res = Cli::try_parse_from(argv(&["forgum", "render", "--file"]));
-    assert!(res.is_err(), "BUG-D6: --file flag without path must fail CLI validation");
+    assert!(
+        res.is_err(),
+        "BUG-D6: --file flag without path must fail CLI validation"
+    );
 }
 
 #[test]
@@ -943,7 +1095,11 @@ fn t1_f19_test04_u64_saturating_mul_duration_overflow_prevention() {
     let duration: u64 = u64::MAX;
     let fps: u64 = 60;
     let frames = duration.saturating_mul(fps);
-    assert_eq!(frames, u64::MAX, "BUG-D7: Saturating multiplication prevents u64 wrap");
+    assert_eq!(
+        frames,
+        u64::MAX,
+        "BUG-D7: Saturating multiplication prevents u64 wrap"
+    );
 }
 
 #[test]
@@ -970,13 +1126,15 @@ fn t1_f20_test01_ci_yml_file_exists() {
 
 #[test]
 fn t1_f20_test02_release_yml_file_exists() {
-    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../.github/workflows/release.yml");
+    let path =
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../.github/workflows/release.yml");
     assert!(path.exists(), "release.yml must exist");
 }
 
 #[test]
 fn t1_f20_test03_release_nightly_yml_file_exists() {
-    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../.github/workflows/release-nightly.yml");
+    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../.github/workflows/release-nightly.yml");
     assert!(path.exists(), "release-nightly.yml must exist");
 }
 
@@ -999,7 +1157,8 @@ fn t1_f20_test04_workflow_yaml_is_valid_syntax() {
 
 #[test]
 fn t1_f20_test05_release_workflow_contains_download_artifact() {
-    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../.github/workflows/release.yml");
+    let path =
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../.github/workflows/release.yml");
     if path.exists() {
         let content = fs::read_to_string(&path).expect("read release.yml");
         assert!(
@@ -1022,7 +1181,11 @@ fn t1_f21_test01_ci_yml_scanned_for_uses_clauses() {
         for line in content.lines() {
             let trimmed = line.trim();
             if trimmed.starts_with("uses:") {
-                assert!(trimmed.contains('@') || trimmed.contains("docker://"), "uses line must specify a target version or sha: {}", trimmed);
+                assert!(
+                    trimmed.contains('@') || trimmed.contains("docker://"),
+                    "uses line must specify a target version or sha: {}",
+                    trimmed
+                );
             }
         }
     }
@@ -1030,13 +1193,18 @@ fn t1_f21_test01_ci_yml_scanned_for_uses_clauses() {
 
 #[test]
 fn t1_f21_test02_release_yml_scanned_for_uses_clauses() {
-    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../.github/workflows/release.yml");
+    let path =
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../.github/workflows/release.yml");
     if path.exists() {
         let content = fs::read_to_string(&path).expect("read release.yml");
         for line in content.lines() {
             let trimmed = line.trim();
             if trimmed.starts_with("uses:") {
-                assert!(trimmed.contains('@') || trimmed.contains("docker://"), "uses line must specify target: {}", trimmed);
+                assert!(
+                    trimmed.contains('@') || trimmed.contains("docker://"),
+                    "uses line must specify target: {}",
+                    trimmed
+                );
             }
         }
     }
@@ -1044,13 +1212,18 @@ fn t1_f21_test02_release_yml_scanned_for_uses_clauses() {
 
 #[test]
 fn t1_f21_test03_release_nightly_yml_scanned_for_uses_clauses() {
-    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../.github/workflows/release-nightly.yml");
+    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../.github/workflows/release-nightly.yml");
     if path.exists() {
         let content = fs::read_to_string(&path).expect("read release-nightly.yml");
         for line in content.lines() {
             let trimmed = line.trim();
             if trimmed.starts_with("uses:") {
-                assert!(trimmed.contains('@') || trimmed.contains("docker://"), "uses line must specify target: {}", trimmed);
+                assert!(
+                    trimmed.contains('@') || trimmed.contains("docker://"),
+                    "uses line must specify target: {}",
+                    trimmed
+                );
             }
         }
     }
@@ -1069,7 +1242,10 @@ fn t1_f21_test04_sha_pinning_pattern_helper_validates_40_hex() {
 #[test]
 fn t1_f21_test05_pinned_sha_inline_version_comment_convention() {
     let line = "uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1";
-    assert!(line.contains('#'), "Pinned SHA lines should document semantic version in comment");
+    assert!(
+        line.contains('#'),
+        "Pinned SHA lines should document semantic version in comment"
+    );
 }
 
 // =========================================================================
@@ -1150,7 +1326,8 @@ fn t1_f23_test02_riscv64_target_string_validity() {
 
 #[test]
 fn t1_f23_test03_release_workflows_scanned_for_targets() {
-    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../.github/workflows/release.yml");
+    let path =
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../.github/workflows/release.yml");
     if path.exists() {
         let content = fs::read_to_string(&path).expect("read release.yml");
         assert!(content.contains("armv7") || content.contains("matrix"));
@@ -1159,7 +1336,8 @@ fn t1_f23_test03_release_workflows_scanned_for_targets() {
 
 #[test]
 fn t1_f23_test04_release_nightly_workflows_scanned_for_targets() {
-    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../.github/workflows/release-nightly.yml");
+    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../.github/workflows/release-nightly.yml");
     if path.exists() {
         let content = fs::read_to_string(&path).expect("read release-nightly.yml");
         assert!(content.contains("armv7") || content.contains("matrix"));

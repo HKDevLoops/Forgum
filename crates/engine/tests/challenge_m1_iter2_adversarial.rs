@@ -3,9 +3,7 @@
 //! Stress-tests resilient deserialization, canonical vs non-canonical corrupted handling,
 //! biological palette recovery, and kinematics invariants.
 
-use forgum_engine::dna::{
-    get_dna, parse_animations_json_str, BaseAnim, CowDna,
-};
+use forgum_engine::dna::{get_dna, parse_animations_json_str, BaseAnim, CowDna};
 use forgum_platform::biome::get_all_mascots;
 use std::collections::HashMap;
 
@@ -62,7 +60,10 @@ fn test_adversarial_arbitrary_corrupted_non_canonical_mascots_omitted() {
         .expect("parse_animations_json_str must succeed despite corrupt entries");
 
     // The valid entry must be present
-    assert!(catalog.contains_key("valid_entry"), "Valid entry must be loaded");
+    assert!(
+        catalog.contains_key("valid_entry"),
+        "Valid entry must be loaded"
+    );
     assert_eq!(catalog["valid_entry"].base, BaseAnim::Float);
 
     // NONE of the arbitrary corrupted non-canonical entries must be present
@@ -115,8 +116,8 @@ fn test_all_132_canonical_mascots_corrupted_simultaneously_recover() {
 
     let raw_json = serde_json::to_string(&serde_json::Value::Object(json_obj)).unwrap();
 
-    let catalog = parse_animations_json_str(&raw_json, None)
-        .expect("parse_animations_json_str must succeed");
+    let catalog =
+        parse_animations_json_str(&raw_json, None).expect("parse_animations_json_str must succeed");
 
     // Must contain exactly the 132 canonical mascots and zero non-canonical entries
     assert_eq!(
@@ -186,10 +187,13 @@ fn test_canonical_mascots_with_cow_extension_corrupted() {
         }
     }"##;
 
-    let catalog = parse_animations_json_str(test_json, None)
-        .expect("parse_animations_json_str must succeed");
+    let catalog =
+        parse_animations_json_str(test_json, None).expect("parse_animations_json_str must succeed");
 
-    assert!(catalog.contains_key("dragon.cow"), "dragon.cow must recover");
+    assert!(
+        catalog.contains_key("dragon.cow"),
+        "dragon.cow must recover"
+    );
     assert!(catalog.contains_key("tux.cow"), "tux.cow must recover");
     assert!(
         !catalog.contains_key("nonexistent_animal.cow"),
@@ -227,8 +231,8 @@ fn test_canonical_mascots_case_insensitivity_recovery() {
         }
     }"##;
 
-    let catalog = parse_animations_json_str(test_json, None)
-        .expect("parse_animations_json_str must succeed");
+    let catalog =
+        parse_animations_json_str(test_json, None).expect("parse_animations_json_str must succeed");
 
     assert!(catalog.contains_key("DRAGON"));
     assert!(catalog.contains_key("ElEpHaNt"));
@@ -269,8 +273,8 @@ fn test_palette_omission_vs_custom_preservation() {
         }
     }"##;
 
-    let catalog = parse_animations_json_str(test_json, None)
-        .expect("parse_animations_json_str must succeed");
+    let catalog =
+        parse_animations_json_str(test_json, None).expect("parse_animations_json_str must succeed");
 
     // dragon: omitted palette -> receives dragon's biological palette
     let dragon = &catalog["dragon"];

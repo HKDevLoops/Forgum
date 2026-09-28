@@ -1,11 +1,11 @@
 //! Capture high-fidelity PNG image snapshots for all 132 Forgum mascots
 //! using the engine's font rasterizer and authentic "natural" color mode.
 
-use std::path::{Path, PathBuf};
 use forgum_engine::cow::{expand_cow, load_cow};
 use forgum_engine::dna;
 use forgum_engine::effects;
 use forgum_engine::framebuffer::{Color, FrameBuffer};
+use std::path::{Path, PathBuf};
 
 const CELL_W: usize = 8;
 const CELL_H: usize = 16;
@@ -31,7 +31,9 @@ fn data_dir() -> PathBuf {
 }
 
 fn output_dir() -> PathBuf {
-    workspace_root().join("test-renders").join("mascot-previews")
+    workspace_root()
+        .join("test-renders")
+        .join("mascot-previews")
 }
 
 fn all_cow_names() -> Vec<String> {
@@ -133,20 +135,19 @@ fn capture_all_132_mascot_previews() {
 
         // Determine canvas size from cow dimensions
         let cow_lines: Vec<&str> = cow_text.lines().collect();
-        let max_w = cow_lines.iter().map(|l| l.chars().count()).max().unwrap_or(40);
+        let max_w = cow_lines
+            .iter()
+            .map(|l| l.chars().count())
+            .max()
+            .unwrap_or(40);
         let max_h = cow_lines.len();
 
         let canvas_cols = (max_w + 6).max(60);
         let canvas_rows = (max_h + 4).max(18);
 
         // Color mode "natural" resolves authentic God-given palette
-        let mut effect = effects::create_effect(
-            cow_dna.base,
-            cow_text,
-            cow_dna.clone(),
-            0,
-            "natural",
-        );
+        let mut effect =
+            effects::create_effect(cow_dna.base, cow_text, cow_dna.clone(), 0, "natural");
 
         let mut fb = FrameBuffer::new(canvas_cols, canvas_rows);
         // Settle animation to mid-stride/breathe
@@ -170,5 +171,9 @@ fn capture_all_132_mascot_previews() {
         rendered += 1;
     }
 
-    println!("Successfully captured {} mascot previews to {}", rendered, out.display());
+    println!(
+        "Successfully captured {} mascot previews to {}",
+        rendered,
+        out.display()
+    );
 }

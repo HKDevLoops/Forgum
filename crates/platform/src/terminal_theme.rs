@@ -5,8 +5,8 @@
 //! and operating system appearance preferences to determine the terminal's
 //! background color and contrast profile.
 
-use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
 
 /// Discovered terminal color scheme and background metadata.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -26,8 +26,8 @@ pub struct TerminalTheme {
 impl Default for TerminalTheme {
     fn default() -> Self {
         Self {
-            bg: (12, 12, 12),       // Standard terminal dark #0c0c0c
-            fg: (204, 204, 204),   // Standard light gray #cccccc
+            bg: (12, 12, 12),    // Standard terminal dark #0c0c0c
+            fg: (204, 204, 204), // Standard light gray #cccccc
             is_light: false,
             luminance: 12,
             name: "Default Dark".to_string(),
@@ -187,8 +187,11 @@ fn probe_windows_terminal_settings() -> Option<TerminalTheme> {
     let local_path = PathBuf::from(local_app_data);
 
     let candidate_paths = [
-        local_path.join(r"Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState\settings.json"),
-        local_path.join(r"Packages\Microsoft.WindowsTerminalPreview_8wekyb3d8bbwe\LocalState\settings.json"),
+        local_path
+            .join(r"Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState\settings.json"),
+        local_path.join(
+            r"Packages\Microsoft.WindowsTerminalPreview_8wekyb3d8bbwe\LocalState\settings.json",
+        ),
         local_path.join(r"Microsoft\Windows Terminal\settings.json"),
     ];
 
@@ -217,7 +220,11 @@ fn parse_windows_terminal_json(json_text: &str) -> Option<TerminalTheme> {
     let mut target_scheme_name: Option<String> = None;
 
     if let Some(ref prof_id) = active_profile_id {
-        if let Some(profiles) = val.get("profiles").and_then(|p| p.get("list")).and_then(|l| l.as_array()) {
+        if let Some(profiles) = val
+            .get("profiles")
+            .and_then(|p| p.get("list"))
+            .and_then(|l| l.as_array())
+        {
             for prof in profiles {
                 if prof.get("guid").and_then(|g| g.as_str()) == Some(prof_id)
                     || prof.get("name").and_then(|n| n.as_str()) == Some(prof_id)
@@ -249,7 +256,10 @@ fn parse_windows_terminal_json(json_text: &str) -> Option<TerminalTheme> {
         for scheme in schemes {
             if scheme.get("name").and_then(|n| n.as_str()) == Some(&scheme_name) {
                 let bg_hex = scheme.get("background").and_then(|b| b.as_str())?;
-                let fg_hex = scheme.get("foreground").and_then(|f| f.as_str()).unwrap_or("#CCCCCC");
+                let fg_hex = scheme
+                    .get("foreground")
+                    .and_then(|f| f.as_str())
+                    .unwrap_or("#CCCCCC");
 
                 let bg = parse_hex_color(bg_hex)?;
                 let fg = parse_hex_color(fg_hex).unwrap_or((204, 204, 204));
@@ -348,12 +358,20 @@ fn probe_wezterm_config() -> Option<TerminalTheme> {
 fn probe_alacritty_config() -> Option<TerminalTheme> {
     let mut candidates = Vec::new();
     if let Some(home) = home_dir() {
-        candidates.push(home.join(".config").join("alacritty").join("alacritty.toml"));
+        candidates.push(
+            home.join(".config")
+                .join("alacritty")
+                .join("alacritty.toml"),
+        );
         candidates.push(home.join(".config").join("alacritty").join("alacritty.yml"));
         candidates.push(home.join(".alacritty.toml"));
     }
     if let Ok(app_data) = std::env::var("APPDATA") {
-        candidates.push(PathBuf::from(app_data).join("alacritty").join("alacritty.toml"));
+        candidates.push(
+            PathBuf::from(app_data)
+                .join("alacritty")
+                .join("alacritty.toml"),
+        );
     }
 
     for path in candidates {
@@ -384,7 +402,11 @@ fn probe_alacritty_config() -> Option<TerminalTheme> {
 fn probe_kitty_config() -> Option<TerminalTheme> {
     let mut candidates = Vec::new();
     if let Some(home) = home_dir() {
-        candidates.push(home.join(".config").join("kitty").join("current-theme.conf"));
+        candidates.push(
+            home.join(".config")
+                .join("kitty")
+                .join("current-theme.conf"),
+        );
         candidates.push(home.join(".config").join("kitty").join("kitty.conf"));
     }
 

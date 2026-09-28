@@ -25,7 +25,10 @@ fn t4_scenario_01_shell_init_bash_and_sweep() {
     let mut cmd = Command::cargo_bin("forgum").expect("cargo_bin forgum");
     cmd.args(["init", "bash"]);
     let output = cmd.output().expect("execute init bash");
-    assert!(output.status.success(), "forgum init bash must exit with code 0");
+    assert!(
+        output.status.success(),
+        "forgum init bash must exit with code 0"
+    );
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(
@@ -36,7 +39,10 @@ fn t4_scenario_01_shell_init_bash_and_sweep() {
         stdout.contains(HOOK_MARKER_END),
         "Bash hook must terminate with standard end marker"
     );
-    assert!(stdout.contains("forgum"), "Bash hook must invoke forgum keyword");
+    assert!(
+        stdout.contains("forgum"),
+        "Bash hook must invoke forgum keyword"
+    );
 
     // 2. Execute emergency sweep recovery
     let mut sweep_cmd = Command::cargo_bin("forgum").expect("cargo_bin forgum");
@@ -50,7 +56,10 @@ fn t4_scenario_01_shell_init_pwsh() {
     let mut cmd = Command::cargo_bin("forgum").expect("cargo_bin forgum");
     cmd.args(["init", "pwsh"]);
     let output = cmd.output().expect("execute init pwsh");
-    assert!(output.status.success(), "forgum init pwsh must exit with code 0");
+    assert!(
+        output.status.success(),
+        "forgum init pwsh must exit with code 0"
+    );
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(
@@ -61,7 +70,10 @@ fn t4_scenario_01_shell_init_pwsh() {
         stdout.contains(HOOK_MARKER_END),
         "Pwsh hook must terminate with standard end marker"
     );
-    assert!(stdout.contains("prompt"), "Pwsh hook must wrap shell prompt");
+    assert!(
+        stdout.contains("prompt"),
+        "Pwsh hook must wrap shell prompt"
+    );
 }
 
 // =========================================================================
@@ -82,7 +94,10 @@ fn t4_scenario_02_pipeline_say_with_fortune_message() {
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     // Verify speech bubble rendering
-    assert!(stdout.contains(message), "Output must contain speech message");
+    assert!(
+        stdout.contains(message),
+        "Output must contain speech message"
+    );
     assert!(
         stdout.contains('\\') || stdout.contains('/') || stdout.contains('|'),
         "Output must render ASCII speech bubble contours"
@@ -114,11 +129,17 @@ fn t4_scenario_03_checkhealth_json_report() {
     let mut cmd = Command::cargo_bin("forgum").expect("cargo_bin forgum");
     cmd.args(["checkhealth", "--json"]);
     let output = cmd.output().expect("execute checkhealth --json");
-    assert!(output.status.success(), "forgum checkhealth --json must succeed");
+    assert!(
+        output.status.success(),
+        "forgum checkhealth --json must succeed"
+    );
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     let json_val: Result<serde_json::Value, _> = serde_json::from_str(&stdout);
-    assert!(json_val.is_ok(), "checkhealth --json must emit valid JSON object");
+    assert!(
+        json_val.is_ok(),
+        "checkhealth --json must emit valid JSON object"
+    );
 }
 
 // =========================================================================
@@ -136,7 +157,8 @@ fn t4_scenario_04_daemon_lifecycle_status_and_stop() {
     // 2. Verify platform daemon state path is resolvable
     let state_file = daemon_state_path("default");
     assert!(
-        state_file.to_string_lossy().contains("forgum") || state_file.to_string_lossy().contains("daemon"),
+        state_file.to_string_lossy().contains("forgum")
+            || state_file.to_string_lossy().contains("daemon"),
         "Daemon state path must follow platform XDG/AppData conventions"
     );
 
@@ -155,8 +177,14 @@ fn t4_scenario_04_daemon_lifecycle_status_and_stop() {
 fn t4_scenario_05_cowsay_dropin_replacement_custom_eyes_tongue() {
     let data_p = data_dir().unwrap_or_else(|_| PathBuf::from("data"));
     let cow_text = cow::load_cow("corgi", &data_p, "$$", "U ", "\\\\");
-    assert!(cow_text.contains("$$"), "Expanded cow text must contain eyes '$$'");
-    assert!(cow_text.contains("U "), "Expanded cow text must contain tongue 'U '");
+    assert!(
+        cow_text.contains("$$"),
+        "Expanded cow text must contain eyes '$$'"
+    );
+    assert!(
+        cow_text.contains("U "),
+        "Expanded cow text must contain tongue 'U '"
+    );
 
     let composed = cow::compose_scene(&cow_text, "Mascot engine operational");
     assert!(composed.contains("$$"));
@@ -187,5 +215,9 @@ fn t4_scenario_06_mascot_catalog_listing() {
     }
 
     // Verify all 132 biome mascots exist in registry
-    assert_eq!(ALL_MASCOTS.len(), 132, "Biome registry must contain exactly 132 mascots");
+    assert_eq!(
+        ALL_MASCOTS.len(),
+        132,
+        "Biome registry must contain exactly 132 mascots"
+    );
 }

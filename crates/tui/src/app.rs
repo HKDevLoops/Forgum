@@ -863,10 +863,8 @@ impl ConfigApp {
             vec!["dynamic", "static"],
             config.animation.as_deref().unwrap_or("dynamic"),
         );
-        let attach_mode_dropdown = Dropdown::new(
-            SHELL_ATTACH_OPTIONS.to_vec(),
-            &config.shell_attach_mode,
-        );
+        let attach_mode_dropdown =
+            Dropdown::new(SHELL_ATTACH_OPTIONS.to_vec(), &config.shell_attach_mode);
         let format_dropdown = Dropdown::new(vec!["json", "yaml", "toml"], format.extension());
         let split_mode_dropdown = Dropdown::new(
             SPLIT_MODE_OPTIONS.to_vec(),
@@ -4752,7 +4750,10 @@ export extern "forgum" [
             }
             ConfigField::ShellAttachMode => {
                 if self.config.shell_attach_mode == "split" {
-                    format!("{} (split_scroll ON) (←/→ cycle)", self.config.shell_attach_mode)
+                    format!(
+                        "{} (split_scroll ON) (←/→ cycle)",
+                        self.config.shell_attach_mode
+                    )
                 } else {
                     format!("{} (←/→ cycle)", self.config.shell_attach_mode)
                 }
@@ -4890,7 +4891,10 @@ export extern "forgum" [
 
                 ListItem::new(Line::from(vec![
                     Span::styled(prefix, Style::default().fg(prefix_color)),
-                    Span::styled(format!("{:<width$}", field.label(), width = label_width), label_style),
+                    Span::styled(
+                        format!("{:<width$}", field.label(), width = label_width),
+                        label_style,
+                    ),
                     Span::styled(val_str, Style::default().fg(val_color)),
                 ]))
                 .style(line_style)

@@ -28,25 +28,42 @@ fn argv(parts: &[&str]) -> Vec<String> {
 #[test]
 fn t2_boundary_dimensions_compact_40x12() {
     let bp = Breakpoint::from_size(40, 12);
-    assert_eq!(bp, Breakpoint::Compact, "40x12 must resolve to Compact breakpoint");
+    assert_eq!(
+        bp,
+        Breakpoint::Compact,
+        "40x12 must resolve to Compact breakpoint"
+    );
 
     let config = SceneConfig::default();
     // Compact terminal: total_rows = 12, max safe = 12 - 4 = 8
     let (cols, rows) = compute_reserved_dimensions(40, 12, 6, &config);
     assert!(cols <= 40, "Reserved cols must not exceed terminal width");
-    assert!(rows <= 8, "Prompt headroom must be preserved on 40x12 terminal");
+    assert!(
+        rows <= 8,
+        "Prompt headroom must be preserved on 40x12 terminal"
+    );
     assert!(rows >= 1, "At least 1 row must be reserved");
 }
 
 #[test]
 fn t2_boundary_dimensions_ultrawide_200x50() {
     let bp = Breakpoint::from_size(200, 50);
-    assert_eq!(bp, Breakpoint::Wide, "200x50 must resolve to Wide breakpoint");
+    assert_eq!(
+        bp,
+        Breakpoint::Wide,
+        "200x50 must resolve to Wide breakpoint"
+    );
 
     let config = SceneConfig::default();
     let (cols, rows) = compute_reserved_dimensions(200, 50, 20, &config);
-    assert_eq!(cols, 200, "Ultrawide terminal allocates full available columns");
-    assert_eq!(rows, 20, "Allocates full mascot line height when headroom allows");
+    assert_eq!(
+        cols, 200,
+        "Ultrawide terminal allocates full available columns"
+    );
+    assert_eq!(
+        rows, 20,
+        "Allocates full mascot line height when headroom allows"
+    );
 }
 
 #[test]
@@ -88,15 +105,26 @@ fn t2_boundary_dimensions_single_row_terminal() {
 
 #[test]
 fn t2_boundary_timing_high_refresh_240_fps() {
-    let cli = Cli::try_parse_from(argv(&["forgum", "render", "--fps", "240", "--duration", "1"]))
-        .expect("parse 240 fps CLI");
+    let cli = Cli::try_parse_from(argv(&[
+        "forgum",
+        "render",
+        "--fps",
+        "240",
+        "--duration",
+        "1",
+    ]))
+    .expect("parse 240 fps CLI");
     assert_eq!(cli.fps, Some(240));
 
     let sched = Scheduler::new(240);
     let period = sched.frame_period();
     let micros = period.as_micros();
     // At 240 FPS: 1,000,000 / 240 ≈ 4,166 µs
-    assert!(micros >= 4100 && micros <= 4200, "240 FPS frame period must be ~4.166ms: {}", micros);
+    assert!(
+        micros >= 4100 && micros <= 4200,
+        "240 FPS frame period must be ~4.166ms: {}",
+        micros
+    );
 }
 
 #[test]
@@ -107,7 +135,11 @@ fn t2_boundary_timing_low_refresh_5_fps() {
 
     let sched = Scheduler::new(5);
     let period = sched.frame_period();
-    assert_eq!(period.as_millis(), 200, "5 FPS frame period must be exactly 200ms");
+    assert_eq!(
+        period.as_millis(),
+        200,
+        "5 FPS frame period must be exactly 200ms"
+    );
 }
 
 #[test]
@@ -117,7 +149,10 @@ fn t2_boundary_timing_duration_zero_infinite_mode() {
         background: true,
         ..Default::default()
     };
-    assert_eq!(config.duration, 0, "duration=0 specifies unbounded background simulation");
+    assert_eq!(
+        config.duration, 0,
+        "duration=0 specifies unbounded background simulation"
+    );
 }
 
 #[test]
@@ -144,11 +179,17 @@ fn t2_boundary_large_mascot_dragon_22_lines() {
     let config = SceneConfig::default();
     // 22 lines tall on standard 80x24: clamped to 20 to protect prompt headroom
     let (_, rows_std) = compute_reserved_dimensions(80, 24, 22, &config);
-    assert_eq!(rows_std, 20, "Standard 80x24 clamps 22-line dragon to 20 rows");
+    assert_eq!(
+        rows_std, 20,
+        "Standard 80x24 clamps 22-line dragon to 20 rows"
+    );
 
     // On tall 100x50: full 22 lines allocated
     let (_, rows_tall) = compute_reserved_dimensions(100, 50, 22, &config);
-    assert_eq!(rows_tall, 22, "50-row terminal allocates full 22 lines for dragon");
+    assert_eq!(
+        rows_tall, 22,
+        "50-row terminal allocates full 22 lines for dragon"
+    );
 }
 
 #[test]
@@ -156,18 +197,27 @@ fn t2_boundary_large_mascot_charizard_41_lines() {
     let config = SceneConfig::default();
     // 41 lines tall on 120x60: full 41 lines allocated
     let (_, rows_tall) = compute_reserved_dimensions(120, 60, 41, &config);
-    assert_eq!(rows_tall, 41, "60-row terminal allocates full 41 lines for charizard");
+    assert_eq!(
+        rows_tall, 41,
+        "60-row terminal allocates full 41 lines for charizard"
+    );
 
     // On 80x24: clamped to 20
     let (_, rows_clamped) = compute_reserved_dimensions(80, 24, 41, &config);
-    assert_eq!(rows_clamped, 20, "24-row terminal clamps 41-line charizard to 20 rows");
+    assert_eq!(
+        rows_clamped, 20,
+        "24-row terminal clamps 41-line charizard to 20 rows"
+    );
 }
 
 #[test]
 fn t2_boundary_large_mascot_elephant_28_lines() {
     let config = SceneConfig::default();
     let (_, rows) = compute_reserved_dimensions(120, 50, 28, &config);
-    assert_eq!(rows, 28, "50-row terminal allocates full 28 lines for elephant");
+    assert_eq!(
+        rows, 28,
+        "50-row terminal allocates full 28 lines for elephant"
+    );
 }
 
 #[test]
@@ -181,7 +231,11 @@ fn t2_boundary_tiny_mascot_small() {
 fn t2_boundary_mascot_catalog_names_non_empty() {
     for m in ALL_MASCOTS.iter() {
         assert!(!m.name.is_empty(), "Mascot name must not be empty");
-        assert!(m.name.len() <= 32, "Mascot name '{}' within reasonable length", m.name);
+        assert!(
+            m.name.len() <= 32,
+            "Mascot name '{}' within reasonable length",
+            m.name
+        );
     }
 }
 
@@ -194,7 +248,10 @@ fn t2_boundary_empty_text_input_cli() {
     let mut cmd = Command::cargo_bin("forgum").expect("cargo_bin forgum");
     cmd.args(["say", ""]);
     let output = cmd.output().expect("execute empty string");
-    assert!(output.status.success(), "Empty text input must succeed without panic");
+    assert!(
+        output.status.success(),
+        "Empty text input must succeed without panic"
+    );
 }
 
 #[test]
@@ -202,7 +259,10 @@ fn t2_boundary_whitespace_only_text_cli() {
     let mut cmd = Command::cargo_bin("forgum").expect("cargo_bin forgum");
     cmd.args(["say", "   \t\n  "]);
     let output = cmd.output().expect("execute whitespace");
-    assert!(output.status.success(), "Whitespace text input must succeed without panic");
+    assert!(
+        output.status.success(),
+        "Whitespace text input must succeed without panic"
+    );
 }
 
 #[test]
@@ -224,7 +284,10 @@ fn t2_boundary_special_ascii_characters_input() {
     let mut cmd = Command::cargo_bin("forgum").expect("cargo_bin forgum");
     cmd.args(["say", text]);
     let output = cmd.output().expect("execute special chars");
-    assert!(output.status.success(), "Special ASCII chars must render safely");
+    assert!(
+        output.status.success(),
+        "Special ASCII chars must render safely"
+    );
 }
 
 #[test]
@@ -233,7 +296,10 @@ fn t2_boundary_deep_word_wrapping_boundary() {
     let mut cmd = Command::cargo_bin("forgum").expect("cargo_bin forgum");
     cmd.args(["say", &long_word]);
     let output = cmd.output().expect("execute long word");
-    assert!(output.status.success(), "120-char unbroken word must wrap safely without crash");
+    assert!(
+        output.status.success(),
+        "120-char unbroken word must wrap safely without crash"
+    );
 }
 
 // =========================================================================

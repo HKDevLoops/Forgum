@@ -2431,7 +2431,11 @@ impl Effect for DissolveEffect {
                     if y < self.cow_start_line && y < fb.height && x < fb.width {
                         let cell_fg = resolve_bubble_line_char_fg(line, x, ch);
                         draw_char_with_hull(fb, x, y, x, hull, ch, cell_fg);
-                    } else if y >= self.cow_start_line && y < fb.height && x < fb.width && scatter < 0.5 {
+                    } else if y >= self.cow_start_line
+                        && y < fb.height
+                        && x < fb.width
+                        && scatter < 0.5
+                    {
                         draw_char_with_hull(fb, x, y, x, hull, ch, Color::WHITE);
                     }
                     continue;

@@ -111,8 +111,7 @@ fn compute_reserved_dimensions_automatic_column_reservation() {
     // Bounded split mode clamps columns to mascot width + padding (40 + 4 = 44)
     let mut bounded_config = config.clone();
     bounded_config.split_mode = Some("bounded".to_string());
-    let (cols_bounded, _) =
-        compute_reserved_dimensions_with_cols(120, 50, 10, 40, &bounded_config);
+    let (cols_bounded, _) = compute_reserved_dimensions_with_cols(120, 50, 10, 40, &bounded_config);
     assert_eq!(cols_bounded, 44);
 
     // Bounded columns minimum 20

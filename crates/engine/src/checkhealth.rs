@@ -659,11 +659,12 @@ pub fn run_health_check(explicit_config: Option<&Path>) -> HealthReport {
         let recent_logs = crate::logger::read_recent_logs(100, None).unwrap_or_default();
         let diag = crate::logger::diagnose_logs(&recent_logs);
 
-        let status = if diag.errors_count > 0 || diag.warnings_count > 0 || !diag.uprising_bugs.is_empty() {
-            HealthStatus::Warn
-        } else {
-            HealthStatus::Ok
-        };
+        let status =
+            if diag.errors_count > 0 || diag.warnings_count > 0 || !diag.uprising_bugs.is_empty() {
+                HealthStatus::Warn
+            } else {
+                HealthStatus::Ok
+            };
 
         let mut details = vec![
             format!("Text Log: {} ({} KB)", text.display(), text_size / 1024),

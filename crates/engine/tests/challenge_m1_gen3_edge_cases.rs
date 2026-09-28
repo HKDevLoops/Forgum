@@ -32,7 +32,10 @@ fn test_edge_case_empty_files_and_fallback_resilience() {
     assert!(empty_res.is_err(), "Empty string should return serde Err");
 
     let whitespace_res = parse_animations_json_str("   \r\n\t   ", None);
-    assert!(whitespace_res.is_err(), "Whitespace string should return serde Err");
+    assert!(
+        whitespace_res.is_err(),
+        "Whitespace string should return serde Err"
+    );
 
     // 2. Directory with completely empty animations.json
     let tmp = tempdir().expect("tempdir");
@@ -101,12 +104,12 @@ fn test_edge_case_malformed_json_syntax_never_panics() {
         r##"{"dragon": {"base": "Walk"}} extra_characters"##,
         r##"{"dragon": {"base": "Walk"}, "cat": }"##,
         r##"{"dragon": {"palette": ["#111111",]}"##, // trailing comma in array
-        r##"{"dragon": {"base": "Walk",}}"##,         // trailing comma in object
-        r##"[{"dragon": {}}]"##,                      // array at root
-        r##""just a string""##,                       // string at root
-        r##"99999"##,                                 // number at root
-        r##"true"##,                                  // boolean at root
-        r##"null"##,                                  // null at root
+        r##"{"dragon": {"base": "Walk",}}"##,        // trailing comma in object
+        r##"[{"dragon": {}}]"##,                     // array at root
+        r##""just a string""##,                      // string at root
+        r##"99999"##,                                // number at root
+        r##"true"##,                                 // boolean at root
+        r##"null"##,                                 // null at root
     ];
 
     for (i, malformed) in truncated_or_corrupt_buffers.iter().enumerate() {
@@ -242,7 +245,10 @@ fn test_edge_case_double_extensions_and_lookup_quirks() {
         CowDna {
             base: BaseAnim::Fly,
             speed: 3.5,
-            palette: get_natural_hex_palette("dragon").iter().map(|s| s.to_string()).collect(),
+            palette: get_natural_hex_palette("dragon")
+                .iter()
+                .map(|s| s.to_string())
+                .collect(),
             ..CowDna::default()
         },
     );
@@ -252,7 +258,10 @@ fn test_edge_case_double_extensions_and_lookup_quirks() {
         CowDna {
             base: BaseAnim::Breathe,
             speed: 0.8,
-            palette: get_natural_hex_palette("cat").iter().map(|s| s.to_string()).collect(),
+            palette: get_natural_hex_palette("cat")
+                .iter()
+                .map(|s| s.to_string())
+                .collect(),
             ..CowDna::default()
         },
     );
@@ -293,10 +302,7 @@ fn test_edge_case_double_extensions_and_lookup_quirks() {
     // 9. Unregistered canonical mascot recovers biological palette from biome
     let elephant = get_dna(&catalog, "elephant");
     assert_eq!(elephant.base, BaseAnim::Walk);
-    assert_eq!(
-        elephant.palette,
-        get_natural_hex_palette("elephant")
-    );
+    assert_eq!(elephant.palette, get_natural_hex_palette("elephant"));
 
     let elephant_with_cow = get_dna(&catalog, "elephant.cow");
     assert_eq!(elephant_with_cow.base, BaseAnim::Walk);
@@ -307,10 +313,7 @@ fn test_edge_case_double_extensions_and_lookup_quirks() {
 
     // Case-insensitivity check in biome lookup
     let elephant_upper = get_dna(&catalog, "ELEPHANT");
-    assert_eq!(
-        elephant_upper.palette,
-        get_natural_hex_palette("elephant")
-    );
+    assert_eq!(elephant_upper.palette, get_natural_hex_palette("elephant"));
     let elephant_upper_cow = get_dna(&catalog, "ELEPHANT.COW");
     let _ = elephant_upper_cow;
 }
@@ -339,7 +342,10 @@ fn test_edge_case_non_existent_files_and_directories() {
 
         // load_animations_or_embedded must return 132 embedded mascots without panic
         let emb_res = std::panic::catch_unwind(|| load_animations_or_embedded(path));
-        assert!(emb_res.is_ok(), "load_animations_or_embedded panicked for path {path:?}");
+        assert!(
+            emb_res.is_ok(),
+            "load_animations_or_embedded panicked for path {path:?}"
+        );
         assert_eq!(
             emb_res.unwrap().len(),
             132,
@@ -423,8 +429,14 @@ fn test_edge_case_boundary_values_and_extreme_parameters() {
 
     for (seed, id) in phase_tests {
         let phase = instance_phase(seed, id);
-        assert!(phase.is_finite(), "instance_phase({seed}, {id}) must be finite, got {phase}");
-        assert!(phase >= 0.0, "instance_phase({seed}, {id}) must be non-negative, got {phase}");
+        assert!(
+            phase.is_finite(),
+            "instance_phase({seed}, {id}) must be finite, got {phase}"
+        );
+        assert!(
+            phase >= 0.0,
+            "instance_phase({seed}, {id}) must be non-negative, got {phase}"
+        );
     }
 
     // (u32::MAX ^ u32::MAX) == 0, so phase must be 0.0
@@ -473,7 +485,12 @@ fn test_recovery_canonical_mascots_vs_rejection_of_corrupt_non_canonical() {
     }
 
     // 10 canonical mascots valid
-    let valid_canonicals: Vec<&str> = all_mascots.iter().skip(10).take(10).map(|m| m.name).collect();
+    let valid_canonicals: Vec<&str> = all_mascots
+        .iter()
+        .skip(10)
+        .take(10)
+        .map(|m| m.name)
+        .collect();
     for name in &valid_canonicals {
         obj.insert(
             name.to_string(),
@@ -486,9 +503,16 @@ fn test_recovery_canonical_mascots_vs_rejection_of_corrupt_non_canonical() {
 
     // 10 non-canonical synthetic mascots corrupted
     let corrupt_synthetics = [
-        "mutant_alien_999", "corrupted_zombie_dog", "fake_beast",
-        "poison_spider", "broken_robot", "glitch_phantom",
-        "chimera_corrupt", "synthetic_demon", "fake_mascot_404", "null_entity",
+        "mutant_alien_999",
+        "corrupted_zombie_dog",
+        "fake_beast",
+        "poison_spider",
+        "broken_robot",
+        "glitch_phantom",
+        "chimera_corrupt",
+        "synthetic_demon",
+        "fake_mascot_404",
+        "null_entity",
     ];
     for name in &corrupt_synthetics {
         obj.insert(
@@ -502,8 +526,16 @@ fn test_recovery_canonical_mascots_vs_rejection_of_corrupt_non_canonical() {
 
     // 10 non-canonical custom mascots valid
     let valid_customs = [
-        "custom_hero_1", "custom_hero_2", "custom_hero_3", "custom_hero_4", "custom_hero_5",
-        "custom_hero_6", "custom_hero_7", "custom_hero_8", "custom_hero_9", "custom_hero_10",
+        "custom_hero_1",
+        "custom_hero_2",
+        "custom_hero_3",
+        "custom_hero_4",
+        "custom_hero_5",
+        "custom_hero_6",
+        "custom_hero_7",
+        "custom_hero_8",
+        "custom_hero_9",
+        "custom_hero_10",
     ];
     for name in &valid_customs {
         obj.insert(
@@ -517,8 +549,8 @@ fn test_recovery_canonical_mascots_vs_rejection_of_corrupt_non_canonical() {
     }
 
     let payload = serde_json::to_string(&serde_json::Value::Object(obj)).unwrap();
-    let catalog = parse_animations_json_str(&payload, None)
-        .expect("parse_animations_json_str must succeed");
+    let catalog =
+        parse_animations_json_str(&payload, None).expect("parse_animations_json_str must succeed");
 
     // Expected total in catalog:
     // 10 recovered canonicals + 10 valid canonicals + 0 corrupt synthetics + 10 valid customs = 30
@@ -530,10 +562,20 @@ fn test_recovery_canonical_mascots_vs_rejection_of_corrupt_non_canonical() {
 
     // Verify 10 recovered canonical mascots
     for name in &test_canonicals {
-        assert!(catalog.contains_key(*name), "Canonical mascot '{name}' must be recovered");
+        assert!(
+            catalog.contains_key(*name),
+            "Canonical mascot '{name}' must be recovered"
+        );
         let dna = &catalog[*name];
-        assert_eq!(dna.base, BaseAnim::Walk, "Recovered mascot '{name}' must have Walk animation");
-        assert_eq!(dna.speed, 1.0, "Recovered mascot '{name}' must have default speed 1.0");
+        assert_eq!(
+            dna.base,
+            BaseAnim::Walk,
+            "Recovered mascot '{name}' must have Walk animation"
+        );
+        assert_eq!(
+            dna.speed, 1.0,
+            "Recovered mascot '{name}' must have default speed 1.0"
+        );
         assert_eq!(
             dna.palette,
             get_natural_hex_palette(name),
@@ -543,7 +585,10 @@ fn test_recovery_canonical_mascots_vs_rejection_of_corrupt_non_canonical() {
 
     // Verify 10 valid canonical mascots (omitted palette populated with biological palette)
     for name in &valid_canonicals {
-        assert!(catalog.contains_key(*name), "Valid canonical '{name}' must be present");
+        assert!(
+            catalog.contains_key(*name),
+            "Valid canonical '{name}' must be present"
+        );
         let dna = &catalog[*name];
         assert_eq!(dna.base, BaseAnim::Float);
         assert_eq!(dna.speed, 2.2);
@@ -564,7 +609,10 @@ fn test_recovery_canonical_mascots_vs_rejection_of_corrupt_non_canonical() {
 
     // Verify 10 valid customs are present
     for name in &valid_customs {
-        assert!(catalog.contains_key(*name), "Valid custom '{name}' must be present");
+        assert!(
+            catalog.contains_key(*name),
+            "Valid custom '{name}' must be present"
+        );
         let dna = &catalog[*name];
         assert_eq!(dna.base, BaseAnim::Breathe);
         assert_eq!(dna.speed, 1.5);
@@ -582,7 +630,11 @@ fn test_recovery_canonical_mascots_vs_rejection_of_corrupt_non_canonical() {
 #[test]
 fn test_standalone_embedded_catalog_integrity() {
     let embedded = load_embedded_animations();
-    assert_eq!(embedded.len(), 132, "Embedded animations must contain all 132 mascots");
+    assert_eq!(
+        embedded.len(),
+        132,
+        "Embedded animations must contain all 132 mascots"
+    );
 
     let all_mascots = get_all_mascots();
     assert_eq!(all_mascots.len(), 132);
@@ -601,8 +653,7 @@ fn test_standalone_embedded_catalog_integrity() {
             mascot.name
         );
         assert_eq!(
-            dna.palette,
-            mascot.natural_palette,
+            dna.palette, mascot.natural_palette,
             "Mascot '{}' in embedded catalog must match biological palette from biome.rs",
             mascot.name
         );

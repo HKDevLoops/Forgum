@@ -191,8 +191,13 @@ pub fn render_loop_background(
         .map(crate::cow::str_display_width)
         .max()
         .unwrap_or(0);
-    let (overlay_cols, overlay_rows) =
-        compute_reserved_dimensions_with_cols(cols as usize, rows as usize, line_count, mascot_cols, &config);
+    let (overlay_cols, overlay_rows) = compute_reserved_dimensions_with_cols(
+        cols as usize,
+        rows as usize,
+        line_count,
+        mascot_cols,
+        &config,
+    );
 
     // Update daemon state with the exact reserved rows so shell prompt hooks
     // and split-clear commands know precisely where the shell partition begins!
@@ -222,7 +227,9 @@ pub fn render_loop_background(
 
 /// Legacy fixed row allocation constant, preserved for backward compatibility.
 /// Dynamic reservation now dynamically determines required rows directly from mascot anatomy.
-#[deprecated(note = "Removed in favor of dynamic automatic row reservation based on mascot anatomy")]
+#[deprecated(
+    note = "Removed in favor of dynamic automatic row reservation based on mascot anatomy"
+)]
 pub const FIXED_SPLIT_ANIM_ROWS: usize = 10;
 
 pub use crate::split_scroll::{compute_reserved_dimensions, compute_reserved_dimensions_with_cols};

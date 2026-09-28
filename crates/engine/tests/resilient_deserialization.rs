@@ -22,7 +22,10 @@ fn repo_root() -> PathBuf {
 
 #[test]
 fn test_resilient_deserialization_single_corrupt_entry_preserves_131_mascots() {
-    let cows_json_path = repo_root().join("data").join("Cows").join("animations.json");
+    let cows_json_path = repo_root()
+        .join("data")
+        .join("Cows")
+        .join("animations.json");
     let content = fs::read_to_string(&cows_json_path).expect("read baseline animations.json");
 
     let mut raw_map: serde_json::Value =
@@ -67,18 +70,34 @@ fn test_resilient_deserialization_single_corrupt_entry_preserves_131_mascots() {
         );
         let dna = &catalog[mascot];
         assert!(dna.speed > 0.0, "Speed must be > 0 for '{mascot}'");
-        assert_eq!(dna.palette.len(), 5, "Palette must have 5 colors for '{mascot}'");
+        assert_eq!(
+            dna.palette.len(),
+            5,
+            "Palette must have 5 colors for '{mascot}'"
+        );
     }
 
     // Verify corrupted mascot recovered via biological fallback from biome.rs
-    let fallback = catalog.get(corrupt_target).expect("Corrupt mascot must have fallback record");
-    assert_eq!(fallback.base, BaseAnim::Walk, "Corrupted mascot must fall back to BaseAnim::Walk");
-    assert_eq!(fallback.speed, 1.0, "Corrupted mascot must fall back to speed 1.0");
+    let fallback = catalog
+        .get(corrupt_target)
+        .expect("Corrupt mascot must have fallback record");
+    assert_eq!(
+        fallback.base,
+        BaseAnim::Walk,
+        "Corrupted mascot must fall back to BaseAnim::Walk"
+    );
+    assert_eq!(
+        fallback.speed, 1.0,
+        "Corrupted mascot must fall back to speed 1.0"
+    );
 
     let expected_palette = get_natural_hex_palette(corrupt_target);
     assert_eq!(
         fallback.palette,
-        expected_palette.iter().map(|&s| s.to_string()).collect::<Vec<_>>(),
+        expected_palette
+            .iter()
+            .map(|&s| s.to_string())
+            .collect::<Vec<_>>(),
         "Corrupted mascot must receive authentic biological palette from biome.rs"
     );
 }
@@ -89,7 +108,10 @@ fn test_file_fallback_to_cows_animations_on_missing_file() {
     let cows_dir = tmp.path().join("Cows");
     fs::create_dir_all(&cows_dir).expect("create Cows dir");
 
-    let baseline = repo_root().join("data").join("Cows").join("animations.json");
+    let baseline = repo_root()
+        .join("data")
+        .join("Cows")
+        .join("animations.json");
     fs::copy(&baseline, cows_dir.join("animations.json")).expect("copy baseline animations.json");
 
     // In tmp.path(), animations.json is absent, but Cows/animations.json exists
@@ -110,7 +132,10 @@ fn test_file_fallback_to_cows_animations_on_syntax_error() {
     let cows_dir = tmp.path().join("Cows");
     fs::create_dir_all(&cows_dir).expect("create Cows dir");
 
-    let baseline = repo_root().join("data").join("Cows").join("animations.json");
+    let baseline = repo_root()
+        .join("data")
+        .join("Cows")
+        .join("animations.json");
     fs::copy(&baseline, cows_dir.join("animations.json")).expect("copy baseline animations.json");
 
     // Write malformed JSON to root animations.json

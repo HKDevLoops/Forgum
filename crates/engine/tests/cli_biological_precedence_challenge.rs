@@ -51,11 +51,7 @@ fn challenge_all_132_mascots_cli_animal_resolves_authentic_palette() {
         // 3. Test via `forgum -c <name>`
         let (args3, _) = parse_args(argv(&["forgum", "-c", m.name])).unwrap();
         let cfg3 = build_scene_config(&args3).unwrap();
-        assert_eq!(
-            cfg3.cow, m.name,
-            "Mascot name mismatch for -c {}",
-            m.name
-        );
+        assert_eq!(cfg3.cow, m.name, "Mascot name mismatch for -c {}", m.name);
         assert_eq!(
             cfg3.palette.as_deref(),
             Some(expected_palette.as_str()),
@@ -135,25 +131,57 @@ fn challenge_color_mode_and_palette_combinations() {
     assert_eq!(cfg1.color_mode, "rainbow");
 
     // Scenario 2: --color-mode rainbow without --palette
-    let (a2, _) = parse_args(argv(&["forgum", "--animal", "tux", "--color-mode", "rainbow"])).unwrap();
+    let (a2, _) = parse_args(argv(&[
+        "forgum",
+        "--animal",
+        "tux",
+        "--color-mode",
+        "rainbow",
+    ]))
+    .unwrap();
     let cfg2 = build_scene_config(&a2).unwrap();
     assert_eq!(cfg2.color_mode, "rainbow");
 
     // Scenario 3: Aliases for natural color mode (animal, animal_natural, default)
     for alias in &["animal", "animal_natural", "default"] {
-        let (a, _) = parse_args(argv(&["forgum", "--animal", "corgi", "--color-mode", alias])).unwrap();
+        let (a, _) = parse_args(argv(&[
+            "forgum",
+            "--animal",
+            "corgi",
+            "--color-mode",
+            alias,
+        ]))
+        .unwrap();
         let cfg = build_scene_config(&a).unwrap();
-        assert_eq!(cfg.color_mode, "natural", "Alias {} must normalize to natural", alias);
+        assert_eq!(
+            cfg.color_mode, "natural",
+            "Alias {} must normalize to natural",
+            alias
+        );
         let corgi_palette = biome::get_natural_hex_palette("corgi").join(",");
         assert_eq!(cfg.palette.as_deref(), Some(corgi_palette.as_str()));
     }
 
     // Scenario 4: Other color modes (solid, none)
-    let (a_solid, _) = parse_args(argv(&["forgum", "--animal", "corgi", "--color-mode", "solid"])).unwrap();
+    let (a_solid, _) = parse_args(argv(&[
+        "forgum",
+        "--animal",
+        "corgi",
+        "--color-mode",
+        "solid",
+    ]))
+    .unwrap();
     let cfg_solid = build_scene_config(&a_solid).unwrap();
     assert_eq!(cfg_solid.color_mode, "solid");
 
-    let (a_none, _) = parse_args(argv(&["forgum", "--animal", "corgi", "--color-mode", "none"])).unwrap();
+    let (a_none, _) = parse_args(argv(&[
+        "forgum",
+        "--animal",
+        "corgi",
+        "--color-mode",
+        "none",
+    ]))
+    .unwrap();
     let cfg_none = build_scene_config(&a_none).unwrap();
     assert_eq!(cfg_none.color_mode, "none");
 }
@@ -238,12 +266,7 @@ fn challenge_config_file_and_cli_overrides_precedence() {
     assert_eq!(cfg2.color_mode, "custom");
 
     // Case 3: CLI does NOT pass --animal or --palette; inherits dragon and custom palette from config
-    let (a3, _) = parse_args(argv(&[
-        "forgum",
-        "--config",
-        cfg_path.to_str().unwrap(),
-    ]))
-    .unwrap();
+    let (a3, _) = parse_args(argv(&["forgum", "--config", cfg_path.to_str().unwrap()])).unwrap();
     let cfg3 = build_scene_config(&a3).unwrap();
     assert_eq!(cfg3.cow, "dragon");
     assert_eq!(
