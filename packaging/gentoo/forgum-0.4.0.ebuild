@@ -30,6 +30,4 @@ src_compile() {
 src_install() {
 	# Install primary forgum executable
 	dobin "target/release/forgum" || die
-	# Backward compatibility symlink
-	dosym forgum /usr/bin/forgum-engine
 }

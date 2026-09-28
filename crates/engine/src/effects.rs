@@ -1204,28 +1204,13 @@ impl Effect for WalkEffect {
             let line = line.trim_end_matches(['\r', '\n']);
 
             // Bounding hull for occlusion masking (zero-allocation scan)
-            let mut first_non_ws = None;
-            let mut last_non_ws = None;
-            for (col, ch) in line.chars().enumerate() {
-                if ch != ' ' {
-                    if first_non_ws.is_none() {
-                        first_non_ws = Some(col);
-                    }
-                    last_non_ws = Some(col);
-                }
-            }
-            let hull_start = first_non_ws;
-            let hull_end = last_non_ws;
+            let hull = find_line_hull(line);
 
             if y < self.cow_start_line {
-                let hull_tuple = match (hull_start, hull_end) {
-                    (Some(s), Some(e)) => Some((s, e)),
-                    _ => None,
-                };
                 for (x, ch) in line.chars().enumerate() {
                     if y < fb.height && x < fb.width {
                         let cell_fg = resolve_bubble_line_char_fg(line, x, ch);
-                        draw_char_with_hull(fb, x, y, x, hull_tuple, ch, cell_fg);
+                        draw_char_with_hull(fb, x, y, x, hull, ch, cell_fg);
                     }
                 }
                 y += 1;
@@ -1286,7 +1271,7 @@ impl Effect for WalkEffect {
                                         Color::WHITE,
                                         sc,
                                     );
-                                    let _ = fb.set(uxi, uyi, Cell::new(sc, cell_fg));
+                                    draw_char_with_hull(fb, uxi, uyi, x + k, hull, sc, cell_fg);
                                 }
                             }
                         }
@@ -1301,23 +1286,16 @@ impl Effect for WalkEffect {
                     let uxi = xi as usize;
                     let uyi = yi as usize;
                     if uyi < fb.height && uxi < fb.width {
-                        if display_ch != ' ' {
-                            let cell_fg = resolve_fg_palette_char(
-                                &self.color_mode,
-                                &self.palette,
-                                x,
-                                animal_rel_y,
-                                time,
-                                Color::WHITE,
-                                display_ch,
-                            );
-                            let _ = fb.set(uxi, uyi, Cell::new(display_ch, cell_fg));
-                        } else if let (Some(hs), Some(he)) = (hull_start, hull_end) {
-                            if x >= hs && x <= he {
-                                // Opaque blank inside hull — occlude scenery
-                                let _ = fb.set(uxi, uyi, Cell::new(' ', Color::WHITE));
-                            }
-                        }
+                        let cell_fg = resolve_fg_palette_char(
+                            &self.color_mode,
+                            &self.palette,
+                            x,
+                            animal_rel_y,
+                            time,
+                            Color::WHITE,
+                            display_ch,
+                        );
+                        draw_char_with_hull(fb, uxi, uyi, x, hull, display_ch, cell_fg);
                     }
                 }
             }
@@ -1425,6 +1403,7 @@ pub struct ParticlesEffect {
     cow_start_line: usize,
     mouth_pos: (usize, usize),
     frame_count: u32,
+    elapsed_time: f32,
 }
 
 impl ParticlesEffect {
@@ -1444,6 +1423,7 @@ impl ParticlesEffect {
             cow_start_line,
             mouth_pos,
             frame_count: 0,
+            elapsed_time: 0.0,
         }
     }
 }
@@ -1451,6 +1431,7 @@ impl ParticlesEffect {
 impl Effect for ParticlesEffect {
     fn update(&mut self, dt: f32, cols: usize, rows: usize) {
         self.frame_count = self.frame_count.wrapping_add(1);
+        self.elapsed_time += dt;
         let frame_seed = self
             .dna
             .phase_seed
@@ -1465,7 +1446,7 @@ impl Effect for ParticlesEffect {
             10
         };
         let interval = 1.0 / rate as f32;
-        if self.spawn_timer >= interval {
+        while self.spawn_timer >= interval {
             self.spawn_timer -= interval;
             let palette = color::parse_palette(&self.dna.particles.palette);
             let spawn_x = (self.mouth_pos.1 as f32).min(cols.saturating_sub(1) as f32);
@@ -1476,7 +1457,7 @@ impl Effect for ParticlesEffect {
                 spawn_x,
                 spawn_y,
                 &palette,
-                self.phase + dt + (self.frame_count as f32 * 0.01),
+                self.phase + (self.elapsed_time * 1.0),
                 cols,
                 rows,
             );
@@ -1812,7 +1793,12 @@ impl FlyEffect {
                 .unwrap_or(usize::MAX);
 
             for (x, mut ch) in line.chars().enumerate() {
-                if x >= fb.width || ch == ' ' {
+                if x >= fb.width {
+                    continue;
+                }
+
+                if ch == ' ' {
+                    draw_char_with_hull(fb, x, draw_y, x, hull, ch, Color::WHITE);
                     continue;
                 }
 
@@ -1886,7 +1872,7 @@ impl FlyEffect {
                         )
                     };
 
-                let _ = fb.set(x, draw_y, Cell::new(ch, fg_color));
+                draw_char_with_hull(fb, x, draw_y, x, hull, ch, fg_color);
             }
 
             y += 1;
@@ -2437,13 +2423,16 @@ impl Effect for DissolveEffect {
         let mut offset_idx = 0;
         for (y, &(start, len)) in self.line_ranges.iter().enumerate() {
             let line = &self.cow_text[start..start + len];
+            let hull = find_line_hull(line);
             for (x, ch) in line.chars().enumerate() {
                 let (dx_base, dy_base) = self.scatter_offsets[offset_idx];
                 offset_idx += 1;
                 if dx_base == f32::MAX && dy_base == f32::MAX {
-                    if y < self.cow_start_line && ch != ' ' && y < fb.height && x < fb.width {
+                    if y < self.cow_start_line && y < fb.height && x < fb.width {
                         let cell_fg = resolve_bubble_line_char_fg(line, x, ch);
-                        let _ = fb.set(x, y, Cell::new(ch, cell_fg));
+                        draw_char_with_hull(fb, x, y, x, hull, ch, cell_fg);
+                    } else if y >= self.cow_start_line && y < fb.height && x < fb.width && scatter < 0.5 {
+                        draw_char_with_hull(fb, x, y, x, hull, ch, Color::WHITE);
                     }
                     continue;
                 }
@@ -2455,7 +2444,6 @@ impl Effect for DissolveEffect {
                     let fx = final_x as usize;
                     let fy = final_y as usize;
                     if fy < fb.height && fx < fb.width {
-                        let alpha = (t * 255.0) as u8;
                         let cell_fg = resolve_fg_palette_char(
                             &self.color_mode,
                             &self.palette,
@@ -2465,16 +2453,7 @@ impl Effect for DissolveEffect {
                             Color::WHITE,
                             ch,
                         );
-                        let _ = fb.set(
-                            fx,
-                            fy,
-                            Cell {
-                                ch,
-                                fg: cell_fg,
-                                bg: Color::TRANSPARENT,
-                                alpha,
-                            },
-                        );
+                        draw_char_with_hull(fb, fx, fy, x, hull, ch, cell_fg);
                     }
                 }
             }
@@ -2482,7 +2461,7 @@ impl Effect for DissolveEffect {
     }
 
     fn is_done(&self) -> bool {
-        self.elapsed >= 2.0
+        false
     }
 }
 
@@ -2903,6 +2882,7 @@ pub struct CompoundSignatureEffect {
     cow_start_line: usize,
     mouth_pos: (usize, usize),
     frame_count: u32,
+    elapsed_time: f32,
 }
 
 impl std::fmt::Debug for CompoundSignatureEffect {
@@ -2941,6 +2921,7 @@ impl CompoundSignatureEffect {
             cow_start_line,
             mouth_pos,
             frame_count: 0,
+            elapsed_time: 0.0,
         }
     }
 
@@ -2968,6 +2949,7 @@ impl CompoundSignatureEffect {
             cow_start_line,
             mouth_pos,
             frame_count: 0,
+            elapsed_time: 0.0,
         }
     }
 }
@@ -2978,6 +2960,7 @@ impl Effect for CompoundSignatureEffect {
 
         if self.dna.particles.rate > 0 {
             self.frame_count = self.frame_count.wrapping_add(1);
+            self.elapsed_time += dt;
             let frame_seed = self
                 .dna
                 .phase_seed
@@ -2987,7 +2970,7 @@ impl Effect for CompoundSignatureEffect {
             seed_frame_rng(frame_seed);
             self.spawn_timer += dt * self.speed;
             let interval = 1.0 / self.dna.particles.rate.max(1) as f32;
-            if self.spawn_timer >= interval {
+            while self.spawn_timer >= interval {
                 self.spawn_timer -= interval;
                 let palette = color::parse_palette(&self.dna.particles.palette);
                 // Compute emitter position: origin around creature mouth/head
@@ -2999,7 +2982,7 @@ impl Effect for CompoundSignatureEffect {
                     spawn_x,
                     spawn_y,
                     &palette,
-                    self.phase + dt + (self.frame_count as f32 * 0.01),
+                    self.phase + (self.elapsed_time * self.speed),
                     cols,
                     rows,
                 );

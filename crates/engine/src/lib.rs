@@ -46,6 +46,7 @@ pub mod scenery;
 pub mod scheduler;
 pub mod shader;
 pub mod showcase;
+pub mod split_scroll;
 pub mod status_line;
 pub mod theme;
 pub mod timer;

@@ -28,15 +28,7 @@
     (build-system cargo-build-system)
     (arguments
       `(#:cargo-build-flags '("-p" "forgum-engine" "--bin" "forgum")
-        #:cargo-test-flags '("-p" "forgum-engine" "--bin" "forgum")
-        #:phases
-        (modify-phases %standard-phases
-          (add-after 'install 'install-compat-symlink
-            (lambda* (#:key outputs #:allow-other-keys)
-              (let* ((out (assoc-ref outputs "out"))
-                     (bin (string-append out "/bin")))
-                (symlink "forgum" (string-append bin "/forgum-engine"))
-                #t))))))
+        #:cargo-test-flags '("-p" "forgum-engine" "--bin" "forgum")))
     (native-inputs
       (list pkg-config))
     (home-page "https://github.com/HKDevLoops/Forgum")

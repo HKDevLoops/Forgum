@@ -11,8 +11,8 @@ cd "${REPO_ROOT}"
 # download needed). Must run as the current user; do this BEFORE switching
 # to a non-root user (since the build needs write access to ${REPO_ROOT}/target/
 # and the cargo home).
-echo "Building forgum-engine..."
-cargo build --release --locked -p forgum-engine
+echo "Building forgum..."
+cargo build --release --locked -p forgum-engine --bin forgum
 
 # Work in an isolated makepkg directory so we don't pollute the tree.
 WORKDIR="$(mktemp -d)"
@@ -41,7 +41,7 @@ build() {
   true
 }
 package() {
-  install -Dm755 "${REPO_ROOT}/target/release/forgum-engine" "\${pkgdir}/usr/bin/forgum-engine"
+  install -Dm755 "${REPO_ROOT}/target/release/forgum" "\${pkgdir}/usr/bin/forgum"
   install -Dm644 "${REPO_ROOT}/LICENSE" "\${pkgdir}/usr/share/licenses/\${pkgname}/LICENSE"
 }
 EOF
@@ -58,8 +58,8 @@ if [ "$(id -u)" = "0" ]; then
     useradd -m -s /bin/bash "$BUILDER"
   fi
   chown -R "$BUILDER":"$BUILDER" "$WORKDIR"
-  chmod 755 "${REPO_ROOT}/target/release/forgum-engine"
-  chown "$BUILDER":"$BUILDER" "${REPO_ROOT}/target/release/forgum-engine"
+  chmod 755 "${REPO_ROOT}/target/release/forgum"
+  chown "$BUILDER":"$BUILDER" "${REPO_ROOT}/target/release/forgum"
   cd "${PKG_DIR}"
   exec sudo -u "$BUILDER" makepkg --nodeps --force --noconfirm
 fi

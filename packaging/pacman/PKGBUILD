@@ -23,6 +23,5 @@ check() {
 package() {
   cd "$pkgname-$pkgver"
   install -Dm755 "target/release/forgum" "$pkgdir/usr/bin/forgum"
-  ln -sf "forgum" "$pkgdir/usr/bin/forgum-engine"
   install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
 }

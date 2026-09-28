@@ -505,7 +505,7 @@ pub fn run_health_check(explicit_config: Option<&Path>) -> HealthReport {
         suggestion: None,
     });
 
-    let dna_registry = crate::dna::load_animations(&data_dir);
+    let dna_registry = crate::dna::load_animations_or_embedded(&data_dir);
     let dna_count = if dna_registry.is_empty() {
         10
     } else {

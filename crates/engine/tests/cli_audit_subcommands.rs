@@ -13,10 +13,10 @@ fn audit_shell_hook_generation_completeness() {
     ];
 
     for s in shells {
-        let hook = forgum_engine::init::generate_hook(s, "/usr/local/bin/forgum-engine");
+        let hook = forgum_engine::init::generate_hook(s, "/usr/local/bin/forgum");
         assert!(!hook.is_empty(), "Hook for {:?} must not be empty", s);
         assert!(
-            hook.contains("forgum-engine") || hook.contains("FORGUM_ENGINE"),
+            hook.contains("/usr/local/bin/forgum") || hook.contains("FORGUM_ENGINE"),
             "Hook for {:?} must contain engine reference",
             s
         );
@@ -25,18 +25,18 @@ fn audit_shell_hook_generation_completeness() {
 
 #[test]
 fn audit_tmux_config_generator_formats() {
-    let tmux = forgum_engine::init::generate_tmux_config("/bin/forgum-engine");
+    let tmux = forgum_engine::init::generate_tmux_config("/bin/forgum");
     assert!(tmux.contains("# >>> forgum tmux >>>"));
     assert!(tmux.contains("status-right"));
     assert!(tmux.contains("# <<< forgum tmux <<<"));
 
-    let zellij = forgum_engine::init::generate_zellij_config("/bin/forgum-engine");
+    let zellij = forgum_engine::init::generate_zellij_config("/bin/forgum");
     assert!(zellij.contains("zellij run"));
 
-    let wezterm = forgum_engine::init::generate_wezterm_config("/bin/forgum-engine");
+    let wezterm = forgum_engine::init::generate_wezterm_config("/bin/forgum");
     assert!(wezterm.contains("wezterm.on('update-status'"));
 
-    let screen = forgum_engine::init::generate_screen_config("/bin/forgum-engine");
+    let screen = forgum_engine::init::generate_screen_config("/bin/forgum");
     assert!(screen.contains("hardstatus alwayslastline"));
 }
 

@@ -88,7 +88,7 @@ pub fn discover_daemons() -> Vec<HerdEntry> {
             Err(_) => continue,
         };
 
-        let alive = state.is_alive();
+        let mut alive = state.is_alive();
         let session_id = name
             .strip_prefix("daemon-")
             .and_then(|s| s.strip_suffix(".json"))
@@ -104,7 +104,10 @@ pub fn discover_daemons() -> Vec<HerdEntry> {
                         ("unknown".into(), 0, 0.0, false)
                     }
                 }
-                Err(_) => ("unknown".into(), 0, 0.0, false),
+                Err(_) => {
+                    alive = false;
+                    ("unknown".into(), 0, 0.0, false)
+                }
             }
         } else {
             ("unknown".into(), 0, 0.0, false)
@@ -141,9 +144,10 @@ pub fn herd_stop(filter: &HerdFilter) -> Result<usize, String> {
     let mut count = 0;
     for entry in &entries {
         if entry.alive {
-            let resp = send_command(&entry.socket_path, r#"{"cmd":"STOP"}"#)?;
-            if resp.ok {
-                count += 1;
+            if let Ok(resp) = send_command(&entry.socket_path, r#"{"cmd":"STOP"}"#) {
+                if resp.ok {
+                    count += 1;
+                }
             }
         }
     }
@@ -156,9 +160,10 @@ pub fn herd_effect(name: &str, filter: &HerdFilter) -> Result<usize, String> {
     for entry in &entries {
         if entry.alive {
             let cmd = serde_json::json!({"cmd": "EFFECT", "arg": name}).to_string();
-            let resp = send_command(&entry.socket_path, &cmd)?;
-            if resp.ok {
-                count += 1;
+            if let Ok(resp) = send_command(&entry.socket_path, &cmd) {
+                if resp.ok {
+                    count += 1;
+                }
             }
         }
     }
@@ -171,9 +176,10 @@ pub fn herd_cow(name: &str, filter: &HerdFilter) -> Result<usize, String> {
     for entry in &entries {
         if entry.alive {
             let cmd = serde_json::json!({"cmd": "COW", "arg": name}).to_string();
-            let resp = send_command(&entry.socket_path, &cmd)?;
-            if resp.ok {
-                count += 1;
+            if let Ok(resp) = send_command(&entry.socket_path, &cmd) {
+                if resp.ok {
+                    count += 1;
+                }
             }
         }
     }
@@ -186,9 +192,10 @@ pub fn herd_eyes(eyes: &str, filter: &HerdFilter) -> Result<usize, String> {
     for entry in &entries {
         if entry.alive {
             let cmd = serde_json::json!({"cmd": "EYES", "arg": eyes}).to_string();
-            let resp = send_command(&entry.socket_path, &cmd)?;
-            if resp.ok {
-                count += 1;
+            if let Ok(resp) = send_command(&entry.socket_path, &cmd) {
+                if resp.ok {
+                    count += 1;
+                }
             }
         }
     }
@@ -201,9 +208,10 @@ pub fn herd_tongue(tongue: &str, filter: &HerdFilter) -> Result<usize, String> {
     for entry in &entries {
         if entry.alive {
             let cmd = serde_json::json!({"cmd": "TONGUE", "arg": tongue}).to_string();
-            let resp = send_command(&entry.socket_path, &cmd)?;
-            if resp.ok {
-                count += 1;
+            if let Ok(resp) = send_command(&entry.socket_path, &cmd) {
+                if resp.ok {
+                    count += 1;
+                }
             }
         }
     }
@@ -216,9 +224,10 @@ pub fn herd_color(color: &str, filter: &HerdFilter) -> Result<usize, String> {
     for entry in &entries {
         if entry.alive {
             let cmd = serde_json::json!({"cmd": "COLOR", "arg": color}).to_string();
-            let resp = send_command(&entry.socket_path, &cmd)?;
-            if resp.ok {
-                count += 1;
+            if let Ok(resp) = send_command(&entry.socket_path, &cmd) {
+                if resp.ok {
+                    count += 1;
+                }
             }
         }
     }
@@ -231,9 +240,10 @@ pub fn herd_speed(speed: f32, filter: &HerdFilter) -> Result<usize, String> {
     for entry in &entries {
         if entry.alive {
             let cmd = serde_json::json!({"cmd": "SPEED", "arg": speed.to_string()}).to_string();
-            let resp = send_command(&entry.socket_path, &cmd)?;
-            if resp.ok {
-                count += 1;
+            if let Ok(resp) = send_command(&entry.socket_path, &cmd) {
+                if resp.ok {
+                    count += 1;
+                }
             }
         }
     }
@@ -245,9 +255,10 @@ pub fn herd_pause(filter: &HerdFilter) -> Result<usize, String> {
     let mut count = 0;
     for entry in &entries {
         if entry.alive {
-            let resp = send_command(&entry.socket_path, r#"{"cmd":"PAUSE"}"#)?;
-            if resp.ok {
-                count += 1;
+            if let Ok(resp) = send_command(&entry.socket_path, r#"{"cmd":"PAUSE"}"#) {
+                if resp.ok {
+                    count += 1;
+                }
             }
         }
     }
@@ -259,9 +270,10 @@ pub fn herd_resume(filter: &HerdFilter) -> Result<usize, String> {
     let mut count = 0;
     for entry in &entries {
         if entry.alive {
-            let resp = send_command(&entry.socket_path, r#"{"cmd":"RESUME"}"#)?;
-            if resp.ok {
-                count += 1;
+            if let Ok(resp) = send_command(&entry.socket_path, r#"{"cmd":"RESUME"}"#) {
+                if resp.ok {
+                    count += 1;
+                }
             }
         }
     }
@@ -275,9 +287,10 @@ pub fn herd_quiet() -> Result<usize, String> {
         if entry.alive {
             // Set speed to 0.1 for "quiet" mode (low FPS) instead of stopping
             let cmd = r#"{"cmd":"SPEED","arg":"0.1"}"#;
-            let resp = send_command(&entry.socket_path, cmd)?;
-            if resp.ok {
-                count += 1;
+            if let Ok(resp) = send_command(&entry.socket_path, cmd) {
+                if resp.ok {
+                    count += 1;
+                }
             }
         }
     }
@@ -296,9 +309,10 @@ pub fn herd_follow(pane: Option<&str>) -> Result<usize, String> {
         let is_target = target_session.as_ref() == Some(&entry.session_id);
         let speed = if is_target { 1.0 } else { 0.1 };
         let cmd = serde_json::json!({"cmd": "SPEED", "arg": speed.to_string()}).to_string();
-        let resp = send_command(&entry.socket_path, &cmd)?;
-        if resp.ok {
-            count += 1;
+        if let Ok(resp) = send_command(&entry.socket_path, &cmd) {
+            if resp.ok {
+                count += 1;
+            }
         }
     }
     Ok(count)

@@ -68,7 +68,7 @@ pub fn render_loop_foreground(
 
     let cow_display = composed_text.unwrap_or(&config.text);
 
-    // Tiny-terminal or non-tty pipe guard: print static text and exit.
+    // Tiny-terminal or non-tty pipe guard: print static text and complete requested duration.
     if cols < MIN_COLS || rows < MIN_ROWS || !crossterm::tty::IsTty::is_tty(&std::io::stdout()) {
         let cow_text = if composed_text.is_some() {
             cow_display.to_string()
@@ -78,6 +78,14 @@ pub fn render_loop_foreground(
             format!("{}\n{}", effects::default_cow_text(), cow_display)
         };
         println!("{cow_text}");
+        if config.duration > 0 {
+            let start = std::time::Instant::now();
+            let limit = std::time::Duration::from_secs(config.duration as u64);
+            while !shutdown.is_shutdown() && start.elapsed() < limit {
+                let rem = limit.saturating_sub(start.elapsed());
+                std::thread::sleep(std::time::Duration::from_millis(10).min(rem));
+            }
+        }
         return Ok(());
     }
 
@@ -217,52 +225,7 @@ pub fn render_loop_background(
 #[deprecated(note = "Removed in favor of dynamic automatic row reservation based on mascot anatomy")]
 pub const FIXED_SPLIT_ANIM_ROWS: usize = 10;
 
-/// Compute reserved rows and columns based on terminal resolution,
-/// mascot height, mascot width, config overrides, and dynamic reservation sizing.
-pub fn compute_reserved_dimensions_with_cols(
-    total_cols: usize,
-    total_rows: usize,
-    mascot_lines: usize,
-    mascot_cols: usize,
-    config: &SceneConfig,
-) -> (usize, usize) {
-    let bounded_split = config.split_mode.as_deref() == Some("bounded");
-    let cols = if let Some(rc) = config.reserve_cols {
-        (rc as usize).min(total_cols).max(20)
-    } else if bounded_split && mascot_cols > 0 {
-        // Clamped to mascot width + padding when bounded split is desired
-        (mascot_cols + 4).min(total_cols).max(20)
-    } else {
-        total_cols.max(20)
-    };
-
-    let raw_rows = if let Some(rr) = config.reserve_rows {
-        rr as usize
-    } else if let Some(ratio) = config.split_ratio {
-        let clamped_ratio = ratio.clamp(0.10, 0.75);
-        ((total_rows as f32) * clamped_ratio).round() as usize
-    } else {
-        // Automatic dynamic row reservation: allocate full height required by mascot lines
-        mascot_lines
-    };
-
-    // Guarantee user gets at least 4 prompt rows in unreserved area if total_rows allows
-    let max_safe_rows = total_rows.saturating_sub(4).max(1);
-    let rows = raw_rows.min(max_safe_rows).max(1);
-
-    (cols, rows)
-}
-
-/// Compute reserved rows and columns based on terminal resolution,
-/// mascot height, config overrides, and dynamic reservation sizing.
-pub fn compute_reserved_dimensions(
-    total_cols: usize,
-    total_rows: usize,
-    mascot_lines: usize,
-    config: &SceneConfig,
-) -> (usize, usize) {
-    compute_reserved_dimensions_with_cols(total_cols, total_rows, mascot_lines, 0, config)
-}
+pub use crate::split_scroll::{compute_reserved_dimensions, compute_reserved_dimensions_with_cols};
 
 /// Run the banner render loop. Renders inline directly in the terminal scrollback
 /// without taking over the screen or clearing history, and positions the cursor
@@ -270,7 +233,7 @@ pub fn compute_reserved_dimensions(
 #[allow(clippy::too_many_arguments)]
 pub fn render_loop_banner(
     mut out: OutputHandle,
-    mut config: SceneConfig,
+    config: SceneConfig,
     shutdown: ShutdownFlag,
     composed_text: Option<&str>,
     cow_dna: CowDna,
@@ -285,7 +248,7 @@ pub fn render_loop_banner(
 
     let cow_display = composed_text.unwrap_or(&config.text);
 
-    // Tiny-terminal or non-tty pipe guard: print static text and exit.
+    // Tiny-terminal or non-tty pipe guard: print static text and complete requested duration.
     if cols < MIN_COLS || rows < MIN_ROWS || !crossterm::tty::IsTty::is_tty(&std::io::stdout()) {
         let cow_text = if composed_text.is_some() {
             cow_display.to_string()
@@ -295,6 +258,14 @@ pub fn render_loop_banner(
             format!("{}\n{}", effects::default_cow_text(), cow_display)
         };
         println!("{cow_text}");
+        if config.duration > 0 {
+            let start = std::time::Instant::now();
+            let limit = std::time::Duration::from_secs(config.duration as u64);
+            while !shutdown.is_shutdown() && start.elapsed() < limit {
+                let rem = limit.saturating_sub(start.elapsed());
+                std::thread::sleep(std::time::Duration::from_millis(10).min(rem));
+            }
+        }
         return Ok(());
     }
 
@@ -304,11 +275,6 @@ pub fn render_loop_banner(
     let cow_foot = effects::find_cow_foot_y(cow_display);
     let line_count = (cow_foot + 4).max(cow_display.lines().count() + 3).max(6);
     let banner_rows = line_count.min((rows as usize).saturating_sub(1)).max(1);
-
-    // In banner mode, default duration to 2s burst if 0
-    if config.duration == 0 {
-        config.duration = 2;
-    }
 
     let max_frames = compute_max_frames(config.duration, config.fps);
 

@@ -7,18 +7,12 @@
         "64bit": {
             "url": "https://github.com/HKDevLoops/Forgum/releases/download/v0.4.0/forgum-0.4.0-windows-x64.zip",
             "hash": "sha256:PLACEHOLDER_HASH_X64",
-            "bin": [
-                "forgum.exe",
-                "forgum-engine.exe"
-            ]
+            "bin": "forgum.exe"
         },
         "arm64": {
             "url": "https://github.com/HKDevLoops/Forgum/releases/download/v0.4.0/forgum-0.4.0-windows-arm64.zip",
             "hash": "sha256:PLACEHOLDER_HASH_ARM64",
-            "bin": [
-                "forgum.exe",
-                "forgum-engine.exe"
-            ]
+            "bin": "forgum.exe"
         }
     },
     "checkver": {

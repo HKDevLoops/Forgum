@@ -168,7 +168,7 @@ pub fn fork_then_exec_self(
         .ok()
         .filter(|p| p.exists())
         .or_else(|| std::env::args().next().map(std::path::PathBuf::from))
-        .unwrap_or_else(|| std::path::PathBuf::from("forgum-engine"));
+        .unwrap_or_else(|| std::path::PathBuf::from("forgum"));
     let exe_c = CString::new(self_exe.to_string_lossy().into_owned())
         .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidInput, e))?;
 
@@ -281,7 +281,7 @@ pub fn daemon_bootstrap<F: FnOnce() -> std::process::ExitCode>(
         .ok()
         .filter(|p| p.exists())
         .or_else(|| std::env::args().next().map(std::path::PathBuf::from))
-        .unwrap_or_else(|| std::path::PathBuf::from("forgum-engine"));
+        .unwrap_or_else(|| std::path::PathBuf::from("forgum"));
 
     let overrides = [("FORGUM_DAEMON_SESSION", session_id.to_owned())];
     let override_refs = [("FORGUM_DAEMON_SESSION", overrides[0].1.as_str())];

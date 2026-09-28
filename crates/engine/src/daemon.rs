@@ -141,7 +141,8 @@ pub fn stop_session_daemon_and_reset_margins() {
         let (_, rows) = forgum_platform::terminal_size();
         let mut clean_buf = Vec::new();
         if ob_y1 > 0 {
-            for y in 1..=(ob_y1 as usize).min(60) {
+            let clean_y1 = (ob_y1 as usize).min(rows as usize);
+            for y in 1..=clean_y1 {
                 clean_buf.extend_from_slice(format!("\x1b[{y};1H\x1b[2K").as_bytes());
             }
         }

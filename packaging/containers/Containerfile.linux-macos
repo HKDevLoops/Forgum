@@ -71,9 +71,7 @@ COPY packaging/containers/configs/unix-darwin-config.toml /home/forgum/.config/f
 # Copy the compiled forgum binary
 COPY --from=builder /build/target/release/forgum /opt/homebrew/bin/forgum
 RUN chmod +x /opt/homebrew/bin/forgum && \
-    ln -sf /opt/homebrew/bin/forgum /usr/local/bin/forgum && \
-    ln -sf /opt/homebrew/bin/forgum /opt/homebrew/bin/forgum-engine && \
-    ln -sf /opt/homebrew/bin/forgum /usr/local/bin/forgum-engine
+    ln -sf /opt/homebrew/bin/forgum /usr/local/bin/forgum
 
 # In-container update script for fetching repo updates
 RUN cat << 'EOF' > /opt/homebrew/bin/forgum-update

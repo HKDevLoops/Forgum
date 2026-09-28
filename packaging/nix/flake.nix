@@ -26,10 +26,6 @@
           nativeBuildInputs = [ pkgs.pkg-config ];
           buildInputs = [ ];
 
-          postInstall = ''
-            ln -sf forgum $out/bin/forgum-engine
-          '';
-
           meta = {
             description = "Forgum - cross-platform ANSI animation mascot and shell integration engine";
             homepage = "https://github.com/HKDevLoops/Forgum";

@@ -21,7 +21,6 @@ Installers:
     InstallerSha256: PLACEHOLDER_HASH_ARM64
 Commands:
   - forgum
-  - forgum-engine
 ManifestType: installer
 ManifestVersion: 1.6.0
 ---

@@ -2919,8 +2919,27 @@ fn render_subcommand_with_scene(
 
     if wants_native_split {
         let caps = forgum_platform::detect_capabilities();
+        let reserved_rows = if let Some(rr) = args.reserve_rows.or(scene.reserve_rows) {
+            rr as usize
+        } else if let Ok(d) = data_dir() {
+            let cow_name = cow::resolve_cow_name(&scene.cow, &d);
+            let cow_raw = cow::load_cow(&cow_name, &d, &scene.eyes, &scene.tongue, "\\");
+            let composed = cow::compose_scene_with_mode(&cow_raw, &scene.text, scene.think);
+            let cow_foot = crate::effects::find_cow_foot_y(&composed);
+            let line_count = (cow_foot + 4).max(composed.lines().count() + 3).max(6);
+            let mascot_cols = composed.lines().map(crate::cow::str_display_width).max().unwrap_or(0);
+            let (_, dyn_rows) = crate::render::compute_reserved_dimensions_with_cols(
+                caps.width as usize,
+                caps.height as usize,
+                line_count,
+                mascot_cols,
+                &scene,
+            );
+            dyn_rows
+        } else {
+            10
+        };
         let mux = forgum_platform::detect_mux();
-        let reserved_rows = args.reserve_rows.or(scene.reserve_rows).unwrap_or(10) as usize;
         let ratio = args.split_ratio.or(scene.split_ratio).unwrap_or(0.35);
         let current_bin = std::env::current_exe()
             .ok()
@@ -3200,7 +3219,7 @@ fn render_subcommand_with_scene(
     };
     let composed = cow::compose_scene_with_mode(&cow_text, &scene.text, is_thought);
 
-    let animations = dna::load_animations(&data);
+    let animations = dna::load_animations_or_embedded(&data);
     let mut cow_dna = dna::get_dna(&animations, &scene.cow);
     if let Some(ref pal_str) = scene.palette {
         let hexes: Vec<String> = pal_str
@@ -3405,7 +3424,7 @@ fn run_daemon_child(args: cli::Args) -> ExitCode {
         thoughts_glyph,
     );
     let composed = cow::compose_scene_with_mode(&cow_text, &scene.text, is_thought);
-    let animations = dna::load_animations(&data);
+    let animations = dna::load_animations_or_embedded(&data);
     let mut cow_dna = dna::get_dna(&animations, &scene.cow);
     if let Some(ref pal_str) = scene.palette {
         let hexes: Vec<String> = pal_str

@@ -15,11 +15,6 @@ pkgs: pkgs.rustPlatform.buildRustPackage {
   nativeBuildInputs = [ pkgs.pkg-config ];
   buildInputs = [ ];
 
-  postInstall = ''
-    # Provide backward compatibility symlink
-    ln -sf forgum $out/bin/forgum-engine
-  '';
-
   meta = {
     description = "Forgum - cross-platform ANSI animation mascot and shell integration engine";
     homepage = "https://github.com/HKDevLoops/Forgum";

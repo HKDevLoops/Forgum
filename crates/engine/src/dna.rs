@@ -267,7 +267,7 @@ pub struct CowDna {
     pub speed: f32,
     #[serde(default)]
     pub amplitude: Amplitude,
-    #[serde(default)]
+    #[serde(default = "default_palette")]
     pub palette: Vec<String>,
     #[serde(default)]
     pub easing: EasingDna,
@@ -284,6 +284,14 @@ fn default_phase_seed() -> u32 {
     0
 }
 
+/// Retrieve the default biological 5-color palette for domestic Holstein cow.
+pub fn default_palette() -> Vec<String> {
+    crate::color::get_natural_hex_palette("default")
+        .iter()
+        .map(|&s| s.to_string())
+        .collect()
+}
+
 impl Default for CowDna {
     fn default() -> Self {
         Self {
@@ -291,7 +299,7 @@ impl Default for CowDna {
             particles: ParticleDna::default(),
             speed: default_speed(),
             amplitude: Amplitude::default(),
-            palette: vec![],
+            palette: default_palette(),
             easing: EasingDna::default(),
             phase_seed: default_phase_seed(),
             glow: GlowDna::default(),
@@ -299,43 +307,50 @@ impl Default for CowDna {
     }
 }
 
-/// Load all cow DNA profiles from `animations.json`.
+/// Authoritative mascot DNA catalog embedded at compile-time (26.6 KB).
+/// Shipped in .rodata to guarantee zero-panic standalone execution without disk assets.
+pub const EMBEDDED_ANIMATIONS_JSON: &str = include_str!("../../../data/Cows/animations.json");
+
+impl CowDna {
+    /// Construct a fallback `CowDna` profile with default Walk kinematics and the
+    /// mascot's authentic 5-slot biological natural palette from `biome.rs`.
+    pub fn from_biome(mascot: &str) -> Self {
+        let clean = mascot.strip_suffix(".cow").unwrap_or(mascot);
+        let palette = crate::color::get_natural_hex_palette(clean)
+            .iter()
+            .map(|&s| s.to_string())
+            .collect();
+        Self {
+            palette,
+            ..Self::default()
+        }
+    }
+}
+
+/// Parse an animation JSON string entry-by-entry.
 ///
-/// Deserializes entry-by-entry so that a single corrupted or malformed record
-/// in `animations.json` never invalidates the entire animation database.
-pub fn load_animations(data_dir: &Path) -> HashMap<String, CowDna> {
-    let path = data_dir.join("animations.json");
-    let content = match std::fs::read_to_string(&path) {
-        Ok(c) => c,
-        Err(e) => {
-            crate::log_warn!(
-                "dna",
-                "Cannot read animations.json at {}: {e}",
-                path.display()
-            );
-            return HashMap::new();
-        }
-    };
-    // Parse as map of raw JSON values first
-    let raw_map: HashMap<String, serde_json::Value> = match serde_json::from_str(&content) {
-        Ok(m) => m,
-        Err(e) => {
-            crate::log_diag!(
-                crate::logger::LogLevel::Error,
-                "dna",
-                &format!("Syntax error parsing {}: {e}", path.display()),
-                "Animation DNA catalog is corrupted. Run `forgum doctor` to verify installation.",
-                "Inspect animations.json syntax in data/Cows/animations.json"
-            );
-            return HashMap::new();
-        }
-    };
+/// If a single mascot entry is corrupted, has invalid types, or missing fields,
+/// serde will not abort catalog loading. It logs a warning and falls back to
+/// the mascot's biological default from `biome.rs`.
+pub fn parse_animations_json_str(
+    content: &str,
+    source_path: Option<&Path>,
+) -> Result<HashMap<String, CowDna>, serde_json::Error> {
+    let raw_map: HashMap<String, serde_json::Value> = serde_json::from_str(content)?;
     let mut result = HashMap::with_capacity(raw_map.len());
+
     for (name, val) in raw_map {
+        let clean = name.strip_suffix(".cow").unwrap_or(&name);
+        let has_explicit_palette = val
+            .get("palette")
+            .and_then(|v| v.as_array())
+            .map(|a| !a.is_empty())
+            .unwrap_or(false);
+
         match serde_json::from_value::<CowDna>(val) {
             Ok(mut dna) => {
-                if dna.palette.is_empty() {
-                    dna.palette = crate::color::get_natural_hex_palette(&name)
+                if !has_explicit_palette || dna.palette.is_empty() {
+                    dna.palette = crate::color::get_natural_hex_palette(clean)
                         .iter()
                         .map(|&s| s.to_string())
                         .collect();
@@ -343,22 +358,161 @@ pub fn load_animations(data_dir: &Path) -> HashMap<String, CowDna> {
                 result.insert(name, dna);
             }
             Err(e) => {
+                let location = source_path
+                    .map(|p| p.display().to_string())
+                    .unwrap_or_else(|| "<embedded>".to_string());
                 crate::log_diag!(
                     crate::logger::LogLevel::Warn,
                     "dna",
-                    &format!("Failed to parse DNA for mascot '{name}': {e}"),
-                    "One mascot animation failed to load and used default Walk.",
+                    &format!("Failed to parse DNA for mascot '{name}' in {location}: {e}"),
+                    "One mascot animation failed to load and used default Walk with biological palette.",
                     &format!("Check CowDna schema in dna.rs for record '{name}'")
+                );
+                // Resilient fallback: canonical mascots from biome.rs recover with default Walk
+                // and authentic biological palette, while invalid/synthetic keys are cleanly skipped.
+                let is_canonical = forgum_platform::biome::ALL_MASCOTS
+                    .iter()
+                    .any(|m| m.name.eq_ignore_ascii_case(clean));
+                if is_canonical {
+                    result.insert(name.clone(), CowDna::from_biome(&name));
+                }
+            }
+        }
+    }
+
+    Ok(result)
+}
+
+/// Resolve ordered candidate paths for `animations.json` given a base data directory.
+fn resolve_animation_candidates(data_dir: &Path) -> Vec<std::path::PathBuf> {
+    let mut candidates = Vec::new();
+
+    // 1. If data_dir itself directly is an existing file (e.g. direct path to animations.json)
+    if data_dir.is_file() {
+        candidates.push(data_dir.to_path_buf());
+    }
+
+    // 2. data_dir/animations.json
+    let direct = data_dir.join("animations.json");
+    if !candidates.contains(&direct) {
+        candidates.push(direct);
+    }
+
+    // 3. data_dir/Cows/animations.json
+    let cows_child = data_dir.join("Cows").join("animations.json");
+    if !candidates.contains(&cows_child) {
+        candidates.push(cows_child);
+    }
+
+    // 4. If data_dir is named "Cows", check parent/animations.json
+    if data_dir.file_name().and_then(|n| n.to_str()) == Some("Cows") {
+        if let Some(parent) = data_dir.parent() {
+            let parent_anim = parent.join("animations.json");
+            if !candidates.contains(&parent_anim) {
+                candidates.push(parent_anim);
+            }
+        }
+    }
+
+    candidates
+}
+
+/// Synthesize a fallback catalog directly from `forgum_platform::biome::ALL_MASCOTS`.
+pub fn synthesize_biome_catalog() -> HashMap<String, CowDna> {
+    let mut catalog = HashMap::with_capacity(132);
+    for mascot in forgum_platform::biome::get_all_mascots() {
+        catalog.insert(mascot.name.to_string(), CowDna::from_biome(mascot.name));
+    }
+    catalog
+}
+
+/// Load all cow DNA profiles from `animations.json` with multi-tier file fallbacks.
+///
+/// 1. Tries `data_dir/animations.json`.
+/// 2. If missing or invalid JSON syntax, falls back to `data_dir/Cows/animations.json`.
+/// 3. If disk files had syntax errors, falls back to compile-time `EMBEDDED_ANIMATIONS_JSON`.
+/// 4. If missing, returns empty map gracefully without panic.
+///
+/// Deserializes entry-by-entry so that a single corrupted record never invalidates
+/// the entire animation catalog.
+pub fn load_animations(data_dir: &Path) -> HashMap<String, CowDna> {
+    let candidates = resolve_animation_candidates(data_dir);
+    let mut any_candidate_existed = false;
+
+    for path in &candidates {
+        if !path.exists() {
+            continue;
+        }
+        any_candidate_existed = true;
+        match std::fs::read_to_string(path) {
+            Ok(content) => match parse_animations_json_str(&content, Some(path)) {
+                Ok(catalog) => {
+                    crate::log_info!(
+                        "dna",
+                        "Loaded {} animal DNA profiles from {}",
+                        catalog.len(),
+                        path.display()
+                    );
+                    return catalog;
+                }
+                Err(e) => {
+                    crate::log_diag!(
+                        crate::logger::LogLevel::Warn,
+                        "dna",
+                        &format!("Syntax error parsing {}: {e}", path.display()),
+                        "Attempting next fallback animation source.",
+                        "Inspect animations.json syntax in data/Cows/animations.json"
+                    );
+                }
+            },
+            Err(e) => {
+                crate::log_warn!(
+                    "dna",
+                    "Cannot read animations.json at {}: {e}",
+                    path.display()
                 );
             }
         }
     }
-    crate::log_info!(
-        "dna",
-        "Loaded {} animal DNA profiles from animations.json",
-        result.len()
-    );
-    result
+
+    if any_candidate_existed {
+        // Files were present on disk but all had syntax errors or read errors.
+        // Fall back to compile-time embedded default animations.json.
+        crate::log_info!(
+            "dna",
+            "Loading animal DNA catalog from compile-time embedded animations.json after disk syntax errors"
+        );
+        if let Ok(catalog) = parse_animations_json_str(EMBEDDED_ANIMATIONS_JSON, None) {
+            return catalog;
+        }
+
+        // Ultimate defensive fallback
+        crate::log_diag!(
+            crate::logger::LogLevel::Error,
+            "dna",
+            "All animation sources and embedded catalog failed; synthesizing from biome.rs",
+            "Using default Walk and biological palettes for all mascots.",
+            "Verify binary integrity and embedded data assets."
+        );
+        return synthesize_biome_catalog();
+    }
+
+    HashMap::new()
+}
+
+/// Load animations from data directory, falling back to compile-time embedded defaults if missing.
+pub fn load_animations_or_embedded(data_dir: &Path) -> HashMap<String, CowDna> {
+    let map = load_animations(data_dir);
+    if map.is_empty() {
+        load_embedded_animations()
+    } else {
+        map
+    }
+}
+
+/// Load the authoritative compile-time embedded animation catalog.
+pub fn load_embedded_animations() -> HashMap<String, CowDna> {
+    parse_animations_json_str(EMBEDDED_ANIMATIONS_JSON, None).unwrap_or_default()
 }
 
 /// Get DNA for a specific cow, falling back to defaults.
@@ -372,6 +526,11 @@ pub fn get_dna(animations: &HashMap<String, CowDna>, cow_name: &str) -> CowDna {
         dna.clone()
     } else if let Some(dna) = animations.get(&with_cow) {
         dna.clone()
+    } else if forgum_platform::biome::ALL_MASCOTS
+        .iter()
+        .any(|m| m.name.eq_ignore_ascii_case(clean))
+    {
+        CowDna::from_biome(clean)
     } else {
         CowDna::default()
     }
@@ -412,7 +571,8 @@ mod tests {
         assert_eq!(dna.glow.radius, 4.0);
         assert_eq!(dna.glow.color, "#ffffff");
         assert_eq!(dna.glow.falloff, "gaussian");
-        assert!(dna.palette.is_empty());
+        assert_eq!(dna.palette.len(), 5);
+        assert_eq!(dna.palette, default_palette());
     }
 
     #[test]

@@ -1290,8 +1290,8 @@ pub fn build_scene_config(args: &Args) -> Result<SceneConfig, String> {
         cfg.color_mode = "custom".to_string();
     }
 
-    // In "natural" mode, the mascot's God-given natural biological palette takes precedence unless user passed an explicit palette
-    if !args.text_only && cfg.color_mode == "natural" && args.palette.is_none() {
+    // In "natural" mode, resolve mascot biological palette if no palette is configured
+    if !args.text_only && cfg.color_mode == "natural" && cfg.palette.is_none() {
         let animal_name = args.cow.as_deref().unwrap_or(&cfg.cow);
         let natural_hexes = crate::color::get_natural_hex_palette(animal_name);
         if !natural_hexes.is_empty() {

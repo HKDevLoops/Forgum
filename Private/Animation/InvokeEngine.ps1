@@ -22,7 +22,7 @@ function Invoke-ForgumEngine {
     )
 
     if (-not (Test-Path -LiteralPath $EnginePath)) {
-        throw "forgum-engine not found at: $EnginePath (set `$env:FORGUM_ENGINE or run install.ps1)"
+        throw "forgum not found at: $EnginePath (set `$env:FORGUM_ENGINE or run install.ps1)"
     }
 
     # Derive timeout from duration if not explicit. Minimum 35 s for

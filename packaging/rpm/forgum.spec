@@ -16,11 +16,9 @@ and lolcat with physical ANSI effects, procedural biomes, and split-shell integr
 %install
 mkdir -p %{buildroot}%{_bindir}
 install -m 755 forgum %{buildroot}%{_bindir}/forgum
-ln -sf forgum %{buildroot}%{_bindir}/forgum-engine
 
 %files
 %{_bindir}/forgum
-%{_bindir}/forgum-engine
 
 %changelog
 * Sat Sep 19 2026 harish2222 <harish2222@users.noreply.github.com> - 0.4.0-1

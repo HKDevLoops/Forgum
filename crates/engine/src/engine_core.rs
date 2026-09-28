@@ -203,12 +203,14 @@ impl SimState {
     }
 
     /// Run one simulation step. Returns the frame snapshot to ship to RENDER.
-    fn tick(&mut self, dt: Duration) -> Arc<Frame> {
+    fn tick(&mut self, dt: Duration, raw_dt: Duration) -> Arc<Frame> {
         // Phase 1.6: O(1) mass-dealloc of last frame's scratch.
         self.arena.reset();
 
         let dt_f32 = dt.as_secs_f32();
-        self.elapsed += dt_f32;
+        let raw_dt_f32 = raw_dt.as_secs_f32();
+        // Decouple simulation elapsed clock from clamped dt to eliminate 10x idle drift
+        self.elapsed += raw_dt_f32;
 
         // Periodic thought rotation if thought_interval > 0
         let thought_interval = self.config.thought_interval;
@@ -326,7 +328,7 @@ impl SimState {
             ControlMsg::Effect(name) => {
                 // Reload DNA for the new effect if it exists in animations.json,
                 // otherwise keep the current DNA but change the base animation.
-                let animations = crate::dna::load_animations(&self.data_dir);
+                let animations = crate::dna::load_animations_or_embedded(&self.data_dir);
                 let new_dna = crate::dna::get_dna(&animations, &self.config.cow);
                 self.config.effect = name.clone();
                 self.cow_dna = new_dna;
@@ -374,7 +376,7 @@ impl SimState {
                     *lock = composed.clone();
                 }
                 self.cow_foot_y = effects::find_cow_foot_y(&composed);
-                let animations = crate::dna::load_animations(&self.data_dir);
+                let animations = crate::dna::load_animations_or_embedded(&self.data_dir);
                 self.cow_dna = crate::dna::get_dna(&animations, &self.config.cow);
                 if let Some(ref pal_str) = self.config.palette {
                     let hexes: Vec<String> = pal_str
@@ -622,7 +624,7 @@ fn sim_thread(
             shutdown.trigger();
             break;
         }
-        if sim.effect.is_done() {
+        if wall_clock_limit.is_none() && max_frames == 0 && sim.effect.is_done() {
             crate::log_info!(
                 "engine",
                 "SIM thread effect.is_done() returned true, shutting down"
@@ -706,7 +708,7 @@ fn sim_thread(
         let dt = raw_dt.clamp(Duration::from_micros(100), Duration::from_millis(100));
         last_frame = now;
 
-        let frame = sim.tick(dt);
+        let frame = sim.tick(dt, raw_dt);
 
         // Send to render thread (non-blocking so slow terminal I/O doesn't throttle simulation FPS).
         match frame_tx.try_send(frame) {
@@ -1420,11 +1422,11 @@ mod tests {
         let dt = Duration::from_secs_f32(1.0 / 30.0);
 
         // First tick: initial render.
-        let frame1 = sim.tick(dt);
+        let frame1 = sim.tick(dt, dt);
         assert_eq!(frame1.cols, 40);
 
         // Second tick: same static cow, no animation change → zero or minimal damage.
-        let frame2 = sim.tick(dt);
+        let frame2 = sim.tick(dt, dt);
         let total_cells = 40 * 12;
         assert!(
             frame2.damage.len() < total_cells / 4,
@@ -1444,7 +1446,8 @@ mod tests {
         let active = Arc::new(std::sync::RwLock::new(String::new()));
         let mut sim = SimState::new(&config, 40, 12, cow_dna, 0, None, data_dir.clone(), active);
 
-        let frame = sim.tick(Duration::from_secs_f32(1.0 / 30.0));
+        let dt = Duration::from_secs_f32(1.0 / 30.0);
+        let frame = sim.tick(dt, dt);
         assert_eq!(frame.cols, 40);
         assert_eq!(frame.rows, 12);
         assert_eq!(frame.cells.len(), 40 * 12);

@@ -3561,16 +3561,25 @@ export extern "forgum" [
     pub fn render(&mut self, f: &mut Frame) {
         let size = f.area();
 
-        // 3-row layout:
-        // Row 0: Zellij Mode Ribbon & Tab Bar (3 lines)
-        // Row 1: LazyGit Split Workspace (Min 10 lines)
-        // Row 2: Zellij Pill Status & Keybinding Bar (2 lines)
+        // Cache terminal dimensions for current_breakpoint() outside render context.
+        self.last_terminal_size = (size.width, size.height);
+        let bp = Breakpoint::from_size(size.width, size.height);
+
+        // Responsive 3-row layout driven by Breakpoint:
+        // Compact  → 1-line header  + min-8 workspace + 1-line footer (max space for content)
+        // Standard → 3-line header  + min-10 workspace + 2-line footer (full chrome)
+        // Wide     → 3-line header  + min-10 workspace + 2-line footer (full chrome)
+        let (header_h, footer_h, workspace_min) = match bp {
+            Breakpoint::Compact => (1, 1, 8),
+            _ => (3, 2, 10),
+        };
+
         let chunks = Layout::default()
             .direction(Direction::Vertical)
             .constraints([
-                Constraint::Length(3),
-                Constraint::Min(10),
-                Constraint::Length(2),
+                Constraint::Length(header_h),
+                Constraint::Min(workspace_min),
+                Constraint::Length(footer_h),
             ])
             .split(size);
 
@@ -3665,6 +3674,38 @@ export extern "forgum" [
     /// Render Zellij-style top header with active mode badge, tabs, and format badge.
     /// Styled with Tailwind CSS-inspired design tokens for a modern vibrant look.
     fn render_zellij_header(&self, f: &mut Frame, area: Rect) {
+        let bp = Breakpoint::from_size(area.width, area.height);
+
+        // ── Compact Mode: single-line tab bar, no decorative border ──────────
+        if bp == Breakpoint::Compact {
+            let mut spans: Vec<Span> = Vec::new();
+            // Compact mode label badge (no emoji, no full pill)
+            spans.push(Span::styled(
+                format!("[{}]", self.current_tab.compact_mode_label()),
+                Style::default()
+                    .fg(tailwind::INDIGO_400)
+                    .add_modifier(Modifier::BOLD),
+            ));
+            spans.push(Span::raw(" "));
+            // Compact tab titles
+            for tab in Tab::ALL {
+                let is_active = tab == self.current_tab;
+                let style = if is_active {
+                    Style::default()
+                        .bg(tailwind::EMERALD_500)
+                        .fg(tailwind::SLATE_900)
+                        .add_modifier(Modifier::BOLD)
+                } else {
+                    Style::default().fg(tailwind::SLATE_400)
+                };
+                spans.push(Span::styled(tab.compact_title(), style));
+            }
+            let p = Paragraph::new(Line::from(spans));
+            f.render_widget(p, area);
+            return;
+        }
+
+        // ── Standard / Wide Mode: full Zellij chrome ─────────────────────────
         let mut line_spans = Vec::new();
 
         // Active mode pill — Indigo-600 bg with bright white text
@@ -3744,18 +3785,53 @@ export extern "forgum" [
 
         let width = area.width;
         let height = area.height;
+        let bp = Breakpoint::from_size(width, height);
 
-        // Tailwind-inspired adaptive split breakpoints:
-        // sm (< 76 cols): mobile/compact view, left panel 36% (min 22)
-        // md (76..=120 cols): tablet/standard view, left panel 28% (min 26, max 38)
-        // lg / xl (> 120 cols): desktop/wide view, left panel 24% (min 28, max 46)
-        let left_width = if width < 76 {
-            (width * 36 / 100).max(22).min(width.saturating_sub(20))
-        } else if width <= 120 {
-            (width * 28 / 100).clamp(26, 38)
-        } else {
-            (width * 24 / 100).clamp(28, 46)
-        };
+        // ── Compact Mode (width < 80): vertical stack layout ─────────────────
+        // Entity list on top (~40% height), preview below (60%), full width.
+        // Inspector collapses aggressively to preserve canvas space.
+        if bp == Breakpoint::Compact {
+            let inspector_len: u16 = if height < 18 {
+                0
+            } else if height < 22 {
+                2
+            } else {
+                4
+            };
+
+            // Top portion: entity list (~40% of available height minus inspector)
+            let available = height.saturating_sub(inspector_len);
+            let list_h = (available * 40 / 100).max(4);
+            let preview_h = available.saturating_sub(list_h);
+
+            let vert_split = Layout::default()
+                .direction(Direction::Vertical)
+                .constraints([
+                    Constraint::Length(list_h),
+                    Constraint::Length(preview_h),
+                    Constraint::Length(inspector_len),
+                ])
+                .split(area);
+
+            // Entity list gets full area width in Compact mode
+            match self.current_tab {
+                Tab::Mascots => self.render_mascots_list(f, vert_split[0]),
+                Tab::Scenery => self.render_scenery_list(f, vert_split[0]),
+                Tab::Effects => self.render_effects_list(f, vert_split[0]),
+                Tab::Installer => self.render_installer_list(f, vert_split[0]),
+                Tab::Config => self.render_config_list(f, vert_split[0]),
+            }
+            self.render_live_preview(f, vert_split[1]);
+            if inspector_len > 0 {
+                self.render_inspector(f, vert_split[2]);
+            }
+            return;
+        }
+
+        // ── Standard / Wide Mode: side-by-side split layout ──────────────────
+        // Standard: 30% list / 70% preview — Wide: 25% list / 75% preview.
+        let left_pct: u16 = if bp == Breakpoint::Wide { 25 } else { 30 };
+        let left_width = (width * left_pct / 100).clamp(24, 50);
         let right_width = width.saturating_sub(left_width);
 
         let left_rect = Rect {
@@ -3782,12 +3858,10 @@ export extern "forgum" [
         }
 
         // Adaptive Inspector Height:
-        // When height is tight (< 20 lines), collapse inspector to 4 lines to give maximum space to canvas
-        // When width is wide (> 120 cols) and height >= 24, expand inspector to 7 lines for rich metadata
-        // Otherwise 6 lines
-        let inspector_len = if height < 20 {
+        // Standard: 6 lines (tight: 4). Wide: 7 lines (tight: 4).
+        let inspector_len: u16 = if height < 20 {
             4
-        } else if width > 120 && height >= 24 {
+        } else if bp == Breakpoint::Wide && height >= 24 {
             7
         } else {
             6
@@ -4772,6 +4846,11 @@ export extern "forgum" [
     }
 
     fn render_config_list(&self, f: &mut Frame, area: Rect) {
+        let bp = Breakpoint::from_size(area.width, area.height);
+
+        // Label column width: shorter in Compact to conserve horizontal space.
+        let label_width: usize = if bp == Breakpoint::Compact { 12 } else { 20 };
+
         let items: Vec<ListItem> = ConfigField::ALL
             .iter()
             .enumerate()
@@ -4811,14 +4890,16 @@ export extern "forgum" [
 
                 ListItem::new(Line::from(vec![
                     Span::styled(prefix, Style::default().fg(prefix_color)),
-                    Span::styled(format!("{:<20}", field.label()), label_style),
+                    Span::styled(format!("{:<width$}", field.label(), width = label_width), label_style),
                     Span::styled(val_str, Style::default().fg(val_color)),
                 ]))
                 .style(line_style)
             })
             .collect();
 
-        let visible_rows_config = (area.height.saturating_sub(2) as usize).max(1);
+        // Compact: no border overhead (saves 2 rows for usable items).
+        let border_overhead: u16 = if bp == Breakpoint::Compact { 0 } else { 2 };
+        let visible_rows_config = (area.height.saturating_sub(border_overhead) as usize).max(1);
         let start_config = if self.config_field_idx >= visible_rows_config {
             self.config_field_idx + 1 - visible_rows_config
         } else {
@@ -4830,19 +4911,26 @@ export extern "forgum" [
             .take(visible_rows_config)
             .collect();
 
-        let list = List::new(visible_config_items).block(
-            Block::default()
-                .borders(Borders::ALL)
-                .border_type(BorderType::Rounded)
-                .border_style(Style::default().fg(tailwind::INDIGO_500))
-                .title(Span::styled(
-                    " ⚙️ Configuration Matrix (100% Parity) ",
-                    Style::default()
-                        .fg(tailwind::SKY_400)
-                        .add_modifier(Modifier::BOLD),
-                )),
-        );
-        f.render_widget(list, area);
+        if bp == Breakpoint::Compact {
+            // ── Compact: borderless list, maximum rows visible ────────────────
+            let list = List::new(visible_config_items);
+            f.render_widget(list, area);
+        } else {
+            // ── Standard / Wide: full rounded-border layout ───────────────────
+            let list = List::new(visible_config_items).block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .border_type(BorderType::Rounded)
+                    .border_style(Style::default().fg(tailwind::INDIGO_500))
+                    .title(Span::styled(
+                        " ⚙️ Configuration Matrix (100% Parity) ",
+                        Style::default()
+                            .fg(tailwind::SKY_400)
+                            .add_modifier(Modifier::BOLD),
+                    )),
+            );
+            f.render_widget(list, area);
+        }
     }
 
     /// Quantize animation time according to target FPS.
@@ -5757,6 +5845,20 @@ export extern "forgum" [
 
     /// Bottom Zellij-style status and keybinding bar with Tailwind dark pill badges.
     fn render_zellij_footer(&self, f: &mut Frame, area: Rect) {
+        let bp = Breakpoint::from_size(area.width, area.height);
+
+        // ── Compact Mode: show only the status message (1 line) ──────────────
+        // The full key-hint bar requires 2 lines and looks cramped on tiny screens.
+        if bp == Breakpoint::Compact {
+            let p = Paragraph::new(Line::from(Span::styled(
+                format!(" {}", self.status_message),
+                Style::default().fg(tailwind::SKY_400),
+            )));
+            f.render_widget(p, area);
+            return;
+        }
+
+        // ── Standard / Wide Mode: full 2-line key-hint bar ───────────────────
         let help_spans = if self.current_tab == Tab::Installer {
             vec![
                 Span::styled(
