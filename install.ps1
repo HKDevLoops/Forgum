@@ -199,36 +199,13 @@ if (-not $Version) {
     }
 }
 if (-not $Version) {
-    # Attempt raw GitHub Cargo.toml from repo branches
-    foreach ($branch in @('dev', 'main', 'master')) {
-        try {
-            $rawCargo = (Invoke-RestMethod -Uri "https://raw.githubusercontent.com/$Repo/$branch/Cargo.toml" `
-                -Headers @{ 'User-Agent' = 'forgum-install' } -ErrorAction Stop)
-            $versionLine = ($rawCargo -split "`n") | Where-Object { $_ -match '^version\s*=' } | Select-Object -First 1
-            if ($versionLine -match '"([^"]+)"') {
-                $Version = $Matches[1]
-                break
-            }
-        } catch {}
-    }
-}
-if (-not $Version) {
-    # Attempt GitHub releases API without failing on 404
+    # Attempt raw GitHub Cargo.toml from repo dev branch (fast 3s timeout)
     try {
-        $latest = (Invoke-RestMethod -Uri "https://api.github.com/repos/$Repo/releases/latest" `
-            -Headers @{ 'User-Agent' = 'forgum-install' } -ErrorAction Stop).tag_name
-        if ($latest) {
-            $Version = $latest.TrimStart('v')
-        }
-    } catch {}
-}
-if (-not $Version) {
-    # Attempt GitHub tags API
-    try {
-        $tags = Invoke-RestMethod -Uri "https://api.github.com/repos/$Repo/tags" `
-            -Headers @{ 'User-Agent' = 'forgum-install' } -ErrorAction Stop
-        if ($tags -and $tags.Count -gt 0) {
-            $Version = ($tags[0].name).TrimStart('v')
+        $rawCargo = (Invoke-RestMethod -Uri "https://raw.githubusercontent.com/$Repo/dev/Cargo.toml" `
+            -Headers @{ 'User-Agent' = 'forgum-install' } -TimeoutSec 3 -ErrorAction Stop)
+        $versionLine = ($rawCargo -split "`n") | Where-Object { $_ -match '^version\s*=' } | Select-Object -First 1
+        if ($versionLine -match '"([^"]+)"') {
+            $Version = $Matches[1]
         }
     } catch {}
 }
@@ -277,6 +254,7 @@ if (Test-Path -LiteralPath $localRelease) {
             "https://github.com/$Repo/releases/download/alpha/forgum-alpha-$targetArch-pc-windows-msvc.zip",
             "https://github.com/$Repo/releases/download/$Tag/$asset",
             "https://github.com/$Repo/releases/download/$Tag/forgum-$Version-$targetArch-pc-windows-msvc.zip",
+            "https://github.com/$Repo/releases/download/nightly/forgum-nightly-$targetArch-pc-windows-msvc.zip",
             "https://github.com/$Repo/releases/latest/download/forgum-$targetArch-pc-windows-msvc.zip"
         )
     } elseif ($Channel -eq 'nightly') {
@@ -290,6 +268,7 @@ if (Test-Path -LiteralPath $localRelease) {
             "https://github.com/$Repo/releases/download/$Tag/$asset",
             "https://github.com/$Repo/releases/download/$Tag/forgum-$Version-$targetArch-pc-windows-msvc.zip",
             "https://github.com/$Repo/releases/download/$Tag/forgum-$Tag-$targetArch-pc-windows-msvc.zip",
+            "https://github.com/$Repo/releases/download/nightly/forgum-nightly-$targetArch-pc-windows-msvc.zip",
             "https://github.com/$Repo/releases/latest/download/forgum-$targetArch-pc-windows-msvc.zip"
         )
     }

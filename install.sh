@@ -254,6 +254,10 @@ run_elevated() {
   if [ "$(id -u)" -eq 0 ]; then
     "$@"
   elif command -v sudo >/dev/null 2>&1; then
+    if [ ! -t 0 ] && ! sudo -n true 2>/dev/null; then
+      echo -e "\033[33m>> Non-interactive environment: passwordless sudo unavailable, skipping elevated command: $*\033[0m" >&2
+      return 1
+    fi
     echo -e "\033[36m>> Requesting elevated privileges (sudo) to install dependencies...\033[0m"
     sudo "$@"
   elif command -v doas >/dev/null 2>&1; then
@@ -479,7 +483,7 @@ elif command -v forgum >/dev/null 2>&1; then
   if [ "$ACTIVE_BIN" != "$BIN_PATH" ]; then
     EXISTING_PM="PATH Shadow"
     EXISTING_PATH="$ACTIVE_BIN"
-    EXISTING_UPDATE_CMD="Replace $ACTIVE_BIN"
+    EXISTING_UPDATE_CMD="rm -f \"$ACTIVE_BIN\""
   fi
 fi
 
@@ -491,17 +495,23 @@ if [ -n "$EXISTING_PM" ] && [ "$HEADLESS" -eq 0 ] && [ "$ASSUME_YES" -eq 0 ]; th
     echo -e "  • Found existing Forgum via \033[36m${EXISTING_PM}\033[0m: ${EXISTING_PATH}"
     echo ""
     echo -e "How would you like to proceed?"
-    echo -e "  \033[32m[1] Delegate to package manager (Run '${EXISTING_UPDATE_CMD}' and exit)\033[0m"
+    if [ "$EXISTING_PM" = "PATH Shadow" ]; then
+      echo -e "  \033[32m[1] Overwrite shadow binary (Remove ${EXISTING_PATH} and install to ${INSTALL_DIR})\033[0m"
+    else
+      echo -e "  \033[32m[1] Delegate to package manager (Run '${EXISTING_UPDATE_CMD}' and exit)\033[0m"
+    fi
     echo -e "  \033[36m[2] Switch to standalone channel build (Install to ${INSTALL_DIR} and update PATH)\033[0m"
     echo -e "  \033[33m[3] Clean reinstall / overwrite\033[0m"
     echo ""
     CHOICE="2"
     read -t 10 -r -p "Select option [1/2/3] (default: 2 in 10s): " USER_CHOICE || true
     CHOICE="${USER_CHOICE:-2}"
-    if [ "$CHOICE" = "1" ]; then
+    if [ "$CHOICE" = "1" ] && [ "$EXISTING_PM" != "PATH Shadow" ]; then
       echo -e "\033[32m>> Delegating update to ${EXISTING_PM}...\033[0m"
       eval "$EXISTING_UPDATE_CMD"
       exit 0
+    elif [ "$CHOICE" = "1" ] && [ "$EXISTING_PM" = "PATH Shadow" ]; then
+      eval "$EXISTING_UPDATE_CMD" || true
     fi
   else
     # Non-interactive / piped execution (curl ... | bash): automatically proceed with standalone upgrade
@@ -529,25 +539,17 @@ resolve_version() {
     fi
   fi
 
-  # Attempt raw GitHub Cargo.toml (matches repository codebase version)
-  for branch in dev main master; do
+  # Fast GitHub Cargo.toml query (capped at 2s connect, 3s max-time, IPv4)
+  if command -v curl >/dev/null 2>&1; then
     local gh_cargo
-    gh_cargo="$(curl -sSL -H "User-Agent: forgum-install" "https://raw.githubusercontent.com/${REPO}/${branch}/Cargo.toml" 2>/dev/null | grep -E '^version\s*=' | head -n1 | sed -E 's/.*"([^"]+)".*/\1/' || true)"
+    gh_cargo="$(curl -fsSL -4 --connect-timeout 2 --max-time 3 -H "User-Agent: forgum-install" "https://raw.githubusercontent.com/${REPO}/dev/Cargo.toml" 2>/dev/null | grep -E '^version\s*=' | head -n1 | sed -E 's/.*"([^"]+)".*/\1/' || true)"
     if [ -n "$gh_cargo" ]; then
       echo "$gh_cargo"
       return 0
     fi
-  done
-
-  # Attempt GitHub releases API without failing on 404
-  local gh_latest
-  gh_latest="$(curl -sSL -H "User-Agent: forgum-install" "https://api.github.com/repos/${REPO}/releases/latest" 2>/dev/null | tr ',' '\n' | grep '"tag_name"' | head -n1 | sed -E 's/.*"tag_name"[[:space:]]*:[[:space:]]*"v?([^"]+)".*/\1/' || true)"
-  if [ -n "$gh_latest" ]; then
-    echo "$gh_latest"
-    return 0
   fi
 
-  # Default fallback constant
+  # Default fallback constant (never blocks on network)
   echo "0.0.2-beta"
 }
 
@@ -596,6 +598,7 @@ else
         "https://github.com/${REPO}/releases/download/alpha/forgum-alpha-${TARGET_ARCH}-${TARGET_OS}.tar.gz"
         "https://github.com/${REPO}/releases/download/${TAG}/forgum-${VERSION}-${TARGET_ARCH}-${TARGET_OS}.tar.gz"
         "https://github.com/${REPO}/releases/download/${TAG}/forgum-${TAG}-${TARGET_ARCH}-${TARGET_OS}.tar.gz"
+        "https://github.com/${REPO}/releases/download/nightly/forgum-nightly-${TARGET_ARCH}-${TARGET_OS}.tar.gz"
         "https://github.com/${REPO}/releases/latest/download/forgum-${TARGET_ARCH}-${TARGET_OS}.tar.gz"
       )
     elif [ "$CHANNEL" = "nightly" ]; then
@@ -608,6 +611,7 @@ else
       CANDIDATE_URLS=(
         "https://github.com/${REPO}/releases/download/${TAG}/forgum-${VERSION}-${TARGET_ARCH}-${TARGET_OS}.tar.gz"
         "https://github.com/${REPO}/releases/download/${TAG}/forgum-${TAG}-${TARGET_ARCH}-${TARGET_OS}.tar.gz"
+        "https://github.com/${REPO}/releases/download/nightly/forgum-nightly-${TARGET_ARCH}-${TARGET_OS}.tar.gz"
         "https://github.com/${REPO}/releases/latest/download/forgum-${TARGET_ARCH}-${TARGET_OS}.tar.gz"
       )
     fi

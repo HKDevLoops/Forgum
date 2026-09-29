@@ -4565,10 +4565,10 @@ mod tests {
                 "{effect_name}: bubble border at (0,1) must be '(' at t=0"
             );
             assert_eq!(
-                fb1.get(0 + x_shift, 1).ch,
+                fb1.get(x_shift, 1).ch,
                 '(',
                 "{effect_name}: bubble border at ({},1) must be '(' at t=0.5",
-                0 + x_shift
+                x_shift
             );
 
             // The 'F' in "Forgum" must stay at (2, 1) and NOT be corrupted or moved
