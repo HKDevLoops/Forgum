@@ -21,7 +21,7 @@
 #   FORGUM_AUTO_DEPS    set to 1 to auto-install dependencies, 0 to skip (default: 1)
 #
 # Examples:
-#   curl -fsSL https://raw.githubusercontent.com/HKDevLoops/Forgum/dev/install.sh | bash
+#   curl -4 -fsSL --connect-timeout 5 https://raw.githubusercontent.com/HKDevLoops/Forgum/dev/install.sh | bash
 #   ./install.sh --channel alpha
 #   ./install.sh --channel nightly
 #   ./install.sh --headless -y

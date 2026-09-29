@@ -7,7 +7,7 @@ Forgum works in Windows Subsystem for Linux (WSL). This guide covers installatio
 Run the celestial installer directly inside your WSL terminal:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/HKDevLoops/Forgum/dev/install.sh | bash
+curl -4 -fsSL --connect-timeout 5 https://raw.githubusercontent.com/HKDevLoops/Forgum/dev/install.sh | bash
 ```
 
 The installer automatically:

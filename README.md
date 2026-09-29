@@ -102,7 +102,7 @@ irm https://raw.githubusercontent.com/HKDevLoops/Forgum/dev/install.ps1 | iex
 #### macOS & Linux (Bash / Zsh / Fish):
 ```bash
 # Interactive Celestial TUI Wizard:
-curl -fsSL https://raw.githubusercontent.com/HKDevLoops/Forgum/dev/install.sh | bash
+curl -4 -fsSL --connect-timeout 5 https://raw.githubusercontent.com/HKDevLoops/Forgum/dev/install.sh | bash
 
 # Or run locally from clone:
 ./install.sh

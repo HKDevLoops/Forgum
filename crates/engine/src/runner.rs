@@ -2273,7 +2273,7 @@ fn handle_update_command(check: bool, channel_flag: Option<&str>) -> ExitCode {
                  {channel_stream}\n\n\
                  Instant update commands via celestial installer scripts:\n\
                    PowerShell: irm https://raw.githubusercontent.com/HKDevLoops/Forgum/{channel_name}/install.ps1 | iex\n\
-                   Bash/Zsh:   curl -fsSL https://raw.githubusercontent.com/HKDevLoops/Forgum/{channel_name}/install.sh | bash -s -- --channel {channel_name}"
+                   Bash/Zsh:   curl -4 -fsSL --connect-timeout 5 https://raw.githubusercontent.com/HKDevLoops/Forgum/{channel_name}/install.sh | bash -s -- --channel {channel_name}"
             );
             ExitCode::SUCCESS
         }

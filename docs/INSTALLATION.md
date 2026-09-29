@@ -19,12 +19,12 @@ This manual covers all installation workflows, preflight dependency checks, pack
 
 ### Windows (PowerShell)
 ```powershell
-irm https://raw.githubusercontent.com/HKDevLoops/Forgum/main/install.ps1 | iex
+irm https://raw.githubusercontent.com/HKDevLoops/Forgum/dev/install.ps1 | iex
 ```
 
 ### Linux, macOS, and BSD (Bash)
 ```bash
-curl -fsSL https://raw.githubusercontent.com/HKDevLoops/Forgum/main/install.sh | bash
+curl -4 -fsSL --connect-timeout 5 https://raw.githubusercontent.com/HKDevLoops/Forgum/dev/install.sh | bash
 ```
 
 Both installers automatically detect your OS, CPU architecture, terminal capabilities, and package manager ecosystem.
