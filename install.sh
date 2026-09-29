@@ -418,7 +418,7 @@ ensure_build_dependencies() {
     if command -v rustup >/dev/null 2>&1; then
       rustup update stable
     else
-      curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
+      curl -4 --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
       export PATH="$HOME/.cargo/bin:$PATH"
       if [ -f "$HOME/.cargo/env" ]; then
         # shellcheck disable=SC1091
