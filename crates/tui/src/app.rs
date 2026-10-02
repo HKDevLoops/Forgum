@@ -21,6 +21,7 @@ use ratatui::Frame;
 
 use forgum_platform::protocol::{ConfigFormat, SceneConfig};
 use forgum_platform::shell::Shell;
+use forgum_platform::terminal_theme::ContrastMode;
 
 /// Tailwind CSS inspired color tokens for modern vibrant terminal styling.
 pub mod tailwind {
@@ -30,6 +31,7 @@ pub mod tailwind {
     pub const SLATE_800: Color = Color::Rgb(30, 41, 59);
     pub const SLATE_700: Color = Color::Rgb(51, 65, 85);
     pub const SLATE_600: Color = Color::Rgb(71, 85, 105);
+    pub const SLATE_500: Color = Color::Rgb(100, 116, 139);
     pub const SLATE_400: Color = Color::Rgb(148, 163, 184);
     pub const SLATE_300: Color = Color::Rgb(203, 213, 225);
     pub const SLATE_200: Color = Color::Rgb(226, 232, 240);
@@ -132,7 +134,7 @@ impl Tab {
 /// Responsive layout breakpoint inspired by modern Tailwind CSS styling.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Breakpoint {
-    /// Compact: width < 80 cols or height < 22 rows.
+    /// Compact / Narrow: width < 80 cols or height < 22 rows.
     Compact,
     /// Standard: 80..=120 cols and height >= 22 rows.
     Standard,
@@ -149,6 +151,13 @@ impl Breakpoint {
         } else {
             Breakpoint::Standard
         }
+    }
+
+    /// Whether the terminal is in a narrow / compact layout where panels should collapse
+    /// and horizontal scrolling is enabled.
+    #[must_use]
+    pub fn is_compact_or_narrow(self) -> bool {
+        matches!(self, Breakpoint::Compact)
     }
 }
 
@@ -185,6 +194,29 @@ impl Dropdown {
 
 /// Dropdown option choices for ColorMode.
 pub const COLOR_MODE_OPTIONS: &[&str] = &["natural", "animal", "rainbow", "solid", "none"];
+
+/// Dropdown option choices for Background Preset / Contrast Profile.
+pub const CONTRAST_OPTIONS: &[(&str, &str, ContrastMode)] = &[
+    ("standard", "Standard", ContrastMode::Standard),
+    (
+        "acrylic_glass",
+        "AcrylicGlass (Transparency)",
+        ContrastMode::AcrylicGlass,
+    ),
+    (
+        "high_contrast",
+        "HighContrast (Maximum Floor)",
+        ContrastMode::HighContrast,
+    ),
+    ("vibrant", "Vibrant (Chroma Boost)", ContrastMode::Vibrant),
+];
+
+pub const CONTRAST_MODE_OPTIONS: &[&str] = &[
+    "standard",
+    "acrylic_glass",
+    "high_contrast",
+    "vibrant",
+];
 
 /// Dropdown option choices for Environment.
 pub const ENVIRONMENT_OPTIONS: &[&str] = &[
@@ -405,6 +437,14 @@ pub const EFFECT_OPTIONS: &[(&str, &str)] = &[
     (
         "dissolve",
         "Ephemeral quantum dispersion fading into terminal cyberspace",
+    ),
+    (
+        "swim",
+        "Buoyant aquatic propulsion with lateral undulating waves and bubble trail",
+    ),
+    (
+        "drift",
+        "Weightless underwater marine suspension drifting along oceanic currents",
     ),
     (
         "animal_natural",
@@ -630,10 +670,11 @@ pub enum ConfigField {
     Editor = 24,
     ConfigFormat = 25,
     Random = 26,
+    ContrastMode = 27,
 }
 
 impl ConfigField {
-    pub const ALL: [ConfigField; 27] = [
+    pub const ALL: [ConfigField; 28] = [
         ConfigField::Duration,
         ConfigField::Fps,
         ConfigField::Text,
@@ -661,6 +702,7 @@ impl ConfigField {
         ConfigField::Editor,
         ConfigField::ConfigFormat,
         ConfigField::Random,
+        ConfigField::ContrastMode,
     ];
 
     pub fn label(self) -> &'static str {
@@ -692,6 +734,7 @@ impl ConfigField {
             ConfigField::Editor => "editor",
             ConfigField::ConfigFormat => "config_format",
             ConfigField::Random => "random",
+            ConfigField::ContrastMode => "contrast_mode",
         }
     }
 
@@ -724,6 +767,7 @@ impl ConfigField {
             ConfigField::Editor => "Preferred text editor: auto, nvim, vim, emacs, nano, helix, micro, code, notepad",
             ConfigField::ConfigFormat => "File serialization syntax: JSON, YAML, or TOML",
             ConfigField::Random => "Universally randomize mascot, scenery, fx, and thoughts on startup",
+            ConfigField::ContrastMode => "Background contrast profile: standard, acrylic_glass (transparency), high_contrast, vibrant",
         }
     }
 
@@ -752,7 +796,8 @@ pub struct ConfigApp {
     // FX Tab state
     pub effect_idx: usize,
     pub color_idx: usize,
-    pub fx_sub_focus: usize, // 0 = effect list, 1 = color list
+    pub contrast_idx: usize,
+    pub fx_sub_focus: usize, // 0 = effect list, 1 = color list, 2 = contrast list
 
     // Shell Installer Tab state
     pub shells: Vec<ShellInfo>,
@@ -777,6 +822,7 @@ pub struct ConfigApp {
     pub format_dropdown: Dropdown,
     pub split_mode_dropdown: Dropdown,
     pub editor_dropdown: Dropdown,
+    pub contrast_mode_dropdown: Dropdown,
 
     // Shared state
     pub saved: bool,
@@ -788,6 +834,8 @@ pub struct ConfigApp {
     /// Last known terminal size (width, height) — updated on every render call.
     /// Used by `current_breakpoint()` for out-of-render-context queries.
     pub last_terminal_size: (u16, u16),
+    /// Horizontal scroll offset (in columns) across wide lists, tables, and config panels.
+    pub h_scroll: usize,
 }
 
 /// Detect the active host terminal name from environment markers.
@@ -876,6 +924,13 @@ impl ConfigApp {
             ],
             config.editor.as_deref().unwrap_or("auto"),
         );
+        let contrast_mode_str = config.contrast_mode.as_deref().unwrap_or("standard");
+        let contrast_mode_dropdown =
+            Dropdown::new(CONTRAST_MODE_OPTIONS.to_vec(), contrast_mode_str);
+        let contrast_idx = CONTRAST_OPTIONS
+            .iter()
+            .position(|(c, _, _)| c.eq_ignore_ascii_case(contrast_mode_str))
+            .unwrap_or(0);
 
         // Find initial mascot indices
         let mut init_cat = 0;
@@ -956,6 +1011,7 @@ impl ConfigApp {
             scenery_sub_focus: 0,
             effect_idx,
             color_idx,
+            contrast_idx,
             fx_sub_focus: 0,
             shells,
             selected_shell_idx: 0,
@@ -977,6 +1033,7 @@ impl ConfigApp {
             format_dropdown,
             split_mode_dropdown,
             editor_dropdown,
+            contrast_mode_dropdown,
             saved: false,
             status_message: "Welcome to Forgum! Use <Tab> to navigate, 'i' to install shell hooks."
                 .into(),
@@ -985,6 +1042,7 @@ impl ConfigApp {
             show_editor_modal: false,
             original_edit_value: String::new(),
             last_terminal_size: (0, 0),
+            h_scroll: 0,
         };
 
         // Cache the initial cow
@@ -1152,8 +1210,38 @@ impl ConfigApp {
             ],
             self.config.editor.as_deref().unwrap_or("auto"),
         );
+        let contrast_mode_str = self.config.contrast_mode.as_deref().unwrap_or("standard");
+        self.contrast_mode_dropdown =
+            Dropdown::new(CONTRAST_MODE_OPTIONS.to_vec(), contrast_mode_str);
+        self.contrast_idx = CONTRAST_OPTIONS
+            .iter()
+            .position(|(c, _, _)| c.eq_ignore_ascii_case(contrast_mode_str))
+            .unwrap_or(0);
         self.cow_cache.clear();
         self.ensure_cow_cached(&self.config.cow.clone());
+    }
+
+    /// Return active background contrast mode.
+    #[must_use]
+    pub fn active_contrast_mode(&self) -> ContrastMode {
+        if let Some(ref mode) = self.config.contrast_mode {
+            ContrastMode::from_str_loose(mode)
+        } else if self.contrast_idx < CONTRAST_OPTIONS.len() {
+            CONTRAST_OPTIONS[self.contrast_idx].2
+        } else {
+            ContrastMode::Standard
+        }
+    }
+
+    /// Sync contrast mode dropdown and index from config.
+    pub fn sync_contrast_from_config(&mut self) {
+        let contrast_mode_str = self.config.contrast_mode.as_deref().unwrap_or("standard");
+        self.contrast_idx = CONTRAST_OPTIONS
+            .iter()
+            .position(|(c, _, _)| c.eq_ignore_ascii_case(contrast_mode_str))
+            .unwrap_or(0);
+        self.contrast_mode_dropdown =
+            Dropdown::new(CONTRAST_MODE_OPTIONS.to_vec(), contrast_mode_str);
     }
 
     /// Open the interactive modal requesting permission to open with system editor or install terminal editor.
@@ -1240,6 +1328,7 @@ impl ConfigApp {
                     KeyCode::Tab => {
                         let next = (self.current_tab as usize + 1) % Tab::ALL.len();
                         self.current_tab = Tab::ALL[next];
+                        self.h_scroll = 0;
                         self.status_message =
                             format!("Switched to {}", self.current_tab.mode_label());
                         return Ok(None);
@@ -1251,6 +1340,7 @@ impl ConfigApp {
                             self.current_tab as usize - 1
                         };
                         self.current_tab = Tab::ALL[prev];
+                        self.h_scroll = 0;
                         self.status_message =
                             format!("Switched to {}", self.current_tab.mode_label());
                         return Ok(None);
@@ -1265,30 +1355,35 @@ impl ConfigApp {
                     }
                     KeyCode::Char('1') if self.current_tab != Tab::Config => {
                         self.current_tab = Tab::Mascots;
+                        self.h_scroll = 0;
                         self.status_message =
                             format!("Switched to {}", self.current_tab.mode_label());
                         return Ok(None);
                     }
                     KeyCode::Char('2') if self.current_tab != Tab::Config => {
                         self.current_tab = Tab::Scenery;
+                        self.h_scroll = 0;
                         self.status_message =
                             format!("Switched to {}", self.current_tab.mode_label());
                         return Ok(None);
                     }
                     KeyCode::Char('3') if self.current_tab != Tab::Config => {
                         self.current_tab = Tab::Effects;
+                        self.h_scroll = 0;
                         self.status_message =
                             format!("Switched to {}", self.current_tab.mode_label());
                         return Ok(None);
                     }
                     KeyCode::Char('4') if self.current_tab != Tab::Config => {
                         self.current_tab = Tab::Installer;
+                        self.h_scroll = 0;
                         self.status_message =
                             format!("Switched to {}", self.current_tab.mode_label());
                         return Ok(None);
                     }
                     KeyCode::Char('5') if self.current_tab != Tab::Config => {
                         self.current_tab = Tab::Config;
+                        self.h_scroll = 0;
                         self.status_message =
                             format!("Switched to {}", self.current_tab.mode_label());
                         return Ok(None);
@@ -1450,8 +1545,9 @@ impl ConfigApp {
                             let chunks = Layout::default()
                                 .direction(Direction::Vertical)
                                 .constraints([
-                                    Constraint::Percentage(60),
-                                    Constraint::Percentage(40),
+                                    Constraint::Percentage(38),
+                                    Constraint::Percentage(32),
+                                    Constraint::Percentage(30),
                                 ])
                                 .split(Rect::new(0, 3, left_width, area_h));
 
@@ -1479,6 +1575,21 @@ impl ConfigApp {
                                     self.config.color_mode = col.clone();
                                     self.color_mode_dropdown =
                                         Dropdown::new(COLOR_MODE_OPTIONS.to_vec(), &col);
+                                    self.saved = false;
+                                }
+                            } else if mouse.row > chunks[2].y
+                                && mouse.row < chunks[2].y + chunks[2].height
+                            {
+                                let idx = (mouse.row - (chunks[2].y + 1)) as usize;
+                                if idx < CONTRAST_OPTIONS.len() {
+                                    self.contrast_idx = idx;
+                                    self.fx_sub_focus = 2;
+                                    let c = CONTRAST_OPTIONS[self.contrast_idx].0.to_string();
+                                    self.config.contrast_mode = Some(c.clone());
+                                    self.contrast_mode_dropdown = Dropdown::new(
+                                        CONTRAST_MODE_OPTIONS.to_vec(),
+                                        &c,
+                                    );
                                     self.saved = false;
                                 }
                             }
@@ -1552,11 +1663,16 @@ impl ConfigApp {
                         self.config.animation_type = Some(eff.clone());
                         self.animation_type_dropdown =
                             Dropdown::new(ANIMATION_TYPE_OPTIONS.to_vec(), &eff);
-                    } else {
+                    } else if self.fx_sub_focus == 1 {
                         self.color_idx = (self.color_idx + 1) % COLOR_OPTIONS.len();
                         let col = COLOR_OPTIONS[self.color_idx].0.to_string();
                         self.config.color_mode = col.clone();
                         self.color_mode_dropdown = Dropdown::new(COLOR_MODE_OPTIONS.to_vec(), &col);
+                    } else {
+                        self.contrast_idx = (self.contrast_idx + 1) % CONTRAST_OPTIONS.len();
+                        let c = CONTRAST_OPTIONS[self.contrast_idx].0.to_string();
+                        self.config.contrast_mode = Some(c.clone());
+                        self.contrast_mode_dropdown = Dropdown::new(CONTRAST_MODE_OPTIONS.to_vec(), &c);
                     }
                     self.saved = false;
                 }
@@ -1618,7 +1734,7 @@ impl ConfigApp {
                         self.config.animation_type = Some(eff.clone());
                         self.animation_type_dropdown =
                             Dropdown::new(ANIMATION_TYPE_OPTIONS.to_vec(), &eff);
-                    } else {
+                    } else if self.fx_sub_focus == 1 {
                         if self.color_idx > 0 {
                             self.color_idx -= 1;
                         } else {
@@ -1627,6 +1743,15 @@ impl ConfigApp {
                         let col = COLOR_OPTIONS[self.color_idx].0.to_string();
                         self.config.color_mode = col.clone();
                         self.color_mode_dropdown = Dropdown::new(COLOR_MODE_OPTIONS.to_vec(), &col);
+                    } else {
+                        if self.contrast_idx > 0 {
+                            self.contrast_idx -= 1;
+                        } else {
+                            self.contrast_idx = CONTRAST_OPTIONS.len().saturating_sub(1);
+                        }
+                        let c = CONTRAST_OPTIONS[self.contrast_idx].0.to_string();
+                        self.config.contrast_mode = Some(c.clone());
+                        self.contrast_mode_dropdown = Dropdown::new(CONTRAST_MODE_OPTIONS.to_vec(), &c);
                     }
                     self.saved = false;
                 }
@@ -1676,19 +1801,69 @@ impl ConfigApp {
                 }
                 self.apply_selected_mascot();
             }
-            KeyCode::Left | KeyCode::Char('h') => {
+            KeyCode::Char('[') | KeyCode::Char(',') => {
                 if self.mascot_category_idx > 0 {
                     self.mascot_category_idx -= 1;
                 } else {
                     self.mascot_category_idx = CATEGORIES.len() - 1;
                 }
                 self.mascot_item_idx = 0;
+                self.h_scroll = 0;
                 self.apply_selected_mascot();
             }
-            KeyCode::Right | KeyCode::Char('l') => {
+            KeyCode::Char(']') | KeyCode::Char('.') => {
                 self.mascot_category_idx = (self.mascot_category_idx + 1) % CATEGORIES.len();
                 self.mascot_item_idx = 0;
+                self.h_scroll = 0;
                 self.apply_selected_mascot();
+            }
+            KeyCode::Char('H') => {
+                self.h_scroll = self.h_scroll.saturating_sub(2);
+                self.status_message = format!("Horizontal scroll: column {}", self.h_scroll);
+            }
+            KeyCode::Char('L') => {
+                self.h_scroll = (self.h_scroll + 2).min(40);
+                self.status_message = format!("Horizontal scroll: column {}", self.h_scroll);
+            }
+            KeyCode::Left
+                if key.modifiers.contains(KeyModifiers::SHIFT)
+                    || key.modifiers.contains(KeyModifiers::CONTROL) =>
+            {
+                self.h_scroll = self.h_scroll.saturating_sub(2);
+                self.status_message = format!("Horizontal scroll: column {}", self.h_scroll);
+            }
+            KeyCode::Right
+                if key.modifiers.contains(KeyModifiers::SHIFT)
+                    || key.modifiers.contains(KeyModifiers::CONTROL) =>
+            {
+                self.h_scroll = (self.h_scroll + 2).min(40);
+                self.status_message = format!("Horizontal scroll: column {}", self.h_scroll);
+            }
+            KeyCode::Left | KeyCode::Char('h') => {
+                if self.current_breakpoint().is_compact_or_narrow() {
+                    self.h_scroll = self.h_scroll.saturating_sub(2);
+                    self.status_message = format!("Horizontal scroll: column {}", self.h_scroll);
+                } else {
+                    if self.mascot_category_idx > 0 {
+                        self.mascot_category_idx -= 1;
+                    } else {
+                        self.mascot_category_idx = CATEGORIES.len() - 1;
+                    }
+                    self.mascot_item_idx = 0;
+                    self.h_scroll = 0;
+                    self.apply_selected_mascot();
+                }
+            }
+            KeyCode::Right | KeyCode::Char('l') => {
+                if self.current_breakpoint().is_compact_or_narrow() {
+                    self.h_scroll = (self.h_scroll + 2).min(40);
+                    self.status_message = format!("Horizontal scroll: column {}", self.h_scroll);
+                } else {
+                    self.mascot_category_idx = (self.mascot_category_idx + 1) % CATEGORIES.len();
+                    self.mascot_item_idx = 0;
+                    self.h_scroll = 0;
+                    self.apply_selected_mascot();
+                }
             }
             KeyCode::Enter | KeyCode::Char(' ') => {
                 self.apply_selected_mascot();
@@ -1817,12 +1992,28 @@ impl ConfigApp {
 
     fn handle_effects_key(&mut self, key: KeyEvent) -> anyhow::Result<Option<Action>> {
         match key.code {
-            KeyCode::Tab
-            | KeyCode::Left
-            | KeyCode::Right
-            | KeyCode::Char('h')
-            | KeyCode::Char('l') => {
-                self.fx_sub_focus = 1 - self.fx_sub_focus;
+            KeyCode::Char('1') => {
+                self.fx_sub_focus = 0;
+            }
+            KeyCode::Char('2') => {
+                self.fx_sub_focus = 1;
+            }
+            KeyCode::Char('3') => {
+                self.fx_sub_focus = 2;
+            }
+            KeyCode::BackTab | KeyCode::Left | KeyCode::Char('h') => {
+                self.fx_sub_focus = (self.fx_sub_focus + 2) % 3;
+            }
+            KeyCode::Tab | KeyCode::Right | KeyCode::Char('l') => {
+                self.fx_sub_focus = (self.fx_sub_focus + 1) % 3;
+            }
+            KeyCode::Char('H') => {
+                self.h_scroll = self.h_scroll.saturating_sub(2);
+                self.status_message = format!("Horizontal scroll: column {}", self.h_scroll);
+            }
+            KeyCode::Char('L') => {
+                self.h_scroll = (self.h_scroll + 2).min(40);
+                self.status_message = format!("Horizontal scroll: column {}", self.h_scroll);
             }
             KeyCode::Up | KeyCode::Char('k') => {
                 if self.fx_sub_focus == 0 {
@@ -1837,7 +2028,7 @@ impl ConfigApp {
                     self.animation_type_dropdown =
                         Dropdown::new(ANIMATION_TYPE_OPTIONS.to_vec(), &eff);
                     self.saved = false;
-                } else {
+                } else if self.fx_sub_focus == 1 {
                     if self.color_idx > 0 {
                         self.color_idx -= 1;
                     } else {
@@ -1846,6 +2037,16 @@ impl ConfigApp {
                     let col = COLOR_OPTIONS[self.color_idx].0.to_string();
                     self.config.color_mode = col.clone();
                     self.color_mode_dropdown = Dropdown::new(COLOR_MODE_OPTIONS.to_vec(), &col);
+                    self.saved = false;
+                } else {
+                    if self.contrast_idx > 0 {
+                        self.contrast_idx -= 1;
+                    } else {
+                        self.contrast_idx = CONTRAST_OPTIONS.len() - 1;
+                    }
+                    let c = CONTRAST_OPTIONS[self.contrast_idx].0.to_string();
+                    self.config.contrast_mode = Some(c.clone());
+                    self.contrast_mode_dropdown = Dropdown::new(CONTRAST_MODE_OPTIONS.to_vec(), &c);
                     self.saved = false;
                 }
             }
@@ -1858,19 +2059,26 @@ impl ConfigApp {
                     self.animation_type_dropdown =
                         Dropdown::new(ANIMATION_TYPE_OPTIONS.to_vec(), &eff);
                     self.saved = false;
-                } else {
+                } else if self.fx_sub_focus == 1 {
                     self.color_idx = (self.color_idx + 1) % COLOR_OPTIONS.len();
                     let col = COLOR_OPTIONS[self.color_idx].0.to_string();
                     self.config.color_mode = col.clone();
                     self.color_mode_dropdown = Dropdown::new(COLOR_MODE_OPTIONS.to_vec(), &col);
                     self.saved = false;
+                } else {
+                    self.contrast_idx = (self.contrast_idx + 1) % CONTRAST_OPTIONS.len();
+                    let c = CONTRAST_OPTIONS[self.contrast_idx].0.to_string();
+                    self.config.contrast_mode = Some(c.clone());
+                    self.contrast_mode_dropdown = Dropdown::new(CONTRAST_MODE_OPTIONS.to_vec(), &c);
+                    self.saved = false;
                 }
             }
             KeyCode::Enter | KeyCode::Char(' ') => {
                 self.saved = false;
+                let c = CONTRAST_OPTIONS[self.contrast_idx].0;
                 self.status_message = format!(
-                    "Effect: '{}' | Color Palette: '{}'",
-                    self.config.effect, self.config.color_mode
+                    "Effect: '{}' | Color: '{}' | Contrast: '{}'",
+                    self.config.effect, self.config.color_mode, c
                 );
             }
             _ => {}
@@ -1931,6 +2139,14 @@ impl ConfigApp {
                         self.status_message = "Update check completed with warnings.".into();
                     }
                 }
+            }
+            KeyCode::Left | KeyCode::Char('h') | KeyCode::Char('H') => {
+                self.h_scroll = self.h_scroll.saturating_sub(4);
+                self.status_message = format!("Horizontal scroll: column {}", self.h_scroll);
+            }
+            KeyCode::Right | KeyCode::Char('L') => {
+                self.h_scroll = (self.h_scroll + 4).min(50);
+                self.status_message = format!("Horizontal scroll: column {}", self.h_scroll);
             }
             _ => {}
         }
@@ -2191,17 +2407,39 @@ export extern "forgum" [
                     self.cycle_config_field(true);
                 }
             }
+            KeyCode::Char('H')
+            | KeyCode::Left
+                if key.modifiers.contains(KeyModifiers::SHIFT)
+                    || key.modifiers.contains(KeyModifiers::CONTROL) =>
+            {
+                self.h_scroll = self.h_scroll.saturating_sub(4);
+                self.status_message = format!("Horizontal scroll: column {}", self.h_scroll);
+            }
+            KeyCode::Char('L')
+            | KeyCode::Right
+                if key.modifiers.contains(KeyModifiers::SHIFT)
+                    || key.modifiers.contains(KeyModifiers::CONTROL) =>
+            {
+                self.h_scroll = (self.h_scroll + 4).min(50);
+                self.status_message = format!("Horizontal scroll: column {}", self.h_scroll);
+            }
+            KeyCode::Char('h') => {
+                self.h_scroll = self.h_scroll.saturating_sub(4);
+                self.status_message = format!("Horizontal scroll: column {}", self.h_scroll);
+            }
+            KeyCode::Char('l') => {
+                self.h_scroll = (self.h_scroll + 4).min(50);
+                self.status_message = format!("Horizontal scroll: column {}", self.h_scroll);
+            }
             KeyCode::Char('+')
             | KeyCode::Char('=')
             | KeyCode::Right
-            | KeyCode::Char('l')
             | KeyCode::Char(']') => {
                 self.cycle_config_field(true);
             }
             KeyCode::Char('-')
             | KeyCode::Char('_')
             | KeyCode::Left
-            | KeyCode::Char('h')
             | KeyCode::Char('[') => {
                 self.cycle_config_field(false);
             }
@@ -2926,6 +3164,17 @@ export extern "forgum" [
                         .as_ref()
                         .map(|r| r.to_string())
                         .unwrap_or_else(|| "disabled".into())
+                );
+            }
+            ConfigField::ContrastMode => {
+                self.contrast_mode_dropdown.cycle(forward);
+                let current = self.contrast_mode_dropdown.current();
+                self.config.contrast_mode = Some(current.clone());
+                self.sync_contrast_from_config();
+                self.saved = false;
+                self.status_message = format!(
+                    "Terminal background contrast profile switched to {}",
+                    current
                 );
             }
         }
@@ -3882,10 +4131,36 @@ export extern "forgum" [
     fn render_installer_workspace(&self, f: &mut Frame, area: Rect) {
         let width = area.width;
         let height = area.height;
+        let bp = Breakpoint::from_size(width, height);
 
-        let left_width = if width < 80 {
-            (width * 38 / 100).max(28).min(width.saturating_sub(30))
-        } else if width <= 130 {
+        if bp == Breakpoint::Compact || width < 90 {
+            // Adaptive Stacked Layout for Compact / Narrow screens (< 90 cols):
+            // Shells & Package Managers on top; Hero diagnostics and action log below.
+            let top_h = (height * 42 / 100).clamp(8, 14);
+            let bot_h = height.saturating_sub(top_h);
+            let stack = Layout::default()
+                .direction(Direction::Vertical)
+                .constraints([Constraint::Length(top_h), Constraint::Length(bot_h)])
+                .split(area);
+
+            let top_split = Layout::default()
+                .direction(Direction::Horizontal)
+                .constraints([Constraint::Percentage(55), Constraint::Percentage(45)])
+                .split(stack[0]);
+            self.render_installer_list(f, top_split[0]);
+            self.render_package_managers_card(f, top_split[1]);
+
+            let bot_log_h = if bot_h < 12 { 4 } else { 6 };
+            let bot_split = Layout::default()
+                .direction(Direction::Vertical)
+                .constraints([Constraint::Min(6), Constraint::Length(bot_log_h)])
+                .split(stack[1]);
+            self.render_installer_hero_card(f, bot_split[0]);
+            self.render_installer_log_card(f, bot_split[1]);
+            return;
+        }
+
+        let left_width = if width <= 130 {
             (width * 30 / 100).clamp(32, 44)
         } else {
             (width * 25 / 100).clamp(34, 50)
@@ -4294,7 +4569,28 @@ export extern "forgum" [
             .enumerate()
             .map(|(i, &cow)| {
                 let is_sel = i == self.mascot_item_idx;
-                let prefix = if is_sel { "▶ " } else { "  " };
+                let prefix = if is_sel {
+                    if self.h_scroll > 0 {
+                        "◀▶ "
+                    } else {
+                        "▶ "
+                    }
+                } else if self.h_scroll > 0 {
+                    "◀  "
+                } else {
+                    "  "
+                };
+                let display_cow: String = if self.h_scroll > 0 {
+                    let scrolled: String = cow.chars().skip(self.h_scroll).collect();
+                    if scrolled.is_empty() {
+                        "…".to_string()
+                    } else {
+                        scrolled
+                    }
+                } else {
+                    cow.to_string()
+                };
+
                 let style = if is_sel {
                     Style::default()
                         .fg(Color::Yellow)
@@ -4304,16 +4600,22 @@ export extern "forgum" [
                 };
                 ListItem::new(Line::from(vec![
                     Span::styled(prefix, Style::default().fg(Color::Cyan)),
-                    Span::styled(cow, style),
+                    Span::styled(display_cow, style),
                 ]))
             })
             .collect();
 
+        let scroll_badge = if self.h_scroll > 0 {
+            format!(" [◀+{}]", self.h_scroll)
+        } else {
+            String::new()
+        };
         let title = format!(
-            " Mascots: {} ({}/{}) ",
+            " Mascots: {} ({}/{}){} ",
             current_category.0,
             self.mascot_category_idx + 1,
-            CATEGORIES.len()
+            CATEGORIES.len(),
+            scroll_badge
         );
 
         let visible_rows = (area.height.saturating_sub(2) as usize).max(1);
@@ -4467,8 +4769,14 @@ export extern "forgum" [
     fn render_effects_list(&self, f: &mut Frame, area: Rect) {
         let chunks = Layout::default()
             .direction(Direction::Vertical)
-            .constraints([Constraint::Percentage(60), Constraint::Percentage(40)])
+            .constraints([
+                Constraint::Percentage(38),
+                Constraint::Percentage(32),
+                Constraint::Percentage(30),
+            ])
             .split(area);
+
+        let native_biome = forgum_platform::biome::get_mascot_biome(&self.config.cow);
 
         // Kinematics Effects
         let effect_items: Vec<ListItem> = EFFECT_OPTIONS
@@ -4478,18 +4786,33 @@ export extern "forgum" [
                 let is_sel = i == self.effect_idx;
                 let is_focused = self.fx_sub_focus == 0;
                 let prefix = if is_sel { "▶ " } else { "  " };
+                let is_compatible = native_biome.is_effect_compatible(name);
+                let badge = if is_compatible {
+                    Span::styled(" [✓ native]", Style::default().fg(tailwind::EMERALD_400))
+                } else if native_biome.is_aquatic() && *name == "walk" {
+                    Span::styled(" [✗ land only]", Style::default().fg(Color::DarkGray))
+                } else if native_biome.is_aquatic() {
+                    Span::styled(" [✗ non-aquatic]", Style::default().fg(Color::DarkGray))
+                } else if *name == "swim" || *name == "drift" {
+                    Span::styled(" [✗ water only]", Style::default().fg(Color::DarkGray))
+                } else {
+                    Span::styled(" [✗ non-native]", Style::default().fg(Color::DarkGray))
+                };
                 let style = if is_sel && is_focused {
                     Style::default()
                         .fg(Color::Yellow)
                         .add_modifier(Modifier::BOLD)
                 } else if is_sel {
                     Style::default().fg(Color::Green)
+                } else if !is_compatible {
+                    Style::default().fg(Color::DarkGray)
                 } else {
                     Style::default().fg(Color::White)
                 };
                 ListItem::new(Line::from(vec![
                     Span::styled(prefix, Style::default().fg(Color::Cyan)),
                     Span::styled(*name, style),
+                    badge,
                 ]))
             })
             .collect();
@@ -4511,6 +4834,11 @@ export extern "forgum" [
             Block::default()
                 .borders(Borders::ALL)
                 .border_type(BorderType::Rounded)
+                .border_style(if self.fx_sub_focus == 0 {
+                    Style::default().fg(tailwind::AMBER_400)
+                } else {
+                    Style::default().fg(tailwind::SLATE_600)
+                })
                 .title(effects_title),
         );
         f.render_widget(effect_list, chunks[0]);
@@ -4556,9 +4884,76 @@ export extern "forgum" [
             Block::default()
                 .borders(Borders::ALL)
                 .border_type(BorderType::Rounded)
+                .border_style(if self.fx_sub_focus == 1 {
+                    Style::default().fg(tailwind::AMBER_400)
+                } else {
+                    Style::default().fg(tailwind::SLATE_600)
+                })
                 .title(colors_title),
         );
         f.render_widget(color_list, chunks[1]);
+
+        // Background Contrast Profile
+        let contrast_items: Vec<ListItem> = CONTRAST_OPTIONS
+            .iter()
+            .enumerate()
+            .map(|(i, (name, _desc, _))| {
+                let is_sel = i == self.contrast_idx;
+                let is_focused = self.fx_sub_focus == 2;
+                let prefix = if is_sel { "▶ " } else { "  " };
+                let style = if is_sel && is_focused {
+                    Style::default()
+                        .fg(tailwind::AMBER_400)
+                        .add_modifier(Modifier::BOLD)
+                } else if is_sel {
+                    Style::default().fg(tailwind::EMERALD_400)
+                } else {
+                    Style::default().fg(Color::White)
+                };
+                let badge = match *name {
+                    "acrylic_glass" => " 🪟 GLASS",
+                    "high_contrast" => " ☀️ HIGH",
+                    "vibrant" => " 🌈 VIVID",
+                    _ => " ⚪ STD",
+                };
+                ListItem::new(Line::from(vec![
+                    Span::styled(prefix, Style::default().fg(Color::Cyan)),
+                    Span::styled(*name, style),
+                    Span::styled(
+                        badge,
+                        Style::default()
+                            .fg(tailwind::SKY_400)
+                            .add_modifier(Modifier::BOLD),
+                    ),
+                ]))
+            })
+            .collect();
+
+        let visible_rows_contrast = (chunks[2].height.saturating_sub(2) as usize).max(1);
+        let start_contrast = if self.contrast_idx >= visible_rows_contrast {
+            self.contrast_idx + 1 - visible_rows_contrast
+        } else {
+            0
+        };
+        let visible_contrast_items: Vec<ListItem> = contrast_items
+            .into_iter()
+            .skip(start_contrast)
+            .take(visible_rows_contrast)
+            .collect();
+
+        let contrast_title = format!(" Contrast Profile ({}) ", CONTRAST_OPTIONS.len());
+        let contrast_list = List::new(visible_contrast_items).block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_type(BorderType::Rounded)
+                .border_style(if self.fx_sub_focus == 2 {
+                    Style::default().fg(tailwind::AMBER_400)
+                } else {
+                    Style::default().fg(tailwind::SLATE_600)
+                })
+                .title(contrast_title),
+        );
+        f.render_widget(contrast_list, chunks[2]);
     }
 
     fn render_installer_list(&self, f: &mut Frame, area: Rect) {
@@ -4843,6 +5238,22 @@ export extern "forgum" [
                     format!("{} (Space/Enter to cycle)", l.join(", "))
                 }
             },
+            ConfigField::ContrastMode => {
+                let cur = self
+                    .config
+                    .contrast_mode
+                    .clone()
+                    .unwrap_or_else(|| "standard".to_string());
+                let desc = match cur.as_str() {
+                    "acrylic_glass" | "glass" => {
+                        " (elevated min luminance, boosted saturation, bold)"
+                    }
+                    "high_contrast" => " (maximum luminance floor, vivid saturation, bold)",
+                    "vibrant" => " (boosted saturation)",
+                    _ => " (default terminal colors)",
+                };
+                format!("{}{} (←/→ cycle)", cur, desc)
+            }
         }
     }
 
@@ -4857,7 +5268,17 @@ export extern "forgum" [
             .enumerate()
             .map(|(i, field)| {
                 let is_sel = i == self.config_field_idx;
-                let prefix = if is_sel { "▶ " } else { "  " };
+                let prefix = if is_sel {
+                    if self.h_scroll > 0 {
+                        "◀▶ "
+                    } else {
+                        "▶ "
+                    }
+                } else if self.h_scroll > 0 {
+                    "◀  "
+                } else {
+                    "  "
+                };
                 let val_str = self.field_value(*field, is_sel);
 
                 let (label_style, line_style) = if is_sel {
@@ -4889,20 +5310,47 @@ export extern "forgum" [
                     tailwind::SLATE_600
                 };
 
-                ListItem::new(Line::from(vec![
-                    Span::styled(prefix, Style::default().fg(prefix_color)),
-                    Span::styled(
-                        format!("{:<width$}", field.label(), width = label_width),
-                        label_style,
-                    ),
-                    Span::styled(val_str, Style::default().fg(val_color)),
-                ]))
-                .style(line_style)
+                let spans = if self.h_scroll == 0 {
+                    vec![
+                        Span::styled(prefix, Style::default().fg(prefix_color)),
+                        Span::styled(
+                            format!("{:<width$}", field.label(), width = label_width),
+                            label_style,
+                        ),
+                        Span::styled(val_str, Style::default().fg(val_color)),
+                    ]
+                } else if self.h_scroll < label_width {
+                    let formatted_label = format!("{:<width$}", field.label(), width = label_width);
+                    let label_part: String = formatted_label.chars().skip(self.h_scroll).collect();
+                    vec![
+                        Span::styled(prefix, Style::default().fg(prefix_color)),
+                        Span::styled(label_part, label_style),
+                        Span::styled(val_str, Style::default().fg(val_color)),
+                    ]
+                } else {
+                    let skip_val = self.h_scroll - label_width;
+                    let scrolled_val: String = val_str.chars().skip(skip_val).collect();
+                    let display_val = if scrolled_val.is_empty() {
+                        "…".to_string()
+                    } else {
+                        scrolled_val
+                    };
+                    vec![
+                        Span::styled(prefix, Style::default().fg(prefix_color)),
+                        Span::styled(display_val, Style::default().fg(val_color)),
+                    ]
+                };
+
+                ListItem::new(Line::from(spans)).style(line_style)
             })
             .collect();
 
-        // Compact: no border overhead (saves 2 rows for usable items).
-        let border_overhead: u16 = if bp == Breakpoint::Compact { 0 } else { 2 };
+        // Compact: if height is very small (< 8), strip borders to maximize visible items.
+        let border_overhead: u16 = if bp == Breakpoint::Compact && area.height < 8 {
+            0
+        } else {
+            2
+        };
         let visible_rows_config = (area.height.saturating_sub(border_overhead) as usize).max(1);
         let start_config = if self.config_field_idx >= visible_rows_config {
             self.config_field_idx + 1 - visible_rows_config
@@ -4915,19 +5363,26 @@ export extern "forgum" [
             .take(visible_rows_config)
             .collect();
 
-        if bp == Breakpoint::Compact {
-            // ── Compact: borderless list, maximum rows visible ────────────────
+        let scroll_badge = if self.h_scroll > 0 {
+            format!(" [◀+{}]", self.h_scroll)
+        } else {
+            String::new()
+        };
+        let config_title = format!(" ⚙️ Configuration Matrix (100% Parity){} ", scroll_badge);
+
+        if border_overhead == 0 {
+            // ── Ultra-compact: borderless list, maximum rows visible ──────────
             let list = List::new(visible_config_items);
             f.render_widget(list, area);
         } else {
-            // ── Standard / Wide: full rounded-border layout ───────────────────
+            // ── Standard / Wide: full rounded-border layout with scroll badge ──
             let list = List::new(visible_config_items).block(
                 Block::default()
                     .borders(Borders::ALL)
                     .border_type(BorderType::Rounded)
                     .border_style(Style::default().fg(tailwind::INDIGO_500))
                     .title(Span::styled(
-                        " ⚙️ Configuration Matrix (100% Parity) ",
+                        config_title,
                         Style::default()
                             .fg(tailwind::SKY_400)
                             .add_modifier(Modifier::BOLD),
@@ -5032,6 +5487,7 @@ export extern "forgum" [
         let quantized_t = Self::quantize_time(self.animation_time, self.config.fps);
         let (t, progress_fraction) = Self::cycle_duration_time(quantized_t, self.config.duration);
         let elapsed_display = t;
+        let contrast = self.active_contrast_mode();
 
         let cow_art = self
             .cow_cache
@@ -5097,9 +5553,10 @@ export extern "forgum" [
                 let m_chars: Vec<char> = mountain_layer.chars().collect();
                 let m_start = (t * 1.5) as usize % m_chars.len();
                 let m_slice: String = m_chars.iter().cycle().skip(m_start).take(30).collect();
+                let (mr, mg, mb) = contrast.adjust_rgb(110, 110, 110);
                 lines.push(Line::from(Span::styled(
                     format!("  {m_slice}"),
-                    Style::default().fg(Color::DarkGray),
+                    Style::default().fg(Color::Rgb(mr, mg, mb)),
                 )));
             }
 
@@ -5127,15 +5584,16 @@ export extern "forgum" [
                     .skip(tree_start)
                     .take(30)
                     .collect();
-                let tree_color = match env_style {
-                    "savanna" => Color::Rgb(139, 195, 74),
-                    "arctic" => Color::Rgb(224, 247, 250),
-                    "graveyard" => Color::Rgb(97, 97, 97),
-                    _ => Color::Rgb(76, 175, 80),
+                let (tr, tg, tb) = match env_style {
+                    "savanna" => (139, 195, 74),
+                    "arctic" => (224, 247, 250),
+                    "graveyard" => (97, 97, 97),
+                    _ => (76, 175, 80),
                 };
+                let (atr, atg, atb) = contrast.adjust_rgb(tr, tg, tb);
                 lines.push(Line::from(Span::styled(
                     format!("  {tree_slice}"),
-                    Style::default().fg(tree_color),
+                    Style::default().fg(Color::Rgb(atr, atg, atb)),
                 )));
             }
         }
@@ -5423,32 +5881,38 @@ export extern "forgum" [
                     .last()
                     .map(|(idx, _)| idx);
 
+                let (conn_r, conn_g, conn_b) = contrast.adjust_rgb(180, 230, 255);
+                let mut conn_style = Style::default().fg(Color::Rgb(conn_r, conn_g, conn_b));
+                if contrast.requires_bold() {
+                    conn_style = conn_style.add_modifier(Modifier::BOLD);
+                }
+
+                let (bord_r, bord_g, bord_b) = contrast.adjust_rgb(215, 225, 240);
+                let mut bord_style = Style::default().fg(Color::Rgb(bord_r, bord_g, bord_b));
+                if contrast.requires_bold() {
+                    bord_style = bord_style.add_modifier(Modifier::BOLD);
+                }
+
+                let (txt_r, txt_g, txt_b) = contrast.adjust_rgb(255, 255, 255);
+                let txt_style = Style::default()
+                    .fg(Color::Rgb(txt_r, txt_g, txt_b))
+                    .add_modifier(Modifier::BOLD);
+
                 let mut spans = Vec::new();
                 spans.push(Span::raw("  "));
                 for (col_idx, ch) in l.chars().enumerate() {
                     if ch == ' ' {
                         spans.push(Span::raw(" "));
                     } else if is_connector_line {
-                        spans.push(Span::styled(
-                            ch.to_string(),
-                            Style::default().fg(Color::Rgb(180, 230, 255)),
-                        ));
+                        spans.push(Span::styled(ch.to_string(), conn_style));
                     } else if is_border_line
                         || Some(col_idx) == first_non_space
                         || Some(col_idx) == last_non_space
                     {
-                        spans.push(Span::styled(
-                            ch.to_string(),
-                            Style::default().fg(Color::Rgb(215, 225, 240)),
-                        ));
+                        spans.push(Span::styled(ch.to_string(), bord_style));
                     } else {
-                        // All inner characters of the thought or speech bubble message: 100% crystal clear bright white
-                        spans.push(Span::styled(
-                            ch.to_string(),
-                            Style::default()
-                                .fg(Color::Rgb(255, 255, 255))
-                                .add_modifier(Modifier::BOLD),
-                        ));
+                        // All inner characters of the thought or speech bubble message
+                        spans.push(Span::styled(ch.to_string(), txt_style));
                     }
                 }
                 lines.push(Line::from(spans));
@@ -5466,23 +5930,38 @@ export extern "forgum" [
                             spans.push(Span::raw(" "));
                         } else {
                             let (r, g, b) = Self::natural_creature_color(p, x, animal_rel_y, ch);
-                            spans.push(Span::styled(
-                                ch.to_string(),
-                                Style::default().fg(Color::Rgb(r, g, b)),
-                            ));
+                            let (cr, cg, cb) = contrast.adjust_rgb(r, g, b);
+                            let mut style = Style::default().fg(Color::Rgb(cr, cg, cb));
+                            if contrast.requires_bold() {
+                                style = style.add_modifier(Modifier::BOLD);
+                            }
+                            spans.push(Span::styled(ch.to_string(), style));
                         }
                     }
                     if !sparkle.is_empty() {
-                        spans.push(Span::styled(
-                            sparkle.to_string(),
-                            Style::default().fg(Color::Yellow),
-                        ));
+                        let (sr, sg, sb) = contrast.adjust_rgb(255, 235, 59);
+                        let mut s_style = Style::default().fg(Color::Rgb(sr, sg, sb));
+                        if contrast.requires_bold() {
+                            s_style = s_style.add_modifier(Modifier::BOLD);
+                        }
+                        spans.push(Span::styled(sparkle.to_string(), s_style));
                     }
                     lines.push(Line::from(spans));
                 } else {
+                    let adj_color = match color {
+                        Color::Rgb(r, g, b) => {
+                            let (cr, cg, cb) = contrast.adjust_rgb(r, g, b);
+                            Color::Rgb(cr, cg, cb)
+                        }
+                        c => c,
+                    };
+                    let mut style = Style::default().fg(adj_color);
+                    if contrast.requires_bold() {
+                        style = style.add_modifier(Modifier::BOLD);
+                    }
                     lines.push(Line::from(Span::styled(
                         format!("  {l}{sparkle}"),
-                        Style::default().fg(color),
+                        style,
                     )));
                 }
             }
@@ -5514,17 +5993,22 @@ export extern "forgum" [
                 let g_chars: Vec<char> = ground_pattern.chars().collect();
                 let g_start = (t * 8.0) as usize % g_chars.len();
                 let g_slice: String = g_chars.iter().cycle().skip(g_start).take(32).collect();
+                let (gr, gg, gb) = contrast.adjust_rgb(115, 115, 115);
                 lines.push(Line::from(Span::styled(
                     format!("  {g_slice}"),
-                    Style::default().fg(Color::DarkGray),
+                    Style::default().fg(Color::Rgb(gr, gg, gb)),
                 )));
             }
         }
 
         let env_name = self.config.environment.as_deref().unwrap_or("pasture");
         let title = format!(
-            " 🐮 Live {} FPS Canvas: {} [{}] [{}] ",
-            self.config.fps, self.config.cow, env_name, self.config.effect
+            " 🐮 Live {} FPS Canvas: {} [{}] [{}] [{}] ",
+            self.config.fps,
+            self.config.cow,
+            env_name,
+            self.config.effect,
+            contrast.display_name(),
         );
 
         let p = Paragraph::new(lines).block(
@@ -5733,14 +6217,24 @@ export extern "forgum" [
             Tab::Effects => {
                 let ef_desc = EFFECT_OPTIONS[self.effect_idx].1;
                 let cl_desc = COLOR_OPTIONS[self.color_idx].1;
-                let text = format!("Kinematics: {ef_desc}\nPalette: {cl_desc}");
+                let ct_desc = CONTRAST_OPTIONS[self.contrast_idx].1;
+                let ct_mode = self.active_contrast_mode();
+                let text = format!(
+                    "Kinematics: {}\nPalette: {}\nContrast: {} (Min Lum: {}, Sat: {:.1}x, Bold: {})",
+                    ef_desc,
+                    cl_desc,
+                    ct_desc,
+                    ct_mode.min_luminance_floor(),
+                    ct_mode.saturation_factor(),
+                    if ct_mode.requires_bold() { "Yes" } else { "No" },
+                );
                 let p = Paragraph::new(text).wrap(Wrap { trim: true }).block(
                     Block::default()
                         .borders(Borders::ALL)
                         .border_type(BorderType::Rounded)
                         .border_style(Style::default().fg(tailwind::INDIGO_400))
                         .title(Span::styled(
-                            " ✨ Dynamics & Rendering ",
+                            " ✨ Dynamics, Colors & Contrast Profile ",
                             Style::default()
                                 .fg(tailwind::VIOLET_400)
                                 .add_modifier(Modifier::BOLD),
@@ -6841,5 +7335,164 @@ mod tests {
         let (cycle_inf, frac_inf) = ConfigApp::cycle_duration_time(12.34, 0);
         assert!((cycle_inf - 12.34).abs() < 1e-4);
         assert_eq!(frac_inf, 1.0);
+    }
+
+    #[test]
+    fn test_horizontal_scrolling_mascots_list() {
+        let mut app = ConfigApp::new(None, None, Some(Tab::Mascots));
+        app.last_terminal_size = (75, 24); // Narrow / compact terminal
+        assert!(app.current_breakpoint().is_compact_or_narrow());
+        assert_eq!(app.h_scroll, 0);
+
+        // 'l' or Right in narrow mode increases h_scroll
+        app.handle_event(Event::Key(KeyEvent::new(KeyCode::Char('l'), KeyModifiers::NONE)))
+            .unwrap();
+        assert_eq!(app.h_scroll, 2);
+
+        app.handle_event(Event::Key(KeyEvent::new(KeyCode::Right, KeyModifiers::NONE)))
+            .unwrap();
+        assert_eq!(app.h_scroll, 4);
+
+        // 'h' or Left in narrow mode decreases h_scroll
+        app.handle_event(Event::Key(KeyEvent::new(KeyCode::Char('h'), KeyModifiers::NONE)))
+            .unwrap();
+        assert_eq!(app.h_scroll, 2);
+
+        app.handle_event(Event::Key(KeyEvent::new(KeyCode::Left, KeyModifiers::NONE)))
+            .unwrap();
+        assert_eq!(app.h_scroll, 0);
+
+        // Clamps at 0, no underflow
+        app.handle_event(Event::Key(KeyEvent::new(KeyCode::Left, KeyModifiers::NONE)))
+            .unwrap();
+        assert_eq!(app.h_scroll, 0);
+
+        // Shift+Right or 'L' scrolls regardless of breakpoint
+        app.last_terminal_size = (120, 30);
+        assert_eq!(app.current_breakpoint(), Breakpoint::Standard);
+        app.handle_event(Event::Key(KeyEvent::new(KeyCode::Char('L'), KeyModifiers::NONE)))
+            .unwrap();
+        assert_eq!(app.h_scroll, 2);
+
+        app.handle_event(Event::Key(KeyEvent::new(KeyCode::Right, KeyModifiers::SHIFT)))
+            .unwrap();
+        assert_eq!(app.h_scroll, 4);
+
+        // Category cycling via '[' and ']' resets h_scroll
+        let cat_before = app.mascot_category_idx;
+        app.handle_event(Event::Key(KeyEvent::new(KeyCode::Char(']'), KeyModifiers::NONE)))
+            .unwrap();
+        assert_eq!(app.mascot_category_idx, (cat_before + 1) % CATEGORIES.len());
+        assert_eq!(app.h_scroll, 0);
+    }
+
+    #[test]
+    fn test_horizontal_scrolling_config_panel() {
+        let mut app = ConfigApp::new(None, None, Some(Tab::Config));
+        assert_eq!(app.h_scroll, 0);
+
+        // 'l' scrolls right by 4
+        app.handle_event(Event::Key(KeyEvent::new(KeyCode::Char('l'), KeyModifiers::NONE)))
+            .unwrap();
+        assert_eq!(app.h_scroll, 4);
+
+        // 'h' scrolls left by 4
+        app.handle_event(Event::Key(KeyEvent::new(KeyCode::Char('h'), KeyModifiers::NONE)))
+            .unwrap();
+        assert_eq!(app.h_scroll, 0);
+
+        // Shift+Right scrolls right
+        app.handle_event(Event::Key(KeyEvent::new(KeyCode::Right, KeyModifiers::SHIFT)))
+            .unwrap();
+        assert_eq!(app.h_scroll, 4);
+
+        // Tab switch resets h_scroll
+        app.handle_event(Event::Key(KeyEvent::new(KeyCode::Tab, KeyModifiers::NONE)))
+            .unwrap();
+        assert_eq!(app.h_scroll, 0);
+    }
+
+    #[test]
+    fn test_adaptive_breakpoint_collapse_threshold_80_cols() {
+        let compact = Breakpoint::from_size(79, 24);
+        assert_eq!(compact, Breakpoint::Compact);
+        assert!(compact.is_compact_or_narrow());
+
+        let standard = Breakpoint::from_size(80, 24);
+        assert_eq!(standard, Breakpoint::Standard);
+        assert!(!standard.is_compact_or_narrow());
+
+        let wide = Breakpoint::from_size(140, 24);
+        assert_eq!(wide, Breakpoint::Wide);
+        assert!(!wide.is_compact_or_narrow());
+    }
+
+    #[test]
+    fn test_contrast_profile_cycling_and_sync_between_tabs() {
+        let mut app = ConfigApp::new(None, None, Some(Tab::Effects));
+        app.fx_sub_focus = 2; // Focus Contrast Profile
+
+        // Initial contrast mode defaults to standard
+        assert_eq!(app.active_contrast_mode(), ContrastMode::Standard);
+
+        // Cycle down in Tab::Effects
+        app.handle_event(Event::Key(KeyEvent::new(KeyCode::Char('j'), KeyModifiers::NONE)))
+            .unwrap();
+        assert_eq!(app.active_contrast_mode(), ContrastMode::AcrylicGlass);
+        assert_eq!(app.config.contrast_mode.as_deref(), Some("acrylic_glass"));
+        assert_eq!(app.contrast_mode_dropdown.current(), "acrylic_glass");
+
+        // Cycle down again -> HighContrast
+        app.handle_event(Event::Key(KeyEvent::new(KeyCode::Char('j'), KeyModifiers::NONE)))
+            .unwrap();
+        assert_eq!(app.active_contrast_mode(), ContrastMode::HighContrast);
+        assert_eq!(app.config.contrast_mode.as_deref(), Some("high_contrast"));
+
+        // Switch to Config tab (Tab 5)
+        app.current_tab = Tab::Config;
+        app.config_field_idx = ConfigField::ContrastMode as usize;
+
+        // Check field_value renders descriptive text
+        let val = app.field_value(ConfigField::ContrastMode, true);
+        assert!(val.contains("high_contrast"));
+        assert!(val.contains("maximum luminance floor"));
+
+        // Cycle field in Config tab using Right arrow
+        app.handle_event(Event::Key(KeyEvent::new(KeyCode::Right, KeyModifiers::NONE)))
+            .unwrap();
+        assert_eq!(app.active_contrast_mode(), ContrastMode::Vibrant);
+        assert_eq!(app.contrast_idx, 3); // Syncs back to contrast_idx for Tab 3
+    }
+
+    #[test]
+    fn test_contrast_mode_acrylic_glass_luminance_and_bold_properties() {
+        let acrylic = ContrastMode::AcrylicGlass;
+        assert!(acrylic.min_luminance_floor() >= 120.0);
+        assert!(acrylic.saturation_factor() > 1.0);
+        assert!(acrylic.requires_bold());
+
+        // Test adjust_rgb lifts dark colors above the luminance floor
+        let dark = (30, 30, 30);
+        let adjusted = acrylic.adjust_rgb(dark.0, dark.1, dark.2);
+        let lum = 0.299 * adjusted.0 as f32 + 0.587 * adjusted.1 as f32 + 0.114 * adjusted.2 as f32;
+        assert!(lum >= acrylic.min_luminance_floor() - 1.0);
+
+        // Test standard mode preserves original values
+        let std_mode = ContrastMode::Standard;
+        assert_eq!(std_mode.adjust_rgb(50, 60, 70), (50, 60, 70));
+        assert!(!std_mode.requires_bold());
+    }
+
+    #[test]
+    fn test_layout_resilience_down_to_extreme_tiny_dimensions() {
+        let mut app = ConfigApp::new(None, None, Some(Tab::Installer));
+        // Verify no panics at 20x5 terminal size
+        let backend = ratatui::backend::TestBackend::new(20, 5);
+        let mut terminal = ratatui::Terminal::new(backend).unwrap();
+
+        for tab in Tab::ALL {
+            app.current_tab = tab;
+            terminal.draw(|f| app.render(f)).unwrap();
+        }
     }
 }

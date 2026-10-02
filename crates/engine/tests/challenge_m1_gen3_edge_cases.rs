@@ -664,7 +664,12 @@ fn test_standalone_embedded_catalog_integrity() {
     for mascot in all_mascots {
         assert!(synthesized.contains_key(mascot.name));
         let dna = &synthesized[mascot.name];
-        assert_eq!(dna.base, BaseAnim::Walk);
+        let expected_base = if mascot.is_aquatic() {
+            BaseAnim::Float
+        } else {
+            BaseAnim::Walk
+        };
+        assert_eq!(dna.base, expected_base);
         assert_eq!(dna.palette, mascot.natural_palette);
     }
 }

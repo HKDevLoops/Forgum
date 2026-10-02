@@ -127,6 +127,10 @@ pub struct SceneConfig {
     /// Universal random mode setting: randomize mascots, scenery, fx, static/dynamic animations, and thoughts on startup.
     #[serde(default)]
     pub random: Option<RandomSetting>,
+
+    /// Background contrast profile: "standard", "acrylic_glass", "high_contrast", "vibrant".
+    #[serde(default)]
+    pub contrast_mode: Option<String>,
 }
 
 /// Universal random configuration setting.
@@ -389,6 +393,7 @@ impl Default for SceneConfig {
             split_mode: None,
             editor: None,
             random: None,
+            contrast_mode: None,
         }
     }
 }
@@ -508,6 +513,7 @@ mod tests {
             split_mode: Some("decstbm".into()),
             editor: Some("nvim".into()),
             random: Some(RandomSetting::Bool(true)),
+            contrast_mode: Some("acrylic_glass".into()),
         };
 
         for format in [ConfigFormat::Json, ConfigFormat::Yaml, ConfigFormat::Toml] {
@@ -518,6 +524,17 @@ mod tests {
                 .expect("deserialization succeeds");
             assert_eq!(full, deserialized, "Mismatch for format {:?}", format);
         }
+    }
+
+    #[test]
+    fn contrast_mode_deserialization_and_roundtrip() {
+        let json = r#"{"contrast_mode":"acrylic_glass"}"#;
+        let s: SceneConfig = serde_json::from_str(json).unwrap();
+        assert_eq!(s.contrast_mode.as_deref(), Some("acrylic_glass"));
+
+        let toml_str = "contrast_mode = \"high_contrast\"\n";
+        let s_toml = SceneConfig::parse_with_format(toml_str, ConfigFormat::Toml).unwrap();
+        assert_eq!(s_toml.contrast_mode.as_deref(), Some("high_contrast"));
     }
 
     #[test]

@@ -2876,6 +2876,19 @@ pub fn resolve_scene_randomness(
         }
     }
 
+    // Ensure aquatic mascots never receive incompatible "walk" locomotion from randomness
+    let is_aquatic = forgum_platform::biome::get_mascot_biome(&scene.cow).is_aquatic();
+    if is_aquatic
+        && (scene.effect.eq_ignore_ascii_case("walk")
+            || scene
+                .animation_type
+                .as_deref()
+                .is_some_and(|a| a.eq_ignore_ascii_case("walk")))
+    {
+        scene.effect = "swim".to_string();
+        scene.animation_type = Some("swim".to_string());
+    }
+
     // ── 4. THOUGHT / TEXT ────────────────────────────────────────────────
     let should_randomize_thought = scene.text.trim().is_empty()
         || scene.text.trim().eq_ignore_ascii_case("random")
@@ -3458,6 +3471,25 @@ fn run_daemon_child(args: cli::Args) -> ExitCode {
             cow_dna.palette = natural_hexes.iter().map(|&s| s.to_string()).collect();
         }
     }
+
+    // Validate mascot taxonomy locomotion consistency
+    let is_aquatic = cow_dna.is_aquatic()
+        || forgum_platform::biome::get_mascot_biome(&scene.cow).is_aquatic();
+    if is_aquatic
+        && (scene.effect.eq_ignore_ascii_case("walk")
+            || scene
+                .animation_type
+                .as_deref()
+                .is_some_and(|a| a.eq_ignore_ascii_case("walk")))
+    {
+        eprintln!(
+            "forgum: Mascot '{}' is aquatic (habitat: aquatic). Remapping incompatible locomotion 'walk' -> 'swim' (floating/swimming with bubbles) for biological consistency.",
+            scene.cow
+        );
+        scene.effect = "swim".to_string();
+        scene.animation_type = Some("swim".to_string());
+    }
+
     let instance_id = std::process::id();
     let shutdown = ShutdownFlag::new();
 

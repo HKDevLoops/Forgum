@@ -193,7 +193,12 @@ fn test_cow_dna_default_has_nonempty_biological_palette() {
 fn test_cow_dna_from_biome_covers_all_132_mascots() {
     for mascot in get_all_mascots() {
         let dna = CowDna::from_biome(mascot.name);
-        assert_eq!(dna.base, BaseAnim::Walk);
+        let expected_base = if mascot.is_aquatic() {
+            BaseAnim::Float
+        } else {
+            BaseAnim::Walk
+        };
+        assert_eq!(dna.base, expected_base);
         assert_eq!(dna.speed, 1.0);
         assert_eq!(dna.palette.len(), 5);
         assert_eq!(dna.palette, mascot.natural_palette);

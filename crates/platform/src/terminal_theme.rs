@@ -8,6 +8,164 @@
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
+/// Background contrast profile for terminal transparency and acrylic glass compensation.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum ContrastMode {
+    /// Default standard terminal palette fidelity.
+    #[default]
+    Standard,
+    /// Transparency compensation: elevated minimum luminance floor, boosted chromatic saturation,
+    /// and bold foreground styling to prevent wash-out against liquid glass / acrylic / blurred desktop wallpapers.
+    AcrylicGlass,
+    /// Maximum visibility floor and high-contrast bold strokes for low opacity & direct glare.
+    HighContrast,
+    /// Ultra-rich chromatic saturation boost for vibrant neon and punchy mascot highlights.
+    Vibrant,
+}
+
+pub type BackgroundPreset = ContrastMode;
+pub type ContrastProfile = ContrastMode;
+
+impl ContrastMode {
+    pub const ALL: [ContrastMode; 4] = [
+        ContrastMode::Standard,
+        ContrastMode::AcrylicGlass,
+        ContrastMode::HighContrast,
+        ContrastMode::Vibrant,
+    ];
+
+    #[must_use]
+    pub fn as_str(self) -> &'static str {
+        match self {
+            ContrastMode::Standard => "standard",
+            ContrastMode::AcrylicGlass => "acrylic_glass",
+            ContrastMode::HighContrast => "high_contrast",
+            ContrastMode::Vibrant => "vibrant",
+        }
+    }
+
+    #[must_use]
+    pub fn display_name(self) -> &'static str {
+        match self {
+            ContrastMode::Standard => "Standard",
+            ContrastMode::AcrylicGlass => "Acrylic Glass (Transparency)",
+            ContrastMode::HighContrast => "High Contrast",
+            ContrastMode::Vibrant => "Vibrant",
+        }
+    }
+
+    #[must_use]
+    pub fn description(self) -> &'static str {
+        match self {
+            ContrastMode::Standard => "Standard terminal colors (default)",
+            ContrastMode::AcrylicGlass => {
+                "Transparency compensation (elevated luminance & saturation for acrylic/glass)"
+            }
+            ContrastMode::HighContrast => {
+                "Maximum contrast floor and bold strokes for low opacity & direct glare"
+            }
+            ContrastMode::Vibrant => "Deep saturation and elevated chromatic intensity",
+        }
+    }
+
+    #[must_use]
+    pub fn from_str_loose(s: &str) -> Self {
+        let cleaned = s.to_lowercase().replace(['-', '_', ' '], "");
+        match cleaned.as_str() {
+            "acrylicglass" | "acrylic" | "glass" | "transparency" | "transparent" => {
+                ContrastMode::AcrylicGlass
+            }
+            "highcontrast" | "high" | "contrast" | "hc" => ContrastMode::HighContrast,
+            "vibrant" | "vivid" | "saturated" | "punchy" => ContrastMode::Vibrant,
+            _ => ContrastMode::Standard,
+        }
+    }
+
+    #[must_use]
+    pub fn min_luminance_floor(self) -> f32 {
+        match self {
+            ContrastMode::Standard => 70.0,
+            ContrastMode::AcrylicGlass => 120.0,
+            ContrastMode::HighContrast => 165.0,
+            ContrastMode::Vibrant => 105.0,
+        }
+    }
+
+    #[must_use]
+    pub fn saturation_factor(self) -> f32 {
+        match self {
+            ContrastMode::Standard => 1.0,
+            ContrastMode::AcrylicGlass => 1.4,
+            ContrastMode::HighContrast => 1.15,
+            ContrastMode::Vibrant => 1.6,
+        }
+    }
+
+    #[must_use]
+    pub fn requires_bold(self) -> bool {
+        matches!(self, ContrastMode::AcrylicGlass | ContrastMode::HighContrast)
+    }
+
+    /// Adjust an RGB color according to this contrast mode.
+    #[must_use]
+    pub fn adjust_rgb(self, r: u8, g: u8, b: u8) -> (u8, u8, u8) {
+        match self {
+            ContrastMode::Standard => (r, g, b),
+            ContrastMode::AcrylicGlass => {
+                let (r_sat, g_sat, b_sat) = boost_saturation(r, g, b, 1.4);
+                elevate_luminance(r_sat, g_sat, b_sat, 120.0)
+            }
+            ContrastMode::HighContrast => {
+                let (r_sat, g_sat, b_sat) = boost_saturation(r, g, b, 1.15);
+                elevate_luminance(r_sat, g_sat, b_sat, 165.0)
+            }
+            ContrastMode::Vibrant => {
+                let (r_sat, g_sat, b_sat) = boost_saturation(r, g, b, 1.6);
+                elevate_luminance(r_sat, g_sat, b_sat, 105.0)
+            }
+        }
+    }
+
+    /// Adjust an RGB color according to this contrast mode with light terminal adaptation.
+    #[must_use]
+    pub fn adjust_rgb_adaptive(self, r: u8, g: u8, b: u8, is_light_bg: bool) -> (u8, u8, u8) {
+        if !is_light_bg {
+            return self.adjust_rgb(r, g, b);
+        }
+        match self {
+            ContrastMode::Standard => (r, g, b),
+            ContrastMode::AcrylicGlass => {
+                let lum = 0.299 * (r as f32) + 0.587 * (g as f32) + 0.114 * (b as f32);
+                if lum > 140.0 {
+                    let scale = (140.0 / lum.max(1.0)).clamp(0.2, 0.95);
+                    (
+                        ((r as f32) * scale).round() as u8,
+                        ((g as f32) * scale).round() as u8,
+                        ((b as f32) * scale).round() as u8,
+                    )
+                } else {
+                    (r, g, b)
+                }
+            }
+            ContrastMode::HighContrast => {
+                let lum = 0.299 * (r as f32) + 0.587 * (g as f32) + 0.114 * (b as f32);
+                if lum > 100.0 {
+                    let scale = (100.0 / lum.max(1.0)).clamp(0.1, 0.9);
+                    (
+                        ((r as f32) * scale).round() as u8,
+                        ((g as f32) * scale).round() as u8,
+                        ((b as f32) * scale).round() as u8,
+                    )
+                } else {
+                    (r, g, b)
+                }
+            }
+            ContrastMode::Vibrant => boost_saturation(r, g, b, 1.4),
+        }
+    }
+}
+
 /// Discovered terminal color scheme and background metadata.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TerminalTheme {
@@ -21,6 +179,9 @@ pub struct TerminalTheme {
     pub luminance: u8,
     /// Identified color scheme name or configuration source.
     pub name: String,
+    /// Active background contrast mode.
+    #[serde(default)]
+    pub contrast_mode: ContrastMode,
 }
 
 impl Default for TerminalTheme {
@@ -31,6 +192,7 @@ impl Default for TerminalTheme {
             is_light: false,
             luminance: 12,
             name: "Default Dark".to_string(),
+            contrast_mode: ContrastMode::Standard,
         }
     }
 }
@@ -46,7 +208,48 @@ impl TerminalTheme {
             is_light: lum >= 128,
             luminance: lum,
             name: name.into(),
+            contrast_mode: ContrastMode::Standard,
         }
+    }
+
+    /// Set background contrast mode.
+    #[must_use]
+    pub fn with_contrast_mode(mut self, mode: ContrastMode) -> Self {
+        self.contrast_mode = mode;
+        self
+    }
+}
+
+/// Boost chromatic saturation of an RGB color by a multiplier factor (1.0 = unchanged).
+#[must_use]
+pub fn boost_saturation(r: u8, g: u8, b: u8, factor: f32) -> (u8, u8, u8) {
+    if (factor - 1.0).abs() < 0.001 {
+        return (r, g, b);
+    }
+    let gray = 0.299 * (r as f32) + 0.587 * (g as f32) + 0.114 * (b as f32);
+    let r_out = gray + ((r as f32) - gray) * factor;
+    let g_out = gray + ((g as f32) - gray) * factor;
+    let b_out = gray + ((b as f32) - gray) * factor;
+    (
+        r_out.clamp(0.0, 255.0).round() as u8,
+        g_out.clamp(0.0, 255.0).round() as u8,
+        b_out.clamp(0.0, 255.0).round() as u8,
+    )
+}
+
+/// Elevate minimum perceived luminance floor of an RGB color.
+#[must_use]
+pub fn elevate_luminance(r: u8, g: u8, b: u8, min_lum: f32) -> (u8, u8, u8) {
+    let lum = 0.299 * (r as f32) + 0.587 * (g as f32) + 0.114 * (b as f32);
+    if lum < min_lum {
+        let boost = min_lum - lum;
+        (
+            ((r as f32) + boost).clamp(0.0, 255.0).round() as u8,
+            ((g as f32) + boost).clamp(0.0, 255.0).round() as u8,
+            ((b as f32) + boost).clamp(0.0, 255.0).round() as u8,
+        )
+    } else {
+        (r, g, b)
     }
 }
 
@@ -631,5 +834,65 @@ mod tests {
         } else {
             assert!(theme.luminance < 128);
         }
+    }
+
+    #[test]
+    fn test_contrast_mode_variants_and_parsing() {
+        assert_eq!(ContrastMode::from_str_loose("standard"), ContrastMode::Standard);
+        assert_eq!(ContrastMode::from_str_loose("acrylic_glass"), ContrastMode::AcrylicGlass);
+        assert_eq!(ContrastMode::from_str_loose("acrylic"), ContrastMode::AcrylicGlass);
+        assert_eq!(ContrastMode::from_str_loose("transparency"), ContrastMode::AcrylicGlass);
+        assert_eq!(ContrastMode::from_str_loose("high_contrast"), ContrastMode::HighContrast);
+        assert_eq!(ContrastMode::from_str_loose("vibrant"), ContrastMode::Vibrant);
+
+        for mode in ContrastMode::ALL {
+            assert!(!mode.as_str().is_empty());
+            assert!(!mode.display_name().is_empty());
+            assert!(!mode.description().is_empty());
+        }
+    }
+
+    #[test]
+    fn test_boost_saturation() {
+        let original = (100, 150, 200);
+        let boosted = boost_saturation(original.0, original.1, original.2, 1.5);
+        // Distances from gray should increase
+        let gray = (0.299 * 100.0 + 0.587 * 150.0 + 0.114 * 200.0) as i32;
+        let orig_dist = (original.2 as i32 - gray).abs();
+        let boost_dist = (boosted.2 as i32 - gray).abs();
+        assert!(boost_dist >= orig_dist);
+
+        // Saturation factor 1.0 is identity
+        assert_eq!(boost_saturation(100, 150, 200, 1.0), (100, 150, 200));
+    }
+
+    #[test]
+    fn test_elevate_luminance() {
+        let dark_color = (20, 30, 20); // lum ~ 25
+        let elevated = elevate_luminance(dark_color.0, dark_color.1, dark_color.2, 120.0);
+        let lum = calculate_luminance(elevated.0, elevated.1, elevated.2);
+        assert!(lum >= 118, "Expected lum >= 118, got {}", lum);
+
+        let bright_color = (200, 220, 210);
+        assert_eq!(elevate_luminance(bright_color.0, bright_color.1, bright_color.2, 120.0), bright_color);
+    }
+
+    #[test]
+    fn test_acrylic_glass_luminance_elevation_and_bold() {
+        assert!(ContrastMode::AcrylicGlass.requires_bold());
+        assert!(ContrastMode::HighContrast.requires_bold());
+        assert!(!ContrastMode::Standard.requires_bold());
+        assert!(!ContrastMode::Vibrant.requires_bold());
+
+        let faint_color = (30, 40, 30);
+        let adjusted = ContrastMode::AcrylicGlass.adjust_rgb(faint_color.0, faint_color.1, faint_color.2);
+        let lum = calculate_luminance(adjusted.0, adjusted.1, adjusted.2);
+        assert!(lum >= 118, "Acrylic glass must elevate minimum luminance floor: got {}", lum);
+    }
+
+    #[test]
+    fn test_terminal_theme_with_contrast_mode() {
+        let theme = TerminalTheme::default().with_contrast_mode(ContrastMode::AcrylicGlass);
+        assert_eq!(theme.contrast_mode, ContrastMode::AcrylicGlass);
     }
 }

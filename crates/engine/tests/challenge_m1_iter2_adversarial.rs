@@ -134,10 +134,15 @@ fn test_all_132_canonical_mascots_corrupted_simultaneously_recover() {
         );
 
         let dna = &catalog[mascot.name];
+        let expected_base = if mascot.is_aquatic() {
+            BaseAnim::Float
+        } else {
+            BaseAnim::Walk
+        };
         assert_eq!(
             dna.base,
-            BaseAnim::Walk,
-            "Recovered mascot '{}' must have BaseAnim::Walk",
+            expected_base,
+            "Recovered mascot '{}' must have expected habitat base anim",
             mascot.name
         );
         assert_eq!(

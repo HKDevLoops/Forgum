@@ -199,6 +199,9 @@ pub fn detect_animal_instinct(cow_text: &str, dna: &CowDna) -> AnimalInstinct {
         || lower.contains("walrus")
         || lower.contains("ebi_furai")
         || lower.contains("shark")
+        || lower.contains("lobster")
+        || dna.habitat == crate::dna::Habitat::Aquatic
+        || dna.is_aquatic()
     {
         return AnimalInstinct::Marine;
     }
@@ -742,6 +745,7 @@ pub struct FloatEffect {
     color_mode: String,
     palette: Vec<(u8, u8, u8)>,
     instinct: AnimalInstinct,
+    is_aquatic: bool,
     pub body: crate::kinematics::KinematicBody,
     elapsed: f32,
     eye_landmarks: Vec<(usize, usize)>,
@@ -769,6 +773,10 @@ impl FloatEffect {
         body.vx = 0.0;
         body.vy = 0.0;
         let instinct = detect_animal_instinct(&cow_text, dna);
+        let is_aquatic = dna.habitat == crate::dna::Habitat::Aquatic
+            || dna.is_aquatic()
+            || instinct == AnimalInstinct::Marine
+            || instinct == AnimalInstinct::Cephalopod;
         let palette = crate::color::parse_palette(&dna.palette);
         let mut amp = dna.amplitude.clone();
         if amp.float <= 0.05 {
@@ -785,6 +793,7 @@ impl FloatEffect {
             color_mode,
             palette,
             instinct,
+            is_aquatic,
             body,
             elapsed: 0.0,
             eye_landmarks,
@@ -795,12 +804,21 @@ impl FloatEffect {
 impl Effect for FloatEffect {
     fn update(&mut self, dt: f32, cols: usize, rows: usize) {
         self.elapsed += dt;
-        // Drive the Lissajous body with vertical-only bobbing so that
-        // CompoundSignatureEffect and external callers get a valid body position.
+        // Drive the Lissajous body with vertical bobbing (and gentle aquatic undulation if swimming)
+        let amp_x = if self.is_aquatic {
+            self.amp.sway * (cols.max(1) as f32) * 0.02
+        } else {
+            0.0
+        };
+        let freq_x = if self.is_aquatic {
+            self.speed * 0.4
+        } else {
+            0.0
+        };
         self.body.bounds_mode = crate::kinematics::BoundsMode::Lissajous {
-            amp_x: 0.0,
+            amp_x,
             amp_y: self.amp.float * (rows.max(1) as f32) * 0.08,
-            freq_x: 0.0,
+            freq_x,
             freq_y: self.speed * 0.5,
             phase_x: self.phase,
             phase_y: self.phase,
@@ -823,6 +841,24 @@ impl Effect for FloatEffect {
         let blink_cycle = (time * 0.24 + self.phase) % 1.0;
         let is_blinking = blink_cycle < 0.04;
 
+        // For aquatic creatures, ensure the bounding hull is submerged below the ocean horizon/waves
+        let submersion_offset: i32 = if self.is_aquatic && fb.height > self.cow_start_line + 4 {
+            1
+        } else {
+            0
+        };
+
+        if self.is_aquatic && self.cow_start_line < fb.height {
+            let surface_y = self.cow_start_line;
+            let wave_fg = Color::rgb(72, 202, 228);
+            for wx in 0..fb.width {
+                if fb.get(wx, surface_y).ch == ' ' {
+                    let wave_ch = if ((wx + ((time * 3.0) as usize)) % 4) < 2 { '~' } else { '≈' };
+                    let _ = fb.set(wx, surface_y, Cell::new(wave_ch, wave_fg));
+                }
+            }
+        }
+
         let mut y = 0usize;
         for_each_line(&self.cow_text, &self.line_offsets, |line| {
             let line = line.trim_end_matches(['\r', '\n']);
@@ -844,8 +880,8 @@ impl Effect for FloatEffect {
                 return;
             }
 
-            // Creature lines: apply vertical bob offset.
-            let draw_yi = y as i32 + bob_offset;
+            // Creature lines: apply vertical bob offset and aquatic submersion.
+            let draw_yi = y as i32 + bob_offset + submersion_offset;
             if draw_yi < 0 || draw_yi as usize >= fb.height {
                 y += 1;
                 return;
@@ -3050,6 +3086,8 @@ pub const DYNAMIC_ANIMATION_TYPES: &[&str] = &[
     "talk",
     "sway",
     "dissolve",
+    "swim",
+    "drift",
 ];
 
 pub const ALL_EFFECTS: &[&str] = &[
@@ -3067,6 +3105,8 @@ pub const ALL_EFFECTS: &[&str] = &[
     "matrix",
     "squish",
     "abduction",
+    "swim",
+    "drift",
 ];
 
 pub fn random_dynamic_animation() -> &'static str {
@@ -3103,6 +3143,32 @@ pub fn create_scene_effect(
     } else {
         eff
     };
+
+    // Biological consistency: validate against mascot DNA habitat
+    let eff = if (dna.is_aquatic() || dna.habitat == crate::dna::Habitat::Aquatic)
+        && matches!(eff.as_str(), "walk" | "walks" | "walking")
+    {
+        eprintln!(
+            "forgum: Mascot is aquatic (habitat: aquatic). Remapping incompatible locomotion '{}' -> 'swim' (floating/swimming with bubbles) for biological consistency.",
+            eff
+        );
+        "swim".to_string()
+    } else {
+        eff
+    };
+
+    // Ensure aquatic mascots always emit bubbles if particle rate was 0
+    let mut dna = dna;
+    if (dna.is_aquatic() || dna.habitat == crate::dna::Habitat::Aquatic) && dna.particles.rate == 0 {
+        dna.particles.rate = 8;
+        dna.particles.r#type = crate::dna::ParticleType::Bubbles;
+        dna.particles.palette = vec![
+            "#00e5ff".to_string(),
+            "#80d8ff".to_string(),
+            "#e0f7fa".to_string(),
+        ];
+    }
+
     let palette = crate::color::parse_palette(&dna.palette);
     if eff == "static" {
         return Box::new(StaticEffect::with_palette(
@@ -3119,7 +3185,7 @@ pub fn create_scene_effect(
             instance_id,
             color_mode.to_string(),
         )),
-        "float" => Box::new(FloatEffect::new(
+        "float" | "swim" | "drift" => Box::new(FloatEffect::new(
             cow_text.clone(),
             &dna,
             instance_id,
@@ -3227,6 +3293,14 @@ pub fn create_effect(
     instance_id: u32,
     color_mode: &str,
 ) -> Box<dyn Effect> {
+    let base = if (dna.is_aquatic() || dna.habitat == crate::dna::Habitat::Aquatic)
+        && base == BaseAnim::Walk
+    {
+        BaseAnim::Float
+    } else {
+        base
+    };
+
     match base {
         BaseAnim::Breathe => Box::new(BreatheEffect::new(
             cow_text,
@@ -3234,7 +3308,7 @@ pub fn create_effect(
             instance_id,
             color_mode.to_string(),
         )),
-        BaseAnim::Float => Box::new(FloatEffect::new(
+        BaseAnim::Float | BaseAnim::Swim | BaseAnim::Drift => Box::new(FloatEffect::new(
             cow_text,
             &dna,
             instance_id,

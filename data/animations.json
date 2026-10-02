@@ -38,7 +38,14 @@
       "color": "#1a1a1a",
       "radius": 0.0,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
+    ]
   },
   "armadillo": {
     "base": "Walk",
@@ -79,7 +86,14 @@
       "color": "#d7ccc8",
       "radius": 0.0,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
+    ]
   },
   "atat": {
     "base": "Walk",
@@ -120,7 +134,14 @@
       "color": "#cfd8dc",
       "radius": 0.0,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
+    ]
   },
   "bearface": {
     "base": "Breathe",
@@ -161,7 +182,14 @@
       "color": "#8d6e63",
       "radius": 0.0,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
+    ]
   },
   "beavis.zen": {
     "base": "Walk",
@@ -202,7 +230,14 @@
       "color": "#42a5f5",
       "radius": 0.0,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
+    ]
   },
   "bees": {
     "base": "Fly",
@@ -243,7 +278,16 @@
       "color": "#212121",
       "radius": 2.5,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "aerial",
+    "allowed_effects": [
+      "fly",
+      "hover",
+      "glide",
+      "breathe",
+      "pulse",
+      "float"
+    ]
   },
   "bill-the-cat": {
     "base": "Talk",
@@ -284,7 +328,15 @@
       "color": "#e57373",
       "radius": 0.0,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse",
+      "talk"
+    ]
   },
   "bud-frogs": {
     "base": "Float",
@@ -325,7 +377,18 @@
       "color": "#81c784",
       "radius": 2.5,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "amphibious",
+    "allowed_effects": [
+      "walk",
+      "swim",
+      "float",
+      "drift",
+      "breathe",
+      "bubble",
+      "sway",
+      "pulse"
+    ]
   },
   "bunny": {
     "base": "Walk",
@@ -366,7 +429,14 @@
       "color": "#f8fafc",
       "radius": 0.0,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
+    ]
   },
   "cat": {
     "base": "Walk",
@@ -407,7 +477,14 @@
       "color": "#d35400",
       "radius": 0.0,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
+    ]
   },
   "cat2": {
     "base": "Walk",
@@ -448,7 +525,14 @@
       "color": "#95a5a6",
       "radius": 0.0,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
+    ]
   },
   "catfence": {
     "base": "Sway",
@@ -489,7 +573,14 @@
       "color": "#3e2723",
       "radius": 0.0,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
+    ]
   },
   "charizardvice": {
     "base": "Breathe",
@@ -530,7 +621,14 @@
       "color": "#ffab00",
       "radius": 2.5,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
+    ]
   },
   "charlie": {
     "base": "Talk",
@@ -571,7 +669,15 @@
       "color": "#5d4037",
       "radius": 0.0,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse",
+      "talk"
+    ]
   },
   "claw-arm": {
     "base": "Pulse",
@@ -612,7 +718,14 @@
       "color": "#76ff03",
       "radius": 2.5,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
+    ]
   },
   "cower": {
     "base": "Breathe",
@@ -653,7 +766,14 @@
       "color": "#212121",
       "radius": 0.0,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
+    ]
   },
   "cowfee": {
     "base": "Breathe",
@@ -694,13 +814,20 @@
       "color": "#8d6e63",
       "radius": 0.0,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
+    ]
   },
   "cthulhu-mini": {
     "base": "Float",
     "particles": {
-      "type": "Fire",
-      "rate": 0,
+      "type": "Bubbles",
+      "rate": 8,
       "life": [
         0.5,
         1.5
@@ -735,7 +862,16 @@
       "color": "#1b5e20",
       "radius": 2.5,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "aquatic",
+    "allowed_effects": [
+      "float",
+      "swim",
+      "drift",
+      "bubble",
+      "pulse",
+      "wave"
+    ]
   },
   "daemon": {
     "base": "Fly",
@@ -776,7 +912,16 @@
       "color": "#f44336",
       "radius": 2.5,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "aerial",
+    "allowed_effects": [
+      "fly",
+      "hover",
+      "glide",
+      "breathe",
+      "pulse",
+      "float"
+    ]
   },
   "docker-whale": {
     "base": "Float",
@@ -817,7 +962,16 @@
       "color": "#29b6f6",
       "radius": 2.5,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "aquatic",
+    "allowed_effects": [
+      "float",
+      "swim",
+      "drift",
+      "bubble",
+      "pulse",
+      "wave"
+    ]
   },
   "doge": {
     "base": "Walk",
@@ -858,7 +1012,14 @@
       "color": "#d35400",
       "radius": 0.0,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
+    ]
   },
   "dolphin": {
     "base": "Float",
@@ -899,7 +1060,16 @@
       "color": "#81d4fa",
       "radius": 2.5,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "aquatic",
+    "allowed_effects": [
+      "float",
+      "swim",
+      "drift",
+      "bubble",
+      "pulse",
+      "wave"
+    ]
   },
   "dragon": {
     "base": "Breathe",
@@ -940,7 +1110,14 @@
       "color": "#f4511e",
       "radius": 2.5,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
+    ]
   },
   "dragon-and-cow": {
     "base": "Breathe",
@@ -981,13 +1158,20 @@
       "color": "#e53935",
       "radius": 2.5,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
+    ]
   },
   "ebi_furai": {
     "base": "Float",
     "particles": {
-      "type": "Fire",
-      "rate": 0,
+      "type": "Bubbles",
+      "rate": 8,
       "life": [
         0.5,
         1.5
@@ -1022,7 +1206,16 @@
       "color": "#ffb300",
       "radius": 2.5,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "aquatic",
+    "allowed_effects": [
+      "float",
+      "swim",
+      "drift",
+      "bubble",
+      "pulse",
+      "wave"
+    ]
   },
   "elephant": {
     "base": "Walk",
@@ -1063,7 +1256,14 @@
       "color": "#90a4ae",
       "radius": 0.0,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
+    ]
   },
   "elephant-in-snake": {
     "base": "Breathe",
@@ -1104,7 +1304,14 @@
       "color": "#78909c",
       "radius": 0.0,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
+    ]
   },
   "elephant2": {
     "base": "Walk",
@@ -1145,7 +1352,14 @@
       "color": "#78909c",
       "radius": 0.0,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
+    ]
   },
   "eyes": {
     "base": "Pulse",
@@ -1186,7 +1400,14 @@
       "color": "#b9f6ca",
       "radius": 2.5,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
+    ]
   },
   "fat-banana": {
     "base": "Sway",
@@ -1227,7 +1448,14 @@
       "color": "#fff59d",
       "radius": 0.0,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
+    ]
   },
   "fat-cow": {
     "base": "Walk",
@@ -1268,7 +1496,14 @@
       "color": "#212121",
       "radius": 0.0,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
+    ]
   },
   "fence": {
     "base": "Sway",
@@ -1309,7 +1544,14 @@
       "color": "#a1887f",
       "radius": 0.0,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
+    ]
   },
   "flaming-sheep": {
     "base": "Breathe",
@@ -1350,7 +1592,14 @@
       "color": "#ff8a65",
       "radius": 2.5,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
+    ]
   },
   "fox": {
     "base": "Walk",
@@ -1391,7 +1640,14 @@
       "color": "#ff9800",
       "radius": 0.0,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
+    ]
   },
   "ghost": {
     "base": "Float",
@@ -1432,7 +1688,16 @@
       "color": "#cfd8dc",
       "radius": 2.5,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "aerial",
+    "allowed_effects": [
+      "fly",
+      "hover",
+      "glide",
+      "breathe",
+      "pulse",
+      "float"
+    ]
   },
   "ghostbusters": {
     "base": "Pulse",
@@ -1473,7 +1738,16 @@
       "color": "#ffffff",
       "radius": 2.5,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "aerial",
+    "allowed_effects": [
+      "fly",
+      "hover",
+      "glide",
+      "breathe",
+      "pulse",
+      "float"
+    ]
   },
   "glados": {
     "base": "Glitch",
@@ -1514,7 +1788,15 @@
       "color": "#212121",
       "radius": 2.5,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse",
+      "glitch"
+    ]
   },
   "goat": {
     "base": "Walk",
@@ -1555,7 +1837,14 @@
       "color": "#a1887f",
       "radius": 0.0,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
+    ]
   },
   "goat2": {
     "base": "Walk",
@@ -1596,7 +1885,14 @@
       "color": "#8d6e63",
       "radius": 0.0,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
+    ]
   },
   "golden-eagle": {
     "base": "Fly",
@@ -1637,7 +1933,16 @@
       "color": "#ffa000",
       "radius": 2.5,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "aerial",
+    "allowed_effects": [
+      "fly",
+      "hover",
+      "glide",
+      "breathe",
+      "pulse",
+      "float"
+    ]
   },
   "happy-whale": {
     "base": "Float",
@@ -1678,7 +1983,16 @@
       "color": "#4fc3f7",
       "radius": 2.5,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "aquatic",
+    "allowed_effects": [
+      "float",
+      "swim",
+      "drift",
+      "bubble",
+      "pulse",
+      "wave"
+    ]
   },
   "hedgehog": {
     "base": "Walk",
@@ -1719,7 +2033,14 @@
       "color": "#8d6e63",
       "radius": 0.0,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
+    ]
   },
   "hellokitty": {
     "base": "Walk",
@@ -1760,7 +2081,14 @@
       "color": "#ff4081",
       "radius": 0.0,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
+    ]
   },
   "hippie": {
     "base": "Sway",
@@ -1801,7 +2129,14 @@
       "color": "#00e5ff",
       "radius": 0.0,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
+    ]
   },
   "hiya": {
     "base": "Talk",
@@ -1842,7 +2177,15 @@
       "color": "#212121",
       "radius": 0.0,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse",
+      "talk"
+    ]
   },
   "hypno": {
     "base": "Pulse",
@@ -1883,12 +2226,19 @@
       "color": "#00e5ff",
       "radius": 2.5,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
+    ]
   },
   "jellyfish": {
     "base": "Float",
     "particles": {
-      "type": "Pulse",
+      "type": "Bubbles",
       "rate": 8,
       "life": [
         0.5,
@@ -1924,7 +2274,16 @@
       "color": "#ea80fc",
       "radius": 2.5,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "aquatic",
+    "allowed_effects": [
+      "float",
+      "swim",
+      "drift",
+      "bubble",
+      "pulse",
+      "wave"
+    ]
   },
   "king": {
     "base": "Breathe",
@@ -1965,7 +2324,14 @@
       "color": "#e91e63",
       "radius": 0.0,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
+    ]
   },
   "kiss": {
     "base": "Talk",
@@ -2006,7 +2372,15 @@
       "color": "#212121",
       "radius": 0.0,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse",
+      "talk"
+    ]
   },
   "kitten": {
     "base": "Walk",
@@ -2047,7 +2421,14 @@
       "color": "#d35400",
       "radius": 0.0,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
+    ]
   },
   "kitty": {
     "base": "Walk",
@@ -2088,7 +2469,14 @@
       "color": "#d35400",
       "radius": 0.0,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
+    ]
   },
   "knight": {
     "base": "Walk",
@@ -2129,7 +2517,14 @@
       "color": "#cfd8dc",
       "radius": 0.0,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
+    ]
   },
   "koala": {
     "base": "Breathe",
@@ -2170,7 +2565,14 @@
       "color": "#bdbdbd",
       "radius": 2.5,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
+    ]
   },
   "kosh": {
     "base": "Float",
@@ -2211,7 +2613,16 @@
       "color": "#4db6ac",
       "radius": 2.5,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "aerial",
+    "allowed_effects": [
+      "fly",
+      "hover",
+      "glide",
+      "breathe",
+      "pulse",
+      "float"
+    ]
   },
   "lamb": {
     "base": "Walk",
@@ -2252,7 +2663,14 @@
       "color": "#f5f5f5",
       "radius": 0.0,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
+    ]
   },
   "lamb2": {
     "base": "Walk",
@@ -2293,13 +2711,20 @@
       "color": "#eeeeee",
       "radius": 0.0,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
+    ]
   },
   "lobster": {
-    "base": "Walk",
+    "base": "Float",
     "particles": {
-      "type": "Fire",
-      "rate": 0,
+      "type": "Bubbles",
+      "rate": 8,
       "life": [
         0.5,
         1.5
@@ -2334,7 +2759,16 @@
       "color": "#f44336",
       "radius": 0.0,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "aquatic",
+    "allowed_effects": [
+      "float",
+      "swim",
+      "drift",
+      "bubble",
+      "pulse",
+      "wave"
+    ]
   },
   "lollerskates": {
     "base": "Walk",
@@ -2375,7 +2809,14 @@
       "color": "#00b0ff",
       "radius": 0.0,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
+    ]
   },
   "luke-koala": {
     "base": "Breathe",
@@ -2416,7 +2857,14 @@
       "color": "#b0bec5",
       "radius": 2.5,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
+    ]
   },
   "meow": {
     "base": "Talk",
@@ -2457,7 +2905,15 @@
       "color": "#d35400",
       "radius": 0.0,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse",
+      "talk"
+    ]
   },
   "minotaur": {
     "base": "Walk",
@@ -2498,7 +2954,14 @@
       "color": "#6d4c41",
       "radius": 0.0,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
+    ]
   },
   "mona-lisa": {
     "base": "Breathe",
@@ -2539,7 +3002,14 @@
       "color": "#a1887f",
       "radius": 0.0,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
+    ]
   },
   "moofasa": {
     "base": "Breathe",
@@ -2580,7 +3050,14 @@
       "color": "#ffa000",
       "radius": 0.0,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
+    ]
   },
   "mooghidjirah": {
     "base": "Breathe",
@@ -2621,7 +3098,14 @@
       "color": "#c62828",
       "radius": 0.0,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
+    ]
   },
   "moojira": {
     "base": "Breathe",
@@ -2662,7 +3146,14 @@
       "color": "#1b5e20",
       "radius": 0.0,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
+    ]
   },
   "moose": {
     "base": "Walk",
@@ -2703,7 +3194,14 @@
       "color": "#5d4037",
       "radius": 0.0,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
+    ]
   },
   "mule": {
     "base": "Walk",
@@ -2744,7 +3242,14 @@
       "color": "#795548",
       "radius": 0.0,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
+    ]
   },
   "mutilated": {
     "base": "Dissolve",
@@ -2785,7 +3290,15 @@
       "color": "#b71c1c",
       "radius": 0.0,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse",
+      "dissolve"
+    ]
   },
   "nyan": {
     "base": "Fly",
@@ -2826,13 +3339,22 @@
       "color": "#ff7f00",
       "radius": 2.5,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "aerial",
+    "allowed_effects": [
+      "fly",
+      "hover",
+      "glide",
+      "breathe",
+      "pulse",
+      "float"
+    ]
   },
   "octopus": {
     "base": "Float",
     "particles": {
-      "type": "Fire",
-      "rate": 0,
+      "type": "Bubbles",
+      "rate": 8,
       "life": [
         0.5,
         1.5
@@ -2867,7 +3389,16 @@
       "color": "#ab47bc",
       "radius": 2.5,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "aquatic",
+    "allowed_effects": [
+      "float",
+      "swim",
+      "drift",
+      "bubble",
+      "pulse",
+      "wave"
+    ]
   },
   "owl": {
     "base": "Breathe",
@@ -2908,7 +3439,16 @@
       "color": "#8d6e63",
       "radius": 0.0,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "aerial",
+    "allowed_effects": [
+      "fly",
+      "hover",
+      "glide",
+      "breathe",
+      "pulse",
+      "float"
+    ]
   },
   "pawn": {
     "base": "Walk",
@@ -2949,7 +3489,14 @@
       "color": "#eceff1",
       "radius": 0.0,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
+    ]
   },
   "periodic-table": {
     "base": "Pulse",
@@ -2990,7 +3537,14 @@
       "color": "#76ff03",
       "radius": 2.5,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
+    ]
   },
   "personality-sphere": {
     "base": "Float",
@@ -3031,7 +3585,16 @@
       "color": "#e0e0e0",
       "radius": 2.5,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "aerial",
+    "allowed_effects": [
+      "fly",
+      "hover",
+      "glide",
+      "breathe",
+      "pulse",
+      "float"
+    ]
   },
   "pterodactyl": {
     "base": "Fly",
@@ -3072,7 +3635,16 @@
       "color": "#8bc34a",
       "radius": 2.5,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "aerial",
+    "allowed_effects": [
+      "fly",
+      "hover",
+      "glide",
+      "breathe",
+      "pulse",
+      "float"
+    ]
   },
   "queen": {
     "base": "Breathe",
@@ -3113,7 +3685,14 @@
       "color": "#e91e63",
       "radius": 0.0,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
+    ]
   },
   "ren": {
     "base": "Talk",
@@ -3154,7 +3733,15 @@
       "color": "#a1887f",
       "radius": 0.0,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse",
+      "talk"
+    ]
   },
   "rook": {
     "base": "Walk",
@@ -3195,7 +3782,14 @@
       "color": "#90a4ae",
       "radius": 0.0,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
+    ]
   },
   "satanic": {
     "base": "Pulse",
@@ -3236,7 +3830,14 @@
       "color": "#b71c1c",
       "radius": 2.5,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
+    ]
   },
   "seahorse": {
     "base": "Float",
@@ -3277,7 +3878,16 @@
       "color": "#ffb300",
       "radius": 2.5,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "aquatic",
+    "allowed_effects": [
+      "float",
+      "swim",
+      "drift",
+      "bubble",
+      "pulse",
+      "wave"
+    ]
   },
   "seahorse-big": {
     "base": "Float",
@@ -3318,7 +3928,16 @@
       "color": "#ffb300",
       "radius": 2.5,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "aquatic",
+    "allowed_effects": [
+      "float",
+      "swim",
+      "drift",
+      "bubble",
+      "pulse",
+      "wave"
+    ]
   },
   "sheep": {
     "base": "Walk",
@@ -3359,7 +3978,14 @@
       "color": "#f5f5f5",
       "radius": 0.0,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
+    ]
   },
   "shikato": {
     "base": "Breathe",
@@ -3400,7 +4026,14 @@
       "color": "#e0e0e0",
       "radius": 0.0,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
+    ]
   },
   "shrug": {
     "base": "Sway",
@@ -3441,7 +4074,14 @@
       "color": "#e0e0e0",
       "radius": 0.0,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
+    ]
   },
   "skeleton": {
     "base": "Walk",
@@ -3482,7 +4122,14 @@
       "color": "#e0e0e0",
       "radius": 0.0,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
+    ]
   },
   "small": {
     "base": "Walk",
@@ -3523,13 +4170,20 @@
       "color": "#e0e0e0",
       "radius": 0.0,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
+    ]
   },
   "smiling-octopus": {
     "base": "Float",
     "particles": {
-      "type": "Fire",
-      "rate": 0,
+      "type": "Bubbles",
+      "rate": 8,
       "life": [
         0.5,
         1.5
@@ -3564,7 +4218,16 @@
       "color": "#ce93d8",
       "radius": 2.5,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "aquatic",
+    "allowed_effects": [
+      "float",
+      "swim",
+      "drift",
+      "bubble",
+      "pulse",
+      "wave"
+    ]
   },
   "snoopy": {
     "base": "Breathe",
@@ -3605,7 +4268,14 @@
       "color": "#212121",
       "radius": 0.0,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
+    ]
   },
   "snoopyhouse": {
     "base": "Breathe",
@@ -3646,7 +4316,14 @@
       "color": "#ffffff",
       "radius": 0.0,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
+    ]
   },
   "snoopysleep": {
     "base": "Breathe",
@@ -3687,7 +4364,14 @@
       "color": "#212121",
       "radius": 0.0,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
+    ]
   },
   "spidercow": {
     "base": "Walk",
@@ -3728,7 +4412,14 @@
       "color": "#d32f2f",
       "radius": 0.0,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
+    ]
   },
   "squirrel": {
     "base": "Walk",
@@ -3769,7 +4460,14 @@
       "color": "#a1887f",
       "radius": 0.0,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
+    ]
   },
   "stegosaurus": {
     "base": "Walk",
@@ -3810,7 +4508,14 @@
       "color": "#4caf50",
       "radius": 0.0,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
+    ]
   },
   "stimpy": {
     "base": "Talk",
@@ -3851,7 +4556,15 @@
       "color": "#ef5350",
       "radius": 0.0,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse",
+      "talk"
+    ]
   },
   "supermilker": {
     "base": "Pulse",
@@ -3892,7 +4605,14 @@
       "color": "#212121",
       "radius": 2.5,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
+    ]
   },
   "surgery": {
     "base": "Glitch",
@@ -3933,7 +4653,15 @@
       "color": "#38bdf8",
       "radius": 2.5,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse",
+      "glitch"
+    ]
   },
   "tortoise": {
     "base": "Walk",
@@ -3974,7 +4702,14 @@
       "color": "#689f38",
       "radius": 0.0,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
+    ]
   },
   "turkey": {
     "base": "Walk",
@@ -4015,13 +4750,22 @@
       "color": "#c62828",
       "radius": 0.0,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "aerial",
+    "allowed_effects": [
+      "fly",
+      "hover",
+      "glide",
+      "breathe",
+      "pulse",
+      "float"
+    ]
   },
   "turtle": {
     "base": "Float",
     "particles": {
-      "type": "Fire",
-      "rate": 0,
+      "type": "Bubbles",
+      "rate": 8,
       "life": [
         0.5,
         1.5
@@ -4056,7 +4800,16 @@
       "color": "#4caf50",
       "radius": 2.5,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "aquatic",
+    "allowed_effects": [
+      "float",
+      "swim",
+      "drift",
+      "bubble",
+      "pulse",
+      "wave"
+    ]
   },
   "tux": {
     "base": "Walk",
@@ -4097,7 +4850,18 @@
       "color": "#212121",
       "radius": 0.0,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "amphibious",
+    "allowed_effects": [
+      "walk",
+      "swim",
+      "float",
+      "drift",
+      "breathe",
+      "bubble",
+      "sway",
+      "pulse"
+    ]
   },
   "tux-big": {
     "base": "Walk",
@@ -4138,7 +4902,18 @@
       "color": "#212121",
       "radius": 0.0,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "amphibious",
+    "allowed_effects": [
+      "walk",
+      "swim",
+      "float",
+      "drift",
+      "breathe",
+      "bubble",
+      "sway",
+      "pulse"
+    ]
   },
   "tweety-bird": {
     "base": "Fly",
@@ -4179,7 +4954,16 @@
       "color": "#fff59d",
       "radius": 2.5,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "aerial",
+    "allowed_effects": [
+      "fly",
+      "hover",
+      "glide",
+      "breathe",
+      "pulse",
+      "float"
+    ]
   },
   "weeping-angel": {
     "base": "Pulse",
@@ -4220,7 +5004,14 @@
       "color": "#757575",
       "radius": 2.5,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
+    ]
   },
   "whale": {
     "base": "Float",
@@ -4261,7 +5052,16 @@
       "color": "#29b6f6",
       "radius": 2.5,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "aquatic",
+    "allowed_effects": [
+      "float",
+      "swim",
+      "drift",
+      "bubble",
+      "pulse",
+      "wave"
+    ]
   },
   "wizard": {
     "base": "Float",
@@ -4302,7 +5102,15 @@
       "color": "#b388ff",
       "radius": 2.5,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse",
+      "float"
+    ]
   },
   "world": {
     "base": "Float",
@@ -4343,7 +5151,16 @@
       "color": "#66bb6a",
       "radius": 2.5,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "aerial",
+    "allowed_effects": [
+      "fly",
+      "hover",
+      "glide",
+      "breathe",
+      "pulse",
+      "float"
+    ]
   },
   "corgi": {
     "base": "Walk",
@@ -4384,7 +5201,14 @@
       "color": "#e59866",
       "radius": 0.0,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
+    ]
   },
   "duck": {
     "base": "Fly",
@@ -4425,7 +5249,18 @@
       "color": "#fbbf24",
       "radius": 2.5,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "amphibious",
+    "allowed_effects": [
+      "walk",
+      "swim",
+      "float",
+      "drift",
+      "breathe",
+      "bubble",
+      "sway",
+      "pulse"
+    ]
   },
   "pig": {
     "base": "Walk",
@@ -4466,7 +5301,14 @@
       "color": "#ff80ab",
       "radius": 0.0,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
+    ]
   },
   "tiger": {
     "base": "Walk",
@@ -4507,7 +5349,14 @@
       "color": "#18181b",
       "radius": 0.0,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
+    ]
   },
   "wolf": {
     "base": "Walk",
@@ -4548,13 +5397,20 @@
       "color": "#4b5563",
       "radius": 0.0,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
+    ]
   },
   "squid": {
     "base": "Float",
     "particles": {
-      "type": "Fire",
-      "rate": 0,
+      "type": "Bubbles",
+      "rate": 8,
       "life": [
         0.5,
         1.5
@@ -4589,7 +5445,16 @@
       "color": "#3b82f6",
       "radius": 2.5,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "aquatic",
+    "allowed_effects": [
+      "float",
+      "swim",
+      "drift",
+      "bubble",
+      "pulse",
+      "wave"
+    ]
   },
   "walrus": {
     "base": "Breathe",
@@ -4630,7 +5495,18 @@
       "color": "#d6d3d1",
       "radius": 0.0,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "amphibious",
+    "allowed_effects": [
+      "walk",
+      "swim",
+      "float",
+      "drift",
+      "breathe",
+      "bubble",
+      "sway",
+      "pulse"
+    ]
   },
   "vader": {
     "base": "Breathe",
@@ -4671,7 +5547,14 @@
       "color": "#27272a",
       "radius": 0.0,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
+    ]
   },
   "yoda": {
     "base": "Float",
@@ -4712,7 +5595,16 @@
       "color": "#65a30d",
       "radius": 2.5,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "aerial",
+    "allowed_effects": [
+      "fly",
+      "hover",
+      "glide",
+      "breathe",
+      "pulse",
+      "float"
+    ]
   },
   "panther": {
     "base": "Walk",
@@ -4753,7 +5645,14 @@
       "color": "#27272a",
       "radius": 0.0,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
+    ]
   },
   "rhino": {
     "base": "Walk",
@@ -4794,7 +5693,14 @@
       "color": "#94a3b8",
       "radius": 0.0,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
+    ]
   },
   "sloth": {
     "base": "Breathe",
@@ -4835,12 +5741,19 @@
       "color": "#ca8a04",
       "radius": 0.0,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
+    ]
   },
   "pufferfish": {
-    "base": "Pulse",
+    "base": "Float",
     "particles": {
-      "type": "Pulse",
+      "type": "Bubbles",
       "rate": 8,
       "life": [
         0.5,
@@ -4876,7 +5789,16 @@
       "color": "#fde047",
       "radius": 2.5,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "aquatic",
+    "allowed_effects": [
+      "float",
+      "swim",
+      "drift",
+      "bubble",
+      "pulse",
+      "wave"
+    ]
   },
   "sauron": {
     "base": "Pulse",
@@ -4917,7 +5839,14 @@
       "color": "#dc2626",
       "radius": 2.5,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
+    ]
   },
   "unipony": {
     "base": "Walk",
@@ -4958,7 +5887,14 @@
       "color": "#38bdf8",
       "radius": 2.5,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
+    ]
   },
   "radioactive-kitty": {
     "base": "Glitch",
@@ -4999,7 +5935,15 @@
       "color": "#86efac",
       "radius": 2.5,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse",
+      "glitch"
+    ]
   },
   "vulpix": {
     "base": "Walk",
@@ -5040,7 +5984,14 @@
       "color": "#ea580c",
       "radius": 0.0,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
+    ]
   },
   "ram": {
     "base": "Walk",
@@ -5081,7 +6032,14 @@
       "color": "#ffffff",
       "radius": 0.0,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
+    ]
   },
   "rooster": {
     "base": "Walk",
@@ -5122,7 +6080,16 @@
       "color": "#f57f17",
       "radius": 0.0,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "aerial",
+    "allowed_effects": [
+      "fly",
+      "hover",
+      "glide",
+      "breathe",
+      "pulse",
+      "float"
+    ]
   },
   "hamster": {
     "base": "Walk",
@@ -5163,7 +6130,14 @@
       "color": "#faedcd",
       "radius": 0.0,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
+    ]
   },
   "apt": {
     "base": "Walk",
@@ -5204,7 +6178,14 @@
       "color": "#f43f5e",
       "radius": 0.0,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
+    ]
   },
   "jesus": {
     "base": "Float",
@@ -5245,7 +6226,16 @@
       "color": "#fef08a",
       "radius": 2.5,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "aerial",
+    "allowed_effects": [
+      "fly",
+      "hover",
+      "glide",
+      "breathe",
+      "pulse",
+      "float"
+    ]
   },
   "three-eyes": {
     "base": "Breathe",
@@ -5286,7 +6276,14 @@
       "color": "#212121",
       "radius": 0.0,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
+    ]
   },
   "viper": {
     "base": "Sway",
@@ -5327,7 +6324,14 @@
       "color": "#22c55e",
       "radius": 0.0,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
+    ]
   },
   "telebears": {
     "base": "Walk",
@@ -5368,7 +6372,14 @@
       "color": "#60a5fa",
       "radius": 0.0,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
+    ]
   },
   "mech-and-cow": {
     "base": "Walk",
@@ -5409,6 +6420,13 @@
       "color": "#e0f2fe",
       "radius": 0.0,
       "falloff": "gaussian"
-    }
+    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
+    ]
   }
 }

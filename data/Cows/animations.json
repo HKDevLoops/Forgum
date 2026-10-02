@@ -9,6 +9,13 @@
       "#2c2c2c",
       "#ffb6c1",
       "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
     ]
   },
   "cower": {
@@ -21,6 +28,13 @@
       "#d7ccc8",
       "#ff80ab",
       "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
     ]
   },
   "fat-cow": {
@@ -33,6 +47,13 @@
       "#cfd8dc",
       "#ff80ab",
       "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
     ]
   },
   "supermilker": {
@@ -45,6 +66,13 @@
       "#e1f5fe",
       "#ff80ab",
       "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
     ]
   },
   "moose": {
@@ -57,6 +85,13 @@
       "#d7ccc8",
       "#ff80ab",
       "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
     ]
   },
   "mule": {
@@ -69,6 +104,13 @@
       "#f5f5f5",
       "#d7ccc8",
       "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
     ]
   },
   "sheep": {
@@ -81,6 +123,13 @@
       "#cfd8dc",
       "#ff80ab",
       "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
     ]
   },
   "flaming-sheep": {
@@ -93,6 +142,13 @@
       "#ffe082",
       "#ff3d00",
       "#ffd600"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
     ]
   },
   "lamb": {
@@ -105,6 +161,13 @@
       "#e0e0e0",
       "#ff80ab",
       "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
     ]
   },
   "lamb2": {
@@ -117,6 +180,13 @@
       "#e0e0e0",
       "#ff80ab",
       "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
     ]
   },
   "goat": {
@@ -129,6 +199,13 @@
       "#ffffff",
       "#ff80ab",
       "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
     ]
   },
   "goat2": {
@@ -141,6 +218,13 @@
       "#ffffff",
       "#ff80ab",
       "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
     ]
   },
   "dolphin": {
@@ -153,6 +237,15 @@
       "#ffffff",
       "#b3e5fc",
       "#ffffff"
+    ],
+    "habitat": "aquatic",
+    "allowed_effects": [
+      "float",
+      "swim",
+      "drift",
+      "bubble",
+      "pulse",
+      "wave"
     ]
   },
   "whale": {
@@ -165,6 +258,15 @@
       "#ffffff",
       "#e0f7fa",
       "#ffffff"
+    ],
+    "habitat": "aquatic",
+    "allowed_effects": [
+      "float",
+      "swim",
+      "drift",
+      "bubble",
+      "pulse",
+      "wave"
     ]
   },
   "happy-whale": {
@@ -177,6 +279,15 @@
       "#ffffff",
       "#e0f7fa",
       "#ffffff"
+    ],
+    "habitat": "aquatic",
+    "allowed_effects": [
+      "float",
+      "swim",
+      "drift",
+      "bubble",
+      "pulse",
+      "wave"
     ]
   },
   "docker-whale": {
@@ -189,11 +300,20 @@
       "#ffffff",
       "#e0f7fa",
       "#ffffff"
+    ],
+    "habitat": "aquatic",
+    "allowed_effects": [
+      "float",
+      "swim",
+      "drift",
+      "bubble",
+      "pulse",
+      "wave"
     ]
   },
   "octopus": {
     "base": "Float",
-    "particles": null,
+    "particles": "Bubbles",
     "speed": 1.0,
     "palette": [
       "#c2185b",
@@ -201,11 +321,20 @@
       "#f8bbd0",
       "#ff4081",
       "#ffffff"
+    ],
+    "habitat": "aquatic",
+    "allowed_effects": [
+      "float",
+      "swim",
+      "drift",
+      "bubble",
+      "pulse",
+      "wave"
     ]
   },
   "smiling-octopus": {
     "base": "Float",
-    "particles": null,
+    "particles": "Bubbles",
     "speed": 1.0,
     "palette": [
       "#c2185b",
@@ -213,11 +342,20 @@
       "#f8bbd0",
       "#ff4081",
       "#ffffff"
+    ],
+    "habitat": "aquatic",
+    "allowed_effects": [
+      "float",
+      "swim",
+      "drift",
+      "bubble",
+      "pulse",
+      "wave"
     ]
   },
   "jellyfish": {
     "base": "Float",
-    "particles": "Pulse",
+    "particles": "Bubbles",
     "speed": 1.0,
     "palette": [
       "#ba68c8",
@@ -225,6 +363,15 @@
       "#f3e5f5",
       "#ea80fc",
       "#ffffff"
+    ],
+    "habitat": "aquatic",
+    "allowed_effects": [
+      "float",
+      "swim",
+      "drift",
+      "bubble",
+      "pulse",
+      "wave"
     ]
   },
   "seahorse": {
@@ -237,6 +384,15 @@
       "#ffab91",
       "#fff9c4",
       "#ffffff"
+    ],
+    "habitat": "aquatic",
+    "allowed_effects": [
+      "float",
+      "swim",
+      "drift",
+      "bubble",
+      "pulse",
+      "wave"
     ]
   },
   "seahorse-big": {
@@ -249,11 +405,20 @@
       "#ffab91",
       "#fff9c4",
       "#ffffff"
+    ],
+    "habitat": "aquatic",
+    "allowed_effects": [
+      "float",
+      "swim",
+      "drift",
+      "bubble",
+      "pulse",
+      "wave"
     ]
   },
   "lobster": {
-    "base": "Walk",
-    "particles": null,
+    "base": "Float",
+    "particles": "Bubbles",
     "speed": 1.0,
     "palette": [
       "#c62828",
@@ -261,6 +426,15 @@
       "#ff6f00",
       "#ff8a65",
       "#ffffff"
+    ],
+    "habitat": "aquatic",
+    "allowed_effects": [
+      "float",
+      "swim",
+      "drift",
+      "bubble",
+      "pulse",
+      "wave"
     ]
   },
   "turkey": {
@@ -273,6 +447,15 @@
       "#bcaaa4",
       "#e53935",
       "#ffffff"
+    ],
+    "habitat": "aerial",
+    "allowed_effects": [
+      "fly",
+      "hover",
+      "glide",
+      "breathe",
+      "pulse",
+      "float"
     ]
   },
   "owl": {
@@ -285,6 +468,15 @@
       "#ffffff",
       "#ffa000",
       "#ffd54f"
+    ],
+    "habitat": "aerial",
+    "allowed_effects": [
+      "fly",
+      "hover",
+      "glide",
+      "breathe",
+      "pulse",
+      "float"
     ]
   },
   "golden-eagle": {
@@ -297,6 +489,15 @@
       "#f5f5f5",
       "#ffb300",
       "#ffe082"
+    ],
+    "habitat": "aerial",
+    "allowed_effects": [
+      "fly",
+      "hover",
+      "glide",
+      "breathe",
+      "pulse",
+      "float"
     ]
   },
   "tweety-bird": {
@@ -309,6 +510,15 @@
       "#4fc3f7",
       "#fff59d",
       "#ffffff"
+    ],
+    "habitat": "aerial",
+    "allowed_effects": [
+      "fly",
+      "hover",
+      "glide",
+      "breathe",
+      "pulse",
+      "float"
     ]
   },
   "pterodactyl": {
@@ -321,6 +531,15 @@
       "#ffd54f",
       "#e65100",
       "#ffffff"
+    ],
+    "habitat": "aerial",
+    "allowed_effects": [
+      "fly",
+      "hover",
+      "glide",
+      "breathe",
+      "pulse",
+      "float"
     ]
   },
   "cat": {
@@ -333,6 +552,13 @@
       "#ffffff",
       "#ffb6c1",
       "#212121"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
     ]
   },
   "cat2": {
@@ -345,6 +571,13 @@
       "#cfd8dc",
       "#ff80ab",
       "#69f0ae"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
     ]
   },
   "kitty": {
@@ -357,6 +590,13 @@
       "#ffffff",
       "#ff80ab",
       "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
     ]
   },
   "kitten": {
@@ -369,6 +609,13 @@
       "#ffffff",
       "#ffb6c1",
       "#212121"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
     ]
   },
   "meow": {
@@ -381,6 +628,14 @@
       "#cfd8dc",
       "#ff80ab",
       "#00e676"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse",
+      "talk"
     ]
   },
   "catfence": {
@@ -393,6 +648,13 @@
       "#ffffff",
       "#ff80ab",
       "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
     ]
   },
   "doge": {
@@ -405,6 +667,13 @@
       "#ffffff",
       "#ff80ab",
       "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
     ]
   },
   "fox": {
@@ -417,6 +686,13 @@
       "#ffffff",
       "#ff80ab",
       "#ffd54f"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
     ]
   },
   "bunny": {
@@ -429,6 +705,13 @@
       "#eceff1",
       "#ffb6c1",
       "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
     ]
   },
   "squirrel": {
@@ -441,6 +724,13 @@
       "#ffffff",
       "#ff80ab",
       "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
     ]
   },
   "hedgehog": {
@@ -453,6 +743,13 @@
       "#fff3e0",
       "#ff80ab",
       "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
     ]
   },
   "koala": {
@@ -465,6 +762,13 @@
       "#ffffff",
       "#ff80ab",
       "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
     ]
   },
   "luke-koala": {
@@ -477,6 +781,13 @@
       "#ffffff",
       "#ff80ab",
       "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
     ]
   },
   "dragon": {
@@ -489,6 +800,13 @@
       "#ffd600",
       "#ff3d00",
       "#ffd600"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
     ]
   },
   "dragon-and-cow": {
@@ -501,6 +819,13 @@
       "#ffd600",
       "#ff3d00",
       "#ffd600"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
     ]
   },
   "charizardvice": {
@@ -513,6 +838,13 @@
       "#ffe082",
       "#ff3d00",
       "#40c4ff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
     ]
   },
   "ghost": {
@@ -525,6 +857,15 @@
       "#e0f2f1",
       "#b2dfdb",
       "#ffffff"
+    ],
+    "habitat": "aerial",
+    "allowed_effects": [
+      "fly",
+      "hover",
+      "glide",
+      "breathe",
+      "pulse",
+      "float"
     ]
   },
   "ghostbusters": {
@@ -537,6 +878,15 @@
       "#b0bec5",
       "#ff80ab",
       "#ffffff"
+    ],
+    "habitat": "aerial",
+    "allowed_effects": [
+      "fly",
+      "hover",
+      "glide",
+      "breathe",
+      "pulse",
+      "float"
     ]
   },
   "weeping-angel": {
@@ -549,11 +899,18 @@
       "#cfd8dc",
       "#b0bec5",
       "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
     ]
   },
   "cthulhu-mini": {
     "base": "Float",
-    "particles": null,
+    "particles": "Bubbles",
     "speed": 1.0,
     "palette": [
       "#388e3c",
@@ -561,6 +918,15 @@
       "#66bb6a",
       "#a5d6a7",
       "#ffea00"
+    ],
+    "habitat": "aquatic",
+    "allowed_effects": [
+      "float",
+      "swim",
+      "drift",
+      "bubble",
+      "pulse",
+      "wave"
     ]
   },
   "daemon": {
@@ -573,6 +939,15 @@
       "#ff5722",
       "#ffd600",
       "#ffd600"
+    ],
+    "habitat": "aerial",
+    "allowed_effects": [
+      "fly",
+      "hover",
+      "glide",
+      "breathe",
+      "pulse",
+      "float"
     ]
   },
   "satanic": {
@@ -585,6 +960,13 @@
       "#757575",
       "#ff1744",
       "#ffd600"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
     ]
   },
   "minotaur": {
@@ -597,6 +979,13 @@
       "#8d6e63",
       "#ffc107",
       "#ff1744"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
     ]
   },
   "glados": {
@@ -609,6 +998,14 @@
       "#78909c",
       "#ff1744",
       "#ffd600"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse",
+      "glitch"
     ]
   },
   "personality-sphere": {
@@ -621,6 +1018,15 @@
       "#78909c",
       "#cfd8dc",
       "#00e5ff"
+    ],
+    "habitat": "aerial",
+    "allowed_effects": [
+      "fly",
+      "hover",
+      "glide",
+      "breathe",
+      "pulse",
+      "float"
     ]
   },
   "kosh": {
@@ -633,6 +1039,15 @@
       "#e0f2f1",
       "#4db6ac",
       "#ffffff"
+    ],
+    "habitat": "aerial",
+    "allowed_effects": [
+      "fly",
+      "hover",
+      "glide",
+      "breathe",
+      "pulse",
+      "float"
     ]
   },
   "snoopy": {
@@ -645,6 +1060,13 @@
       "#e53935",
       "#ff80ab",
       "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
     ]
   },
   "snoopyhouse": {
@@ -657,6 +1079,13 @@
       "#e53935",
       "#ff80ab",
       "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
     ]
   },
   "snoopysleep": {
@@ -669,6 +1098,13 @@
       "#e53935",
       "#ff80ab",
       "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
     ]
   },
   "ren": {
@@ -681,6 +1117,14 @@
       "#42a5f5",
       "#ffffff",
       "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse",
+      "talk"
     ]
   },
   "stimpy": {
@@ -693,6 +1137,14 @@
       "#ffffff",
       "#ff80ab",
       "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse",
+      "talk"
     ]
   },
   "beavis.zen": {
@@ -705,6 +1157,13 @@
       "#ffcc80",
       "#78909c",
       "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
     ]
   },
   "nyan": {
@@ -717,6 +1176,15 @@
       "#e91e63",
       "#b0bec5",
       "#ffffff"
+    ],
+    "habitat": "aerial",
+    "allowed_effects": [
+      "fly",
+      "hover",
+      "glide",
+      "breathe",
+      "pulse",
+      "float"
     ]
   },
   "hellokitty": {
@@ -729,6 +1197,13 @@
       "#fff9c4",
       "#ff80ab",
       "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
     ]
   },
   "bees": {
@@ -741,6 +1216,15 @@
       "#e0f7fa",
       "#fff59d",
       "#ffffff"
+    ],
+    "habitat": "aerial",
+    "allowed_effects": [
+      "fly",
+      "hover",
+      "glide",
+      "breathe",
+      "pulse",
+      "float"
     ]
   },
   "spidercow": {
@@ -753,6 +1237,13 @@
       "#ffffff",
       "#1976d2",
       "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
     ]
   },
   "stegosaurus": {
@@ -765,6 +1256,13 @@
       "#dcedc8",
       "#fff9c4",
       "#ffd54f"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
     ]
   },
   "tortoise": {
@@ -777,11 +1275,18 @@
       "#fff59d",
       "#689f38",
       "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
     ]
   },
   "turtle": {
     "base": "Float",
-    "particles": null,
+    "particles": "Bubbles",
     "speed": 1.0,
     "palette": [
       "#558b2f",
@@ -789,6 +1294,15 @@
       "#fff59d",
       "#689f38",
       "#ffffff"
+    ],
+    "habitat": "aquatic",
+    "allowed_effects": [
+      "float",
+      "swim",
+      "drift",
+      "bubble",
+      "pulse",
+      "wave"
     ]
   },
   "mona-lisa": {
@@ -801,6 +1315,13 @@
       "#f5f5f5",
       "#a1887f",
       "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
     ]
   },
   "periodic-table": {
@@ -813,6 +1334,13 @@
       "#ff9800",
       "#4caf50",
       "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
     ]
   },
   "world": {
@@ -825,6 +1353,15 @@
       "#ffffff",
       "#81c784",
       "#ffffff"
+    ],
+    "habitat": "aerial",
+    "allowed_effects": [
+      "fly",
+      "hover",
+      "glide",
+      "breathe",
+      "pulse",
+      "float"
     ]
   },
   "king": {
@@ -837,6 +1374,13 @@
       "#ffffff",
       "#d7ccc8",
       "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
     ]
   },
   "queen": {
@@ -849,6 +1393,13 @@
       "#fce4ec",
       "#c2185b",
       "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
     ]
   },
   "knight": {
@@ -861,6 +1412,13 @@
       "#ffffff",
       "#cfd8dc",
       "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
     ]
   },
   "rook": {
@@ -873,6 +1431,13 @@
       "#eceff1",
       "#b0bec5",
       "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
     ]
   },
   "pawn": {
@@ -885,6 +1450,13 @@
       "#ffffff",
       "#bcaaa4",
       "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
     ]
   },
   "surgery": {
@@ -897,6 +1469,14 @@
       "#ffffff",
       "#ff80ab",
       "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse",
+      "glitch"
     ]
   },
   "mutilated": {
@@ -909,6 +1489,14 @@
       "#e0e0e0",
       "#ff1744",
       "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse",
+      "dissolve"
     ]
   },
   "tux": {
@@ -921,6 +1509,17 @@
       "#ffa000",
       "#ffb300",
       "#ffffff"
+    ],
+    "habitat": "amphibious",
+    "allowed_effects": [
+      "walk",
+      "swim",
+      "float",
+      "drift",
+      "breathe",
+      "bubble",
+      "sway",
+      "pulse"
     ]
   },
   "tux-big": {
@@ -933,6 +1532,17 @@
       "#ffa000",
       "#ffb300",
       "#ffffff"
+    ],
+    "habitat": "amphibious",
+    "allowed_effects": [
+      "walk",
+      "swim",
+      "float",
+      "drift",
+      "breathe",
+      "bubble",
+      "sway",
+      "pulse"
     ]
   },
   "armadillo": {
@@ -945,6 +1555,13 @@
       "#f5f5f5",
       "#ff80ab",
       "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
     ]
   },
   "atat": {
@@ -957,6 +1574,13 @@
       "#cfd8dc",
       "#ff1744",
       "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
     ]
   },
   "bearface": {
@@ -969,6 +1593,13 @@
       "#d7ccc8",
       "#ff80ab",
       "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
     ]
   },
   "bill-the-cat": {
@@ -981,6 +1612,14 @@
       "#ffffff",
       "#ff80ab",
       "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse",
+      "talk"
     ]
   },
   "bud-frogs": {
@@ -993,6 +1632,17 @@
       "#aed581",
       "#ffeb3b",
       "#ffd54f"
+    ],
+    "habitat": "amphibious",
+    "allowed_effects": [
+      "walk",
+      "swim",
+      "float",
+      "drift",
+      "breathe",
+      "bubble",
+      "sway",
+      "pulse"
     ]
   },
   "charlie": {
@@ -1005,6 +1655,14 @@
       "#f5f5f5",
       "#ff80ab",
       "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse",
+      "talk"
     ]
   },
   "claw-arm": {
@@ -1017,6 +1675,13 @@
       "#ffc107",
       "#ff1744",
       "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
     ]
   },
   "cowfee": {
@@ -1029,11 +1694,18 @@
       "#fff8e1",
       "#ff80ab",
       "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
     ]
   },
   "ebi_furai": {
     "base": "Float",
-    "particles": null,
+    "particles": "Bubbles",
     "speed": 1.0,
     "palette": [
       "#ff9800",
@@ -1041,6 +1713,15 @@
       "#e53935",
       "#fff3e0",
       "#ffffff"
+    ],
+    "habitat": "aquatic",
+    "allowed_effects": [
+      "float",
+      "swim",
+      "drift",
+      "bubble",
+      "pulse",
+      "wave"
     ]
   },
   "elephant-in-snake": {
@@ -1053,6 +1734,13 @@
       "#fffde7",
       "#ffb6c1",
       "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
     ]
   },
   "elephant": {
@@ -1065,6 +1753,13 @@
       "#fffde7",
       "#ffb6c1",
       "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
     ]
   },
   "elephant2": {
@@ -1077,6 +1772,13 @@
       "#fffde7",
       "#ffb6c1",
       "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
     ]
   },
   "eyes": {
@@ -1089,6 +1791,13 @@
       "#ffffff",
       "#e1bee7",
       "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
     ]
   },
   "fat-banana": {
@@ -1101,6 +1810,13 @@
       "#fff9c4",
       "#c0ca33",
       "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
     ]
   },
   "fence": {
@@ -1113,6 +1829,13 @@
       "#d7ccc8",
       "#a1887f",
       "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
     ]
   },
   "hippie": {
@@ -1125,6 +1848,13 @@
       "#ffff00",
       "#76ff03",
       "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
     ]
   },
   "hiya": {
@@ -1137,6 +1867,14 @@
       "#ffffff",
       "#ff80ab",
       "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse",
+      "talk"
     ]
   },
   "hypno": {
@@ -1149,6 +1887,13 @@
       "#ffffff",
       "#7c4dff",
       "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
     ]
   },
   "kiss": {
@@ -1161,6 +1906,14 @@
       "#fce4ec",
       "#d81b60",
       "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse",
+      "talk"
     ]
   },
   "lollerskates": {
@@ -1173,6 +1926,13 @@
       "#ffff00",
       "#76ff03",
       "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
     ]
   },
   "moofasa": {
@@ -1185,6 +1945,13 @@
       "#fff8e1",
       "#ff80ab",
       "#ffd54f"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
     ]
   },
   "mooghidjirah": {
@@ -1197,6 +1964,13 @@
       "#c8e6c9",
       "#00e5ff",
       "#ffd600"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
     ]
   },
   "moojira": {
@@ -1209,6 +1983,13 @@
       "#c8e6c9",
       "#00e5ff",
       "#ffd600"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
     ]
   },
   "shikato": {
@@ -1221,6 +2002,13 @@
       "#ffffff",
       "#ff80ab",
       "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
     ]
   },
   "shrug": {
@@ -1233,6 +2021,13 @@
       "#b0bec5",
       "#90a4ae",
       "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
     ]
   },
   "skeleton": {
@@ -1245,6 +2040,13 @@
       "#ffffff",
       "#b0bec5",
       "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
     ]
   },
   "small": {
@@ -1257,6 +2059,13 @@
       "#e0e0e0",
       "#ff80ab",
       "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
     ]
   },
   "wizard": {
@@ -1269,6 +2078,14 @@
       "#fdd835",
       "#8d6e63",
       "#00e5ff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse",
+      "float"
     ]
   },
   "hamster": {
@@ -1281,6 +2098,13 @@
       "#fff8e1",
       "#ff80ab",
       "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
     ]
   },
   "corgi": {
@@ -1293,6 +2117,13 @@
       "#ffffff",
       "#ff80ab",
       "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
     ]
   },
   "pig": {
@@ -1305,6 +2136,13 @@
       "#fce4ec",
       "#ec407a",
       "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
     ]
   },
   "ram": {
@@ -1317,6 +2155,13 @@
       "#ffffff",
       "#bcaaa4",
       "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
     ]
   },
   "rooster": {
@@ -1329,6 +2174,15 @@
       "#fbc02d",
       "#ff9800",
       "#ffffff"
+    ],
+    "habitat": "aerial",
+    "allowed_effects": [
+      "fly",
+      "hover",
+      "glide",
+      "breathe",
+      "pulse",
+      "float"
     ]
   },
   "panther": {
@@ -1341,6 +2195,13 @@
       "#cfd8dc",
       "#ff80ab",
       "#00e676"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
     ]
   },
   "rhino": {
@@ -1353,6 +2214,13 @@
       "#fffde7",
       "#b0bec5",
       "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
     ]
   },
   "sloth": {
@@ -1365,6 +2233,13 @@
       "#d7ccc8",
       "#3e2723",
       "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
     ]
   },
   "telebears": {
@@ -1377,6 +2252,13 @@
       "#e3f2fd",
       "#ff80ab",
       "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
     ]
   },
   "tiger": {
@@ -1389,6 +2271,13 @@
       "#ffffff",
       "#ff80ab",
       "#69f0ae"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
     ]
   },
   "wolf": {
@@ -1401,6 +2290,13 @@
       "#ffffff",
       "#37474f",
       "#ffd54f"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
     ]
   },
   "duck": {
@@ -1413,11 +2309,22 @@
       "#cfd8dc",
       "#ff9800",
       "#ffffff"
+    ],
+    "habitat": "amphibious",
+    "allowed_effects": [
+      "walk",
+      "swim",
+      "float",
+      "drift",
+      "breathe",
+      "bubble",
+      "sway",
+      "pulse"
     ]
   },
   "pufferfish": {
-    "base": "Pulse",
-    "particles": "Pulse",
+    "base": "Float",
+    "particles": "Bubbles",
     "speed": 1.0,
     "palette": [
       "#ffb74d",
@@ -1425,11 +2332,20 @@
       "#fffde7",
       "#ffe082",
       "#ffffff"
+    ],
+    "habitat": "aquatic",
+    "allowed_effects": [
+      "float",
+      "swim",
+      "drift",
+      "bubble",
+      "pulse",
+      "wave"
     ]
   },
   "squid": {
     "base": "Float",
-    "particles": null,
+    "particles": "Bubbles",
     "speed": 1.0,
     "palette": [
       "#00bcd4",
@@ -1437,6 +2353,15 @@
       "#e0f7fa",
       "#64ffda",
       "#ffffff"
+    ],
+    "habitat": "aquatic",
+    "allowed_effects": [
+      "float",
+      "swim",
+      "drift",
+      "bubble",
+      "pulse",
+      "wave"
     ]
   },
   "walrus": {
@@ -1449,6 +2374,17 @@
       "#fffde7",
       "#ff80ab",
       "#ffffff"
+    ],
+    "habitat": "amphibious",
+    "allowed_effects": [
+      "walk",
+      "swim",
+      "float",
+      "drift",
+      "breathe",
+      "bubble",
+      "sway",
+      "pulse"
     ]
   },
   "mech-and-cow": {
@@ -1461,6 +2397,13 @@
       "#e0e0e0",
       "#0284c7",
       "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
     ]
   },
   "sauron": {
@@ -1473,6 +2416,13 @@
       "#9e9e9e",
       "#ff3d00",
       "#ffd600"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
     ]
   },
   "unipony": {
@@ -1485,6 +2435,13 @@
       "#ffd54f",
       "#ff80ab",
       "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
     ]
   },
   "vader": {
@@ -1497,6 +2454,13 @@
       "#616161",
       "#303030",
       "#ff1744"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
     ]
   },
   "yoda": {
@@ -1509,6 +2473,15 @@
       "#d7ccc8",
       "#ffb6c1",
       "#ffd54f"
+    ],
+    "habitat": "aerial",
+    "allowed_effects": [
+      "fly",
+      "hover",
+      "glide",
+      "breathe",
+      "pulse",
+      "float"
     ]
   },
   "radioactive-kitty": {
@@ -1521,6 +2494,14 @@
       "#b2ff59",
       "#ff80ab",
       "#ffff00"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse",
+      "glitch"
     ]
   },
   "vulpix": {
@@ -1533,6 +2514,13 @@
       "#fff3e0",
       "#e65100",
       "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
     ]
   },
   "apt": {
@@ -1545,6 +2533,13 @@
       "#e57373",
       "#ff80ab",
       "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
     ]
   },
   "jesus": {
@@ -1557,6 +2552,15 @@
       "#e0e0e0",
       "#ffb6c1",
       "#ffd54f"
+    ],
+    "habitat": "aerial",
+    "allowed_effects": [
+      "fly",
+      "hover",
+      "glide",
+      "breathe",
+      "pulse",
+      "float"
     ]
   },
   "three-eyes": {
@@ -1569,6 +2573,13 @@
       "#b2ff59",
       "#ff80ab",
       "#00e5ff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
     ]
   },
   "viper": {
@@ -1581,6 +2592,13 @@
       "#c8e6c9",
       "#ff1744",
       "#ffd54f"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse"
     ]
   }
 }

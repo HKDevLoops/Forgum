@@ -19,6 +19,60 @@ pub struct MascotBiomeInfo {
     pub movement_lore: &'static str,
 }
 
+impl MascotBiomeInfo {
+    /// Biological habitat classification (aquatic, aerial, amphibious, terrestrial).
+    pub fn habitat(&self) -> &'static str {
+        match self.name {
+            "whale" | "happy-whale" | "docker-whale" | "dolphin" | "octopus"
+            | "smiling-octopus" | "jellyfish" | "seahorse" | "seahorse-big" | "pufferfish"
+            | "squid" | "lobster" | "turtle" | "ebi_furai" | "cthulhu-mini" => "aquatic",
+            "bud-frogs" | "walrus" | "duck" | "tux" | "tux-big" => "amphibious",
+            "bees" | "golden-eagle" | "owl" | "pterodactyl" | "rooster" | "turkey"
+            | "tweety-bird" | "nyan" | "nyan_cat" | "nyancat" | "daemon"
+            | "personality-sphere" | "ghost" | "ghostbusters" | "world" | "yoda" | "kosh"
+            | "jesus" => "aerial",
+            _ => "terrestrial",
+        }
+    }
+
+    /// True if the creature is biologically aquatic.
+    pub fn is_aquatic(&self) -> bool {
+        self.habitat() == "aquatic"
+    }
+
+    /// Check if an animation/effect is logically compatible with this creature's habitat.
+    pub fn is_effect_compatible(&self, effect: &str) -> bool {
+        let eff = effect.trim().to_ascii_lowercase();
+        if eff == "default"
+            || eff == "natural"
+            || eff == "animal_natural"
+            || eff == "dna"
+            || eff == "random"
+            || eff == "static"
+        {
+            return true;
+        }
+        match self.habitat() {
+            "aquatic" => matches!(
+                eff.as_str(),
+                "float" | "swim" | "drift" | "bubble" | "pulse" | "wave" | "glitch" | "dissolve" | "particles"
+            ),
+            "aerial" => matches!(
+                eff.as_str(),
+                "fly" | "hover" | "glide" | "breathe" | "pulse" | "float" | "particles" | "glitch" | "dissolve"
+            ),
+            "amphibious" => matches!(
+                eff.as_str(),
+                "walk" | "swim" | "float" | "drift" | "breathe" | "bubble" | "sway" | "pulse" | "particles" | "glitch" | "dissolve" | "talk"
+            ),
+            _ => matches!(
+                eff.as_str(),
+                "walk" | "breathe" | "sway" | "pulse" | "talk" | "particles" | "glitch" | "dissolve" | "squish"
+            ),
+        }
+    }
+}
+
 /// Static registry of all 132 mascots.
 pub static ALL_MASCOTS: [MascotBiomeInfo; 132] = [
     MascotBiomeInfo {
@@ -1363,7 +1417,7 @@ pub static ALL_MASCOTS: [MascotBiomeInfo; 132] = [
         natural_palette: ["#c62828", "#8e0000", "#ff6f00", "#ff8a65", "#ffffff"],
         natural_rgb: [(198, 40, 40), (142, 0, 0), (255, 111, 0), (255, 138, 101), (255, 255, 255)],
         description: "Formidable clawed decapod crustacean patrolling deep tidal crevices.",
-        movement_lore: "Methodical lateral seabed walk with defensive claw raises.",
+        movement_lore: "Buoyant benthic crawling glide and tail-flick swimming across tidal trenches.",
     },
     MascotBiomeInfo {
         name: "owl",
@@ -1829,4 +1883,17 @@ pub fn natural_creature_color_adaptive(
 
     // 5. Primary body coat
     c0
+}
+
+/// Resolve natural creature color with the specified background contrast mode applied.
+#[must_use]
+pub fn natural_creature_color_with_contrast(
+    palette: &[(u8, u8, u8)],
+    rel_x: usize,
+    rel_y: usize,
+    ch: char,
+    contrast_mode: crate::terminal_theme::ContrastMode,
+) -> (u8, u8, u8) {
+    let (r, g, b) = natural_creature_color(palette, rel_x, rel_y, ch);
+    contrast_mode.adjust_rgb(r, g, b)
 }

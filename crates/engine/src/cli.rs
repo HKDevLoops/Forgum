@@ -1365,9 +1365,24 @@ pub fn build_scene_config(args: &Args) -> Result<SceneConfig, String> {
         cfg.image = Some(img.to_string_lossy().to_string());
     }
 
-    // If --background and no explicit duration, default to 0 (infinite).
-    if cfg.background && args.duration.is_none() && cfg.duration == 0 {
-        // already 0, which means infinite — correct
+    // Validate mascot taxonomy locomotion consistency
+    let animal_name = args.cow.as_deref().unwrap_or(&cfg.cow);
+    let is_aquatic = forgum_platform::biome::get_mascot_biome(animal_name).is_aquatic();
+    if is_aquatic {
+        let is_walk_effect = cfg.effect.eq_ignore_ascii_case("walk")
+            || cfg.effect.eq_ignore_ascii_case("walking")
+            || cfg.effect.eq_ignore_ascii_case("walks");
+        let is_walk_anim = cfg
+            .animation_type
+            .as_deref()
+            .is_some_and(|a| a.eq_ignore_ascii_case("walk") || a.eq_ignore_ascii_case("walking") || a.eq_ignore_ascii_case("walks"));
+        if is_walk_effect || is_walk_anim {
+            eprintln!(
+                "forgum: Mascot '{animal_name}' is aquatic (habitat: aquatic). Remapping incompatible locomotion 'walk' -> 'swim' (floating/swimming with bubbles) for biological consistency."
+            );
+            cfg.effect = "swim".to_string();
+            cfg.animation_type = Some("swim".to_string());
+        }
     }
 
     Ok(cfg)

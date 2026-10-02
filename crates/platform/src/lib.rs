@@ -144,7 +144,10 @@ pub use terminal::{
     terminal_size, terminal_supports_sync, ColorLevel, GraphicsCaps, NativeSplitPlan, SplitMode,
     TerminalCapabilities, TerminalEmulator,
 };
-pub use terminal_theme::{calculate_luminance, detect_terminal_theme, TerminalTheme};
+pub use terminal_theme::{
+    boost_saturation, calculate_luminance, detect_terminal_theme, elevate_luminance,
+    BackgroundPreset, ContrastMode, ContrastProfile, TerminalTheme,
+};
 /// Expand to the contained code only when compiling on a Unix-like target.
 ///
 /// This macro emits a `#[cfg(unix)]` attribute that gates a block, so the

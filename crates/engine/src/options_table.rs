@@ -365,6 +365,8 @@ pub fn render_options(category: &str) -> String {
             vec!["glitch", "Cyberpunk Distortion", "Digital VHS glitch tearing, horizontal displacement, and electric particle bursts"],
             vec!["particles", "Ambient Emitter", "Atmospheric elemental particles (snowflakes, embers, stars, spores) swirling around mascot"],
             vec!["dissolve", "Phase Transition", "Particle deconstruction and dynamic molecular reassembly sequence"],
+            vec!["swim", "Marine Locomotion", "Fluid aquatic propulsion, sinusoidal body undulation below the ocean horizon with bubble trails"],
+            vec!["drift", "Marine Buoyancy", "Weightless marine suspension drifting passively along ocean floor currents"],
         ];
         out.push_str(&format_table(&headers, &rows));
     }

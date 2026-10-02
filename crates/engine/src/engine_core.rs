@@ -255,16 +255,31 @@ impl SimState {
         let (mtn_style, road_style, env_style) = self.scenery;
         let _has_scenery = env_style != crate::scenery::EnvironmentStyle::None
             || mtn_style != crate::scenery::MountainStyle::None;
-        let road_y = match self.cow_dna.base {
-            crate::dna::BaseAnim::Fly
-            | crate::dna::BaseAnim::Float
-            | crate::dna::BaseAnim::Abduction => {
-                // Flying/floating creatures soar in the upper atmosphere above tree canopies
-                self.fb.height.saturating_sub(3).max(self.cow_foot_y + 2)
-            }
-            _ => {
-                // Walking and ground creatures walk directly on the road surface
-                self.cow_foot_y + 1
+        let is_aquatic_animal = self.cow_dna.habitat == crate::dna::Habitat::Aquatic
+            || self.cow_dna.is_aquatic()
+            || effects::detect_animal_instinct(&self.config.cow, &self.cow_dna)
+                == effects::AnimalInstinct::Marine
+            || effects::detect_animal_instinct(&self.config.cow, &self.cow_dna)
+                == effects::AnimalInstinct::Cephalopod;
+
+        let road_y = if env_style == crate::scenery::EnvironmentStyle::Ocean || is_aquatic_animal {
+            // Aquatic immersion: The creature is submerged in the water column.
+            // The seabed is situated below the creature's swimming depth,
+            // providing natural underwater depth.
+            let min_seabed = self.cow_foot_y + 2;
+            self.fb.height.saturating_sub(2).max(min_seabed)
+        } else {
+            match self.cow_dna.base {
+                crate::dna::BaseAnim::Fly
+                | crate::dna::BaseAnim::Float
+                | crate::dna::BaseAnim::Abduction => {
+                    // Flying/floating creatures soar in the upper atmosphere above tree canopies
+                    self.fb.height.saturating_sub(3).max(self.cow_foot_y + 2)
+                }
+                _ => {
+                    // Walking and ground creatures walk directly on the road surface
+                    self.cow_foot_y + 1
+                }
             }
         };
         let animal_h = self.cow_foot_y.max(1);

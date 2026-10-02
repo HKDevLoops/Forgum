@@ -194,6 +194,7 @@ pub fn merge(base: SceneConfig, overlay: SceneConfig) -> SceneConfig {
         split_mode: overlay.split_mode.or(base.split_mode),
         editor: overlay.editor.or(base.editor),
         random: overlay.random.or(base.random),
+        contrast_mode: overlay.contrast_mode.or(base.contrast_mode),
     }
 }
 

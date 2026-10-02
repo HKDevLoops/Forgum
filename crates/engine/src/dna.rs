@@ -7,10 +7,10 @@
 use std::collections::HashMap;
 use std::path::Path;
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 /// The base animation types.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "PascalCase")]
 pub enum BaseAnim {
     #[default]
@@ -32,6 +32,10 @@ pub enum BaseAnim {
     Matrix,
     /// Eerie upward levitation with flicker — maps to Float with spectral phase.
     Abduction,
+    /// Fluid aquatic propulsion and body wave motion through water.
+    Swim,
+    /// Weightless marine buoyancy and deep-sea current drift.
+    Drift,
 }
 
 impl BaseAnim {
@@ -51,6 +55,8 @@ impl BaseAnim {
             "squish" | "squash" | "stretch" | "bounce" => Some(Self::Squish),
             "matrix" | "digital" | "cyber" | "rain" => Some(Self::Matrix),
             "abduction" | "abduct" | "beam" | "lift" => Some(Self::Abduction),
+            "swim" | "swims" | "swimming" => Some(Self::Swim),
+            "drift" | "drifts" | "drifting" => Some(Self::Drift),
             _ => None,
         }
     }
@@ -71,6 +77,77 @@ impl BaseAnim {
             Self::Squish => "squish",
             Self::Matrix => "matrix",
             Self::Abduction => "abduction",
+            Self::Swim => "swim",
+            Self::Drift => "drift",
+        }
+    }
+}
+
+/// Biological and kinematic habitat classification.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum Habitat {
+    #[default]
+    Terrestrial,
+    Aquatic,
+    Aerial,
+    Amphibious,
+}
+
+impl Habitat {
+    pub fn parse(s: &str) -> Option<Self> {
+        match s.trim().to_ascii_lowercase().as_str() {
+            "aquatic" | "ocean" | "marine" | "sea" | "water" => Some(Self::Aquatic),
+            "aerial" | "air" | "flying" | "sky" => Some(Self::Aerial),
+            "amphibious" | "amphibian" => Some(Self::Amphibious),
+            "terrestrial" | "land" | "ground" => Some(Self::Terrestrial),
+            _ => None,
+        }
+    }
+
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Aquatic => "aquatic",
+            Self::Aerial => "aerial",
+            Self::Amphibious => "amphibious",
+            Self::Terrestrial => "terrestrial",
+        }
+    }
+
+    pub fn default_allowed_effects(&self) -> Vec<String> {
+        match self {
+            Self::Aquatic => vec![
+                "float".to_string(),
+                "swim".to_string(),
+                "drift".to_string(),
+                "bubble".to_string(),
+                "pulse".to_string(),
+                "wave".to_string(),
+            ],
+            Self::Aerial => vec![
+                "fly".to_string(),
+                "hover".to_string(),
+                "glide".to_string(),
+                "breathe".to_string(),
+                "pulse".to_string(),
+                "float".to_string(),
+            ],
+            Self::Terrestrial => vec![
+                "walk".to_string(),
+                "breathe".to_string(),
+                "sway".to_string(),
+                "pulse".to_string(),
+            ],
+            Self::Amphibious => vec![
+                "walk".to_string(),
+                "swim".to_string(),
+                "float".to_string(),
+                "drift".to_string(),
+                "breathe".to_string(),
+                "bubble".to_string(),
+                "sway".to_string(),
+                "pulse".to_string(),
+            ],
         }
     }
 }
@@ -275,6 +352,10 @@ pub struct CowDna {
     pub phase_seed: u32,
     #[serde(default)]
     pub glow: GlowDna,
+    #[serde(default)]
+    pub habitat: Habitat,
+    #[serde(default)]
+    pub allowed_effects: Vec<String>,
 }
 
 fn default_speed() -> f32 {
@@ -303,6 +384,8 @@ impl Default for CowDna {
             easing: EasingDna::default(),
             phase_seed: default_phase_seed(),
             glow: GlowDna::default(),
+            habitat: Habitat::default(),
+            allowed_effects: Vec::new(),
         }
     }
 }
@@ -312,6 +395,35 @@ impl Default for CowDna {
 pub const EMBEDDED_ANIMATIONS_JSON: &str = include_str!("../../../data/Cows/animations.json");
 
 impl CowDna {
+    /// Retrieve allowed effects for this mascot, falling back to habitat defaults if unspecified.
+    pub fn get_allowed_effects(&self) -> Vec<String> {
+        if !self.allowed_effects.is_empty() {
+            return self.allowed_effects.clone();
+        }
+        self.habitat.default_allowed_effects()
+    }
+
+    /// Check if a specific effect name is compatible with this mascot's biological taxonomy.
+    pub fn is_effect_allowed(&self, effect: &str) -> bool {
+        let eff = effect.trim().to_ascii_lowercase();
+        if eff == "random"
+            || eff == "static"
+            || eff == "default"
+            || eff == "natural"
+            || eff == "animal_natural"
+            || eff == "dna"
+        {
+            return true;
+        }
+        let allowed = self.get_allowed_effects();
+        allowed.iter().any(|a| a.trim().eq_ignore_ascii_case(&eff))
+    }
+
+    /// True if the creature is biologically aquatic.
+    pub fn is_aquatic(&self) -> bool {
+        self.habitat == Habitat::Aquatic
+    }
+
     /// Construct a fallback `CowDna` profile with default Walk kinematics and the
     /// mascot's authentic 5-slot biological natural palette from `biome.rs`.
     pub fn from_biome(mascot: &str) -> Self {
@@ -320,8 +432,38 @@ impl CowDna {
             .iter()
             .map(|&s| s.to_string())
             .collect();
+        let biome = forgum_platform::biome::get_mascot_biome(clean);
+        let habitat = match biome.habitat() {
+            "aquatic" => Habitat::Aquatic,
+            "amphibious" => Habitat::Amphibious,
+            "aerial" => Habitat::Aerial,
+            _ => Habitat::Terrestrial,
+        };
+
+        let base = if habitat == Habitat::Aquatic {
+            BaseAnim::Float
+        } else {
+            BaseAnim::default()
+        };
+
+        let particles = if habitat == Habitat::Aquatic {
+            ParticleDna {
+                r#type: ParticleType::Bubbles,
+                rate: 8,
+                ..ParticleDna::default()
+            }
+        } else {
+            ParticleDna::default()
+        };
+
+        let allowed_effects = habitat.default_allowed_effects();
+
         Self {
+            base,
+            particles,
             palette,
+            habitat,
+            allowed_effects,
             ..Self::default()
         }
     }
@@ -354,6 +496,9 @@ pub fn parse_animations_json_str(
                         .iter()
                         .map(|&s| s.to_string())
                         .collect();
+                }
+                if dna.allowed_effects.is_empty() {
+                    dna.allowed_effects = dna.habitat.default_allowed_effects();
                 }
                 result.insert(name, dna);
             }
@@ -573,6 +718,8 @@ mod tests {
         assert_eq!(dna.glow.falloff, "gaussian");
         assert_eq!(dna.palette.len(), 5);
         assert_eq!(dna.palette, default_palette());
+        assert_eq!(dna.habitat, Habitat::Terrestrial);
+        assert_eq!(dna.allowed_effects, Vec::<String>::new());
     }
 
     #[test]
@@ -798,6 +945,8 @@ mod tests {
             "easing",
             "phase_seed",
             "glow",
+            "habitat",
+            "allowed_effects",
         ];
         for key in obj.keys() {
             assert!(
@@ -862,5 +1011,42 @@ mod tests {
             "particle speed range must be ordered: {:?}",
             dna.particles.speed
         );
+    }
+
+    #[test]
+    fn test_aquatic_taxonomy_and_effects() {
+        let dna = CowDna::from_biome("whale");
+        assert_eq!(dna.habitat, Habitat::Aquatic);
+        assert_eq!(dna.base, BaseAnim::Float);
+        assert_eq!(dna.particles.r#type, ParticleType::Bubbles);
+        assert!(!dna.is_effect_allowed("walk"));
+        assert!(dna.is_effect_allowed("swim"));
+        assert!(dna.is_effect_allowed("float"));
+        assert!(dna.is_effect_allowed("drift"));
+        assert!(dna.is_effect_allowed("bubble"));
+
+        let lobster = CowDna::from_biome("lobster");
+        assert_eq!(lobster.habitat, Habitat::Aquatic);
+        assert_eq!(lobster.base, BaseAnim::Float);
+        assert!(!lobster.is_effect_allowed("walk"));
+    }
+
+    #[test]
+    fn test_habitat_default_allowed_effects() {
+        let aq = Habitat::Aquatic.default_allowed_effects();
+        assert!(aq.contains(&"swim".to_string()));
+        assert!(aq.contains(&"float".to_string()));
+        assert!(!aq.contains(&"walk".to_string()));
+
+        let ter = Habitat::Terrestrial.default_allowed_effects();
+        assert!(ter.contains(&"walk".to_string()));
+
+        let aer = Habitat::Aerial.default_allowed_effects();
+        assert!(aer.contains(&"fly".to_string()));
+        assert!(!aer.contains(&"walk".to_string()));
+
+        let amp = Habitat::Amphibious.default_allowed_effects();
+        assert!(amp.contains(&"walk".to_string()));
+        assert!(amp.contains(&"swim".to_string()));
     }
 }

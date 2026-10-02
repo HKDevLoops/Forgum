@@ -388,7 +388,7 @@ pub fn get_animal_profile(animal: &str) -> AnimalProfile {
         "kosh" => ("kosh", BaseAnim::Float, "oo", "  "),
         "lamb" => ("lamb", BaseAnim::Walk, "oo", "  "),
         "lamb2" => ("lamb2", BaseAnim::Walk, "oo", "  "),
-        "lobster" => ("lobster", BaseAnim::Walk, "oo", "  "),
+        "lobster" => ("lobster", BaseAnim::Float, "oo", "  "),
         "lollerskates" => ("lollerskates", BaseAnim::Walk, "oo", "  "),
         "luke-koala" => ("luke-koala", BaseAnim::Breathe, "oo", "  "),
         "mech-and-cow" => ("mech-and-cow", BaseAnim::Walk, "oo", "  "),
@@ -815,6 +815,7 @@ pub fn calculate_tree_count(width: usize, env: EnvironmentStyle, animal_height: 
         EnvironmentStyle::City
         | EnvironmentStyle::Space
         | EnvironmentStyle::Cyber
+        | EnvironmentStyle::Ocean
         | EnvironmentStyle::None => return 0,
         _ => 0.90_f32,
     };
@@ -969,6 +970,7 @@ pub fn render_trees_with_animal(
                 | EnvironmentStyle::City
                 | EnvironmentStyle::Space
                 | EnvironmentStyle::Cyber
+                | EnvironmentStyle::Ocean
         )
     {
         return;
@@ -1674,15 +1676,27 @@ pub fn render_environment(
             }
         }
         EnvironmentStyle::Ocean => {
-            // Rising bubbles ascending from the seabed ground
+            // Render surface ocean waves horizon across the water boundary
+            let surface_y = if ground_y >= 6 { 1 } else { 0 };
+            let wave_fg = Color::rgb(72, 202, 228); // Luminous sea surface cyan
+            for x in 0..width {
+                let wave_harmonic = (x as f32 * 0.28 + time * 2.8).sin() * 0.45;
+                let wave_ch = if ((x + (time * 3.0) as usize) % 4) < 2 { '~' } else { '≈' };
+                let y_wave = ((surface_y as f32 + wave_harmonic).round() as usize).min(ground_y.saturating_sub(1));
+                let _ = fb.set(x, y_wave, Cell::new(wave_ch, wave_fg));
+            }
+
+            // Rising bubbles ascending through the water column from seabed to surface
             let bubble_fg = Color::rgb(128, 222, 234);
-            for i in 0..5 {
-                let seed = i * 23;
-                let x = (seed + i * 7) % width;
-                let rise = (((time * 2.5) as usize) + i * 2) % (ground_y.max(1) + 1);
+            for i in 0..8 {
+                let seed = i * 19;
+                let x = (seed + i * 11 + ((time * 1.5) as usize)) % width;
+                let rise = (((time * 2.5) as usize) + i * 2) % (ground_y.saturating_sub(surface_y).max(1) + 1);
                 let y = ground_y.saturating_sub(rise);
-                let ch = if i % 2 == 0 { 'o' } else { '.' };
-                let _ = fb.set(x, y, Cell::new(ch, bubble_fg));
+                if y > surface_y && y < ground_y {
+                    let ch = if i % 2 == 0 { 'o' } else { '.' };
+                    let _ = fb.set(x, y, Cell::new(ch, bubble_fg));
+                }
             }
         }
         EnvironmentStyle::Arctic => {
