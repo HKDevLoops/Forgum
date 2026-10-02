@@ -20,17 +20,47 @@ pub struct MascotBiomeInfo {
 }
 
 impl MascotBiomeInfo {
-    /// Biological habitat classification (aquatic, aerial, amphibious, terrestrial).
+    /// Biological habitat classification:
+    /// - `aquatic`: Marine & underwater creatures (swimming, floating with bubbles)
+    /// - `amphibious`: Transitional land/water creatures (walking, swimming, floating)
+    /// - `aerial`: Soaring & flying creatures (atmospheric flight, hovering, gliding)
+    /// - `inanimate`: Static monuments, objects, art, architecture, chess pieces
+    /// - `ethereal`: Spectral ghosts, cosmic bodies, eyes, quantum anomalies
+    /// - `serpentine`: Legless reptiles (slithering, undulating lateral sway)
+    /// - `sedentary`: Very slow arboreal mammals (slow breathing, gentle sway)
+    /// - `terrestrial`: Ground-walking quadrupeds, bipeds, and domestic/wild animals
     pub fn habitat(&self) -> &'static str {
         match self.name {
+            // Aquatic (15):
             "whale" | "happy-whale" | "docker-whale" | "dolphin" | "octopus"
             | "smiling-octopus" | "jellyfish" | "seahorse" | "seahorse-big" | "pufferfish"
             | "squid" | "lobster" | "turtle" | "ebi_furai" | "cthulhu-mini" => "aquatic",
+
+            // Amphibious (5):
             "bud-frogs" | "walrus" | "duck" | "tux" | "tux-big" => "amphibious",
-            "bees" | "golden-eagle" | "owl" | "pterodactyl" | "rooster" | "turkey"
-            | "tweety-bird" | "nyan" | "nyan_cat" | "nyancat" | "daemon"
-            | "personality-sphere" | "ghost" | "ghostbusters" | "world" | "yoda" | "kosh"
-            | "jesus" => "aerial",
+
+            // Aerial / Flying (11):
+            "golden-eagle" | "pterodactyl" | "tweety-bird" | "owl" | "bees"
+            | "dragon" | "dragon-and-cow" | "charizardvice" | "daemon" | "nyan"
+            | "nyan_cat" | "nyancat" | "unipony" => "aerial",
+
+            // Inanimate objects / structures / chess pieces (14):
+            "periodic-table" | "mona-lisa" | "fence" | "snoopyhouse" | "snoopysleep"
+            | "cower" | "claw-arm" | "supermilker" | "surgery" | "apt"
+            | "king" | "queen" | "rook" | "pawn" => "inanimate",
+
+            // Ethereal / Cosmic / Supernatural / Celestial (14):
+            "ghost" | "ghostbusters" | "sauron" | "weeping-angel" | "satanic"
+            | "personality-sphere" | "world" | "eyes" | "kosh" | "jesus"
+            | "wizard" | "glados" | "hypno" | "mutilated" => "ethereal",
+
+            // Serpentine / Legless reptiles (2):
+            "viper" | "elephant-in-snake" => "serpentine",
+
+            // Sedentary / Slow arboreal animals (3):
+            "sloth" | "koala" | "luke-koala" => "sedentary",
+
+            // Terrestrial land-walking animals:
             _ => "terrestrial",
         }
     }
@@ -38,6 +68,81 @@ impl MascotBiomeInfo {
     /// True if the creature is biologically aquatic.
     pub fn is_aquatic(&self) -> bool {
         self.habitat() == "aquatic"
+    }
+
+    /// True if the creature is biologically amphibious.
+    pub fn is_amphibious(&self) -> bool {
+        self.habitat() == "amphibious"
+    }
+
+    /// True if the creature is an aerial flyer.
+    pub fn is_aerial(&self) -> bool {
+        self.habitat() == "aerial"
+    }
+
+    /// True if the mascot is an inanimate object or structure.
+    pub fn is_inanimate(&self) -> bool {
+        self.habitat() == "inanimate"
+    }
+
+    /// True if the mascot is an ethereal or cosmic entity.
+    pub fn is_ethereal(&self) -> bool {
+        self.habitat() == "ethereal"
+    }
+
+    /// True if the creature is a legless serpentine reptile.
+    pub fn is_serpentine(&self) -> bool {
+        self.habitat() == "serpentine"
+    }
+
+    /// True if the creature is a slow sedentary arboreal mammal.
+    pub fn is_sedentary(&self) -> bool {
+        self.habitat() == "sedentary"
+    }
+
+    /// True if the creature naturally walks on ground with stepping cycles.
+    pub fn can_walk(&self) -> bool {
+        match self.habitat() {
+            "terrestrial" | "amphibious" => true,
+            _ => false,
+        }
+    }
+
+    /// Gracefully remap an incompatible locomotion or animation effect to the mascot's
+    /// natural physical kinematics, returning `Some((remapped_effect, explanation))`
+    /// or `None` if the effect is already compatible.
+    pub fn remap_incompatible_effect(&self, effect: &str) -> Option<(&'static str, &'static str)> {
+        let eff = effect.trim().to_ascii_lowercase();
+        let is_walk = matches!(eff.as_str(), "walk" | "walks" | "walking");
+        let is_fly = matches!(eff.as_str(), "fly" | "flying");
+
+        match self.habitat() {
+            "aquatic" if is_walk => Some((
+                "swim",
+                "aquatic creature; swimming/floating with bubbles is required",
+            )),
+            "aerial" if is_walk => Some((
+                "fly",
+                "airborne flyer; soaring flight kinematics is required",
+            )),
+            "inanimate" if is_walk || is_fly => Some((
+                "pulse",
+                "inanimate structure/object; stationary resonant pulse is required",
+            )),
+            "ethereal" if is_walk => Some((
+                "float",
+                "ethereal/cosmic entity; zero-gravity levitation is required",
+            )),
+            "serpentine" if is_walk => Some((
+                "sway",
+                "legless reptile; undulating lateral slither is required",
+            )),
+            "sedentary" if is_walk => Some((
+                "sway",
+                "sedentary arboreal creature; slow harmonic sway is required",
+            )),
+            _ => None,
+        }
     }
 
     /// Check if an animation/effect is logically compatible with this creature's habitat.
@@ -60,6 +165,22 @@ impl MascotBiomeInfo {
             "aerial" => matches!(
                 eff.as_str(),
                 "fly" | "hover" | "glide" | "breathe" | "pulse" | "float" | "particles" | "glitch" | "dissolve"
+            ),
+            "inanimate" => matches!(
+                eff.as_str(),
+                "pulse" | "breathe" | "sway" | "glitch" | "dissolve" | "static"
+            ),
+            "ethereal" => matches!(
+                eff.as_str(),
+                "float" | "drift" | "pulse" | "glitch" | "dissolve" | "breathe" | "wave" | "particles"
+            ),
+            "serpentine" => matches!(
+                eff.as_str(),
+                "sway" | "drift" | "breathe" | "pulse" | "glitch" | "dissolve"
+            ),
+            "sedentary" => matches!(
+                eff.as_str(),
+                "breathe" | "sway" | "pulse" | "squish" | "dissolve"
             ),
             "amphibious" => matches!(
                 eff.as_str(),

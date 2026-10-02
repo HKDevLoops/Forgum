@@ -268,19 +268,19 @@ impl SimState {
             // providing natural underwater depth.
             let min_seabed = self.cow_foot_y + 2;
             self.fb.height.saturating_sub(2).max(min_seabed)
-        } else {
-            match self.cow_dna.base {
+        } else if self.cow_dna.habitat == crate::dna::Habitat::Aerial
+            || matches!(
+                self.cow_dna.base,
                 crate::dna::BaseAnim::Fly
-                | crate::dna::BaseAnim::Float
-                | crate::dna::BaseAnim::Abduction => {
-                    // Flying/floating creatures soar in the upper atmosphere above tree canopies
-                    self.fb.height.saturating_sub(3).max(self.cow_foot_y + 2)
-                }
-                _ => {
-                    // Walking and ground creatures walk directly on the road surface
-                    self.cow_foot_y + 1
-                }
-            }
+                    | crate::dna::BaseAnim::Float
+                    | crate::dna::BaseAnim::Abduction
+            )
+        {
+            // Flying/floating creatures soar in the upper atmosphere above tree canopies
+            self.fb.height.saturating_sub(3).max(self.cow_foot_y + 2)
+        } else {
+            // Ground creatures and stationary objects rest directly on the road surface
+            self.cow_foot_y + 1
         };
         let animal_h = self.cow_foot_y.max(1);
         crate::scenery::render_scenery_full(

@@ -15,7 +15,12 @@
       "walk",
       "breathe",
       "sway",
-      "pulse"
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
     ]
   },
   "cower": {
@@ -29,12 +34,14 @@
       "#ff80ab",
       "#ffffff"
     ],
-    "habitat": "terrestrial",
+    "habitat": "inanimate",
     "allowed_effects": [
-      "walk",
+      "pulse",
       "breathe",
       "sway",
-      "pulse"
+      "glitch",
+      "dissolve",
+      "static"
     ]
   },
   "fat-cow": {
@@ -53,7 +60,12 @@
       "walk",
       "breathe",
       "sway",
-      "pulse"
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
     ]
   },
   "supermilker": {
@@ -67,12 +79,14 @@
       "#ff80ab",
       "#ffffff"
     ],
-    "habitat": "terrestrial",
+    "habitat": "inanimate",
     "allowed_effects": [
-      "walk",
+      "pulse",
       "breathe",
       "sway",
-      "pulse"
+      "glitch",
+      "dissolve",
+      "static"
     ]
   },
   "moose": {
@@ -91,7 +105,12 @@
       "walk",
       "breathe",
       "sway",
-      "pulse"
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
     ]
   },
   "mule": {
@@ -110,7 +129,12 @@
       "walk",
       "breathe",
       "sway",
-      "pulse"
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
     ]
   },
   "sheep": {
@@ -129,7 +153,12 @@
       "walk",
       "breathe",
       "sway",
-      "pulse"
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
     ]
   },
   "flaming-sheep": {
@@ -148,7 +177,12 @@
       "walk",
       "breathe",
       "sway",
-      "pulse"
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
     ]
   },
   "lamb": {
@@ -167,7 +201,12 @@
       "walk",
       "breathe",
       "sway",
-      "pulse"
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
     ]
   },
   "lamb2": {
@@ -186,7 +225,12 @@
       "walk",
       "breathe",
       "sway",
-      "pulse"
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
     ]
   },
   "goat": {
@@ -205,7 +249,12 @@
       "walk",
       "breathe",
       "sway",
-      "pulse"
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
     ]
   },
   "goat2": {
@@ -224,7 +273,12 @@
       "walk",
       "breathe",
       "sway",
-      "pulse"
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
     ]
   },
   "dolphin": {
@@ -448,18 +502,21 @@
       "#e53935",
       "#ffffff"
     ],
-    "habitat": "aerial",
+    "habitat": "terrestrial",
     "allowed_effects": [
-      "fly",
-      "hover",
-      "glide",
+      "walk",
       "breathe",
+      "sway",
       "pulse",
-      "float"
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
     ]
   },
   "owl": {
-    "base": "Breathe",
+    "base": "Fly",
     "particles": null,
     "speed": 0.8,
     "palette": [
@@ -558,7 +615,12 @@
       "walk",
       "breathe",
       "sway",
-      "pulse"
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
     ]
   },
   "cat2": {
@@ -577,7 +639,12 @@
       "walk",
       "breathe",
       "sway",
-      "pulse"
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
     ]
   },
   "kitty": {
@@ -596,7 +663,12 @@
       "walk",
       "breathe",
       "sway",
-      "pulse"
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
     ]
   },
   "kitten": {
@@ -615,7 +687,12 @@
       "walk",
       "breathe",
       "sway",
-      "pulse"
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
     ]
   },
   "meow": {
@@ -635,7 +712,11 @@
       "breathe",
       "sway",
       "pulse",
-      "talk"
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
     ]
   },
   "catfence": {
@@ -654,7 +735,12 @@
       "walk",
       "breathe",
       "sway",
-      "pulse"
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
     ]
   },
   "doge": {
@@ -673,7 +759,12 @@
       "walk",
       "breathe",
       "sway",
-      "pulse"
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
     ]
   },
   "fox": {
@@ -692,7 +783,12 @@
       "walk",
       "breathe",
       "sway",
-      "pulse"
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
     ]
   },
   "bunny": {
@@ -711,7 +807,12 @@
       "walk",
       "breathe",
       "sway",
-      "pulse"
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
     ]
   },
   "squirrel": {
@@ -730,7 +831,12 @@
       "walk",
       "breathe",
       "sway",
-      "pulse"
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
     ]
   },
   "hedgehog": {
@@ -749,13 +855,18 @@
       "walk",
       "breathe",
       "sway",
-      "pulse"
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
     ]
   },
   "koala": {
     "base": "Breathe",
     "particles": "Zzz",
-    "speed": 0.8,
+    "speed": 0.4,
     "palette": [
       "#90a4ae",
       "#546e7a",
@@ -763,18 +874,19 @@
       "#ff80ab",
       "#ffffff"
     ],
-    "habitat": "terrestrial",
+    "habitat": "sedentary",
     "allowed_effects": [
-      "walk",
       "breathe",
       "sway",
-      "pulse"
+      "pulse",
+      "squish",
+      "dissolve"
     ]
   },
   "luke-koala": {
     "base": "Breathe",
     "particles": "Zzz",
-    "speed": 0.8,
+    "speed": 0.4,
     "palette": [
       "#90a4ae",
       "#546e7a",
@@ -782,16 +894,17 @@
       "#ff80ab",
       "#ffffff"
     ],
-    "habitat": "terrestrial",
+    "habitat": "sedentary",
     "allowed_effects": [
-      "walk",
       "breathe",
       "sway",
-      "pulse"
+      "pulse",
+      "squish",
+      "dissolve"
     ]
   },
   "dragon": {
-    "base": "Breathe",
+    "base": "Fly",
     "particles": "Fire",
     "speed": 0.8,
     "palette": [
@@ -801,16 +914,18 @@
       "#ff3d00",
       "#ffd600"
     ],
-    "habitat": "terrestrial",
+    "habitat": "aerial",
     "allowed_effects": [
-      "walk",
+      "fly",
+      "hover",
+      "glide",
       "breathe",
-      "sway",
-      "pulse"
+      "pulse",
+      "float"
     ]
   },
   "dragon-and-cow": {
-    "base": "Breathe",
+    "base": "Fly",
     "particles": "Fire",
     "speed": 0.8,
     "palette": [
@@ -820,16 +935,18 @@
       "#ff3d00",
       "#ffd600"
     ],
-    "habitat": "terrestrial",
+    "habitat": "aerial",
     "allowed_effects": [
-      "walk",
+      "fly",
+      "hover",
+      "glide",
       "breathe",
-      "sway",
-      "pulse"
+      "pulse",
+      "float"
     ]
   },
   "charizardvice": {
-    "base": "Breathe",
+    "base": "Fly",
     "particles": "Fire",
     "speed": 0.8,
     "palette": [
@@ -839,12 +956,14 @@
       "#ff3d00",
       "#40c4ff"
     ],
-    "habitat": "terrestrial",
+    "habitat": "aerial",
     "allowed_effects": [
-      "walk",
+      "fly",
+      "hover",
+      "glide",
       "breathe",
-      "sway",
-      "pulse"
+      "pulse",
+      "float"
     ]
   },
   "ghost": {
@@ -858,18 +977,19 @@
       "#b2dfdb",
       "#ffffff"
     ],
-    "habitat": "aerial",
+    "habitat": "ethereal",
     "allowed_effects": [
-      "fly",
-      "hover",
-      "glide",
-      "breathe",
+      "float",
+      "drift",
       "pulse",
-      "float"
+      "glitch",
+      "dissolve",
+      "breathe",
+      "wave"
     ]
   },
   "ghostbusters": {
-    "base": "Pulse",
+    "base": "Float",
     "particles": null,
     "speed": 1.0,
     "palette": [
@@ -879,14 +999,15 @@
       "#ff80ab",
       "#ffffff"
     ],
-    "habitat": "aerial",
+    "habitat": "ethereal",
     "allowed_effects": [
-      "fly",
-      "hover",
-      "glide",
-      "breathe",
+      "float",
+      "drift",
       "pulse",
-      "float"
+      "glitch",
+      "dissolve",
+      "breathe",
+      "wave"
     ]
   },
   "weeping-angel": {
@@ -900,17 +1021,20 @@
       "#b0bec5",
       "#ffffff"
     ],
-    "habitat": "terrestrial",
+    "habitat": "ethereal",
     "allowed_effects": [
-      "walk",
+      "float",
+      "drift",
+      "pulse",
+      "glitch",
+      "dissolve",
       "breathe",
-      "sway",
-      "pulse"
+      "wave"
     ]
   },
   "cthulhu-mini": {
     "base": "Float",
-    "particles": "Bubbles",
+    "particles": "Stars",
     "speed": 1.0,
     "palette": [
       "#388e3c",
@@ -961,12 +1085,15 @@
       "#ff1744",
       "#ffd600"
     ],
-    "habitat": "terrestrial",
+    "habitat": "ethereal",
     "allowed_effects": [
-      "walk",
+      "float",
+      "drift",
+      "pulse",
+      "glitch",
+      "dissolve",
       "breathe",
-      "sway",
-      "pulse"
+      "wave"
     ]
   },
   "minotaur": {
@@ -985,11 +1112,16 @@
       "walk",
       "breathe",
       "sway",
-      "pulse"
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
     ]
   },
   "glados": {
-    "base": "Glitch",
+    "base": "Sway",
     "particles": "Glitch",
     "speed": 1.0,
     "palette": [
@@ -999,13 +1131,15 @@
       "#ff1744",
       "#ffd600"
     ],
-    "habitat": "terrestrial",
+    "habitat": "ethereal",
     "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
+      "float",
+      "drift",
       "pulse",
-      "glitch"
+      "glitch",
+      "dissolve",
+      "breathe",
+      "wave"
     ]
   },
   "personality-sphere": {
@@ -1019,14 +1153,15 @@
       "#cfd8dc",
       "#00e5ff"
     ],
-    "habitat": "aerial",
+    "habitat": "ethereal",
     "allowed_effects": [
-      "fly",
-      "hover",
-      "glide",
-      "breathe",
+      "float",
+      "drift",
       "pulse",
-      "float"
+      "glitch",
+      "dissolve",
+      "breathe",
+      "wave"
     ]
   },
   "kosh": {
@@ -1040,14 +1175,15 @@
       "#4db6ac",
       "#ffffff"
     ],
-    "habitat": "aerial",
+    "habitat": "ethereal",
     "allowed_effects": [
-      "fly",
-      "hover",
-      "glide",
-      "breathe",
+      "float",
+      "drift",
       "pulse",
-      "float"
+      "glitch",
+      "dissolve",
+      "breathe",
+      "wave"
     ]
   },
   "snoopy": {
@@ -1066,7 +1202,12 @@
       "walk",
       "breathe",
       "sway",
-      "pulse"
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
     ]
   },
   "snoopyhouse": {
@@ -1080,12 +1221,14 @@
       "#ff80ab",
       "#ffffff"
     ],
-    "habitat": "terrestrial",
+    "habitat": "inanimate",
     "allowed_effects": [
-      "walk",
+      "pulse",
       "breathe",
       "sway",
-      "pulse"
+      "glitch",
+      "dissolve",
+      "static"
     ]
   },
   "snoopysleep": {
@@ -1099,12 +1242,14 @@
       "#ff80ab",
       "#ffffff"
     ],
-    "habitat": "terrestrial",
+    "habitat": "inanimate",
     "allowed_effects": [
-      "walk",
+      "pulse",
       "breathe",
       "sway",
-      "pulse"
+      "glitch",
+      "dissolve",
+      "static"
     ]
   },
   "ren": {
@@ -1124,7 +1269,11 @@
       "breathe",
       "sway",
       "pulse",
-      "talk"
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
     ]
   },
   "stimpy": {
@@ -1144,7 +1293,11 @@
       "breathe",
       "sway",
       "pulse",
-      "talk"
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
     ]
   },
   "beavis.zen": {
@@ -1163,7 +1316,12 @@
       "walk",
       "breathe",
       "sway",
-      "pulse"
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
     ]
   },
   "nyan": {
@@ -1203,7 +1361,12 @@
       "walk",
       "breathe",
       "sway",
-      "pulse"
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
     ]
   },
   "bees": {
@@ -1243,7 +1406,12 @@
       "walk",
       "breathe",
       "sway",
-      "pulse"
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
     ]
   },
   "stegosaurus": {
@@ -1262,7 +1430,12 @@
       "walk",
       "breathe",
       "sway",
-      "pulse"
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
     ]
   },
   "tortoise": {
@@ -1281,7 +1454,12 @@
       "walk",
       "breathe",
       "sway",
-      "pulse"
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
     ]
   },
   "turtle": {
@@ -1316,12 +1494,14 @@
       "#a1887f",
       "#ffffff"
     ],
-    "habitat": "terrestrial",
+    "habitat": "inanimate",
     "allowed_effects": [
-      "walk",
+      "pulse",
       "breathe",
       "sway",
-      "pulse"
+      "glitch",
+      "dissolve",
+      "static"
     ]
   },
   "periodic-table": {
@@ -1335,12 +1515,14 @@
       "#4caf50",
       "#ffffff"
     ],
-    "habitat": "terrestrial",
+    "habitat": "inanimate",
     "allowed_effects": [
-      "walk",
+      "pulse",
       "breathe",
       "sway",
-      "pulse"
+      "glitch",
+      "dissolve",
+      "static"
     ]
   },
   "world": {
@@ -1354,18 +1536,19 @@
       "#81c784",
       "#ffffff"
     ],
-    "habitat": "aerial",
+    "habitat": "ethereal",
     "allowed_effects": [
-      "fly",
-      "hover",
-      "glide",
-      "breathe",
+      "float",
+      "drift",
       "pulse",
-      "float"
+      "glitch",
+      "dissolve",
+      "breathe",
+      "wave"
     ]
   },
   "king": {
-    "base": "Breathe",
+    "base": "Pulse",
     "particles": null,
     "speed": 0.8,
     "palette": [
@@ -1375,16 +1558,18 @@
       "#d7ccc8",
       "#ffffff"
     ],
-    "habitat": "terrestrial",
+    "habitat": "inanimate",
     "allowed_effects": [
-      "walk",
+      "pulse",
       "breathe",
       "sway",
-      "pulse"
+      "glitch",
+      "dissolve",
+      "static"
     ]
   },
   "queen": {
-    "base": "Breathe",
+    "base": "Pulse",
     "particles": null,
     "speed": 0.8,
     "palette": [
@@ -1394,12 +1579,14 @@
       "#c2185b",
       "#ffffff"
     ],
-    "habitat": "terrestrial",
+    "habitat": "inanimate",
     "allowed_effects": [
-      "walk",
+      "pulse",
       "breathe",
       "sway",
-      "pulse"
+      "glitch",
+      "dissolve",
+      "static"
     ]
   },
   "knight": {
@@ -1418,11 +1605,16 @@
       "walk",
       "breathe",
       "sway",
-      "pulse"
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
     ]
   },
   "rook": {
-    "base": "Walk",
+    "base": "Pulse",
     "particles": null,
     "speed": 1.0,
     "palette": [
@@ -1432,16 +1624,18 @@
       "#b0bec5",
       "#ffffff"
     ],
-    "habitat": "terrestrial",
+    "habitat": "inanimate",
     "allowed_effects": [
-      "walk",
+      "pulse",
       "breathe",
       "sway",
-      "pulse"
+      "glitch",
+      "dissolve",
+      "static"
     ]
   },
   "pawn": {
-    "base": "Walk",
+    "base": "Pulse",
     "particles": null,
     "speed": 1.0,
     "palette": [
@@ -1451,12 +1645,14 @@
       "#bcaaa4",
       "#ffffff"
     ],
-    "habitat": "terrestrial",
+    "habitat": "inanimate",
     "allowed_effects": [
-      "walk",
+      "pulse",
       "breathe",
       "sway",
-      "pulse"
+      "glitch",
+      "dissolve",
+      "static"
     ]
   },
   "surgery": {
@@ -1470,13 +1666,14 @@
       "#ff80ab",
       "#ffffff"
     ],
-    "habitat": "terrestrial",
+    "habitat": "inanimate",
     "allowed_effects": [
-      "walk",
+      "pulse",
       "breathe",
       "sway",
-      "pulse",
-      "glitch"
+      "glitch",
+      "dissolve",
+      "static"
     ]
   },
   "mutilated": {
@@ -1490,13 +1687,15 @@
       "#ff1744",
       "#ffffff"
     ],
-    "habitat": "terrestrial",
+    "habitat": "ethereal",
     "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
+      "float",
+      "drift",
       "pulse",
-      "dissolve"
+      "glitch",
+      "dissolve",
+      "breathe",
+      "wave"
     ]
   },
   "tux": {
@@ -1561,7 +1760,12 @@
       "walk",
       "breathe",
       "sway",
-      "pulse"
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
     ]
   },
   "atat": {
@@ -1580,7 +1784,12 @@
       "walk",
       "breathe",
       "sway",
-      "pulse"
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
     ]
   },
   "bearface": {
@@ -1599,7 +1808,12 @@
       "walk",
       "breathe",
       "sway",
-      "pulse"
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
     ]
   },
   "bill-the-cat": {
@@ -1619,11 +1833,15 @@
       "breathe",
       "sway",
       "pulse",
-      "talk"
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
     ]
   },
   "bud-frogs": {
-    "base": "Float",
+    "base": "Walk",
     "particles": null,
     "speed": 1.0,
     "palette": [
@@ -1662,7 +1880,11 @@
       "breathe",
       "sway",
       "pulse",
-      "talk"
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
     ]
   },
   "claw-arm": {
@@ -1676,12 +1898,14 @@
       "#ff1744",
       "#ffffff"
     ],
-    "habitat": "terrestrial",
+    "habitat": "inanimate",
     "allowed_effects": [
-      "walk",
+      "pulse",
       "breathe",
       "sway",
-      "pulse"
+      "glitch",
+      "dissolve",
+      "static"
     ]
   },
   "cowfee": {
@@ -1700,7 +1924,12 @@
       "walk",
       "breathe",
       "sway",
-      "pulse"
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
     ]
   },
   "ebi_furai": {
@@ -1725,7 +1954,7 @@
     ]
   },
   "elephant-in-snake": {
-    "base": "Breathe",
+    "base": "Sway",
     "particles": null,
     "speed": 0.8,
     "palette": [
@@ -1735,12 +1964,14 @@
       "#ffb6c1",
       "#ffffff"
     ],
-    "habitat": "terrestrial",
+    "habitat": "serpentine",
     "allowed_effects": [
-      "walk",
-      "breathe",
       "sway",
-      "pulse"
+      "drift",
+      "breathe",
+      "pulse",
+      "glitch",
+      "dissolve"
     ]
   },
   "elephant": {
@@ -1759,7 +1990,12 @@
       "walk",
       "breathe",
       "sway",
-      "pulse"
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
     ]
   },
   "elephant2": {
@@ -1778,7 +2014,12 @@
       "walk",
       "breathe",
       "sway",
-      "pulse"
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
     ]
   },
   "eyes": {
@@ -1792,12 +2033,15 @@
       "#e1bee7",
       "#ffffff"
     ],
-    "habitat": "terrestrial",
+    "habitat": "ethereal",
     "allowed_effects": [
-      "walk",
+      "float",
+      "drift",
+      "pulse",
+      "glitch",
+      "dissolve",
       "breathe",
-      "sway",
-      "pulse"
+      "wave"
     ]
   },
   "fat-banana": {
@@ -1816,7 +2060,12 @@
       "walk",
       "breathe",
       "sway",
-      "pulse"
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
     ]
   },
   "fence": {
@@ -1830,12 +2079,14 @@
       "#a1887f",
       "#ffffff"
     ],
-    "habitat": "terrestrial",
+    "habitat": "inanimate",
     "allowed_effects": [
-      "walk",
+      "pulse",
       "breathe",
       "sway",
-      "pulse"
+      "glitch",
+      "dissolve",
+      "static"
     ]
   },
   "hippie": {
@@ -1854,7 +2105,12 @@
       "walk",
       "breathe",
       "sway",
-      "pulse"
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
     ]
   },
   "hiya": {
@@ -1874,7 +2130,11 @@
       "breathe",
       "sway",
       "pulse",
-      "talk"
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
     ]
   },
   "hypno": {
@@ -1888,12 +2148,15 @@
       "#7c4dff",
       "#ffffff"
     ],
-    "habitat": "terrestrial",
+    "habitat": "ethereal",
     "allowed_effects": [
-      "walk",
+      "float",
+      "drift",
+      "pulse",
+      "glitch",
+      "dissolve",
       "breathe",
-      "sway",
-      "pulse"
+      "wave"
     ]
   },
   "kiss": {
@@ -1913,7 +2176,11 @@
       "breathe",
       "sway",
       "pulse",
-      "talk"
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
     ]
   },
   "lollerskates": {
@@ -1932,7 +2199,12 @@
       "walk",
       "breathe",
       "sway",
-      "pulse"
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
     ]
   },
   "moofasa": {
@@ -1951,7 +2223,12 @@
       "walk",
       "breathe",
       "sway",
-      "pulse"
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
     ]
   },
   "mooghidjirah": {
@@ -1970,7 +2247,12 @@
       "walk",
       "breathe",
       "sway",
-      "pulse"
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
     ]
   },
   "moojira": {
@@ -1989,7 +2271,12 @@
       "walk",
       "breathe",
       "sway",
-      "pulse"
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
     ]
   },
   "shikato": {
@@ -2008,7 +2295,12 @@
       "walk",
       "breathe",
       "sway",
-      "pulse"
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
     ]
   },
   "shrug": {
@@ -2027,7 +2319,12 @@
       "walk",
       "breathe",
       "sway",
-      "pulse"
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
     ]
   },
   "skeleton": {
@@ -2046,7 +2343,12 @@
       "walk",
       "breathe",
       "sway",
-      "pulse"
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
     ]
   },
   "small": {
@@ -2065,7 +2367,12 @@
       "walk",
       "breathe",
       "sway",
-      "pulse"
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
     ]
   },
   "wizard": {
@@ -2079,13 +2386,15 @@
       "#8d6e63",
       "#00e5ff"
     ],
-    "habitat": "terrestrial",
+    "habitat": "ethereal",
     "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
+      "float",
+      "drift",
       "pulse",
-      "float"
+      "glitch",
+      "dissolve",
+      "breathe",
+      "wave"
     ]
   },
   "hamster": {
@@ -2104,7 +2413,12 @@
       "walk",
       "breathe",
       "sway",
-      "pulse"
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
     ]
   },
   "corgi": {
@@ -2123,7 +2437,12 @@
       "walk",
       "breathe",
       "sway",
-      "pulse"
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
     ]
   },
   "pig": {
@@ -2142,7 +2461,12 @@
       "walk",
       "breathe",
       "sway",
-      "pulse"
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
     ]
   },
   "ram": {
@@ -2161,7 +2485,12 @@
       "walk",
       "breathe",
       "sway",
-      "pulse"
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
     ]
   },
   "rooster": {
@@ -2175,14 +2504,17 @@
       "#ff9800",
       "#ffffff"
     ],
-    "habitat": "aerial",
+    "habitat": "terrestrial",
     "allowed_effects": [
-      "fly",
-      "hover",
-      "glide",
+      "walk",
       "breathe",
+      "sway",
       "pulse",
-      "float"
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
     ]
   },
   "panther": {
@@ -2201,7 +2533,12 @@
       "walk",
       "breathe",
       "sway",
-      "pulse"
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
     ]
   },
   "rhino": {
@@ -2220,13 +2557,18 @@
       "walk",
       "breathe",
       "sway",
-      "pulse"
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
     ]
   },
   "sloth": {
     "base": "Breathe",
     "particles": null,
-    "speed": 0.8,
+    "speed": 0.3,
     "palette": [
       "#8d6e63",
       "#558b2f",
@@ -2234,12 +2576,13 @@
       "#3e2723",
       "#ffffff"
     ],
-    "habitat": "terrestrial",
+    "habitat": "sedentary",
     "allowed_effects": [
-      "walk",
       "breathe",
       "sway",
-      "pulse"
+      "pulse",
+      "squish",
+      "dissolve"
     ]
   },
   "telebears": {
@@ -2258,7 +2601,12 @@
       "walk",
       "breathe",
       "sway",
-      "pulse"
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
     ]
   },
   "tiger": {
@@ -2277,7 +2625,12 @@
       "walk",
       "breathe",
       "sway",
-      "pulse"
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
     ]
   },
   "wolf": {
@@ -2296,11 +2649,16 @@
       "walk",
       "breathe",
       "sway",
-      "pulse"
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
     ]
   },
   "duck": {
-    "base": "Fly",
+    "base": "Walk",
     "particles": null,
     "speed": 1.2,
     "palette": [
@@ -2403,7 +2761,12 @@
       "walk",
       "breathe",
       "sway",
-      "pulse"
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
     ]
   },
   "sauron": {
@@ -2417,16 +2780,19 @@
       "#ff3d00",
       "#ffd600"
     ],
-    "habitat": "terrestrial",
+    "habitat": "ethereal",
     "allowed_effects": [
-      "walk",
+      "float",
+      "drift",
+      "pulse",
+      "glitch",
+      "dissolve",
       "breathe",
-      "sway",
-      "pulse"
+      "wave"
     ]
   },
   "unipony": {
-    "base": "Walk",
+    "base": "Fly",
     "particles": "Stars",
     "speed": 1.0,
     "palette": [
@@ -2436,12 +2802,14 @@
       "#ff80ab",
       "#ffffff"
     ],
-    "habitat": "terrestrial",
+    "habitat": "aerial",
     "allowed_effects": [
-      "walk",
+      "fly",
+      "hover",
+      "glide",
       "breathe",
-      "sway",
-      "pulse"
+      "pulse",
+      "float"
     ]
   },
   "vader": {
@@ -2460,7 +2828,12 @@
       "walk",
       "breathe",
       "sway",
-      "pulse"
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
     ]
   },
   "yoda": {
@@ -2474,14 +2847,17 @@
       "#ffb6c1",
       "#ffd54f"
     ],
-    "habitat": "aerial",
+    "habitat": "terrestrial",
     "allowed_effects": [
-      "fly",
-      "hover",
-      "glide",
+      "walk",
       "breathe",
+      "sway",
       "pulse",
-      "float"
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
     ]
   },
   "radioactive-kitty": {
@@ -2501,7 +2877,11 @@
       "breathe",
       "sway",
       "pulse",
-      "glitch"
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
     ]
   },
   "vulpix": {
@@ -2520,11 +2900,16 @@
       "walk",
       "breathe",
       "sway",
-      "pulse"
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
     ]
   },
   "apt": {
-    "base": "Walk",
+    "base": "Pulse",
     "particles": null,
     "speed": 1.0,
     "palette": [
@@ -2534,12 +2919,14 @@
       "#ff80ab",
       "#ffffff"
     ],
-    "habitat": "terrestrial",
+    "habitat": "inanimate",
     "allowed_effects": [
-      "walk",
+      "pulse",
       "breathe",
       "sway",
-      "pulse"
+      "glitch",
+      "dissolve",
+      "static"
     ]
   },
   "jesus": {
@@ -2553,14 +2940,15 @@
       "#ffb6c1",
       "#ffd54f"
     ],
-    "habitat": "aerial",
+    "habitat": "ethereal",
     "allowed_effects": [
-      "fly",
-      "hover",
-      "glide",
-      "breathe",
+      "float",
+      "drift",
       "pulse",
-      "float"
+      "glitch",
+      "dissolve",
+      "breathe",
+      "wave"
     ]
   },
   "three-eyes": {
@@ -2579,7 +2967,12 @@
       "walk",
       "breathe",
       "sway",
-      "pulse"
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
     ]
   },
   "viper": {
@@ -2593,12 +2986,14 @@
       "#ff1744",
       "#ffd54f"
     ],
-    "habitat": "terrestrial",
+    "habitat": "serpentine",
     "allowed_effects": [
-      "walk",
-      "breathe",
       "sway",
-      "pulse"
+      "drift",
+      "breathe",
+      "pulse",
+      "glitch",
+      "dissolve"
     ]
   }
 }

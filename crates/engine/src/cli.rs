@@ -1367,21 +1367,19 @@ pub fn build_scene_config(args: &Args) -> Result<SceneConfig, String> {
 
     // Validate mascot taxonomy locomotion consistency
     let animal_name = args.cow.as_deref().unwrap_or(&cfg.cow);
-    let is_aquatic = forgum_platform::biome::get_mascot_biome(animal_name).is_aquatic();
-    if is_aquatic {
-        let is_walk_effect = cfg.effect.eq_ignore_ascii_case("walk")
-            || cfg.effect.eq_ignore_ascii_case("walking")
-            || cfg.effect.eq_ignore_ascii_case("walks");
-        let is_walk_anim = cfg
-            .animation_type
-            .as_deref()
-            .is_some_and(|a| a.eq_ignore_ascii_case("walk") || a.eq_ignore_ascii_case("walking") || a.eq_ignore_ascii_case("walks"));
-        if is_walk_effect || is_walk_anim {
-            eprintln!(
-                "forgum: Mascot '{animal_name}' is aquatic (habitat: aquatic). Remapping incompatible locomotion 'walk' -> 'swim' (floating/swimming with bubbles) for biological consistency."
-            );
-            cfg.effect = "swim".to_string();
-            cfg.animation_type = Some("swim".to_string());
+    let biome = forgum_platform::biome::get_mascot_biome(animal_name);
+    if let Some((remapped, reason)) = biome.remap_incompatible_effect(&cfg.effect) {
+        eprintln!(
+            "forgum: Mascot '{animal_name}' is {} (habitat: {}). Remapping incompatible locomotion '{}' -> '{remapped}' ({reason}) for physical consistency.",
+            biome.habitat(),
+            biome.habitat(),
+            cfg.effect
+        );
+        cfg.effect = remapped.to_string();
+    }
+    if let Some(anim) = &cfg.animation_type {
+        if let Some((remapped, _)) = biome.remap_incompatible_effect(anim) {
+            cfg.animation_type = Some(remapped.to_string());
         }
     }
 

@@ -2876,17 +2876,15 @@ pub fn resolve_scene_randomness(
         }
     }
 
-    // Ensure aquatic mascots never receive incompatible "walk" locomotion from randomness
-    let is_aquatic = forgum_platform::biome::get_mascot_biome(&scene.cow).is_aquatic();
-    if is_aquatic
-        && (scene.effect.eq_ignore_ascii_case("walk")
-            || scene
-                .animation_type
-                .as_deref()
-                .is_some_and(|a| a.eq_ignore_ascii_case("walk")))
-    {
-        scene.effect = "swim".to_string();
-        scene.animation_type = Some("swim".to_string());
+    // Ensure mascots never receive incompatible locomotion from randomness or presets
+    let biome = forgum_platform::biome::get_mascot_biome(&scene.cow);
+    if let Some((remapped, _)) = biome.remap_incompatible_effect(&scene.effect) {
+        scene.effect = remapped.to_string();
+    }
+    if let Some(anim) = &scene.animation_type {
+        if let Some((remapped, _)) = biome.remap_incompatible_effect(anim) {
+            scene.animation_type = Some(remapped.to_string());
+        }
     }
 
     // ── 4. THOUGHT / TEXT ────────────────────────────────────────────────
@@ -3473,21 +3471,21 @@ fn run_daemon_child(args: cli::Args) -> ExitCode {
     }
 
     // Validate mascot taxonomy locomotion consistency
-    let is_aquatic = cow_dna.is_aquatic()
-        || forgum_platform::biome::get_mascot_biome(&scene.cow).is_aquatic();
-    if is_aquatic
-        && (scene.effect.eq_ignore_ascii_case("walk")
-            || scene
-                .animation_type
-                .as_deref()
-                .is_some_and(|a| a.eq_ignore_ascii_case("walk")))
-    {
+    let biome = forgum_platform::biome::get_mascot_biome(&scene.cow);
+    if let Some((remapped, reason)) = biome.remap_incompatible_effect(&scene.effect) {
         eprintln!(
-            "forgum: Mascot '{}' is aquatic (habitat: aquatic). Remapping incompatible locomotion 'walk' -> 'swim' (floating/swimming with bubbles) for biological consistency.",
-            scene.cow
+            "forgum: Mascot '{}' is {} (habitat: {}). Remapping incompatible locomotion '{}' -> '{remapped}' ({reason}) for physical consistency.",
+            scene.cow,
+            biome.habitat(),
+            biome.habitat(),
+            scene.effect
         );
-        scene.effect = "swim".to_string();
-        scene.animation_type = Some("swim".to_string());
+        scene.effect = remapped.to_string();
+    }
+    if let Some(anim) = &scene.animation_type {
+        if let Some((remapped, _)) = biome.remap_incompatible_effect(anim) {
+            scene.animation_type = Some(remapped.to_string());
+        }
     }
 
     let instance_id = std::process::id();

@@ -1883,6 +1883,23 @@ impl ConfigApp {
         self.config.cow = name.clone();
         self.ensure_cow_cached(&name);
         let biome = forgum_platform::biome::get_mascot_biome(&name);
+
+        // Dynamically reconcile locomotion/effect compatibility with the newly selected mascot
+        if let Some((remapped, _)) = biome.remap_incompatible_effect(&self.config.effect) {
+            self.config.effect = remapped.to_string();
+            if let Some(pos) = EFFECT_OPTIONS
+                .iter()
+                .position(|(eff, _)| eff.eq_ignore_ascii_case(remapped))
+            {
+                self.effect_idx = pos;
+            }
+        }
+        if let Some(anim) = &self.config.animation_type {
+            if let Some((remapped, _)) = biome.remap_incompatible_effect(anim) {
+                self.config.animation_type = Some(remapped.to_string());
+            }
+        }
+
         self.status_message = format!("🐾 Mascot: {} | 🌿 Biome: {}", name, biome.biome_name);
         self.saved = false;
     }
@@ -1911,6 +1928,11 @@ impl ConfigApp {
         let mtn = biome.mountain.to_string();
         self.config.mountain = Some(mtn.clone());
         self.mountain_dropdown = Dropdown::new(MOUNTAIN_OPTIONS.to_vec(), &mtn);
+
+        // Synchronize biological natural 5-color palette
+        let natural_palette = biome.natural_palette.join(",");
+        self.config.palette = Some(natural_palette);
+
         self.saved = false;
         self.status_message = format!(
             "🌿 Native habitat applied: {} (Atmosphere: {}, Ground: {}, Skyline: {})",
@@ -4791,6 +4813,16 @@ export extern "forgum" [
                     Span::styled(" [✓ native]", Style::default().fg(tailwind::EMERALD_400))
                 } else if native_biome.is_aquatic() && *name == "walk" {
                     Span::styled(" [✗ land only]", Style::default().fg(Color::DarkGray))
+                } else if native_biome.is_aerial() && *name == "walk" {
+                    Span::styled(" [✗ flight only]", Style::default().fg(Color::DarkGray))
+                } else if native_biome.is_inanimate() && (*name == "walk" || *name == "fly") {
+                    Span::styled(" [✗ static object]", Style::default().fg(Color::DarkGray))
+                } else if native_biome.is_ethereal() && *name == "walk" {
+                    Span::styled(" [✗ ethereal entity]", Style::default().fg(Color::DarkGray))
+                } else if native_biome.is_serpentine() && *name == "walk" {
+                    Span::styled(" [✗ legless reptile]", Style::default().fg(Color::DarkGray))
+                } else if native_biome.is_sedentary() && *name == "walk" {
+                    Span::styled(" [✗ sedentary]", Style::default().fg(Color::DarkGray))
                 } else if native_biome.is_aquatic() {
                     Span::styled(" [✗ non-aquatic]", Style::default().fg(Color::DarkGray))
                 } else if *name == "swim" || *name == "drift" {

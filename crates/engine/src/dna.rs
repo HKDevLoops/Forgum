@@ -92,6 +92,10 @@ pub enum Habitat {
     Aquatic,
     Aerial,
     Amphibious,
+    Inanimate,
+    Ethereal,
+    Serpentine,
+    Sedentary,
 }
 
 impl Habitat {
@@ -100,6 +104,10 @@ impl Habitat {
             "aquatic" | "ocean" | "marine" | "sea" | "water" => Some(Self::Aquatic),
             "aerial" | "air" | "flying" | "sky" => Some(Self::Aerial),
             "amphibious" | "amphibian" => Some(Self::Amphibious),
+            "inanimate" | "object" | "structure" | "static" | "art" => Some(Self::Inanimate),
+            "ethereal" | "cosmic" | "celestial" | "supernatural" | "spirit" => Some(Self::Ethereal),
+            "serpentine" | "snake" | "reptile_legless" => Some(Self::Serpentine),
+            "sedentary" | "slow" | "arboreal" => Some(Self::Sedentary),
             "terrestrial" | "land" | "ground" => Some(Self::Terrestrial),
             _ => None,
         }
@@ -110,6 +118,10 @@ impl Habitat {
             Self::Aquatic => "aquatic",
             Self::Aerial => "aerial",
             Self::Amphibious => "amphibious",
+            Self::Inanimate => "inanimate",
+            Self::Ethereal => "ethereal",
+            Self::Serpentine => "serpentine",
+            Self::Sedentary => "sedentary",
             Self::Terrestrial => "terrestrial",
         }
     }
@@ -132,11 +144,35 @@ impl Habitat {
                 "pulse".to_string(),
                 "float".to_string(),
             ],
-            Self::Terrestrial => vec![
-                "walk".to_string(),
+            Self::Inanimate => vec![
+                "pulse".to_string(),
+                "breathe".to_string(),
+                "sway".to_string(),
+                "glitch".to_string(),
+                "dissolve".to_string(),
+                "static".to_string(),
+            ],
+            Self::Ethereal => vec![
+                "float".to_string(),
+                "drift".to_string(),
+                "pulse".to_string(),
+                "glitch".to_string(),
+                "dissolve".to_string(),
+                "breathe".to_string(),
+                "wave".to_string(),
+            ],
+            Self::Serpentine => vec![
+                "sway".to_string(),
+                "drift".to_string(),
+                "breathe".to_string(),
+                "pulse".to_string(),
+                "glitch".to_string(),
+            ],
+            Self::Sedentary => vec![
                 "breathe".to_string(),
                 "sway".to_string(),
                 "pulse".to_string(),
+                "squish".to_string(),
             ],
             Self::Amphibious => vec![
                 "walk".to_string(),
@@ -145,6 +181,12 @@ impl Habitat {
                 "drift".to_string(),
                 "breathe".to_string(),
                 "bubble".to_string(),
+                "sway".to_string(),
+                "pulse".to_string(),
+            ],
+            Self::Terrestrial => vec![
+                "walk".to_string(),
+                "breathe".to_string(),
                 "sway".to_string(),
                 "pulse".to_string(),
             ],
@@ -424,6 +466,41 @@ impl CowDna {
         self.habitat == Habitat::Aquatic
     }
 
+    /// True if the creature is an aerial flyer.
+    pub fn is_aerial(&self) -> bool {
+        self.habitat == Habitat::Aerial
+    }
+
+    /// True if the mascot is an inanimate object or structure.
+    pub fn is_inanimate(&self) -> bool {
+        self.habitat == Habitat::Inanimate
+    }
+
+    /// True if the mascot is an ethereal or cosmic entity.
+    pub fn is_ethereal(&self) -> bool {
+        self.habitat == Habitat::Ethereal
+    }
+
+    /// True if the creature is a legless serpentine reptile.
+    pub fn is_serpentine(&self) -> bool {
+        self.habitat == Habitat::Serpentine
+    }
+
+    /// True if the creature is a slow sedentary arboreal mammal.
+    pub fn is_sedentary(&self) -> bool {
+        self.habitat == Habitat::Sedentary
+    }
+
+    /// True if the creature is biologically amphibious.
+    pub fn is_amphibious(&self) -> bool {
+        self.habitat == Habitat::Amphibious
+    }
+
+    /// True if the creature naturally walks on ground with stepping cycles.
+    pub fn can_walk(&self) -> bool {
+        matches!(self.habitat, Habitat::Terrestrial | Habitat::Amphibious)
+    }
+
     /// Construct a fallback `CowDna` profile with default Walk kinematics and the
     /// mascot's authentic 5-slot biological natural palette from `biome.rs`.
     pub fn from_biome(mascot: &str) -> Self {
@@ -437,6 +514,10 @@ impl CowDna {
             "aquatic" => Habitat::Aquatic,
             "amphibious" => Habitat::Amphibious,
             "aerial" => Habitat::Aerial,
+            "inanimate" => Habitat::Inanimate,
+            "ethereal" => Habitat::Ethereal,
+            "serpentine" => Habitat::Serpentine,
+            "sedentary" => Habitat::Sedentary,
             _ => Habitat::Terrestrial,
         };
 

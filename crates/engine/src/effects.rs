@@ -3144,15 +3144,59 @@ pub fn create_scene_effect(
         eff
     };
 
-    // Biological consistency: validate against mascot DNA habitat
-    let eff = if (dna.is_aquatic() || dna.habitat == crate::dna::Habitat::Aquatic)
-        && matches!(eff.as_str(), "walk" | "walks" | "walking")
-    {
+    // Biological & physical consistency: validate against mascot DNA habitat
+    let eff = if matches!(eff.as_str(), "walk" | "walks" | "walking") {
+        match dna.habitat {
+            crate::dna::Habitat::Aquatic => {
+                eprintln!(
+                    "forgum: Mascot is aquatic (habitat: aquatic). Remapping incompatible locomotion '{}' -> 'swim' (floating/swimming with bubbles) for biological consistency.",
+                    eff
+                );
+                "swim".to_string()
+            }
+            crate::dna::Habitat::Aerial => {
+                eprintln!(
+                    "forgum: Mascot is aerial flyer (habitat: aerial). Remapping incompatible locomotion '{}' -> 'fly' (atmospheric flight) for physical consistency.",
+                    eff
+                );
+                "fly".to_string()
+            }
+            crate::dna::Habitat::Inanimate => {
+                eprintln!(
+                    "forgum: Mascot is an inanimate structure/object (habitat: inanimate). Remapping incompatible locomotion '{}' -> 'pulse' for physical consistency.",
+                    eff
+                );
+                "pulse".to_string()
+            }
+            crate::dna::Habitat::Ethereal => {
+                eprintln!(
+                    "forgum: Mascot is an ethereal/cosmic entity (habitat: ethereal). Remapping incompatible locomotion '{}' -> 'float' for physical consistency.",
+                    eff
+                );
+                "float".to_string()
+            }
+            crate::dna::Habitat::Serpentine => {
+                eprintln!(
+                    "forgum: Mascot is a legless serpentine reptile (habitat: serpentine). Remapping incompatible locomotion '{}' -> 'sway' (undulating lateral slither) for biological consistency.",
+                    eff
+                );
+                "sway".to_string()
+            }
+            crate::dna::Habitat::Sedentary => {
+                eprintln!(
+                    "forgum: Mascot is a sedentary arboreal mammal (habitat: sedentary). Remapping incompatible locomotion '{}' -> 'sway' for biological consistency.",
+                    eff
+                );
+                "sway".to_string()
+            }
+            _ => eff,
+        }
+    } else if matches!(eff.as_str(), "fly" | "flying") && dna.habitat == crate::dna::Habitat::Inanimate {
         eprintln!(
-            "forgum: Mascot is aquatic (habitat: aquatic). Remapping incompatible locomotion '{}' -> 'swim' (floating/swimming with bubbles) for biological consistency.",
+            "forgum: Mascot is an inanimate structure/object (habitat: inanimate). Remapping incompatible locomotion '{}' -> 'pulse' for physical consistency.",
             eff
         );
-        "swim".to_string()
+        "pulse".to_string()
     } else {
         eff
     };
@@ -3293,12 +3337,14 @@ pub fn create_effect(
     instance_id: u32,
     color_mode: &str,
 ) -> Box<dyn Effect> {
-    let base = if (dna.is_aquatic() || dna.habitat == crate::dna::Habitat::Aquatic)
-        && base == BaseAnim::Walk
-    {
-        BaseAnim::Float
-    } else {
-        base
+    let base = match dna.habitat {
+        crate::dna::Habitat::Aquatic if base == BaseAnim::Walk => BaseAnim::Float,
+        crate::dna::Habitat::Aerial if base == BaseAnim::Walk => BaseAnim::Fly,
+        crate::dna::Habitat::Inanimate if base == BaseAnim::Walk || base == BaseAnim::Fly => BaseAnim::Pulse,
+        crate::dna::Habitat::Ethereal if base == BaseAnim::Walk => BaseAnim::Float,
+        crate::dna::Habitat::Serpentine if base == BaseAnim::Walk => BaseAnim::Sway,
+        crate::dna::Habitat::Sedentary if base == BaseAnim::Walk => BaseAnim::Breathe,
+        _ => base,
     };
 
     match base {

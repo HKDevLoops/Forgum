@@ -1,28 +1,8 @@
 {
   "default": {
     "base": "Walk",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#ffffff",
-        "#1a1a1a"
-      ]
-    },
+    "particles": null,
     "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.0
-    },
     "palette": [
       "#ffffff",
       "#1a1a1a",
@@ -30,727 +10,23 @@
       "#ffb6c1",
       "#ffffff"
     ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 10182,
-    "glow": {
-      "color": "#1a1a1a",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
-    "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
-      "pulse"
-    ]
-  },
-  "armadillo": {
-    "base": "Walk",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#8d6e63",
-        "#d7ccc8"
-      ]
-    },
-    "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.0
-    },
-    "palette": [
-      "#a1887f",
-      "#8d6e63",
-      "#f5f5f5",
-      "#ff80ab",
-      "#ffffff"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 49240,
-    "glow": {
-      "color": "#d7ccc8",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
-    "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
-      "pulse"
-    ]
-  },
-  "atat": {
-    "base": "Walk",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#9e9e9e",
-        "#cfd8dc"
-      ]
-    },
-    "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.0
-    },
-    "palette": [
-      "#90a4ae",
-      "#546e7a",
-      "#cfd8dc",
-      "#ff1744",
-      "#ffffff"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 59257,
-    "glow": {
-      "color": "#cfd8dc",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
-    "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
-      "pulse"
-    ]
-  },
-  "bearface": {
-    "base": "Breathe",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#5d4037",
-        "#8d6e63"
-      ]
-    },
-    "speed": 0.8,
-    "amplitude": {
-      "breath": 0.35,
-      "sway": 0.2,
-      "float": 0.0
-    },
-    "palette": [
-      "#8d6e63",
-      "#5d4037",
-      "#d7ccc8",
-      "#ff80ab",
-      "#ffffff"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 45190,
-    "glow": {
-      "color": "#8d6e63",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
-    "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
-      "pulse"
-    ]
-  },
-  "beavis.zen": {
-    "base": "Walk",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#ffca28",
-        "#42a5f5"
-      ]
-    },
-    "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.0
-    },
-    "palette": [
-      "#ffd600",
-      "#1e88e5",
-      "#ffcc80",
-      "#78909c",
-      "#ffffff"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 26186,
-    "glow": {
-      "color": "#42a5f5",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
-    "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
-      "pulse"
-    ]
-  },
-  "bees": {
-    "base": "Fly",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#ffeb3b",
-        "#212121"
-      ]
-    },
-    "speed": 1.2,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.5
-    },
-    "palette": [
-      "#ffb300",
-      "#263238",
-      "#e0f7fa",
-      "#fff59d",
-      "#ffffff"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 39258,
-    "glow": {
-      "color": "#212121",
-      "radius": 2.5,
-      "falloff": "gaussian"
-    },
-    "habitat": "aerial",
-    "allowed_effects": [
-      "fly",
-      "hover",
-      "glide",
-      "breathe",
-      "pulse",
-      "float"
-    ]
-  },
-  "bill-the-cat": {
-    "base": "Talk",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#ffb74d",
-        "#e57373"
-      ]
-    },
-    "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.0
-    },
-    "palette": [
-      "#f57f17",
-      "#d32f2f",
-      "#ffffff",
-      "#ff80ab",
-      "#ffffff"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 25458,
-    "glow": {
-      "color": "#e57373",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    },
     "habitat": "terrestrial",
     "allowed_effects": [
       "walk",
       "breathe",
       "sway",
       "pulse",
-      "talk"
-    ]
-  },
-  "bud-frogs": {
-    "base": "Float",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#4caf50",
-        "#81c784"
-      ]
-    },
-    "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.5
-    },
-    "palette": [
-      "#4caf50",
-      "#2e7d32",
-      "#aed581",
-      "#ffeb3b",
-      "#ffd54f"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 4866,
-    "glow": {
-      "color": "#81c784",
-      "radius": 2.5,
-      "falloff": "gaussian"
-    },
-    "habitat": "amphibious",
-    "allowed_effects": [
-      "walk",
-      "swim",
-      "float",
-      "drift",
-      "breathe",
-      "bubble",
-      "sway",
-      "pulse"
-    ]
-  },
-  "bunny": {
-    "base": "Walk",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#ffffff",
-        "#f8fafc"
-      ]
-    },
-    "speed": 1.25,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.0
-    },
-    "palette": [
-      "#ffffff",
-      "#f5f5f5",
-      "#eceff1",
-      "#ffb6c1",
-      "#ffffff"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 17251,
-    "glow": {
-      "color": "#f8fafc",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
-    "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
-      "pulse"
-    ]
-  },
-  "cat": {
-    "base": "Walk",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#ffffff",
-        "#d35400"
-      ]
-    },
-    "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.0
-    },
-    "palette": [
-      "#d35400",
-      "#795548",
-      "#ffffff",
-      "#ffb6c1",
-      "#212121"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 8379,
-    "glow": {
-      "color": "#d35400",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
-    "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
-      "pulse"
-    ]
-  },
-  "cat2": {
-    "base": "Walk",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#7f8c8d",
-        "#95a5a6"
-      ]
-    },
-    "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.0
-    },
-    "palette": [
-      "#78909c",
-      "#546e7a",
-      "#cfd8dc",
-      "#ff80ab",
-      "#69f0ae"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 63446,
-    "glow": {
-      "color": "#95a5a6",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
-    "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
-      "pulse"
-    ]
-  },
-  "catfence": {
-    "base": "Sway",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#5d4037",
-        "#3e2723"
-      ]
-    },
-    "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.4,
-      "float": 0.0
-    },
-    "palette": [
-      "#d35400",
-      "#795548",
-      "#ffffff",
-      "#ff80ab",
-      "#ffffff"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 20345,
-    "glow": {
-      "color": "#3e2723",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
-    "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
-      "pulse"
-    ]
-  },
-  "charizardvice": {
-    "base": "Breathe",
-    "particles": {
-      "type": "Fire",
-      "rate": 8,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#ff6f00",
-        "#ffab00"
-      ]
-    },
-    "speed": 0.8,
-    "amplitude": {
-      "breath": 0.35,
-      "sway": 0.2,
-      "float": 0.0
-    },
-    "palette": [
-      "#ef6c00",
-      "#26a69a",
-      "#ffe082",
-      "#ff3d00",
-      "#40c4ff"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 51882,
-    "glow": {
-      "color": "#ffab00",
-      "radius": 2.5,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
-    "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
-      "pulse"
-    ]
-  },
-  "charlie": {
-    "base": "Talk",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#8d6e63",
-        "#5d4037"
-      ]
-    },
-    "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.0
-    },
-    "palette": [
-      "#8d6e63",
-      "#5d4037",
-      "#f5f5f5",
-      "#ff80ab",
-      "#ffffff"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 41832,
-    "glow": {
-      "color": "#5d4037",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
-    "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
-      "pulse",
-      "talk"
-    ]
-  },
-  "claw-arm": {
-    "base": "Pulse",
-    "particles": {
-      "type": "Pulse",
-      "rate": 8,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#00e5ff",
-        "#76ff03"
-      ]
-    },
-    "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.0
-    },
-    "palette": [
-      "#78909c",
-      "#455a64",
-      "#ffc107",
-      "#ff1744",
-      "#ffffff"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 36556,
-    "glow": {
-      "color": "#76ff03",
-      "radius": 2.5,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
-    "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
-      "pulse"
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
     ]
   },
   "cower": {
     "base": "Breathe",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#ffffff",
-        "#212121"
-      ]
-    },
+    "particles": null,
     "speed": 0.8,
-    "amplitude": {
-      "breath": 0.35,
-      "sway": 0.2,
-      "float": 0.0
-    },
     "palette": [
       "#8d6e63",
       "#4e342e",
@@ -758,729 +34,20 @@
       "#ff80ab",
       "#ffffff"
     ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 2905,
-    "glow": {
-      "color": "#212121",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
+    "habitat": "inanimate",
     "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
-      "pulse"
-    ]
-  },
-  "cowfee": {
-    "base": "Breathe",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#6d4c41",
-        "#8d6e63"
-      ]
-    },
-    "speed": 0.8,
-    "amplitude": {
-      "breath": 0.35,
-      "sway": 0.2,
-      "float": 0.0
-    },
-    "palette": [
-      "#8d6e63",
-      "#5d4037",
-      "#fff8e1",
-      "#ff80ab",
-      "#ffffff"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 27053,
-    "glow": {
-      "color": "#8d6e63",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
-    "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
-      "pulse"
-    ]
-  },
-  "cthulhu-mini": {
-    "base": "Float",
-    "particles": {
-      "type": "Bubbles",
-      "rate": 8,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#2e7d32",
-        "#1b5e20"
-      ]
-    },
-    "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.5
-    },
-    "palette": [
-      "#388e3c",
-      "#1b5e20",
-      "#66bb6a",
-      "#a5d6a7",
-      "#ffea00"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 43237,
-    "glow": {
-      "color": "#1b5e20",
-      "radius": 2.5,
-      "falloff": "gaussian"
-    },
-    "habitat": "aquatic",
-    "allowed_effects": [
-      "float",
-      "swim",
-      "drift",
-      "bubble",
       "pulse",
-      "wave"
-    ]
-  },
-  "daemon": {
-    "base": "Fly",
-    "particles": {
-      "type": "Fire",
-      "rate": 8,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#d32f2f",
-        "#f44336"
-      ]
-    },
-    "speed": 1.2,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.5
-    },
-    "palette": [
-      "#d32f2f",
-      "#7f0000",
-      "#ff5722",
-      "#ffd600",
-      "#ffd600"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 36456,
-    "glow": {
-      "color": "#f44336",
-      "radius": 2.5,
-      "falloff": "gaussian"
-    },
-    "habitat": "aerial",
-    "allowed_effects": [
-      "fly",
-      "hover",
-      "glide",
-      "breathe",
-      "pulse",
-      "float"
-    ]
-  },
-  "docker-whale": {
-    "base": "Float",
-    "particles": {
-      "type": "Bubbles",
-      "rate": 8,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#0288d1",
-        "#29b6f6"
-      ]
-    },
-    "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.5
-    },
-    "palette": [
-      "#0284c7",
-      "#0369a1",
-      "#ffffff",
-      "#e0f7fa",
-      "#ffffff"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 28848,
-    "glow": {
-      "color": "#29b6f6",
-      "radius": 2.5,
-      "falloff": "gaussian"
-    },
-    "habitat": "aquatic",
-    "allowed_effects": [
-      "float",
-      "swim",
-      "drift",
-      "bubble",
-      "pulse",
-      "wave"
-    ]
-  },
-  "doge": {
-    "base": "Walk",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#e59866",
-        "#d35400"
-      ]
-    },
-    "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.0
-    },
-    "palette": [
-      "#e59866",
-      "#d35400",
-      "#ffffff",
-      "#ff80ab",
-      "#ffffff"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 41777,
-    "glow": {
-      "color": "#d35400",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
-    "allowed_effects": [
-      "walk",
       "breathe",
       "sway",
-      "pulse"
-    ]
-  },
-  "dolphin": {
-    "base": "Float",
-    "particles": {
-      "type": "Bubbles",
-      "rate": 8,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#4fc3f7",
-        "#81d4fa"
-      ]
-    },
-    "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.5
-    },
-    "palette": [
-      "#4fc3f7",
-      "#0288d1",
-      "#ffffff",
-      "#b3e5fc",
-      "#ffffff"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 34330,
-    "glow": {
-      "color": "#81d4fa",
-      "radius": 2.5,
-      "falloff": "gaussian"
-    },
-    "habitat": "aquatic",
-    "allowed_effects": [
-      "float",
-      "swim",
-      "drift",
-      "bubble",
-      "pulse",
-      "wave"
-    ]
-  },
-  "dragon": {
-    "base": "Breathe",
-    "particles": {
-      "type": "Fire",
-      "rate": 8,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#d84315",
-        "#f4511e"
-      ]
-    },
-    "speed": 0.8,
-    "amplitude": {
-      "breath": 0.35,
-      "sway": 0.2,
-      "float": 0.0
-    },
-    "palette": [
-      "#e53935",
-      "#ff7043",
-      "#ffd600",
-      "#ff3d00",
-      "#ffd600"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 38266,
-    "glow": {
-      "color": "#f4511e",
-      "radius": 2.5,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
-    "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
-      "pulse"
-    ]
-  },
-  "dragon-and-cow": {
-    "base": "Breathe",
-    "particles": {
-      "type": "Fire",
-      "rate": 8,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#c62828",
-        "#e53935"
-      ]
-    },
-    "speed": 0.8,
-    "amplitude": {
-      "breath": 0.35,
-      "sway": 0.2,
-      "float": 0.0
-    },
-    "palette": [
-      "#e53935",
-      "#ff7043",
-      "#ffd600",
-      "#ff3d00",
-      "#ffd600"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 43472,
-    "glow": {
-      "color": "#e53935",
-      "radius": 2.5,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
-    "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
-      "pulse"
-    ]
-  },
-  "ebi_furai": {
-    "base": "Float",
-    "particles": {
-      "type": "Bubbles",
-      "rate": 8,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#ff8f00",
-        "#ffb300"
-      ]
-    },
-    "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.5
-    },
-    "palette": [
-      "#ff9800",
-      "#ffb74d",
-      "#e53935",
-      "#fff3e0",
-      "#ffffff"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 60622,
-    "glow": {
-      "color": "#ffb300",
-      "radius": 2.5,
-      "falloff": "gaussian"
-    },
-    "habitat": "aquatic",
-    "allowed_effects": [
-      "float",
-      "swim",
-      "drift",
-      "bubble",
-      "pulse",
-      "wave"
-    ]
-  },
-  "elephant": {
-    "base": "Walk",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#78909c",
-        "#90a4ae"
-      ]
-    },
-    "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.0
-    },
-    "palette": [
-      "#90a4ae",
-      "#546e7a",
-      "#fffde7",
-      "#ffb6c1",
-      "#ffffff"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 5780,
-    "glow": {
-      "color": "#90a4ae",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
-    "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
-      "pulse"
-    ]
-  },
-  "elephant-in-snake": {
-    "base": "Breathe",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#558b2f",
-        "#78909c"
-      ]
-    },
-    "speed": 0.8,
-    "amplitude": {
-      "breath": 0.35,
-      "sway": 0.2,
-      "float": 0.0
-    },
-    "palette": [
-      "#90a4ae",
-      "#43a047",
-      "#fffde7",
-      "#ffb6c1",
-      "#ffffff"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 44431,
-    "glow": {
-      "color": "#78909c",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
-    "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
-      "pulse"
-    ]
-  },
-  "elephant2": {
-    "base": "Walk",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#607d8b",
-        "#78909c"
-      ]
-    },
-    "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.0
-    },
-    "palette": [
-      "#90a4ae",
-      "#546e7a",
-      "#fffde7",
-      "#ffb6c1",
-      "#ffffff"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 7179,
-    "glow": {
-      "color": "#78909c",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
-    "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
-      "pulse"
-    ]
-  },
-  "eyes": {
-    "base": "Pulse",
-    "particles": {
-      "type": "Pulse",
-      "rate": 8,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#00e676",
-        "#b9f6ca"
-      ]
-    },
-    "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.0
-    },
-    "palette": [
-      "#9c27b0",
-      "#00e5ff",
-      "#ffffff",
-      "#e1bee7",
-      "#ffffff"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 40429,
-    "glow": {
-      "color": "#b9f6ca",
-      "radius": 2.5,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
-    "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
-      "pulse"
-    ]
-  },
-  "fat-banana": {
-    "base": "Sway",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#ffeb3b",
-        "#fff59d"
-      ]
-    },
-    "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.4,
-      "float": 0.0
-    },
-    "palette": [
-      "#fdd835",
-      "#8d6e63",
-      "#fff9c4",
-      "#c0ca33",
-      "#ffffff"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 36160,
-    "glow": {
-      "color": "#fff59d",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
-    "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
-      "pulse"
+      "glitch",
+      "dissolve",
+      "static"
     ]
   },
   "fat-cow": {
     "base": "Walk",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#ffffff",
-        "#212121"
-      ]
-    },
+    "particles": null,
     "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.0
-    },
     "palette": [
       "#ffffff",
       "#37474f",
@@ -1488,1697 +55,44 @@
       "#ff80ab",
       "#ffffff"
     ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 14805,
-    "glow": {
-      "color": "#212121",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    },
     "habitat": "terrestrial",
     "allowed_effects": [
       "walk",
       "breathe",
       "sway",
-      "pulse"
-    ]
-  },
-  "fence": {
-    "base": "Sway",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#8d6e63",
-        "#a1887f"
-      ]
-    },
-    "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.4,
-      "float": 0.0
-    },
-    "palette": [
-      "#8d6e63",
-      "#5d4037",
-      "#d7ccc8",
-      "#a1887f",
-      "#ffffff"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 2975,
-    "glow": {
-      "color": "#a1887f",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
-    "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
-      "pulse"
-    ]
-  },
-  "flaming-sheep": {
-    "base": "Breathe",
-    "particles": {
-      "type": "Fire",
-      "rate": 8,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#ff5722",
-        "#ff8a65"
-      ]
-    },
-    "speed": 0.8,
-    "amplitude": {
-      "breath": 0.35,
-      "sway": 0.2,
-      "float": 0.0
-    },
-    "palette": [
-      "#ff7043",
-      "#d84315",
-      "#ffe082",
-      "#ff3d00",
-      "#ffd600"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 18412,
-    "glow": {
-      "color": "#ff8a65",
-      "radius": 2.5,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
-    "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
-      "pulse"
-    ]
-  },
-  "fox": {
-    "base": "Walk",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#e65100",
-        "#ff9800"
-      ]
-    },
-    "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.0
-    },
-    "palette": [
-      "#e65100",
-      "#8d6e63",
-      "#ffffff",
-      "#ff80ab",
-      "#ffd54f"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 12086,
-    "glow": {
-      "color": "#ff9800",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
-    "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
-      "pulse"
-    ]
-  },
-  "ghost": {
-    "base": "Float",
-    "particles": {
-      "type": "Glitch",
-      "rate": 8,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#eceff1",
-        "#cfd8dc"
-      ]
-    },
-    "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.5
-    },
-    "palette": [
-      "#80cbc4",
-      "#4db6ac",
-      "#e0f2f1",
-      "#b2dfdb",
-      "#ffffff"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 40822,
-    "glow": {
-      "color": "#cfd8dc",
-      "radius": 2.5,
-      "falloff": "gaussian"
-    },
-    "habitat": "aerial",
-    "allowed_effects": [
-      "fly",
-      "hover",
-      "glide",
-      "breathe",
       "pulse",
-      "float"
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
     ]
   },
-  "ghostbusters": {
+  "supermilker": {
     "base": "Pulse",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#e53935",
-        "#ffffff"
-      ]
-    },
+    "particles": "Pulse",
     "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.0
-    },
     "palette": [
-      "#ffffff",
-      "#e53935",
-      "#b0bec5",
-      "#ff80ab",
-      "#ffffff"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 54240,
-    "glow": {
-      "color": "#ffffff",
-      "radius": 2.5,
-      "falloff": "gaussian"
-    },
-    "habitat": "aerial",
-    "allowed_effects": [
-      "fly",
-      "hover",
-      "glide",
-      "breathe",
-      "pulse",
-      "float"
-    ]
-  },
-  "glados": {
-    "base": "Glitch",
-    "particles": {
-      "type": "Glitch",
-      "rate": 8,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#eceff1",
-        "#212121"
-      ]
-    },
-    "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.0
-    },
-    "palette": [
-      "#eceff1",
-      "#455a64",
       "#78909c",
-      "#ff1744",
-      "#ffd600"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 57778,
-    "glow": {
-      "color": "#212121",
-      "radius": 2.5,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
-    "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
-      "pulse",
-      "glitch"
-    ]
-  },
-  "goat": {
-    "base": "Walk",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#d7ccc8",
-        "#a1887f"
-      ]
-    },
-    "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.0
-    },
-    "palette": [
-      "#d7ccc8",
-      "#8d6e63",
-      "#ffffff",
-      "#ff80ab",
-      "#ffffff"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 45609,
-    "glow": {
-      "color": "#a1887f",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
-    "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
-      "pulse"
-    ]
-  },
-  "goat2": {
-    "base": "Walk",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#bcaaa4",
-        "#8d6e63"
-      ]
-    },
-    "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.0
-    },
-    "palette": [
-      "#cfd8dc",
-      "#78909c",
-      "#ffffff",
-      "#ff80ab",
-      "#ffffff"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 1874,
-    "glow": {
-      "color": "#8d6e63",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
-    "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
-      "pulse"
-    ]
-  },
-  "golden-eagle": {
-    "base": "Fly",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#ffb300",
-        "#ffa000"
-      ]
-    },
-    "speed": 1.2,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.5
-    },
-    "palette": [
-      "#8d6e63",
-      "#ffc107",
-      "#f5f5f5",
-      "#ffb300",
-      "#ffe082"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 50760,
-    "glow": {
-      "color": "#ffa000",
-      "radius": 2.5,
-      "falloff": "gaussian"
-    },
-    "habitat": "aerial",
-    "allowed_effects": [
-      "fly",
-      "hover",
-      "glide",
-      "breathe",
-      "pulse",
-      "float"
-    ]
-  },
-  "happy-whale": {
-    "base": "Float",
-    "particles": {
-      "type": "Bubbles",
-      "rate": 8,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#039be5",
-        "#4fc3f7"
-      ]
-    },
-    "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.5
-    },
-    "palette": [
       "#0284c7",
-      "#0369a1",
-      "#ffffff",
-      "#e0f7fa",
+      "#e1f5fe",
+      "#ff80ab",
       "#ffffff"
     ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 446,
-    "glow": {
-      "color": "#4fc3f7",
-      "radius": 2.5,
-      "falloff": "gaussian"
-    },
-    "habitat": "aquatic",
+    "habitat": "inanimate",
     "allowed_effects": [
-      "float",
-      "swim",
-      "drift",
-      "bubble",
       "pulse",
-      "wave"
-    ]
-  },
-  "hedgehog": {
-    "base": "Walk",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#6d4c41",
-        "#8d6e63"
-      ]
-    },
-    "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.0
-    },
-    "palette": [
-      "#8d6e63",
-      "#5d4037",
-      "#fff3e0",
-      "#ff80ab",
-      "#ffffff"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 35454,
-    "glow": {
-      "color": "#8d6e63",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
-    "allowed_effects": [
-      "walk",
       "breathe",
       "sway",
-      "pulse"
-    ]
-  },
-  "hellokitty": {
-    "base": "Walk",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#ffffff",
-        "#ff4081"
-      ]
-    },
-    "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.0
-    },
-    "palette": [
-      "#ffffff",
-      "#e53935",
-      "#fff9c4",
-      "#ff80ab",
-      "#ffffff"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 23107,
-    "glow": {
-      "color": "#ff4081",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
-    "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
-      "pulse"
-    ]
-  },
-  "hippie": {
-    "base": "Sway",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#ff007f",
-        "#00e5ff"
-      ]
-    },
-    "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.4,
-      "float": 0.0
-    },
-    "palette": [
-      "#ff007f",
-      "#00e5ff",
-      "#ffff00",
-      "#76ff03",
-      "#ffffff"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 53595,
-    "glow": {
-      "color": "#00e5ff",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
-    "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
-      "pulse"
-    ]
-  },
-  "hiya": {
-    "base": "Talk",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#ffffff",
-        "#212121"
-      ]
-    },
-    "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.0
-    },
-    "palette": [
-      "#ffb74d",
-      "#ff7043",
-      "#ffffff",
-      "#ff80ab",
-      "#ffffff"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 18207,
-    "glow": {
-      "color": "#212121",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
-    "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
-      "pulse",
-      "talk"
-    ]
-  },
-  "hypno": {
-    "base": "Pulse",
-    "particles": {
-      "type": "Pulse",
-      "rate": 8,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#7c4dff",
-        "#00e5ff"
-      ]
-    },
-    "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.0
-    },
-    "palette": [
-      "#455a64",
-      "#00e5ff",
-      "#ffffff",
-      "#7c4dff",
-      "#ffffff"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 13931,
-    "glow": {
-      "color": "#00e5ff",
-      "radius": 2.5,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
-    "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
-      "pulse"
-    ]
-  },
-  "jellyfish": {
-    "base": "Float",
-    "particles": {
-      "type": "Bubbles",
-      "rate": 8,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#e040fb",
-        "#ea80fc"
-      ]
-    },
-    "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.5
-    },
-    "palette": [
-      "#ba68c8",
-      "#80d8ff",
-      "#f3e5f5",
-      "#ea80fc",
-      "#ffffff"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 60009,
-    "glow": {
-      "color": "#ea80fc",
-      "radius": 2.5,
-      "falloff": "gaussian"
-    },
-    "habitat": "aquatic",
-    "allowed_effects": [
-      "float",
-      "swim",
-      "drift",
-      "bubble",
-      "pulse",
-      "wave"
-    ]
-  },
-  "king": {
-    "base": "Breathe",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#ffd700",
-        "#e91e63"
-      ]
-    },
-    "speed": 0.8,
-    "amplitude": {
-      "breath": 0.35,
-      "sway": 0.2,
-      "float": 0.0
-    },
-    "palette": [
-      "#ffd54f",
-      "#bcaaa4",
-      "#ffffff",
-      "#d7ccc8",
-      "#ffffff"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 52837,
-    "glow": {
-      "color": "#e91e63",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
-    "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
-      "pulse"
-    ]
-  },
-  "kiss": {
-    "base": "Talk",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#ffffff",
-        "#212121"
-      ]
-    },
-    "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.0
-    },
-    "palette": [
-      "#e91e63",
-      "#ff4081",
-      "#fce4ec",
-      "#d81b60",
-      "#ffffff"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 58001,
-    "glow": {
-      "color": "#212121",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
-    "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
-      "pulse",
-      "talk"
-    ]
-  },
-  "kitten": {
-    "base": "Walk",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#ffffff",
-        "#d35400"
-      ]
-    },
-    "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.0
-    },
-    "palette": [
-      "#d35400",
-      "#795548",
-      "#ffffff",
-      "#ffb6c1",
-      "#212121"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 8475,
-    "glow": {
-      "color": "#d35400",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
-    "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
-      "pulse"
-    ]
-  },
-  "kitty": {
-    "base": "Walk",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#ffffff",
-        "#d35400"
-      ]
-    },
-    "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.0
-    },
-    "palette": [
-      "#e67e22",
-      "#6d4c41",
-      "#ffffff",
-      "#ff80ab",
-      "#ffffff"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 52482,
-    "glow": {
-      "color": "#d35400",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
-    "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
-      "pulse"
-    ]
-  },
-  "knight": {
-    "base": "Walk",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#b0bec5",
-        "#cfd8dc"
-      ]
-    },
-    "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.0
-    },
-    "palette": [
-      "#90a4ae",
-      "#546e7a",
-      "#ffffff",
-      "#cfd8dc",
-      "#ffffff"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 47216,
-    "glow": {
-      "color": "#cfd8dc",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
-    "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
-      "pulse"
-    ]
-  },
-  "koala": {
-    "base": "Breathe",
-    "particles": {
-      "type": "Zzz",
-      "rate": 8,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#9e9e9e",
-        "#bdbdbd"
-      ]
-    },
-    "speed": 0.8,
-    "amplitude": {
-      "breath": 0.35,
-      "sway": 0.2,
-      "float": 0.0
-    },
-    "palette": [
-      "#90a4ae",
-      "#546e7a",
-      "#ffffff",
-      "#ff80ab",
-      "#ffffff"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 46079,
-    "glow": {
-      "color": "#bdbdbd",
-      "radius": 2.5,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
-    "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
-      "pulse"
-    ]
-  },
-  "kosh": {
-    "base": "Float",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#80cbc4",
-        "#4db6ac"
-      ]
-    },
-    "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.5
-    },
-    "palette": [
-      "#80cbc4",
-      "#00695c",
-      "#e0f2f1",
-      "#4db6ac",
-      "#ffffff"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 32435,
-    "glow": {
-      "color": "#4db6ac",
-      "radius": 2.5,
-      "falloff": "gaussian"
-    },
-    "habitat": "aerial",
-    "allowed_effects": [
-      "fly",
-      "hover",
-      "glide",
-      "breathe",
-      "pulse",
-      "float"
-    ]
-  },
-  "lamb": {
-    "base": "Walk",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#fafafa",
-        "#f5f5f5"
-      ]
-    },
-    "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.0
-    },
-    "palette": [
-      "#ffffff",
-      "#f5f5f5",
-      "#e0e0e0",
-      "#ff80ab",
-      "#ffffff"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 57306,
-    "glow": {
-      "color": "#f5f5f5",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
-    "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
-      "pulse"
-    ]
-  },
-  "lamb2": {
-    "base": "Walk",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#f5f5f5",
-        "#eeeeee"
-      ]
-    },
-    "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.0
-    },
-    "palette": [
-      "#ffffff",
-      "#f5f5f5",
-      "#e0e0e0",
-      "#ff80ab",
-      "#ffffff"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 21937,
-    "glow": {
-      "color": "#eeeeee",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
-    "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
-      "pulse"
-    ]
-  },
-  "lobster": {
-    "base": "Float",
-    "particles": {
-      "type": "Bubbles",
-      "rate": 8,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#d32f2f",
-        "#f44336"
-      ]
-    },
-    "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.0
-    },
-    "palette": [
-      "#c62828",
-      "#8e0000",
-      "#ff6f00",
-      "#ff8a65",
-      "#ffffff"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 49522,
-    "glow": {
-      "color": "#f44336",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    },
-    "habitat": "aquatic",
-    "allowed_effects": [
-      "float",
-      "swim",
-      "drift",
-      "bubble",
-      "pulse",
-      "wave"
-    ]
-  },
-  "lollerskates": {
-    "base": "Walk",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#00e676",
-        "#00b0ff"
-      ]
-    },
-    "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.0
-    },
-    "palette": [
-      "#ff4081",
-      "#00e5ff",
-      "#ffff00",
-      "#76ff03",
-      "#ffffff"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 51684,
-    "glow": {
-      "color": "#00b0ff",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
-    "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
-      "pulse"
-    ]
-  },
-  "luke-koala": {
-    "base": "Breathe",
-    "particles": {
-      "type": "Zzz",
-      "rate": 8,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#90a4ae",
-        "#b0bec5"
-      ]
-    },
-    "speed": 0.8,
-    "amplitude": {
-      "breath": 0.35,
-      "sway": 0.2,
-      "float": 0.0
-    },
-    "palette": [
-      "#90a4ae",
-      "#546e7a",
-      "#ffffff",
-      "#ff80ab",
-      "#ffffff"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 32159,
-    "glow": {
-      "color": "#b0bec5",
-      "radius": 2.5,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
-    "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
-      "pulse"
-    ]
-  },
-  "meow": {
-    "base": "Talk",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#ffffff",
-        "#d35400"
-      ]
-    },
-    "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.0
-    },
-    "palette": [
-      "#455a64",
-      "#263238",
-      "#cfd8dc",
-      "#ff80ab",
-      "#00e676"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 18637,
-    "glow": {
-      "color": "#d35400",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
-    "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
-      "pulse",
-      "talk"
-    ]
-  },
-  "minotaur": {
-    "base": "Walk",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#4e342e",
-        "#6d4c41"
-      ]
-    },
-    "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.0
-    },
-    "palette": [
-      "#795548",
-      "#f5f5f5",
-      "#8d6e63",
-      "#ffc107",
-      "#ff1744"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 21242,
-    "glow": {
-      "color": "#6d4c41",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
-    "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
-      "pulse"
-    ]
-  },
-  "mona-lisa": {
-    "base": "Breathe",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#8d6e63",
-        "#a1887f"
-      ]
-    },
-    "speed": 0.8,
-    "amplitude": {
-      "breath": 0.35,
-      "sway": 0.2,
-      "float": 0.0
-    },
-    "palette": [
-      "#8d6e63",
-      "#5d4037",
-      "#f5f5f5",
-      "#a1887f",
-      "#ffffff"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 62172,
-    "glow": {
-      "color": "#a1887f",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
-    "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
-      "pulse"
-    ]
-  },
-  "moofasa": {
-    "base": "Breathe",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#ff8f00",
-        "#ffa000"
-      ]
-    },
-    "speed": 0.8,
-    "amplitude": {
-      "breath": 0.35,
-      "sway": 0.2,
-      "float": 0.0
-    },
-    "palette": [
-      "#d4a373",
-      "#795548",
-      "#fff8e1",
-      "#ff80ab",
-      "#ffd54f"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 63741,
-    "glow": {
-      "color": "#ffa000",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
-    "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
-      "pulse"
-    ]
-  },
-  "mooghidjirah": {
-    "base": "Breathe",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#ffd700",
-        "#c62828"
-      ]
-    },
-    "speed": 0.8,
-    "amplitude": {
-      "breath": 0.35,
-      "sway": 0.2,
-      "float": 0.0
-    },
-    "palette": [
-      "#388e3c",
-      "#1b5e20",
-      "#c8e6c9",
-      "#00e5ff",
-      "#ffd600"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 56696,
-    "glow": {
-      "color": "#c62828",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
-    "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
-      "pulse"
-    ]
-  },
-  "moojira": {
-    "base": "Breathe",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#2e7d32",
-        "#1b5e20"
-      ]
-    },
-    "speed": 0.8,
-    "amplitude": {
-      "breath": 0.35,
-      "sway": 0.2,
-      "float": 0.0
-    },
-    "palette": [
-      "#388e3c",
-      "#1b5e20",
-      "#c8e6c9",
-      "#00e5ff",
-      "#ffd600"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 11883,
-    "glow": {
-      "color": "#1b5e20",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
-    "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
-      "pulse"
+      "glitch",
+      "dissolve",
+      "static"
     ]
   },
   "moose": {
     "base": "Walk",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#4e342e",
-        "#5d4037"
-      ]
-    },
+    "particles": null,
     "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.0
-    },
     "palette": [
       "#8d6e63",
       "#5d4037",
@@ -3186,47 +100,23 @@
       "#ff80ab",
       "#ffffff"
     ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 31010,
-    "glow": {
-      "color": "#5d4037",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    },
     "habitat": "terrestrial",
     "allowed_effects": [
       "walk",
       "breathe",
       "sway",
-      "pulse"
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
     ]
   },
   "mule": {
     "base": "Walk",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#5c4033",
-        "#795548"
-      ]
-    },
+    "particles": null,
     "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.0
-    },
     "palette": [
       "#5c4033",
       "#795548",
@@ -3234,162 +124,174 @@
       "#d7ccc8",
       "#ffffff"
     ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 35458,
-    "glow": {
-      "color": "#795548",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    },
     "habitat": "terrestrial",
     "allowed_effects": [
       "walk",
       "breathe",
       "sway",
-      "pulse"
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
     ]
   },
-  "mutilated": {
-    "base": "Dissolve",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#d32f2f",
-        "#b71c1c"
-      ]
-    },
+  "sheep": {
+    "base": "Walk",
+    "particles": null,
     "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.0
-    },
     "palette": [
-      "#90a4ae",
-      "#00e5ff",
+      "#ffffff",
       "#e0e0e0",
-      "#ff1744",
+      "#cfd8dc",
+      "#ff80ab",
       "#ffffff"
     ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 23411,
-    "glow": {
-      "color": "#b71c1c",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    },
     "habitat": "terrestrial",
     "allowed_effects": [
       "walk",
       "breathe",
       "sway",
       "pulse",
-      "dissolve"
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
     ]
   },
-  "nyan": {
-    "base": "Fly",
-    "particles": {
-      "type": "Stars",
-      "rate": 8,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#ff0033",
-        "#ff7f00"
-      ]
-    },
-    "speed": 1.2,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.5
-    },
+  "flaming-sheep": {
+    "base": "Breathe",
+    "particles": "Fire",
+    "speed": 0.8,
     "palette": [
+      "#ff7043",
+      "#d84315",
       "#ffe082",
-      "#f48fb1",
-      "#e91e63",
-      "#b0bec5",
-      "#ffffff"
+      "#ff3d00",
+      "#ffd600"
     ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 43878,
-    "glow": {
-      "color": "#ff7f00",
-      "radius": 2.5,
-      "falloff": "gaussian"
-    },
-    "habitat": "aerial",
+    "habitat": "terrestrial",
     "allowed_effects": [
-      "fly",
-      "hover",
-      "glide",
+      "walk",
       "breathe",
+      "sway",
       "pulse",
-      "float"
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
     ]
   },
-  "octopus": {
-    "base": "Float",
-    "particles": {
-      "type": "Bubbles",
-      "rate": 8,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#8e24aa",
-        "#ab47bc"
-      ]
-    },
+  "lamb": {
+    "base": "Walk",
+    "particles": null,
     "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.5
-    },
     "palette": [
-      "#c2185b",
-      "#7b1fa2",
-      "#f8bbd0",
-      "#ff4081",
+      "#ffffff",
+      "#f5f5f5",
+      "#e0e0e0",
+      "#ff80ab",
       "#ffffff"
     ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 14330,
-    "glow": {
-      "color": "#ab47bc",
-      "radius": 2.5,
-      "falloff": "gaussian"
-    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
+    ]
+  },
+  "lamb2": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#ffffff",
+      "#f5f5f5",
+      "#e0e0e0",
+      "#ff80ab",
+      "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
+    ]
+  },
+  "goat": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#d7ccc8",
+      "#8d6e63",
+      "#ffffff",
+      "#ff80ab",
+      "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
+    ]
+  },
+  "goat2": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#cfd8dc",
+      "#78909c",
+      "#ffffff",
+      "#ff80ab",
+      "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
+    ]
+  },
+  "dolphin": {
+    "base": "Float",
+    "particles": "Bubbles",
+    "speed": 1.0,
+    "palette": [
+      "#4fc3f7",
+      "#0288d1",
+      "#ffffff",
+      "#b3e5fc",
+      "#ffffff"
+    ],
     "habitat": "aquatic",
     "allowed_effects": [
       "float",
@@ -3400,469 +302,136 @@
       "wave"
     ]
   },
-  "owl": {
-    "base": "Breathe",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#795548",
-        "#8d6e63"
-      ]
-    },
-    "speed": 0.8,
-    "amplitude": {
-      "breath": 0.35,
-      "sway": 0.2,
-      "float": 0.0
-    },
-    "palette": [
-      "#d7ccc8",
-      "#8d6e63",
-      "#ffffff",
-      "#ffa000",
-      "#ffd54f"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 7751,
-    "glow": {
-      "color": "#8d6e63",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    },
-    "habitat": "aerial",
-    "allowed_effects": [
-      "fly",
-      "hover",
-      "glide",
-      "breathe",
-      "pulse",
-      "float"
-    ]
-  },
-  "pawn": {
-    "base": "Walk",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#cfd8dc",
-        "#eceff1"
-      ]
-    },
-    "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.0
-    },
-    "palette": [
-      "#d7ccc8",
-      "#8d6e63",
-      "#ffffff",
-      "#bcaaa4",
-      "#ffffff"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 32407,
-    "glow": {
-      "color": "#eceff1",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
-    "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
-      "pulse"
-    ]
-  },
-  "periodic-table": {
-    "base": "Pulse",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#00e5ff",
-        "#76ff03"
-      ]
-    },
-    "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.0
-    },
-    "palette": [
-      "#00bcd4",
-      "#9c27b0",
-      "#ff9800",
-      "#4caf50",
-      "#ffffff"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 61601,
-    "glow": {
-      "color": "#76ff03",
-      "radius": 2.5,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
-    "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
-      "pulse"
-    ]
-  },
-  "personality-sphere": {
+  "whale": {
     "base": "Float",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#03a9f4",
-        "#e0e0e0"
-      ]
-    },
+    "particles": "Bubbles",
     "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.5
-    },
     "palette": [
+      "#0284c7",
+      "#0369a1",
       "#ffffff",
-      "#37474f",
-      "#78909c",
-      "#cfd8dc",
-      "#00e5ff"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 64616,
-    "glow": {
-      "color": "#e0e0e0",
-      "radius": 2.5,
-      "falloff": "gaussian"
-    },
-    "habitat": "aerial",
-    "allowed_effects": [
-      "fly",
-      "hover",
-      "glide",
-      "breathe",
-      "pulse",
-      "float"
-    ]
-  },
-  "pterodactyl": {
-    "base": "Fly",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#689f38",
-        "#8bc34a"
-      ]
-    },
-    "speed": 1.2,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.5
-    },
-    "palette": [
-      "#bf360c",
-      "#ff7043",
-      "#ffd54f",
-      "#e65100",
+      "#e0f7fa",
       "#ffffff"
     ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 38208,
-    "glow": {
-      "color": "#8bc34a",
-      "radius": 2.5,
-      "falloff": "gaussian"
-    },
-    "habitat": "aerial",
+    "habitat": "aquatic",
     "allowed_effects": [
-      "fly",
-      "hover",
-      "glide",
-      "breathe",
+      "float",
+      "swim",
+      "drift",
+      "bubble",
       "pulse",
-      "float"
+      "wave"
     ]
   },
-  "queen": {
-    "base": "Breathe",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#ffd700",
-        "#e91e63"
-      ]
-    },
-    "speed": 0.8,
-    "amplitude": {
-      "breath": 0.35,
-      "sway": 0.2,
-      "float": 0.0
-    },
+  "happy-whale": {
+    "base": "Float",
+    "particles": "Bubbles",
+    "speed": 1.0,
     "palette": [
-      "#e91e63",
+      "#0284c7",
+      "#0369a1",
       "#ffffff",
-      "#fce4ec",
+      "#e0f7fa",
+      "#ffffff"
+    ],
+    "habitat": "aquatic",
+    "allowed_effects": [
+      "float",
+      "swim",
+      "drift",
+      "bubble",
+      "pulse",
+      "wave"
+    ]
+  },
+  "docker-whale": {
+    "base": "Float",
+    "particles": "Bubbles",
+    "speed": 1.0,
+    "palette": [
+      "#0284c7",
+      "#0369a1",
+      "#ffffff",
+      "#e0f7fa",
+      "#ffffff"
+    ],
+    "habitat": "aquatic",
+    "allowed_effects": [
+      "float",
+      "swim",
+      "drift",
+      "bubble",
+      "pulse",
+      "wave"
+    ]
+  },
+  "octopus": {
+    "base": "Float",
+    "particles": "Bubbles",
+    "speed": 1.0,
+    "palette": [
       "#c2185b",
+      "#7b1fa2",
+      "#f8bbd0",
+      "#ff4081",
       "#ffffff"
     ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 33382,
-    "glow": {
-      "color": "#e91e63",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
+    "habitat": "aquatic",
     "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
-      "pulse"
-    ]
-  },
-  "ren": {
-    "base": "Talk",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#d7ccc8",
-        "#a1887f"
-      ]
-    },
-    "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.0
-    },
-    "palette": [
-      "#ffb74d",
-      "#ff80ab",
-      "#42a5f5",
-      "#ffffff",
-      "#ffffff"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 39056,
-    "glow": {
-      "color": "#a1887f",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
-    "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
+      "float",
+      "swim",
+      "drift",
+      "bubble",
       "pulse",
-      "talk"
+      "wave"
     ]
   },
-  "rook": {
-    "base": "Walk",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#78909c",
-        "#90a4ae"
-      ]
-    },
+  "smiling-octopus": {
+    "base": "Float",
+    "particles": "Bubbles",
     "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.0
-    },
     "palette": [
-      "#78909c",
-      "#455a64",
-      "#eceff1",
-      "#b0bec5",
+      "#c2185b",
+      "#7b1fa2",
+      "#f8bbd0",
+      "#ff4081",
       "#ffffff"
     ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 53285,
-    "glow": {
-      "color": "#90a4ae",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
+    "habitat": "aquatic",
     "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
-      "pulse"
+      "float",
+      "swim",
+      "drift",
+      "bubble",
+      "pulse",
+      "wave"
     ]
   },
-  "satanic": {
-    "base": "Pulse",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#d32f2f",
-        "#b71c1c"
-      ]
-    },
+  "jellyfish": {
+    "base": "Float",
+    "particles": "Bubbles",
     "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.0
-    },
     "palette": [
-      "#424242",
-      "#c62828",
-      "#757575",
-      "#ff1744",
-      "#ffd600"
+      "#ba68c8",
+      "#80d8ff",
+      "#f3e5f5",
+      "#ea80fc",
+      "#ffffff"
     ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 8416,
-    "glow": {
-      "color": "#b71c1c",
-      "radius": 2.5,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
+    "habitat": "aquatic",
     "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
-      "pulse"
+      "float",
+      "swim",
+      "drift",
+      "bubble",
+      "pulse",
+      "wave"
     ]
   },
   "seahorse": {
     "base": "Float",
-    "particles": {
-      "type": "Bubbles",
-      "rate": 8,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#ffa000",
-        "#ffb300"
-      ]
-    },
+    "particles": "Bubbles",
     "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.5
-    },
     "palette": [
       "#ff7043",
       "#ffd54f",
@@ -3870,15 +439,6 @@
       "#fff9c4",
       "#ffffff"
     ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 59411,
-    "glow": {
-      "color": "#ffb300",
-      "radius": 2.5,
-      "falloff": "gaussian"
-    },
     "habitat": "aquatic",
     "allowed_effects": [
       "float",
@@ -3891,28 +451,8 @@
   },
   "seahorse-big": {
     "base": "Float",
-    "particles": {
-      "type": "Bubbles",
-      "rate": 8,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#ffa000",
-        "#ffb300"
-      ]
-    },
+    "particles": "Bubbles",
     "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.5
-    },
     "palette": [
       "#ff7043",
       "#ffd54f",
@@ -3920,15 +460,6 @@
       "#fff9c4",
       "#ffffff"
     ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 54817,
-    "glow": {
-      "color": "#ffb300",
-      "radius": 2.5,
-      "falloff": "gaussian"
-    },
     "habitat": "aquatic",
     "allowed_effects": [
       "float",
@@ -3939,286 +470,17 @@
       "wave"
     ]
   },
-  "sheep": {
-    "base": "Walk",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#ffffff",
-        "#f5f5f5"
-      ]
-    },
-    "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.0
-    },
-    "palette": [
-      "#ffffff",
-      "#e0e0e0",
-      "#cfd8dc",
-      "#ff80ab",
-      "#ffffff"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 32590,
-    "glow": {
-      "color": "#f5f5f5",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
-    "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
-      "pulse"
-    ]
-  },
-  "shikato": {
-    "base": "Breathe",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#9e9e9e",
-        "#e0e0e0"
-      ]
-    },
-    "speed": 0.8,
-    "amplitude": {
-      "breath": 0.35,
-      "sway": 0.2,
-      "float": 0.0
-    },
-    "palette": [
-      "#d7ccc8",
-      "#8d6e63",
-      "#ffffff",
-      "#ff80ab",
-      "#ffffff"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 19861,
-    "glow": {
-      "color": "#e0e0e0",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
-    "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
-      "pulse"
-    ]
-  },
-  "shrug": {
-    "base": "Sway",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#ffffff",
-        "#e0e0e0"
-      ]
-    },
-    "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.4,
-      "float": 0.0
-    },
-    "palette": [
-      "#ffffff",
-      "#cfd8dc",
-      "#b0bec5",
-      "#90a4ae",
-      "#ffffff"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 12332,
-    "glow": {
-      "color": "#e0e0e0",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
-    "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
-      "pulse"
-    ]
-  },
-  "skeleton": {
-    "base": "Walk",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#f5f5f5",
-        "#e0e0e0"
-      ]
-    },
-    "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.0
-    },
-    "palette": [
-      "#f5f5f5",
-      "#78909c",
-      "#ffffff",
-      "#b0bec5",
-      "#ffffff"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 34002,
-    "glow": {
-      "color": "#e0e0e0",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
-    "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
-      "pulse"
-    ]
-  },
-  "small": {
-    "base": "Walk",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#ffffff",
-        "#e0e0e0"
-      ]
-    },
-    "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.0
-    },
-    "palette": [
-      "#ffffff",
-      "#263238",
-      "#e0e0e0",
-      "#ff80ab",
-      "#ffffff"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 10409,
-    "glow": {
-      "color": "#e0e0e0",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
-    "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
-      "pulse"
-    ]
-  },
-  "smiling-octopus": {
+  "lobster": {
     "base": "Float",
-    "particles": {
-      "type": "Bubbles",
-      "rate": 8,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#ab47bc",
-        "#ce93d8"
-      ]
-    },
+    "particles": "Bubbles",
     "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.5
-    },
     "palette": [
-      "#c2185b",
-      "#7b1fa2",
-      "#f8bbd0",
-      "#ff4081",
+      "#c62828",
+      "#8e0000",
+      "#ff6f00",
+      "#ff8a65",
       "#ffffff"
     ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 21393,
-    "glow": {
-      "color": "#ce93d8",
-      "radius": 2.5,
-      "falloff": "gaussian"
-    },
     "habitat": "aquatic",
     "allowed_effects": [
       "float",
@@ -4227,514 +489,12 @@
       "bubble",
       "pulse",
       "wave"
-    ]
-  },
-  "snoopy": {
-    "base": "Breathe",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#ffffff",
-        "#212121"
-      ]
-    },
-    "speed": 0.8,
-    "amplitude": {
-      "breath": 0.35,
-      "sway": 0.2,
-      "float": 0.0
-    },
-    "palette": [
-      "#ffffff",
-      "#263238",
-      "#e53935",
-      "#ff80ab",
-      "#ffffff"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 47583,
-    "glow": {
-      "color": "#212121",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
-    "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
-      "pulse"
-    ]
-  },
-  "snoopyhouse": {
-    "base": "Breathe",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#d32f2f",
-        "#ffffff"
-      ]
-    },
-    "speed": 0.8,
-    "amplitude": {
-      "breath": 0.35,
-      "sway": 0.2,
-      "float": 0.0
-    },
-    "palette": [
-      "#ffffff",
-      "#263238",
-      "#e53935",
-      "#ff80ab",
-      "#ffffff"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 62309,
-    "glow": {
-      "color": "#ffffff",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
-    "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
-      "pulse"
-    ]
-  },
-  "snoopysleep": {
-    "base": "Breathe",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#ffffff",
-        "#212121"
-      ]
-    },
-    "speed": 0.8,
-    "amplitude": {
-      "breath": 0.35,
-      "sway": 0.2,
-      "float": 0.0
-    },
-    "palette": [
-      "#ffffff",
-      "#263238",
-      "#e53935",
-      "#ff80ab",
-      "#ffffff"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 46587,
-    "glow": {
-      "color": "#212121",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
-    "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
-      "pulse"
-    ]
-  },
-  "spidercow": {
-    "base": "Walk",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#212121",
-        "#d32f2f"
-      ]
-    },
-    "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.0
-    },
-    "palette": [
-      "#455a64",
-      "#d32f2f",
-      "#ffffff",
-      "#1976d2",
-      "#ffffff"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 10371,
-    "glow": {
-      "color": "#d32f2f",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
-    "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
-      "pulse"
-    ]
-  },
-  "squirrel": {
-    "base": "Walk",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#8d6e63",
-        "#a1887f"
-      ]
-    },
-    "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.0
-    },
-    "palette": [
-      "#8d6e63",
-      "#a1887f",
-      "#ffffff",
-      "#ff80ab",
-      "#ffffff"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 6501,
-    "glow": {
-      "color": "#a1887f",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
-    "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
-      "pulse"
-    ]
-  },
-  "stegosaurus": {
-    "base": "Walk",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#388e3c",
-        "#4caf50"
-      ]
-    },
-    "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.0
-    },
-    "palette": [
-      "#558b2f",
-      "#d84315",
-      "#dcedc8",
-      "#fff9c4",
-      "#ffd54f"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 7930,
-    "glow": {
-      "color": "#4caf50",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
-    "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
-      "pulse"
-    ]
-  },
-  "stimpy": {
-    "base": "Talk",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#e53935",
-        "#ef5350"
-      ]
-    },
-    "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.0
-    },
-    "palette": [
-      "#e65100",
-      "#1e88e5",
-      "#ffffff",
-      "#ff80ab",
-      "#ffffff"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 53059,
-    "glow": {
-      "color": "#ef5350",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
-    "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
-      "pulse",
-      "talk"
-    ]
-  },
-  "supermilker": {
-    "base": "Pulse",
-    "particles": {
-      "type": "Pulse",
-      "rate": 8,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#ffffff",
-        "#212121"
-      ]
-    },
-    "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.0
-    },
-    "palette": [
-      "#78909c",
-      "#0284c7",
-      "#e1f5fe",
-      "#ff80ab",
-      "#ffffff"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 12674,
-    "glow": {
-      "color": "#212121",
-      "radius": 2.5,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
-    "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
-      "pulse"
-    ]
-  },
-  "surgery": {
-    "base": "Glitch",
-    "particles": {
-      "type": "Glitch",
-      "rate": 8,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#0284c7",
-        "#38bdf8"
-      ]
-    },
-    "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.0
-    },
-    "palette": [
-      "#80deea",
-      "#00838f",
-      "#ffffff",
-      "#ff80ab",
-      "#ffffff"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 2971,
-    "glow": {
-      "color": "#38bdf8",
-      "radius": 2.5,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
-    "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
-      "pulse",
-      "glitch"
-    ]
-  },
-  "tortoise": {
-    "base": "Walk",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#558b2f",
-        "#689f38"
-      ]
-    },
-    "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.0
-    },
-    "palette": [
-      "#558b2f",
-      "#33691e",
-      "#fff59d",
-      "#689f38",
-      "#ffffff"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 43960,
-    "glow": {
-      "color": "#689f38",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
-    "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
-      "pulse"
     ]
   },
   "turkey": {
     "base": "Walk",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#6d4c41",
-        "#c62828"
-      ]
-    },
+    "particles": null,
     "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.0
-    },
     "palette": [
       "#8d6e63",
       "#d32f2f",
@@ -4742,15 +502,30 @@
       "#e53935",
       "#ffffff"
     ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 52332,
-    "glow": {
-      "color": "#c62828",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
+    ]
+  },
+  "owl": {
+    "base": "Fly",
+    "particles": null,
+    "speed": 0.8,
+    "palette": [
+      "#d7ccc8",
+      "#8d6e63",
+      "#ffffff",
+      "#ffa000",
+      "#ffd54f"
+    ],
     "habitat": "aerial",
     "allowed_effects": [
       "fly",
@@ -4761,46 +536,513 @@
       "float"
     ]
   },
-  "turtle": {
-    "base": "Float",
-    "particles": {
-      "type": "Bubbles",
-      "rate": 8,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#2e7d32",
-        "#4caf50"
-      ]
-    },
-    "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.5
-    },
+  "golden-eagle": {
+    "base": "Fly",
+    "particles": null,
+    "speed": 1.2,
     "palette": [
-      "#558b2f",
-      "#33691e",
+      "#8d6e63",
+      "#ffc107",
+      "#f5f5f5",
+      "#ffb300",
+      "#ffe082"
+    ],
+    "habitat": "aerial",
+    "allowed_effects": [
+      "fly",
+      "hover",
+      "glide",
+      "breathe",
+      "pulse",
+      "float"
+    ]
+  },
+  "tweety-bird": {
+    "base": "Fly",
+    "particles": null,
+    "speed": 1.2,
+    "palette": [
+      "#ffee58",
+      "#ff9800",
+      "#4fc3f7",
       "#fff59d",
-      "#689f38",
       "#ffffff"
     ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 8789,
-    "glow": {
-      "color": "#4caf50",
-      "radius": 2.5,
-      "falloff": "gaussian"
-    },
+    "habitat": "aerial",
+    "allowed_effects": [
+      "fly",
+      "hover",
+      "glide",
+      "breathe",
+      "pulse",
+      "float"
+    ]
+  },
+  "pterodactyl": {
+    "base": "Fly",
+    "particles": null,
+    "speed": 1.2,
+    "palette": [
+      "#bf360c",
+      "#ff7043",
+      "#ffd54f",
+      "#e65100",
+      "#ffffff"
+    ],
+    "habitat": "aerial",
+    "allowed_effects": [
+      "fly",
+      "hover",
+      "glide",
+      "breathe",
+      "pulse",
+      "float"
+    ]
+  },
+  "cat": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#d35400",
+      "#795548",
+      "#ffffff",
+      "#ffb6c1",
+      "#212121"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
+    ]
+  },
+  "cat2": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#78909c",
+      "#546e7a",
+      "#cfd8dc",
+      "#ff80ab",
+      "#69f0ae"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
+    ]
+  },
+  "kitty": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#e67e22",
+      "#6d4c41",
+      "#ffffff",
+      "#ff80ab",
+      "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
+    ]
+  },
+  "kitten": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#d35400",
+      "#795548",
+      "#ffffff",
+      "#ffb6c1",
+      "#212121"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
+    ]
+  },
+  "meow": {
+    "base": "Talk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#455a64",
+      "#263238",
+      "#cfd8dc",
+      "#ff80ab",
+      "#00e676"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
+    ]
+  },
+  "catfence": {
+    "base": "Sway",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#d35400",
+      "#795548",
+      "#ffffff",
+      "#ff80ab",
+      "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
+    ]
+  },
+  "doge": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#e59866",
+      "#d35400",
+      "#ffffff",
+      "#ff80ab",
+      "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
+    ]
+  },
+  "fox": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#e65100",
+      "#8d6e63",
+      "#ffffff",
+      "#ff80ab",
+      "#ffd54f"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
+    ]
+  },
+  "bunny": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.25,
+    "palette": [
+      "#ffffff",
+      "#f5f5f5",
+      "#eceff1",
+      "#ffb6c1",
+      "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
+    ]
+  },
+  "squirrel": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#8d6e63",
+      "#a1887f",
+      "#ffffff",
+      "#ff80ab",
+      "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
+    ]
+  },
+  "hedgehog": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#8d6e63",
+      "#5d4037",
+      "#fff3e0",
+      "#ff80ab",
+      "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
+    ]
+  },
+  "koala": {
+    "base": "Breathe",
+    "particles": "Zzz",
+    "speed": 0.4,
+    "palette": [
+      "#90a4ae",
+      "#546e7a",
+      "#ffffff",
+      "#ff80ab",
+      "#ffffff"
+    ],
+    "habitat": "sedentary",
+    "allowed_effects": [
+      "breathe",
+      "sway",
+      "pulse",
+      "squish",
+      "dissolve"
+    ]
+  },
+  "luke-koala": {
+    "base": "Breathe",
+    "particles": "Zzz",
+    "speed": 0.4,
+    "palette": [
+      "#90a4ae",
+      "#546e7a",
+      "#ffffff",
+      "#ff80ab",
+      "#ffffff"
+    ],
+    "habitat": "sedentary",
+    "allowed_effects": [
+      "breathe",
+      "sway",
+      "pulse",
+      "squish",
+      "dissolve"
+    ]
+  },
+  "dragon": {
+    "base": "Fly",
+    "particles": "Fire",
+    "speed": 0.8,
+    "palette": [
+      "#e53935",
+      "#ff7043",
+      "#ffd600",
+      "#ff3d00",
+      "#ffd600"
+    ],
+    "habitat": "aerial",
+    "allowed_effects": [
+      "fly",
+      "hover",
+      "glide",
+      "breathe",
+      "pulse",
+      "float"
+    ]
+  },
+  "dragon-and-cow": {
+    "base": "Fly",
+    "particles": "Fire",
+    "speed": 0.8,
+    "palette": [
+      "#e53935",
+      "#ff7043",
+      "#ffd600",
+      "#ff3d00",
+      "#ffd600"
+    ],
+    "habitat": "aerial",
+    "allowed_effects": [
+      "fly",
+      "hover",
+      "glide",
+      "breathe",
+      "pulse",
+      "float"
+    ]
+  },
+  "charizardvice": {
+    "base": "Fly",
+    "particles": "Fire",
+    "speed": 0.8,
+    "palette": [
+      "#ef6c00",
+      "#26a69a",
+      "#ffe082",
+      "#ff3d00",
+      "#40c4ff"
+    ],
+    "habitat": "aerial",
+    "allowed_effects": [
+      "fly",
+      "hover",
+      "glide",
+      "breathe",
+      "pulse",
+      "float"
+    ]
+  },
+  "ghost": {
+    "base": "Float",
+    "particles": "Glitch",
+    "speed": 1.0,
+    "palette": [
+      "#80cbc4",
+      "#4db6ac",
+      "#e0f2f1",
+      "#b2dfdb",
+      "#ffffff"
+    ],
+    "habitat": "ethereal",
+    "allowed_effects": [
+      "float",
+      "drift",
+      "pulse",
+      "glitch",
+      "dissolve",
+      "breathe",
+      "wave"
+    ]
+  },
+  "ghostbusters": {
+    "base": "Float",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#ffffff",
+      "#e53935",
+      "#b0bec5",
+      "#ff80ab",
+      "#ffffff"
+    ],
+    "habitat": "ethereal",
+    "allowed_effects": [
+      "float",
+      "drift",
+      "pulse",
+      "glitch",
+      "dissolve",
+      "breathe",
+      "wave"
+    ]
+  },
+  "weeping-angel": {
+    "base": "Pulse",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#90a4ae",
+      "#546e7a",
+      "#cfd8dc",
+      "#b0bec5",
+      "#ffffff"
+    ],
+    "habitat": "ethereal",
+    "allowed_effects": [
+      "float",
+      "drift",
+      "pulse",
+      "glitch",
+      "dissolve",
+      "breathe",
+      "wave"
+    ]
+  },
+  "cthulhu-mini": {
+    "base": "Float",
+    "particles": "Stars",
+    "speed": 1.0,
+    "palette": [
+      "#388e3c",
+      "#1b5e20",
+      "#66bb6a",
+      "#a5d6a7",
+      "#ffea00"
+    ],
     "habitat": "aquatic",
     "allowed_effects": [
       "float",
@@ -4811,30 +1053,655 @@
       "wave"
     ]
   },
+  "daemon": {
+    "base": "Fly",
+    "particles": "Fire",
+    "speed": 1.2,
+    "palette": [
+      "#d32f2f",
+      "#7f0000",
+      "#ff5722",
+      "#ffd600",
+      "#ffd600"
+    ],
+    "habitat": "aerial",
+    "allowed_effects": [
+      "fly",
+      "hover",
+      "glide",
+      "breathe",
+      "pulse",
+      "float"
+    ]
+  },
+  "satanic": {
+    "base": "Pulse",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#424242",
+      "#c62828",
+      "#757575",
+      "#ff1744",
+      "#ffd600"
+    ],
+    "habitat": "ethereal",
+    "allowed_effects": [
+      "float",
+      "drift",
+      "pulse",
+      "glitch",
+      "dissolve",
+      "breathe",
+      "wave"
+    ]
+  },
+  "minotaur": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#795548",
+      "#f5f5f5",
+      "#8d6e63",
+      "#ffc107",
+      "#ff1744"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
+    ]
+  },
+  "glados": {
+    "base": "Sway",
+    "particles": "Glitch",
+    "speed": 1.0,
+    "palette": [
+      "#eceff1",
+      "#455a64",
+      "#78909c",
+      "#ff1744",
+      "#ffd600"
+    ],
+    "habitat": "ethereal",
+    "allowed_effects": [
+      "float",
+      "drift",
+      "pulse",
+      "glitch",
+      "dissolve",
+      "breathe",
+      "wave"
+    ]
+  },
+  "personality-sphere": {
+    "base": "Float",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#ffffff",
+      "#37474f",
+      "#78909c",
+      "#cfd8dc",
+      "#00e5ff"
+    ],
+    "habitat": "ethereal",
+    "allowed_effects": [
+      "float",
+      "drift",
+      "pulse",
+      "glitch",
+      "dissolve",
+      "breathe",
+      "wave"
+    ]
+  },
+  "kosh": {
+    "base": "Float",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#80cbc4",
+      "#00695c",
+      "#e0f2f1",
+      "#4db6ac",
+      "#ffffff"
+    ],
+    "habitat": "ethereal",
+    "allowed_effects": [
+      "float",
+      "drift",
+      "pulse",
+      "glitch",
+      "dissolve",
+      "breathe",
+      "wave"
+    ]
+  },
+  "snoopy": {
+    "base": "Breathe",
+    "particles": null,
+    "speed": 0.8,
+    "palette": [
+      "#ffffff",
+      "#263238",
+      "#e53935",
+      "#ff80ab",
+      "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
+    ]
+  },
+  "snoopyhouse": {
+    "base": "Breathe",
+    "particles": null,
+    "speed": 0.8,
+    "palette": [
+      "#ffffff",
+      "#263238",
+      "#e53935",
+      "#ff80ab",
+      "#ffffff"
+    ],
+    "habitat": "inanimate",
+    "allowed_effects": [
+      "pulse",
+      "breathe",
+      "sway",
+      "glitch",
+      "dissolve",
+      "static"
+    ]
+  },
+  "snoopysleep": {
+    "base": "Breathe",
+    "particles": null,
+    "speed": 0.8,
+    "palette": [
+      "#ffffff",
+      "#263238",
+      "#e53935",
+      "#ff80ab",
+      "#ffffff"
+    ],
+    "habitat": "inanimate",
+    "allowed_effects": [
+      "pulse",
+      "breathe",
+      "sway",
+      "glitch",
+      "dissolve",
+      "static"
+    ]
+  },
+  "ren": {
+    "base": "Talk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#ffb74d",
+      "#ff80ab",
+      "#42a5f5",
+      "#ffffff",
+      "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
+    ]
+  },
+  "stimpy": {
+    "base": "Talk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#e65100",
+      "#1e88e5",
+      "#ffffff",
+      "#ff80ab",
+      "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
+    ]
+  },
+  "beavis.zen": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#ffd600",
+      "#1e88e5",
+      "#ffcc80",
+      "#78909c",
+      "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
+    ]
+  },
+  "nyan": {
+    "base": "Fly",
+    "particles": "Stars",
+    "speed": 1.2,
+    "palette": [
+      "#ffe082",
+      "#f48fb1",
+      "#e91e63",
+      "#b0bec5",
+      "#ffffff"
+    ],
+    "habitat": "aerial",
+    "allowed_effects": [
+      "fly",
+      "hover",
+      "glide",
+      "breathe",
+      "pulse",
+      "float"
+    ]
+  },
+  "hellokitty": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#ffffff",
+      "#e53935",
+      "#fff9c4",
+      "#ff80ab",
+      "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
+    ]
+  },
+  "bees": {
+    "base": "Fly",
+    "particles": null,
+    "speed": 1.2,
+    "palette": [
+      "#ffb300",
+      "#263238",
+      "#e0f7fa",
+      "#fff59d",
+      "#ffffff"
+    ],
+    "habitat": "aerial",
+    "allowed_effects": [
+      "fly",
+      "hover",
+      "glide",
+      "breathe",
+      "pulse",
+      "float"
+    ]
+  },
+  "spidercow": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#455a64",
+      "#d32f2f",
+      "#ffffff",
+      "#1976d2",
+      "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
+    ]
+  },
+  "stegosaurus": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#558b2f",
+      "#d84315",
+      "#dcedc8",
+      "#fff9c4",
+      "#ffd54f"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
+    ]
+  },
+  "tortoise": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#558b2f",
+      "#33691e",
+      "#fff59d",
+      "#689f38",
+      "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
+    ]
+  },
+  "turtle": {
+    "base": "Float",
+    "particles": "Bubbles",
+    "speed": 1.0,
+    "palette": [
+      "#558b2f",
+      "#33691e",
+      "#fff59d",
+      "#689f38",
+      "#ffffff"
+    ],
+    "habitat": "aquatic",
+    "allowed_effects": [
+      "float",
+      "swim",
+      "drift",
+      "bubble",
+      "pulse",
+      "wave"
+    ]
+  },
+  "mona-lisa": {
+    "base": "Breathe",
+    "particles": null,
+    "speed": 0.8,
+    "palette": [
+      "#8d6e63",
+      "#5d4037",
+      "#f5f5f5",
+      "#a1887f",
+      "#ffffff"
+    ],
+    "habitat": "inanimate",
+    "allowed_effects": [
+      "pulse",
+      "breathe",
+      "sway",
+      "glitch",
+      "dissolve",
+      "static"
+    ]
+  },
+  "periodic-table": {
+    "base": "Pulse",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#00bcd4",
+      "#9c27b0",
+      "#ff9800",
+      "#4caf50",
+      "#ffffff"
+    ],
+    "habitat": "inanimate",
+    "allowed_effects": [
+      "pulse",
+      "breathe",
+      "sway",
+      "glitch",
+      "dissolve",
+      "static"
+    ]
+  },
+  "world": {
+    "base": "Float",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#0288d1",
+      "#4caf50",
+      "#ffffff",
+      "#81c784",
+      "#ffffff"
+    ],
+    "habitat": "ethereal",
+    "allowed_effects": [
+      "float",
+      "drift",
+      "pulse",
+      "glitch",
+      "dissolve",
+      "breathe",
+      "wave"
+    ]
+  },
+  "king": {
+    "base": "Pulse",
+    "particles": null,
+    "speed": 0.8,
+    "palette": [
+      "#ffd54f",
+      "#bcaaa4",
+      "#ffffff",
+      "#d7ccc8",
+      "#ffffff"
+    ],
+    "habitat": "inanimate",
+    "allowed_effects": [
+      "pulse",
+      "breathe",
+      "sway",
+      "glitch",
+      "dissolve",
+      "static"
+    ]
+  },
+  "queen": {
+    "base": "Pulse",
+    "particles": null,
+    "speed": 0.8,
+    "palette": [
+      "#e91e63",
+      "#ffffff",
+      "#fce4ec",
+      "#c2185b",
+      "#ffffff"
+    ],
+    "habitat": "inanimate",
+    "allowed_effects": [
+      "pulse",
+      "breathe",
+      "sway",
+      "glitch",
+      "dissolve",
+      "static"
+    ]
+  },
+  "knight": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#90a4ae",
+      "#546e7a",
+      "#ffffff",
+      "#cfd8dc",
+      "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
+    ]
+  },
+  "rook": {
+    "base": "Pulse",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#78909c",
+      "#455a64",
+      "#eceff1",
+      "#b0bec5",
+      "#ffffff"
+    ],
+    "habitat": "inanimate",
+    "allowed_effects": [
+      "pulse",
+      "breathe",
+      "sway",
+      "glitch",
+      "dissolve",
+      "static"
+    ]
+  },
+  "pawn": {
+    "base": "Pulse",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#d7ccc8",
+      "#8d6e63",
+      "#ffffff",
+      "#bcaaa4",
+      "#ffffff"
+    ],
+    "habitat": "inanimate",
+    "allowed_effects": [
+      "pulse",
+      "breathe",
+      "sway",
+      "glitch",
+      "dissolve",
+      "static"
+    ]
+  },
+  "surgery": {
+    "base": "Glitch",
+    "particles": "Glitch",
+    "speed": 1.0,
+    "palette": [
+      "#80deea",
+      "#00838f",
+      "#ffffff",
+      "#ff80ab",
+      "#ffffff"
+    ],
+    "habitat": "inanimate",
+    "allowed_effects": [
+      "pulse",
+      "breathe",
+      "sway",
+      "glitch",
+      "dissolve",
+      "static"
+    ]
+  },
+  "mutilated": {
+    "base": "Dissolve",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#90a4ae",
+      "#00e5ff",
+      "#e0e0e0",
+      "#ff1744",
+      "#ffffff"
+    ],
+    "habitat": "ethereal",
+    "allowed_effects": [
+      "float",
+      "drift",
+      "pulse",
+      "glitch",
+      "dissolve",
+      "breathe",
+      "wave"
+    ]
+  },
   "tux": {
     "base": "Walk",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#ffffff",
-        "#212121"
-      ]
-    },
+    "particles": null,
     "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.0
-    },
     "palette": [
       "#455a64",
       "#ffffff",
@@ -4842,15 +1709,6 @@
       "#ffb300",
       "#ffffff"
     ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 57461,
-    "glow": {
-      "color": "#212121",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    },
     "habitat": "amphibious",
     "allowed_effects": [
       "walk",
@@ -4865,28 +1723,8 @@
   },
   "tux-big": {
     "base": "Walk",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#ffffff",
-        "#212121"
-      ]
-    },
+    "particles": null,
     "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.0
-    },
     "palette": [
       "#455a64",
       "#ffffff",
@@ -4894,15 +1732,6 @@
       "#ffb300",
       "#ffffff"
     ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 6688,
-    "glow": {
-      "color": "#212121",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    },
     "habitat": "amphibious",
     "allowed_effects": [
       "walk",
@@ -4915,144 +1744,205 @@
       "pulse"
     ]
   },
-  "tweety-bird": {
-    "base": "Fly",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#ffeb3b",
-        "#fff59d"
-      ]
-    },
-    "speed": 1.2,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.5
-    },
-    "palette": [
-      "#ffee58",
-      "#ff9800",
-      "#4fc3f7",
-      "#fff59d",
-      "#ffffff"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 60854,
-    "glow": {
-      "color": "#fff59d",
-      "radius": 2.5,
-      "falloff": "gaussian"
-    },
-    "habitat": "aerial",
-    "allowed_effects": [
-      "fly",
-      "hover",
-      "glide",
-      "breathe",
-      "pulse",
-      "float"
-    ]
-  },
-  "weeping-angel": {
-    "base": "Pulse",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#9e9e9e",
-        "#757575"
-      ]
-    },
+  "armadillo": {
+    "base": "Walk",
+    "particles": null,
     "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.0
-    },
     "palette": [
-      "#90a4ae",
-      "#546e7a",
-      "#cfd8dc",
-      "#b0bec5",
+      "#a1887f",
+      "#8d6e63",
+      "#f5f5f5",
+      "#ff80ab",
       "#ffffff"
     ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 35876,
-    "glow": {
-      "color": "#757575",
-      "radius": 2.5,
-      "falloff": "gaussian"
-    },
     "habitat": "terrestrial",
     "allowed_effects": [
       "walk",
       "breathe",
       "sway",
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
+    ]
+  },
+  "atat": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#90a4ae",
+      "#546e7a",
+      "#cfd8dc",
+      "#ff1744",
+      "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
+    ]
+  },
+  "bearface": {
+    "base": "Breathe",
+    "particles": null,
+    "speed": 0.8,
+    "palette": [
+      "#8d6e63",
+      "#5d4037",
+      "#d7ccc8",
+      "#ff80ab",
+      "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
+    ]
+  },
+  "bill-the-cat": {
+    "base": "Talk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#f57f17",
+      "#d32f2f",
+      "#ffffff",
+      "#ff80ab",
+      "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
+    ]
+  },
+  "bud-frogs": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#4caf50",
+      "#2e7d32",
+      "#aed581",
+      "#ffeb3b",
+      "#ffd54f"
+    ],
+    "habitat": "amphibious",
+    "allowed_effects": [
+      "walk",
+      "swim",
+      "float",
+      "drift",
+      "breathe",
+      "bubble",
+      "sway",
       "pulse"
     ]
   },
-  "whale": {
-    "base": "Float",
-    "particles": {
-      "type": "Bubbles",
-      "rate": 8,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#0288d1",
-        "#29b6f6"
-      ]
-    },
+  "charlie": {
+    "base": "Talk",
+    "particles": null,
     "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.5
-    },
     "palette": [
-      "#0284c7",
-      "#0369a1",
-      "#ffffff",
-      "#e0f7fa",
+      "#8d6e63",
+      "#5d4037",
+      "#f5f5f5",
+      "#ff80ab",
       "#ffffff"
     ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 34333,
-    "glow": {
-      "color": "#29b6f6",
-      "radius": 2.5,
-      "falloff": "gaussian"
-    },
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
+    ]
+  },
+  "claw-arm": {
+    "base": "Pulse",
+    "particles": "Pulse",
+    "speed": 1.0,
+    "palette": [
+      "#78909c",
+      "#455a64",
+      "#ffc107",
+      "#ff1744",
+      "#ffffff"
+    ],
+    "habitat": "inanimate",
+    "allowed_effects": [
+      "pulse",
+      "breathe",
+      "sway",
+      "glitch",
+      "dissolve",
+      "static"
+    ]
+  },
+  "cowfee": {
+    "base": "Breathe",
+    "particles": null,
+    "speed": 0.8,
+    "palette": [
+      "#8d6e63",
+      "#5d4037",
+      "#fff8e1",
+      "#ff80ab",
+      "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
+    ]
+  },
+  "ebi_furai": {
+    "base": "Float",
+    "particles": "Bubbles",
+    "speed": 1.0,
+    "palette": [
+      "#ff9800",
+      "#ffb74d",
+      "#e53935",
+      "#fff3e0",
+      "#ffffff"
+    ],
     "habitat": "aquatic",
     "allowed_effects": [
       "float",
@@ -5063,30 +1953,432 @@
       "wave"
     ]
   },
+  "elephant-in-snake": {
+    "base": "Sway",
+    "particles": null,
+    "speed": 0.8,
+    "palette": [
+      "#90a4ae",
+      "#43a047",
+      "#fffde7",
+      "#ffb6c1",
+      "#ffffff"
+    ],
+    "habitat": "serpentine",
+    "allowed_effects": [
+      "sway",
+      "drift",
+      "breathe",
+      "pulse",
+      "glitch",
+      "dissolve"
+    ]
+  },
+  "elephant": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#90a4ae",
+      "#546e7a",
+      "#fffde7",
+      "#ffb6c1",
+      "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
+    ]
+  },
+  "elephant2": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#90a4ae",
+      "#546e7a",
+      "#fffde7",
+      "#ffb6c1",
+      "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
+    ]
+  },
+  "eyes": {
+    "base": "Pulse",
+    "particles": "Pulse",
+    "speed": 1.0,
+    "palette": [
+      "#9c27b0",
+      "#00e5ff",
+      "#ffffff",
+      "#e1bee7",
+      "#ffffff"
+    ],
+    "habitat": "ethereal",
+    "allowed_effects": [
+      "float",
+      "drift",
+      "pulse",
+      "glitch",
+      "dissolve",
+      "breathe",
+      "wave"
+    ]
+  },
+  "fat-banana": {
+    "base": "Sway",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#fdd835",
+      "#8d6e63",
+      "#fff9c4",
+      "#c0ca33",
+      "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
+    ]
+  },
+  "fence": {
+    "base": "Sway",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#8d6e63",
+      "#5d4037",
+      "#d7ccc8",
+      "#a1887f",
+      "#ffffff"
+    ],
+    "habitat": "inanimate",
+    "allowed_effects": [
+      "pulse",
+      "breathe",
+      "sway",
+      "glitch",
+      "dissolve",
+      "static"
+    ]
+  },
+  "hippie": {
+    "base": "Sway",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#ff007f",
+      "#00e5ff",
+      "#ffff00",
+      "#76ff03",
+      "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
+    ]
+  },
+  "hiya": {
+    "base": "Talk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#ffb74d",
+      "#ff7043",
+      "#ffffff",
+      "#ff80ab",
+      "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
+    ]
+  },
+  "hypno": {
+    "base": "Pulse",
+    "particles": "Pulse",
+    "speed": 1.0,
+    "palette": [
+      "#455a64",
+      "#00e5ff",
+      "#ffffff",
+      "#7c4dff",
+      "#ffffff"
+    ],
+    "habitat": "ethereal",
+    "allowed_effects": [
+      "float",
+      "drift",
+      "pulse",
+      "glitch",
+      "dissolve",
+      "breathe",
+      "wave"
+    ]
+  },
+  "kiss": {
+    "base": "Talk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#e91e63",
+      "#ff4081",
+      "#fce4ec",
+      "#d81b60",
+      "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
+    ]
+  },
+  "lollerskates": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#ff4081",
+      "#00e5ff",
+      "#ffff00",
+      "#76ff03",
+      "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
+    ]
+  },
+  "moofasa": {
+    "base": "Breathe",
+    "particles": null,
+    "speed": 0.8,
+    "palette": [
+      "#d4a373",
+      "#795548",
+      "#fff8e1",
+      "#ff80ab",
+      "#ffd54f"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
+    ]
+  },
+  "mooghidjirah": {
+    "base": "Breathe",
+    "particles": null,
+    "speed": 0.8,
+    "palette": [
+      "#388e3c",
+      "#1b5e20",
+      "#c8e6c9",
+      "#00e5ff",
+      "#ffd600"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
+    ]
+  },
+  "moojira": {
+    "base": "Breathe",
+    "particles": null,
+    "speed": 0.8,
+    "palette": [
+      "#388e3c",
+      "#1b5e20",
+      "#c8e6c9",
+      "#00e5ff",
+      "#ffd600"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
+    ]
+  },
+  "shikato": {
+    "base": "Breathe",
+    "particles": null,
+    "speed": 0.8,
+    "palette": [
+      "#d7ccc8",
+      "#8d6e63",
+      "#ffffff",
+      "#ff80ab",
+      "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
+    ]
+  },
+  "shrug": {
+    "base": "Sway",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#ffffff",
+      "#cfd8dc",
+      "#b0bec5",
+      "#90a4ae",
+      "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
+    ]
+  },
+  "skeleton": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#f5f5f5",
+      "#78909c",
+      "#ffffff",
+      "#b0bec5",
+      "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
+    ]
+  },
+  "small": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#ffffff",
+      "#263238",
+      "#e0e0e0",
+      "#ff80ab",
+      "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
+    ]
+  },
   "wizard": {
     "base": "Float",
-    "particles": {
-      "type": "Stars",
-      "rate": 8,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#7c4dff",
-        "#b388ff"
-      ]
-    },
+    "particles": "Stars",
     "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.5
-    },
     "palette": [
       "#3949ab",
       "#eceff1",
@@ -5094,98 +2386,45 @@
       "#8d6e63",
       "#00e5ff"
     ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 40388,
-    "glow": {
-      "color": "#b388ff",
-      "radius": 2.5,
-      "falloff": "gaussian"
-    },
+    "habitat": "ethereal",
+    "allowed_effects": [
+      "float",
+      "drift",
+      "pulse",
+      "glitch",
+      "dissolve",
+      "breathe",
+      "wave"
+    ]
+  },
+  "hamster": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.25,
+    "palette": [
+      "#d4a373",
+      "#8d6e63",
+      "#fff8e1",
+      "#ff80ab",
+      "#ffffff"
+    ],
     "habitat": "terrestrial",
     "allowed_effects": [
       "walk",
       "breathe",
       "sway",
       "pulse",
-      "float"
-    ]
-  },
-  "world": {
-    "base": "Float",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#29b6f6",
-        "#66bb6a"
-      ]
-    },
-    "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.5
-    },
-    "palette": [
-      "#0288d1",
-      "#4caf50",
-      "#ffffff",
-      "#81c784",
-      "#ffffff"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 51352,
-    "glow": {
-      "color": "#66bb6a",
-      "radius": 2.5,
-      "falloff": "gaussian"
-    },
-    "habitat": "aerial",
-    "allowed_effects": [
-      "fly",
-      "hover",
-      "glide",
-      "breathe",
-      "pulse",
-      "float"
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
     ]
   },
   "corgi": {
     "base": "Walk",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#d35400",
-        "#e59866"
-      ]
-    },
+    "particles": null,
     "speed": 1.25,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.0
-    },
     "palette": [
       "#e59866",
       "#d35400",
@@ -5193,47 +2432,235 @@
       "#ff80ab",
       "#ffffff"
     ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 13162,
-    "glow": {
-      "color": "#e59866",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    },
     "habitat": "terrestrial",
     "allowed_effects": [
       "walk",
       "breathe",
       "sway",
-      "pulse"
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
+    ]
+  },
+  "pig": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#ffb6c1",
+      "#ff80ab",
+      "#fce4ec",
+      "#ec407a",
+      "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
+    ]
+  },
+  "ram": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#f5f5f5",
+      "#9e9e9e",
+      "#ffffff",
+      "#bcaaa4",
+      "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
+    ]
+  },
+  "rooster": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#e53935",
+      "#2e7d32",
+      "#fbc02d",
+      "#ff9800",
+      "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
+    ]
+  },
+  "panther": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#424242",
+      "#263238",
+      "#cfd8dc",
+      "#ff80ab",
+      "#00e676"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
+    ]
+  },
+  "rhino": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#78909c",
+      "#546e7a",
+      "#fffde7",
+      "#b0bec5",
+      "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
+    ]
+  },
+  "sloth": {
+    "base": "Breathe",
+    "particles": null,
+    "speed": 0.3,
+    "palette": [
+      "#8d6e63",
+      "#558b2f",
+      "#d7ccc8",
+      "#3e2723",
+      "#ffffff"
+    ],
+    "habitat": "sedentary",
+    "allowed_effects": [
+      "breathe",
+      "sway",
+      "pulse",
+      "squish",
+      "dissolve"
+    ]
+  },
+  "telebears": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#1565c0",
+      "#ffb300",
+      "#e3f2fd",
+      "#ff80ab",
+      "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
+    ]
+  },
+  "tiger": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#e65100",
+      "#263238",
+      "#ffffff",
+      "#ff80ab",
+      "#69f0ae"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
+    ]
+  },
+  "wolf": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#90a4ae",
+      "#546e7a",
+      "#ffffff",
+      "#37474f",
+      "#ffd54f"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
     ]
   },
   "duck": {
-    "base": "Fly",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#059669",
-        "#fbbf24"
-      ]
-    },
+    "base": "Walk",
+    "particles": null,
     "speed": 1.2,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.5
-    },
     "palette": [
       "#2e7d32",
       "#795548",
@@ -5241,15 +2668,6 @@
       "#ff9800",
       "#ffffff"
     ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 14269,
-    "glow": {
-      "color": "#fbbf24",
-      "radius": 2.5,
-      "falloff": "gaussian"
-    },
     "habitat": "amphibious",
     "allowed_effects": [
       "walk",
@@ -5262,174 +2680,31 @@
       "pulse"
     ]
   },
-  "pig": {
-    "base": "Walk",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#ffb6c1",
-        "#ff80ab"
-      ]
-    },
+  "pufferfish": {
+    "base": "Float",
+    "particles": "Bubbles",
     "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.0
-    },
     "palette": [
-      "#ffb6c1",
-      "#ff80ab",
-      "#fce4ec",
-      "#ec407a",
+      "#ffb74d",
+      "#6d4c41",
+      "#fffde7",
+      "#ffe082",
       "#ffffff"
     ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 1183,
-    "glow": {
-      "color": "#ff80ab",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
+    "habitat": "aquatic",
     "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
-      "pulse"
-    ]
-  },
-  "tiger": {
-    "base": "Walk",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#ea580c",
-        "#18181b"
-      ]
-    },
-    "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.0
-    },
-    "palette": [
-      "#e65100",
-      "#263238",
-      "#ffffff",
-      "#ff80ab",
-      "#69f0ae"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 23445,
-    "glow": {
-      "color": "#18181b",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
-    "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
-      "pulse"
-    ]
-  },
-  "wolf": {
-    "base": "Walk",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#9ca3af",
-        "#4b5563"
-      ]
-    },
-    "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.0
-    },
-    "palette": [
-      "#90a4ae",
-      "#546e7a",
-      "#ffffff",
-      "#37474f",
-      "#ffd54f"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 62078,
-    "glow": {
-      "color": "#4b5563",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
-    "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
-      "pulse"
+      "float",
+      "swim",
+      "drift",
+      "bubble",
+      "pulse",
+      "wave"
     ]
   },
   "squid": {
     "base": "Float",
-    "particles": {
-      "type": "Bubbles",
-      "rate": 8,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#06b6d4",
-        "#3b82f6"
-      ]
-    },
+    "particles": "Bubbles",
     "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.5
-    },
     "palette": [
       "#00bcd4",
       "#3f51b5",
@@ -5437,15 +2712,6 @@
       "#64ffda",
       "#ffffff"
     ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 42817,
-    "glow": {
-      "color": "#3b82f6",
-      "radius": 2.5,
-      "falloff": "gaussian"
-    },
     "habitat": "aquatic",
     "allowed_effects": [
       "float",
@@ -5458,28 +2724,8 @@
   },
   "walrus": {
     "base": "Breathe",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#78716c",
-        "#d6d3d1"
-      ]
-    },
+    "particles": null,
     "speed": 0.8,
-    "amplitude": {
-      "breath": 0.35,
-      "sway": 0.2,
-      "float": 0.0
-    },
     "palette": [
       "#8d6e63",
       "#5d4037",
@@ -5487,15 +2733,6 @@
       "#ff80ab",
       "#ffffff"
     ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 36813,
-    "glow": {
-      "color": "#d6d3d1",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    },
     "habitat": "amphibious",
     "allowed_effects": [
       "walk",
@@ -5508,903 +2745,10 @@
       "pulse"
     ]
   },
-  "vader": {
-    "base": "Breathe",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#18181b",
-        "#27272a"
-      ]
-    },
-    "speed": 0.8,
-    "amplitude": {
-      "breath": 0.35,
-      "sway": 0.2,
-      "float": 0.0
-    },
-    "palette": [
-      "#424242",
-      "#e0e0e0",
-      "#616161",
-      "#303030",
-      "#ff1744"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 45431,
-    "glow": {
-      "color": "#27272a",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
-    "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
-      "pulse"
-    ]
-  },
-  "yoda": {
-    "base": "Float",
-    "particles": {
-      "type": "Stars",
-      "rate": 8,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#84cc16",
-        "#65a30d"
-      ]
-    },
-    "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.5
-    },
-    "palette": [
-      "#7cb342",
-      "#558b2f",
-      "#d7ccc8",
-      "#ffb6c1",
-      "#ffd54f"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 58867,
-    "glow": {
-      "color": "#65a30d",
-      "radius": 2.5,
-      "falloff": "gaussian"
-    },
-    "habitat": "aerial",
-    "allowed_effects": [
-      "fly",
-      "hover",
-      "glide",
-      "breathe",
-      "pulse",
-      "float"
-    ]
-  },
-  "panther": {
-    "base": "Walk",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#18181b",
-        "#27272a"
-      ]
-    },
-    "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.0
-    },
-    "palette": [
-      "#424242",
-      "#263238",
-      "#cfd8dc",
-      "#ff80ab",
-      "#00e676"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 63863,
-    "glow": {
-      "color": "#27272a",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
-    "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
-      "pulse"
-    ]
-  },
-  "rhino": {
-    "base": "Walk",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#64748b",
-        "#94a3b8"
-      ]
-    },
-    "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.0
-    },
-    "palette": [
-      "#78909c",
-      "#546e7a",
-      "#fffde7",
-      "#b0bec5",
-      "#ffffff"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 4408,
-    "glow": {
-      "color": "#94a3b8",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
-    "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
-      "pulse"
-    ]
-  },
-  "sloth": {
-    "base": "Breathe",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#a16207",
-        "#ca8a04"
-      ]
-    },
-    "speed": 0.8,
-    "amplitude": {
-      "breath": 0.35,
-      "sway": 0.2,
-      "float": 0.0
-    },
-    "palette": [
-      "#8d6e63",
-      "#558b2f",
-      "#d7ccc8",
-      "#3e2723",
-      "#ffffff"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 55811,
-    "glow": {
-      "color": "#ca8a04",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
-    "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
-      "pulse"
-    ]
-  },
-  "pufferfish": {
-    "base": "Float",
-    "particles": {
-      "type": "Bubbles",
-      "rate": 8,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#facc15",
-        "#fde047"
-      ]
-    },
-    "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.0
-    },
-    "palette": [
-      "#ffb74d",
-      "#6d4c41",
-      "#fffde7",
-      "#ffe082",
-      "#ffffff"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 65412,
-    "glow": {
-      "color": "#fde047",
-      "radius": 2.5,
-      "falloff": "gaussian"
-    },
-    "habitat": "aquatic",
-    "allowed_effects": [
-      "float",
-      "swim",
-      "drift",
-      "bubble",
-      "pulse",
-      "wave"
-    ]
-  },
-  "sauron": {
-    "base": "Pulse",
-    "particles": {
-      "type": "Pulse",
-      "rate": 8,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#f97316",
-        "#dc2626"
-      ]
-    },
-    "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.0
-    },
-    "palette": [
-      "#424242",
-      "#616161",
-      "#9e9e9e",
-      "#ff3d00",
-      "#ffd600"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 51009,
-    "glow": {
-      "color": "#dc2626",
-      "radius": 2.5,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
-    "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
-      "pulse"
-    ]
-  },
-  "unipony": {
-    "base": "Walk",
-    "particles": {
-      "type": "Stars",
-      "rate": 8,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#e879f9",
-        "#38bdf8"
-      ]
-    },
-    "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.0
-    },
-    "palette": [
-      "#ffffff",
-      "#e1bee7",
-      "#ffd54f",
-      "#ff80ab",
-      "#ffffff"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 6458,
-    "glow": {
-      "color": "#38bdf8",
-      "radius": 2.5,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
-    "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
-      "pulse"
-    ]
-  },
-  "radioactive-kitty": {
-    "base": "Glitch",
-    "particles": {
-      "type": "Glitch",
-      "rate": 8,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#22c55e",
-        "#86efac"
-      ]
-    },
-    "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.0
-    },
-    "palette": [
-      "#76ff03",
-      "#00e676",
-      "#b2ff59",
-      "#ff80ab",
-      "#ffff00"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 43487,
-    "glow": {
-      "color": "#86efac",
-      "radius": 2.5,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
-    "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
-      "pulse",
-      "glitch"
-    ]
-  },
-  "vulpix": {
-    "base": "Walk",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#f97316",
-        "#ea580c"
-      ]
-    },
-    "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.0
-    },
-    "palette": [
-      "#d35400",
-      "#ff9800",
-      "#fff3e0",
-      "#e65100",
-      "#ffffff"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 54382,
-    "glow": {
-      "color": "#ea580c",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
-    "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
-      "pulse"
-    ]
-  },
-  "ram": {
-    "base": "Walk",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#f5f5f5",
-        "#ffffff"
-      ]
-    },
-    "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.0
-    },
-    "palette": [
-      "#f5f5f5",
-      "#9e9e9e",
-      "#ffffff",
-      "#bcaaa4",
-      "#ffffff"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 16366,
-    "glow": {
-      "color": "#ffffff",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
-    "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
-      "pulse"
-    ]
-  },
-  "rooster": {
-    "base": "Walk",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#d32f2f",
-        "#f57f17"
-      ]
-    },
-    "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.0
-    },
-    "palette": [
-      "#e53935",
-      "#2e7d32",
-      "#fbc02d",
-      "#ff9800",
-      "#ffffff"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 33153,
-    "glow": {
-      "color": "#f57f17",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    },
-    "habitat": "aerial",
-    "allowed_effects": [
-      "fly",
-      "hover",
-      "glide",
-      "breathe",
-      "pulse",
-      "float"
-    ]
-  },
-  "hamster": {
-    "base": "Walk",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#d4a373",
-        "#faedcd"
-      ]
-    },
-    "speed": 1.25,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.0
-    },
-    "palette": [
-      "#d4a373",
-      "#8d6e63",
-      "#fff8e1",
-      "#ff80ab",
-      "#ffffff"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 13116,
-    "glow": {
-      "color": "#faedcd",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
-    "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
-      "pulse"
-    ]
-  },
-  "apt": {
-    "base": "Walk",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#e11d48",
-        "#f43f5e"
-      ]
-    },
-    "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.0
-    },
-    "palette": [
-      "#d32f2f",
-      "#ffffff",
-      "#e57373",
-      "#ff80ab",
-      "#ffffff"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 313,
-    "glow": {
-      "color": "#f43f5e",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
-    "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
-      "pulse"
-    ]
-  },
-  "jesus": {
-    "base": "Float",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#fbbf24",
-        "#fef08a"
-      ]
-    },
-    "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.5
-    },
-    "palette": [
-      "#f5f5f5",
-      "#8d6e63",
-      "#e0e0e0",
-      "#ffb6c1",
-      "#ffd54f"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 57669,
-    "glow": {
-      "color": "#fef08a",
-      "radius": 2.5,
-      "falloff": "gaussian"
-    },
-    "habitat": "aerial",
-    "allowed_effects": [
-      "fly",
-      "hover",
-      "glide",
-      "breathe",
-      "pulse",
-      "float"
-    ]
-  },
-  "three-eyes": {
-    "base": "Breathe",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#ffffff",
-        "#212121"
-      ]
-    },
-    "speed": 0.8,
-    "amplitude": {
-      "breath": 0.35,
-      "sway": 0.2,
-      "float": 0.0
-    },
-    "palette": [
-      "#76ff03",
-      "#00e676",
-      "#b2ff59",
-      "#ff80ab",
-      "#00e5ff"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 58032,
-    "glow": {
-      "color": "#212121",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
-    "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
-      "pulse"
-    ]
-  },
-  "viper": {
-    "base": "Sway",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#16a34a",
-        "#22c55e"
-      ]
-    },
-    "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.4,
-      "float": 0.0
-    },
-    "palette": [
-      "#4caf50",
-      "#2e7d32",
-      "#c8e6c9",
-      "#ff1744",
-      "#ffd54f"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 2759,
-    "glow": {
-      "color": "#22c55e",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
-    "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
-      "pulse"
-    ]
-  },
-  "telebears": {
-    "base": "Walk",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#3b82f6",
-        "#60a5fa"
-      ]
-    },
-    "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.0
-    },
-    "palette": [
-      "#1565c0",
-      "#ffb300",
-      "#e3f2fd",
-      "#ff80ab",
-      "#ffffff"
-    ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 47730,
-    "glow": {
-      "color": "#60a5fa",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    },
-    "habitat": "terrestrial",
-    "allowed_effects": [
-      "walk",
-      "breathe",
-      "sway",
-      "pulse"
-    ]
-  },
   "mech-and-cow": {
     "base": "Walk",
-    "particles": {
-      "type": "Fire",
-      "rate": 0,
-      "life": [
-        0.5,
-        1.5
-      ],
-      "speed": [
-        0.3,
-        0.8
-      ],
-      "palette": [
-        "#0284c7",
-        "#e0f2fe"
-      ]
-    },
+    "particles": null,
     "speed": 1.0,
-    "amplitude": {
-      "breath": 0.2,
-      "sway": 0.2,
-      "float": 0.0
-    },
     "palette": [
       "#78909c",
       "#455a64",
@@ -6412,21 +2756,244 @@
       "#0284c7",
       "#ffffff"
     ],
-    "easing": {
-      "base": "sine_inout"
-    },
-    "phase_seed": 22836,
-    "glow": {
-      "color": "#e0f2fe",
-      "radius": 0.0,
-      "falloff": "gaussian"
-    },
     "habitat": "terrestrial",
     "allowed_effects": [
       "walk",
       "breathe",
       "sway",
-      "pulse"
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
+    ]
+  },
+  "sauron": {
+    "base": "Pulse",
+    "particles": "Pulse",
+    "speed": 1.0,
+    "palette": [
+      "#424242",
+      "#616161",
+      "#9e9e9e",
+      "#ff3d00",
+      "#ffd600"
+    ],
+    "habitat": "ethereal",
+    "allowed_effects": [
+      "float",
+      "drift",
+      "pulse",
+      "glitch",
+      "dissolve",
+      "breathe",
+      "wave"
+    ]
+  },
+  "unipony": {
+    "base": "Fly",
+    "particles": "Stars",
+    "speed": 1.0,
+    "palette": [
+      "#ffffff",
+      "#e1bee7",
+      "#ffd54f",
+      "#ff80ab",
+      "#ffffff"
+    ],
+    "habitat": "aerial",
+    "allowed_effects": [
+      "fly",
+      "hover",
+      "glide",
+      "breathe",
+      "pulse",
+      "float"
+    ]
+  },
+  "vader": {
+    "base": "Breathe",
+    "particles": null,
+    "speed": 0.8,
+    "palette": [
+      "#424242",
+      "#e0e0e0",
+      "#616161",
+      "#303030",
+      "#ff1744"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
+    ]
+  },
+  "yoda": {
+    "base": "Float",
+    "particles": "Stars",
+    "speed": 1.0,
+    "palette": [
+      "#7cb342",
+      "#558b2f",
+      "#d7ccc8",
+      "#ffb6c1",
+      "#ffd54f"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
+    ]
+  },
+  "radioactive-kitty": {
+    "base": "Glitch",
+    "particles": "Glitch",
+    "speed": 1.0,
+    "palette": [
+      "#76ff03",
+      "#00e676",
+      "#b2ff59",
+      "#ff80ab",
+      "#ffff00"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
+    ]
+  },
+  "vulpix": {
+    "base": "Walk",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#d35400",
+      "#ff9800",
+      "#fff3e0",
+      "#e65100",
+      "#ffffff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
+    ]
+  },
+  "apt": {
+    "base": "Pulse",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#d32f2f",
+      "#ffffff",
+      "#e57373",
+      "#ff80ab",
+      "#ffffff"
+    ],
+    "habitat": "inanimate",
+    "allowed_effects": [
+      "pulse",
+      "breathe",
+      "sway",
+      "glitch",
+      "dissolve",
+      "static"
+    ]
+  },
+  "jesus": {
+    "base": "Float",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#f5f5f5",
+      "#8d6e63",
+      "#e0e0e0",
+      "#ffb6c1",
+      "#ffd54f"
+    ],
+    "habitat": "ethereal",
+    "allowed_effects": [
+      "float",
+      "drift",
+      "pulse",
+      "glitch",
+      "dissolve",
+      "breathe",
+      "wave"
+    ]
+  },
+  "three-eyes": {
+    "base": "Breathe",
+    "particles": null,
+    "speed": 0.8,
+    "palette": [
+      "#76ff03",
+      "#00e676",
+      "#b2ff59",
+      "#ff80ab",
+      "#00e5ff"
+    ],
+    "habitat": "terrestrial",
+    "allowed_effects": [
+      "walk",
+      "breathe",
+      "sway",
+      "pulse",
+      "talk",
+      "particles",
+      "glitch",
+      "dissolve",
+      "squish"
+    ]
+  },
+  "viper": {
+    "base": "Sway",
+    "particles": null,
+    "speed": 1.0,
+    "palette": [
+      "#4caf50",
+      "#2e7d32",
+      "#c8e6c9",
+      "#ff1744",
+      "#ffd54f"
+    ],
+    "habitat": "serpentine",
+    "allowed_effects": [
+      "sway",
+      "drift",
+      "breathe",
+      "pulse",
+      "glitch",
+      "dissolve"
     ]
   }
 }
