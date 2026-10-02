@@ -7,11 +7,11 @@
 |                              *  ~  *  FORGUM JUNGLE ENGINE  *  ~  *                              |
 +==================================================================================================+
 |        / \  //\                                                                                  |
-| |\___/|/  \//  \\   ███████╗ ██████╗ ██████╗  ██████╗ ██╗   ██╗███╗   ███╗   \   ^__^            |
-| /O   O \_ / // | \  ██╔════╝██╔═══██╗██╔══██╗██╔════╝ ██║   ██║████╗ ████║    \  (oo)\_______    |
-| \@_^_@'/ \/_// |  \ █████╗  ██║   ██║██████╔╝██║  ███╗██║   ██║██╔████╔██║       (__)\       )\/\|
-|  //_^_/  \///  |  ) ██╔══╝  ██║   ██║██╔══██╗██║   ██║██║   ██║██║╚██╔╝██║           ||----w |   |
-|( //) |    //   | /  ██║     ╚██████╔╝██║  ██║╚██████╔╝╚██████╔╝██║ ╚═╝ ██║           ||     ||   |
+| |\___/|/  \//  \\   ███████╗ ██████╗ ██████╗  ██████╗ ██╗   ██╗███╗   ███╗  \   ^__^             |
+| /O   O \_ / // | \  ██╔════╝██╔═══██╗██╔══██╗██╔════╝ ██║   ██║████╗ ████║   \  (oo)\_______     |
+| \@_^_@'/ \/_// |  \ █████╗  ██║   ██║██████╔╝██║  ███╗██║   ██║██╔████╔██║      (__)\       )\/\ |
+|  //_^_/  \///  |  ) ██╔══╝  ██║   ██║██╔══██╗██║   ██║██║   ██║██║╚██╔╝██║          ||----w |    |
+|( //) |    //   | /  ██║     ╚██████╔╝██║  ██║╚██████╔╝╚██████╔╝██║ ╚═╝ ██║          ||     ||    |
 |                     ╚═╝      ╚═════╝ ╚═╝  ╚═╝ ╚═════╝  ╚═════╝ ╚═╝     ╚═╝                       |
 |                * * *  K I N E M A T I C   J U N G L E   M E N A G E R I E  * * *                 |
 |                          ___                                     .___.                           |
@@ -115,7 +115,7 @@ Forgum features a celestial, **Omarchy and Celestial Shell-inspired Terminal UI 
 ```text
   ✦ CELESTIAL INSTALLER ✦   [1] Welcome  ── [2] Privacy  ── [3] Shells  ── [4] Install  ── [5] Blastoff
   ╭───────────────────────────────╮
-  │   ✦  F O R G U M   O S  ✦     │   Detects: PowerShell 7, Pwsh, Bash, Zsh, Fish, Nushell
+  │    ✦  F O R G U M   O S  ✦    │   Detects: PowerShell 7, Pwsh, Bash, Zsh, Fish, Nushell
   ╰───────────────────────────────╯   Zero Surveillance · Transparent Consent · 100% Offline
 ```
 
@@ -806,8 +806,8 @@ forgum tui
 
 ```text
  ✨ FORGUM CONFIGURATOR   [CONFIG]  1 Mascots  2 Scenery  3 Effects  4 Installer  5 [Config]        0.0.2 beta
-┌──────────────────────────── ⚙️ Forgum Engine Settings ──────────────────────────────┬───────────────────────────────┐
-│ > 01. cow                   [ moojira                      ]                       │ ⚙️ Parameter Details          │
+┌───────────────────────────── Forgum Engine Settings ───────────────────────────────┬───────────────────────────────┐
+│ > 01. cow                   [ moojira                      ]                       │ Parameter Details             │
 │   02. text                  [                              ]                       │ Parameter: split_mode         │
 │   03. effect                [ animal_natural               ]                       │ Value:     [seamless]         │
 │   04. split_mode            [ seamless                     ]                       │ Mode:      Single-pane        │

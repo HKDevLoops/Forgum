@@ -28,7 +28,7 @@ pub const CELESTIAL_COW_CONSTELLATION: &[&str] = &[
 pub const CELESTIAL_PORTAL_ART: &[&str] = &[
     r"                       .   *   ✦   .   *   ★   .   *",
     r"              *   .    ╭───────────────────────────────╮    .   *",
-    r"                 ✦   . │   ✦  F O R G U M   O S  ✦     │ .   ✦",
+    r"                 ✦   . │    ✦  F O R G U M   O S  ✦    │ .   ✦",
     r"            .   *      ╰───────────────────────────────╯      *   .",
     r"                      /                                 \",
     r"             .   *   /     ^__^                          \   *   .",
