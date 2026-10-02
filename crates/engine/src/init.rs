@@ -188,6 +188,12 @@ __forgum_clear() {{
     fi
   fi
   command clear 2>/dev/null || printf '\x1b[H\x1b[2J'
+  if [ -f "$__FORGUM_CONFIG" ]; then
+    local mode; mode=$(grep -E -i -o '"?shell_attach_mode"?\s*[:=]\s*[^,}}]*' "$__FORGUM_CONFIG" 2>/dev/null | awk -F'[:=]' '{{print $2}}' | tr -d ' "' | tr -d "'")
+    if [ "$mode" = "clear" ]; then
+      "$__FORGUM_ENGINE" render --banner 2>/dev/null
+    fi
+  fi
 }}
 alias clear='__forgum_clear'
 
@@ -235,18 +241,18 @@ __forgum_precmd() {{
     local mode; mode=$(grep -E -i -o '"?shell_attach_mode"?\s*[:=]\s*[^,}}]*' "$__FORGUM_CONFIG" 2>/dev/null | awk -F'[:=]' '{{print $2}}' | tr -d ' "' | tr -d "'")
     if [ "$auto" != "false" ]; then
       case "$mode" in
-        banner) "$__FORGUM_ENGINE" render --banner --duration 1{extra} 2>/dev/null ;;
+        prompt|reactive)
+          if [ ! -f "$state" ]; then
+            "$__FORGUM_ENGINE" render --background --daemon --duration 0{extra} >/dev/null 2>&1
+          fi
+          ;;
         split)
           if [ ! -f "$state" ]; then
             "$__FORGUM_ENGINE" render --split-scroll --daemon --duration 0{extra} >/dev/null 2>&1
           fi
           ;;
-        reactive)
-          if [ ! -f "$state" ]; then
-            "$__FORGUM_ENGINE" render --background --daemon --duration 0{extra} >/dev/null 2>&1
-          fi
-          ;;
-        *) ;;
+        pane) ;;
+        startup|clear|banner|*) ;;
       esac
     fi
   fi
@@ -255,6 +261,13 @@ if [ -n "${{PROMPT_COMMAND+x}}" ]; then
   PROMPT_COMMAND="__forgum_precmd${{PROMPT_COMMAND:+;$PROMPT_COMMAND}}"
 else
   PROMPT_COMMAND="__forgum_precmd"
+fi
+if [ -f "$__FORGUM_CONFIG" ]; then
+  __forgum_init_mode=$(grep -E -i -o '"?shell_attach_mode"?\s*[:=]\s*[^,}}]*' "$__FORGUM_CONFIG" 2>/dev/null | awk -F'[:=]' '{{print $2}}' | tr -d ' "' | tr -d "'")
+  if [ "$__forgum_init_mode" = "startup" ] || [ "$__forgum_init_mode" = "clear" ] || [ "$__forgum_init_mode" = "banner" ]; then
+    "$__FORGUM_ENGINE" render --banner --duration 0 2>/dev/null
+  fi
+  unset __forgum_init_mode
 fi
 # <<< forgum <<<
 "#
@@ -333,6 +346,12 @@ __forgum_clear() {{
     fi
   fi
   command clear 2>/dev/null || printf '\x1b[H\x1b[2J'
+  if [ -f "$__FORGUM_CONFIG" ]; then
+    local mode; mode=$(grep -E -i -o '"?shell_attach_mode"?\s*[:=]\s*[^,}}]*' "$__FORGUM_CONFIG" 2>/dev/null | awk -F'[:=]' '{{print $2}}' | tr -d ' "' | tr -d "'")
+    if [ "$mode" = "clear" ]; then
+      "$__FORGUM_ENGINE" render --banner 2>/dev/null
+    fi
+  fi
 }}
 alias clear='__forgum_clear'
 
@@ -357,18 +376,18 @@ __forgum_precmd() {{
     local mode; mode=$(grep -E -i -o '"?shell_attach_mode"?\s*[:=]\s*[^,}}]*' "$__FORGUM_CONFIG" 2>/dev/null | awk -F'[:=]' '{{print $2}}' | tr -d ' "' | tr -d "'")
     if [ "$auto" != "false" ]; then
       case "$mode" in
-        banner) "$__FORGUM_ENGINE" render --banner --duration 1{extra} 2>/dev/null ;;
+        prompt|reactive)
+          if [ ! -f "$state" ]; then
+            "$__FORGUM_ENGINE" render --background --daemon --duration 0{extra} >/dev/null 2>&1
+          fi
+          ;;
         split)
           if [ ! -f "$state" ]; then
             "$__FORGUM_ENGINE" render --split-scroll --daemon --duration 0{extra} >/dev/null 2>&1
           fi
           ;;
-        reactive)
-          if [ ! -f "$state" ]; then
-            "$__FORGUM_ENGINE" render --background --daemon --duration 0{extra} >/dev/null 2>&1
-          fi
-          ;;
-        *) ;;
+        pane) ;;
+        startup|clear|banner|*) ;;
       esac
     fi
   fi
@@ -395,6 +414,13 @@ add-zsh-hook preexec __forgum_preexec 2>/dev/null || {{
   typeset -a preexec_functions 2>/dev/null
   preexec_functions+=(__forgum_preexec)
 }}
+if [ -f "$__FORGUM_CONFIG" ]; then
+  __forgum_init_mode=$(grep -E -i -o '"?shell_attach_mode"?\s*[:=]\s*[^,}}]*' "$__FORGUM_CONFIG" 2>/dev/null | awk -F'[:=]' '{{print $2}}' | tr -d ' "' | tr -d "'")
+  if [ "$__forgum_init_mode" = "startup" ] || [ "$__forgum_init_mode" = "clear" ] || [ "$__forgum_init_mode" = "banner" ]; then
+    "$__FORGUM_ENGINE" render --banner --duration 0 2>/dev/null
+  fi
+  unset __forgum_init_mode
+fi
 # <<< forgum <<<
 "#
     )
@@ -470,6 +496,12 @@ function clear
         end
     end
     command clear
+    if test -f "$__forgum_config"
+        set -l mode (grep -E -i -o '"?shell_attach_mode"?\s*[:=]\s*[^,}}]*' "$__forgum_config" 2>/dev/null | awk -F'[:=]' '{{print $2}}' | tr -d ' "' | tr -d "'")
+        if test "$mode" = "clear"
+            $__forgum_engine render --banner 2>/dev/null
+        end
+    end
 end
 
 function __forgum_preexec --on-event fish_preexec
@@ -507,18 +539,24 @@ function __forgum_sweep --on-event fish_prompt
         set -l mode (grep -E -i -o '"?shell_attach_mode"?\s*[:=]\s*[^,}}]*' "$__forgum_config" 2>/dev/null | awk -F'[:=]' '{{print $2}}' | tr -d ' "' | tr -d "'")
         if test "$auto" != "false"
             switch "$mode"
-                case banner
-                    $__forgum_engine render --banner --duration 1{extra} 2>/dev/null
+                case prompt reactive
+                    if not test -f $state
+                        $__forgum_engine render --background --daemon --duration 0{extra} >/dev/null 2>&1
+                    end
                 case split
                     if not test -f $state
                         $__forgum_engine render --split-scroll --daemon --duration 0{extra} >/dev/null 2>&1
                     end
-                case reactive
-                    if not test -f $state
-                        $__forgum_engine render --background --daemon --duration 0{extra} >/dev/null 2>&1
-                    end
+                case pane startup clear banner
+                    # no-op on regular prompt
             end
         end
+    end
+end
+if test -f "$__forgum_config"
+    set -l __forgum_init_mode (grep -E -i -o '"?shell_attach_mode"?\s*[:=]\s*[^,}}]*' "$__forgum_config" 2>/dev/null | awk -F'[:=]' '{{print $2}}' | tr -d ' "' | tr -d "'")
+    if test "$__forgum_init_mode" = "startup" -o "$__forgum_init_mode" = "clear" -o "$__forgum_init_mode" = "banner"
+        $__forgum_engine render --banner --duration 0 2>/dev/null
     end
 end
 # <<< forgum <<<
@@ -606,6 +644,18 @@ function global:Clear-Host {{
         }} catch {{ }}
     }}
     [Console]::Clear()
+    if (Test-Path $__ForgumConfig) {{
+        try {{
+            $rawCfg = Get-Content $__ForgumConfig -Raw -EA SilentlyContinue
+            if ($rawCfg) {{
+                $modeMatch = [regex]::Match($rawCfg, '(?i)"?shell_attach_mode"?\s*[:=]\s*["'']?([^"''\r\n,}}]+)')
+                $mode = if ($modeMatch.Success) {{ $modeMatch.Groups[1].Value.Trim().Trim('"').Trim("'") }} else {{ 'startup' }}
+                if ($mode -eq 'clear') {{
+                    & $__ForgumEngine render --banner 2>$null
+                }}
+            }}
+        }} catch {{ }}
+    }}
 }}
 
 if (Get-Command Set-PSReadLineKeyHandler -EA SilentlyContinue) {{
@@ -662,20 +712,17 @@ function global:prompt {{
                 $autoMatch = [regex]::Match($rawCfg, '(?i)"?auto_render_on_prompt"?\s*[:=]\s*([^,\r\n}}]+)')
                 $modeMatch = [regex]::Match($rawCfg, '(?i)"?shell_attach_mode"?\s*[:=]\s*["'']?([^"''\r\n,}}]+)')
                 $auto = if ($autoMatch.Success) {{ $autoMatch.Groups[1].Value.Trim().Trim('"').Trim("'") }} else {{ 'true' }}
-                $mode = if ($modeMatch.Success) {{ $modeMatch.Groups[1].Value.Trim().Trim('"').Trim("'") }} else {{ 'split' }}
+                $mode = if ($modeMatch.Success) {{ $modeMatch.Groups[1].Value.Trim().Trim('"').Trim("'") }} else {{ 'startup' }}
                 if ($auto -ne 'false') {{
                     switch ($mode) {{
-                        'banner' {{
-                            & $__ForgumEngine render --banner --duration 1{extra} 2>$null
+                        {{ $_ -in @('prompt', 'reactive') }} {{
+                            if (-not (Test-Path $state)) {{
+                                & $__ForgumEngine render --background --daemon --duration 0{extra} 2>$null
+                            }}
                         }}
                         'split' {{
                             if (-not (Test-Path $state)) {{
                                 & $__ForgumEngine render --split-scroll --daemon --duration 0{extra} 2>$null
-                            }}
-                        }}
-                        'reactive' {{
-                            if (-not (Test-Path $state)) {{
-                                & $__ForgumEngine render --background --daemon --duration 0{extra} 2>$null
                             }}
                         }}
                         default {{ }}
@@ -686,6 +733,18 @@ function global:prompt {{
     }}
 
     & $global:__ForgumPromptBackup
+}}
+if (Test-Path $__ForgumConfig) {{
+    try {{
+        $rawCfg = Get-Content $__ForgumConfig -Raw -EA SilentlyContinue
+        if ($rawCfg) {{
+            $modeMatch = [regex]::Match($rawCfg, '(?i)"?shell_attach_mode"?\s*[:=]\s*["'']?([^"''\r\n,}}]+)')
+            $mode = if ($modeMatch.Success) {{ $modeMatch.Groups[1].Value.Trim().Trim('"').Trim("'") }} else {{ 'startup' }}
+            if ($mode -in @('startup', 'clear', 'banner')) {{
+                & $__ForgumEngine render --banner --duration 0 2>$null
+            }}
+        }}
+    }} catch {{ }}
 }}
 # <<< forgum <<<
 "#
@@ -709,7 +768,9 @@ set "_FORGUM_ENGINE={engine}"
 if not defined _FORGUM_OLD_PROMPT set "_FORGUM_OLD_PROMPT=$P$G"
 doskey forgum="{engine}" $*
 doskey forgum-init="{engine}" init $*
+doskey cls=cls ^& "%_FORGUM_ENGINE%" render --banner
 prompt $_FORGUM_OLD_PROMPT$G & "%_FORGUM_ENGINE%" sweep
+"%_FORGUM_ENGINE%" render --banner --duration 0 2>nul
 rem <<< forgum <<<
 "#
     )
@@ -795,6 +856,18 @@ function global:Clear-Host {{
         }} catch {{ }}
     }}
     [Console]::Clear()
+    if (Test-Path $__ForgumConfig) {{
+        try {{
+            $rawCfg = Get-Content $__ForgumConfig -Raw -EA SilentlyContinue
+            if ($rawCfg) {{
+                $modeMatch = [regex]::Match($rawCfg, '(?i)"?shell_attach_mode"?\s*[:=]\s*["'']?([^"''\r\n,}}]+)')
+                $mode = if ($modeMatch.Success) {{ $modeMatch.Groups[1].Value.Trim().Trim('"').Trim("'") }} else {{ 'startup' }}
+                if ($mode -eq 'clear') {{
+                    & $__ForgumEngine render --banner 2>$null
+                }}
+            }}
+        }} catch {{ }}
+    }}
 }}
 
 if (Get-Command Set-PSReadLineKeyHandler -EA SilentlyContinue) {{
@@ -851,20 +924,17 @@ function global:prompt {{
                 $autoMatch = [regex]::Match($rawCfg, '(?i)"?auto_render_on_prompt"?\s*[:=]\s*([^,\r\n}}]+)')
                 $modeMatch = [regex]::Match($rawCfg, '(?i)"?shell_attach_mode"?\s*[:=]\s*["'']?([^"''\r\n,}}]+)')
                 $auto = if ($autoMatch.Success) {{ $autoMatch.Groups[1].Value.Trim().Trim('"').Trim("'") }} else {{ 'true' }}
-                $mode = if ($modeMatch.Success) {{ $modeMatch.Groups[1].Value.Trim().Trim('"').Trim("'") }} else {{ 'split' }}
+                $mode = if ($modeMatch.Success) {{ $modeMatch.Groups[1].Value.Trim().Trim('"').Trim("'") }} else {{ 'startup' }}
                 if ($auto -ne 'false') {{
                     switch ($mode) {{
-                        'banner' {{
-                            & $__ForgumEngine render --banner --duration 1{extra} 2>$null
+                        {{ $_ -in @('prompt', 'reactive') }} {{
+                            if (-not (Test-Path $state)) {{
+                                & $__ForgumEngine render --background --daemon --duration 0{extra} 2>$null
+                            }}
                         }}
                         'split' {{
                             if (-not (Test-Path $state)) {{
                                 & $__ForgumEngine render --split-scroll --daemon --duration 0{extra} 2>$null
-                            }}
-                        }}
-                        'reactive' {{
-                            if (-not (Test-Path $state)) {{
-                                & $__ForgumEngine render --background --daemon --duration 0{extra} 2>$null
                             }}
                         }}
                         default {{ }}
@@ -875,6 +945,18 @@ function global:prompt {{
     }}
 
     & $global:__ForgumPromptBackup
+}}
+if (Test-Path $__ForgumConfig) {{
+    try {{
+        $rawCfg = Get-Content $__ForgumConfig -Raw -EA SilentlyContinue
+        if ($rawCfg) {{
+            $modeMatch = [regex]::Match($rawCfg, '(?i)"?shell_attach_mode"?\s*[:=]\s*["'']?([^"''\r\n,}}]+)')
+            $mode = if ($modeMatch.Success) {{ $modeMatch.Groups[1].Value.Trim().Trim('"').Trim("'") }} else {{ 'startup' }}
+            if ($mode -in @('startup', 'clear', 'banner')) {{
+                & $__ForgumEngine render --banner --duration 0 2>$null
+            }}
+        }}
+    }} catch {{ }}
 }}
 # <<< forgum <<<
 "#

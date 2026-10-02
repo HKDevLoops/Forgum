@@ -4,6 +4,20 @@
 //! Single authoritative source of truth shared across `forgum-platform`,
 //! `forgum-engine`, and `forgum-tui`.
 
+/// Biological natural color variation (coat morph, plumage, or subspecies pattern)
+/// for a mascot that naturally exists in nature.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct NaturalPaletteVariation {
+    /// Distinct common name of the natural morph (e.g. "Holstein (White & Black Patches)", "White Bengal").
+    pub name: &'static str,
+    /// Brief biological / natural description of this color variation.
+    pub description: &'static str,
+    /// 5-slot color palette in hex notation.
+    pub palette: [&'static str; 5],
+    /// 5-slot color palette in RGB values.
+    pub rgb: [(u8, u8, u8); 5],
+}
+
 /// Canonical biological biome, recommended scenery, and natural coloration metadata.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct MascotBiomeInfo {
@@ -20,6 +34,11 @@ pub struct MascotBiomeInfo {
 }
 
 impl MascotBiomeInfo {
+    /// Authentic biological coat/morph variations for this mascot that exist in nature.
+    pub fn variations(&self) -> &'static [NaturalPaletteVariation] {
+        get_mascot_variations(self.name)
+    }
+
     /// Biological habitat classification:
     /// - `aquatic`: Marine & underwater creatures (swimming, floating with bubbles)
     /// - `amphibious`: Transitional land/water creatures (walking, swimming, floating)
@@ -1804,6 +1823,485 @@ pub fn get_mascot_biome(animal: &str) -> &'static MascotBiomeInfo {
         _ => &ALL_MASCOTS[0], // Default cow
     }
 }
+
+// ── Authentic Biological Natural Palette Variations ─────────────────────────
+
+/// Cattle color variations (Bos taurus) across domestic dairy, beef, and draught breeds.
+pub static CATTLE_VARIATIONS: [NaturalPaletteVariation; 6] = [
+    NaturalPaletteVariation {
+        name: "Holstein (White & Black Patches)",
+        description: "Classic domestic dairy cow with crisp white coat, iconic black patches, and pink udder.",
+        palette: ["#ffffff", "#1a1a1a", "#2c2c2c", "#ffb6c1", "#ffffff"],
+        rgb: [(255, 255, 255), (26, 26, 26), (44, 44, 44), (255, 182, 193), (255, 255, 255)],
+    },
+    NaturalPaletteVariation {
+        name: "Charolais (Complete White)",
+        description: "Pristine solid creamy-white French breed with soft porcelain sheen and pale muzzle.",
+        palette: ["#fdfbf7", "#eae5dc", "#d8d0c5", "#f4a6b8", "#fdfbf7"],
+        rgb: [(253, 251, 247), (234, 229, 220), (216, 208, 197), (244, 166, 184), (253, 251, 247)],
+    },
+    NaturalPaletteVariation {
+        name: "Black Angus (Complete Black)",
+        description: "Deep solid black Scottish Angus with charcoal hooves, horns, and dark muzzle.",
+        palette: ["#1c1c1c", "#121212", "#2e2e2e", "#424242", "#ffffff"],
+        rgb: [(28, 28, 28), (18, 18, 18), (46, 46, 46), (66, 66, 66), (255, 255, 255)],
+    },
+    NaturalPaletteVariation {
+        name: "Jersey (Brown Color)",
+        description: "Warm golden-fawn Jersey dairy cow with rich caramel flanks and dark muzzle ring.",
+        palette: ["#a06535", "#6e3f19", "#d49b6a", "#f4a6b8", "#ffffff"],
+        rgb: [(160, 101, 53), (110, 63, 25), (212, 155, 106), (244, 166, 184), (255, 255, 255)],
+    },
+    NaturalPaletteVariation {
+        name: "Normande (Brown & Black Patches)",
+        description: "Mottled brindle coat with irregular dark brown and black patches and pale underbelly.",
+        palette: ["#6e4720", "#1a1a1a", "#d7ccc8", "#f4a6b8", "#ffffff"],
+        rgb: [(110, 71, 32), (26, 26, 26), (215, 204, 200), (244, 166, 184), (255, 255, 255)],
+    },
+    NaturalPaletteVariation {
+        name: "Grey Ox (Grey with Black Color)",
+        description: "Silver-grey working draught ox with charcoal neck, dark spine, and black hooves.",
+        palette: ["#9e9e9e", "#424242", "#616161", "#e0e0e0", "#ffffff"],
+        rgb: [(158, 158, 158), (66, 66, 66), (97, 97, 97), (224, 224, 224), (255, 255, 255)],
+    },
+];
+
+/// Tiger color morphs (Panthera tigris).
+pub static TIGER_VARIATIONS: [NaturalPaletteVariation; 3] = [
+    NaturalPaletteVariation {
+        name: "Bengal Tiger (Orange with Black Stripes)",
+        description: "Fiery orange coat with dense black vertical stripes and snowy underbelly.",
+        palette: ["#e65100", "#1a1a1a", "#ffffff", "#ff80ab", "#ffffff"],
+        rgb: [(230, 81, 0), (26, 26, 26), (255, 255, 255), (255, 128, 171), (255, 255, 255)],
+    },
+    NaturalPaletteVariation {
+        name: "White Bengal Tiger (White Color)",
+        description: "Rare white morph with ivory coat, charcoal brown stripes, and ice-blue eyes.",
+        palette: ["#f5f5f5", "#212121", "#ffffff", "#ffb6c1", "#64b5f6"],
+        rgb: [(245, 245, 245), (33, 33, 33), (255, 255, 255), (255, 182, 193), (100, 181, 246)],
+    },
+    NaturalPaletteVariation {
+        name: "Royal Bengal (Orange with Black & White Stripes)",
+        description: "Vivid flame-orange coat with rich black stripes, white chest blaze, and amber eyes.",
+        palette: ["#ff6f00", "#121212", "#f5f5f5", "#ff80ab", "#ffeb3b"],
+        rgb: [(255, 111, 0), (18, 18, 18), (245, 245, 245), (255, 128, 171), (255, 235, 59)],
+    },
+];
+
+/// Domestic and wild feline color patterns (Felis catus).
+pub static FELINE_VARIATIONS: [NaturalPaletteVariation; 7] = [
+    NaturalPaletteVariation {
+        name: "Calico (Tri-color Ginger, Brown & White)",
+        description: "Warm ginger and dark chocolate brown patches over pure white fur.",
+        palette: ["#d35400", "#795548", "#ffffff", "#ffb6c1", "#212121"],
+        rgb: [(211, 84, 0), (121, 85, 72), (255, 255, 255), (255, 182, 193), (33, 33, 33)],
+    },
+    NaturalPaletteVariation {
+        name: "Tuxedo (Black & White)",
+        description: "Formal jet black coat with white chest bib, white paws, and emerald eyes.",
+        palette: ["#1a1a1a", "#ffffff", "#333333", "#ffb6c1", "#69f0ae"],
+        rgb: [(26, 26, 26), (255, 255, 255), (51, 51, 51), (255, 182, 193), (105, 240, 174)],
+    },
+    NaturalPaletteVariation {
+        name: "Ginger Tabby (Marmalade Striped)",
+        description: "Vibrant copper and apricot orange coat with prominent mackerel stripes.",
+        palette: ["#e67e22", "#d35400", "#f39c12", "#ffb6c1", "#ffffff"],
+        rgb: [(230, 126, 34), (211, 84, 0), (243, 156, 18), (255, 182, 193), (255, 255, 255)],
+    },
+    NaturalPaletteVariation {
+        name: "Russian Blue (Slate Grey)",
+        description: "Even shimmering silver-blue coat with vivid jade green eyes.",
+        palette: ["#78909c", "#546e7a", "#cfd8dc", "#ff80ab", "#69f0ae"],
+        rgb: [(120, 144, 156), (84, 110, 122), (207, 216, 220), (255, 128, 171), (105, 240, 174)],
+    },
+    NaturalPaletteVariation {
+        name: "Melanistic (Solid Black)",
+        description: "Midnight black pantherine coat with striking luminescent golden eyes.",
+        palette: ["#1e1e1e", "#0a0a0a", "#2a2a2a", "#333333", "#ffd700"],
+        rgb: [(30, 30, 30), (10, 10, 10), (42, 42, 42), (51, 51, 51), (255, 215, 0)],
+    },
+    NaturalPaletteVariation {
+        name: "Solid White (Snow White)",
+        description: "Pristine snow white coat with soft pink nose and sapphire blue eyes.",
+        palette: ["#ffffff", "#e0e0e0", "#f5f5f5", "#ffb6c1", "#42a5f5"],
+        rgb: [(255, 255, 255), (224, 224, 224), (245, 245, 245), (255, 182, 193), (66, 165, 245)],
+    },
+    NaturalPaletteVariation {
+        name: "Siamese (Seal Point)",
+        description: "Pale fawn body with dark chocolate face mask, ears, tail, and sapphire eyes.",
+        palette: ["#f5e6d3", "#3e2723", "#d7ccc8", "#ffb6c1", "#1e88e5"],
+        rgb: [(245, 230, 211), (62, 39, 35), (215, 204, 200), (255, 182, 193), (30, 136, 229)],
+    },
+];
+
+/// Wolf coat colorations (Canis lupus).
+pub static CANINE_VARIATIONS: [NaturalPaletteVariation; 4] = [
+    NaturalPaletteVariation {
+        name: "Timber Wolf (Grey)",
+        description: "Grizzled salt-and-pepper grey coat with tawny underwool and amber eyes.",
+        palette: ["#757575", "#424242", "#9e9e9e", "#e0e0e0", "#ffd54f"],
+        rgb: [(117, 117, 117), (66, 66, 66), (158, 158, 158), (224, 224, 224), (255, 213, 79)],
+    },
+    NaturalPaletteVariation {
+        name: "Arctic Wolf (White)",
+        description: "Thick insulating all-white polar pelt adapted for tundra camouflage.",
+        palette: ["#f8f9fa", "#cfd8dc", "#eceff1", "#b0bec5", "#ffb300"],
+        rgb: [(248, 249, 250), (207, 216, 220), (236, 239, 241), (176, 190, 197), (255, 179, 0)],
+    },
+    NaturalPaletteVariation {
+        name: "Melanistic Wolf (Black)",
+        description: "Striking black phase wolf with midnight fur and piercing golden irises.",
+        palette: ["#212121", "#121212", "#424242", "#616161", "#ffca28"],
+        rgb: [(33, 33, 33), (18, 18, 18), (66, 66, 66), (97, 97, 97), (255, 202, 40)],
+    },
+    NaturalPaletteVariation {
+        name: "Red Wolf (Cinnamon)",
+        description: "Tawny cinnamon-red coat with dark saddle and long slender reddish limbs.",
+        palette: ["#bf360c", "#870000", "#f4511e", "#ff8a65", "#ffd54f"],
+        rgb: [(191, 54, 12), (135, 0, 0), (244, 81, 30), (255, 138, 101), (255, 213, 79)],
+    },
+];
+
+/// Bear colorations (Ursidae).
+pub static BEAR_VARIATIONS: [NaturalPaletteVariation; 3] = [
+    NaturalPaletteVariation {
+        name: "Grizzly (Brown Bear)",
+        description: "Deep chocolate brown fur tipped with silver-blonde grizzly highlights.",
+        palette: ["#5d4037", "#3e2723", "#795548", "#8d6e63", "#212121"],
+        rgb: [(93, 64, 55), (62, 39, 35), (121, 85, 72), (141, 110, 99), (33, 33, 33)],
+    },
+    NaturalPaletteVariation {
+        name: "Black Bear",
+        description: "Glossy jet black coat with light brown muzzle.",
+        palette: ["#212121", "#0d0d0d", "#424242", "#8d6e63", "#212121"],
+        rgb: [(33, 33, 33), (13, 13, 13), (66, 66, 66), (141, 110, 99), (33, 33, 33)],
+    },
+    NaturalPaletteVariation {
+        name: "Kermode / Spirit Bear (White)",
+        description: "Rare coastal rainforest white/cream subspecies with black nose.",
+        palette: ["#f5f5dc", "#d7ccc8", "#efebe9", "#bcaaa4", "#212121"],
+        rgb: [(245, 245, 220), (215, 204, 200), (239, 235, 233), (188, 170, 164), (33, 33, 33)],
+    },
+];
+
+/// Fox variations (Vulpes).
+pub static FOX_VARIATIONS: [NaturalPaletteVariation; 3] = [
+    NaturalPaletteVariation {
+        name: "Red Fox",
+        description: "Rust-red body, snowy white throat and tail brush tip, and black ear backs/socks.",
+        palette: ["#e64a19", "#d84315", "#ffffff", "#212121", "#ffffff"],
+        rgb: [(230, 74, 25), (216, 67, 21), (255, 255, 255), (33, 33, 33), (255, 255, 255)],
+    },
+    NaturalPaletteVariation {
+        name: "Arctic Fox (Winter White)",
+        description: "Dense snowy white winter pelt suited for sub-zero camouflage.",
+        palette: ["#fdfbf7", "#cfd8dc", "#eceff1", "#90a4ae", "#212121"],
+        rgb: [(253, 251, 247), (207, 216, 220), (236, 239, 241), (144, 164, 174), (33, 33, 33)],
+    },
+    NaturalPaletteVariation {
+        name: "Cross / Silver Fox",
+        description: "Melanistic silver-tipped charcoal fur with distinct dark dorsal band.",
+        palette: ["#37474f", "#212121", "#78909c", "#cfd8dc", "#ffd54f"],
+        rgb: [(55, 71, 79), (33, 33, 33), (120, 144, 156), (207, 216, 220), (255, 213, 79)],
+    },
+];
+
+/// Sheep variations (Ovis aries).
+pub static SHEEP_VARIATIONS: [NaturalPaletteVariation; 3] = [
+    NaturalPaletteVariation {
+        name: "White Merino",
+        description: "Dense crinkled cream-white fleece with pale pink muzzle.",
+        palette: ["#f5f5f5", "#e0e0e0", "#d7ccc8", "#ffb6c1", "#212121"],
+        rgb: [(245, 245, 245), (224, 224, 224), (215, 204, 200), (255, 182, 193), (33, 33, 33)],
+    },
+    NaturalPaletteVariation {
+        name: "Black Suffolk",
+        description: "Clean white fleece body with jet black woolless head and black legs.",
+        palette: ["#212121", "#141414", "#d7ccc8", "#ffb6c1", "#212121"],
+        rgb: [(33, 33, 33), (20, 20, 20), (215, 204, 200), (255, 182, 193), (33, 33, 33)],
+    },
+    NaturalPaletteVariation {
+        name: "Jacob Sheep (Piebald)",
+        description: "Ancient spotted piebald fleece with alternating white and black patches.",
+        palette: ["#f5f5f5", "#212121", "#616161", "#ffb6c1", "#212121"],
+        rgb: [(245, 245, 245), (33, 33, 33), (97, 97, 97), (255, 182, 193), (33, 33, 33)],
+    },
+];
+
+/// Bunny / Rabbit variations.
+pub static BUNNY_VARIATIONS: [NaturalPaletteVariation; 3] = [
+    NaturalPaletteVariation {
+        name: "Snow White",
+        description: "Pristine white fur with soft rose-pink inner ears and ruby eyes.",
+        palette: ["#ffffff", "#f5f5f5", "#ffb6c1", "#ff80ab", "#ff1744"],
+        rgb: [(255, 255, 255), (245, 245, 245), (255, 182, 193), (255, 128, 171), (255, 23, 68)],
+    },
+    NaturalPaletteVariation {
+        name: "Wild Agouti Brown",
+        description: "Natural wild agouti brown with grizzled grey guard hairs.",
+        palette: ["#8d6e63", "#5d4037", "#d7ccc8", "#ffb6c1", "#212121"],
+        rgb: [(141, 110, 99), (93, 64, 55), (215, 204, 200), (255, 182, 193), (33, 33, 33)],
+    },
+    NaturalPaletteVariation {
+        name: "Dutch Piebald (Black & White)",
+        description: "Iconic white blaze, white front legs, and black cheeks and hindquarters.",
+        palette: ["#ffffff", "#212121", "#424242", "#ffb6c1", "#212121"],
+        rgb: [(255, 255, 255), (33, 33, 33), (66, 66, 66), (255, 182, 193), (33, 33, 33)],
+    },
+];
+
+/// Duck variations (Anas platyrhynchos).
+pub static DUCK_VARIATIONS: [NaturalPaletteVariation; 3] = [
+    NaturalPaletteVariation {
+        name: "Mallard Drake (Iridescent Green)",
+        description: "Iridescent emerald green head, chestnut chest, white neck ring, and orange feet.",
+        palette: ["#00796b", "#4e342e", "#ffd54f", "#ffffff", "#ff6f00"],
+        rgb: [(0, 121, 107), (78, 52, 46), (255, 213, 79), (255, 255, 255), (255, 111, 0)],
+    },
+    NaturalPaletteVariation {
+        name: "Mallard Hen (Camouflage Brown)",
+        description: "Cryptic mottled buff-and-brown plumage with orange bill.",
+        palette: ["#6d4c41", "#4e342e", "#8d6e63", "#d7ccc8", "#ff6f00"],
+        rgb: [(109, 76, 65), (78, 52, 46), (141, 110, 99), (215, 204, 200), (255, 111, 0)],
+    },
+    NaturalPaletteVariation {
+        name: "Pekin Duck (White)",
+        description: "Pure domestic white feathers with vibrant bright orange bill and feet.",
+        palette: ["#ffffff", "#f5f5f5", "#ff9800", "#ffb74d", "#212121"],
+        rgb: [(255, 255, 255), (245, 245, 245), (255, 152, 0), (255, 183, 77), (33, 33, 33)],
+    },
+];
+
+/// Owl variations (Strigiformes).
+pub static OWL_VARIATIONS: [NaturalPaletteVariation; 3] = [
+    NaturalPaletteVariation {
+        name: "Barn Owl (Buff & White)",
+        description: "Golden-buff and grey mantle with heart-shaped white facial disc.",
+        palette: ["#d7ccc8", "#8d6e63", "#ffffff", "#4e342e", "#212121"],
+        rgb: [(215, 204, 200), (141, 110, 99), (255, 255, 255), (78, 52, 46), (33, 33, 33)],
+    },
+    NaturalPaletteVariation {
+        name: "Snowy Owl (Arctic White)",
+        description: "Stunning white plumage with narrow dark brown bars and bright yellow eyes.",
+        palette: ["#ffffff", "#e0e0e0", "#424242", "#ffd600", "#212121"],
+        rgb: [(255, 255, 255), (224, 224, 224), (66, 66, 66), (255, 214, 0), (33, 33, 33)],
+    },
+    NaturalPaletteVariation {
+        name: "Great Horned Owl (Mottled Brown)",
+        description: "Heavily mottled grey-brown plumage with reddish-orange facial disc.",
+        palette: ["#5d4037", "#3e2723", "#8d6e63", "#ffb300", "#212121"],
+        rgb: [(93, 64, 55), (62, 39, 35), (141, 110, 99), (255, 179, 0), (33, 33, 33)],
+    },
+];
+
+/// Equine variations (Equus).
+pub static EQUINE_VARIATIONS: [NaturalPaletteVariation; 4] = [
+    NaturalPaletteVariation {
+        name: "Bay (Brown & Black)",
+        description: "Rich reddish-brown body with black mane, tail, and lower legs.",
+        palette: ["#8d4004", "#1a1a1a", "#542502", "#e0e0e0", "#212121"],
+        rgb: [(141, 64, 4), (26, 26, 26), (84, 37, 2), (224, 224, 224), (33, 33, 33)],
+    },
+    NaturalPaletteVariation {
+        name: "Dapple Grey",
+        description: "Lustrous grey coat with distinct darker concentric rings (dapples).",
+        palette: ["#9e9e9e", "#e0e0e0", "#616161", "#212121", "#212121"],
+        rgb: [(158, 158, 158), (224, 224, 224), (97, 97, 97), (33, 33, 33), (33, 33, 33)],
+    },
+    NaturalPaletteVariation {
+        name: "Black Stallion",
+        description: "Solid deep black coat with dark mane and hooves.",
+        palette: ["#1c1c1c", "#0f0f0f", "#383838", "#ffffff", "#212121"],
+        rgb: [(28, 28, 28), (15, 15, 15), (56, 56, 56), (255, 255, 255), (33, 33, 33)],
+    },
+    NaturalPaletteVariation {
+        name: "Chestnut",
+        description: "Warm copper-red coat with matching flaxen/chestnut points.",
+        palette: ["#a04000", "#782800", "#cf6d17", "#ffffff", "#212121"],
+        rgb: [(160, 64, 0), (120, 40, 0), (207, 109, 23), (255, 255, 255), (33, 33, 33)],
+    },
+];
+
+/// Doge / Corgi variations.
+pub static DOGE_VARIATIONS: [NaturalPaletteVariation; 2] = [
+    NaturalPaletteVariation {
+        name: "Red / Fawn (Classic Urajiro)",
+        description: "Classic golden-red coat with white urajiro markings on cheeks and chest.",
+        palette: ["#e67e22", "#ffffff", "#d35400", "#212121", "#ff80ab"],
+        rgb: [(230, 126, 34), (255, 255, 255), (211, 84, 0), (33, 33, 33), (255, 128, 171)],
+    },
+    NaturalPaletteVariation {
+        name: "Black & Tan (Tri-color)",
+        description: "Glossy black saddle with tan points over eyebrows and white chest blaze.",
+        palette: ["#212121", "#d35400", "#ffffff", "#424242", "#ff80ab"],
+        rgb: [(33, 33, 33), (211, 84, 0), (255, 255, 255), (66, 66, 66), (255, 128, 171)],
+    },
+];
+
+/// Koala variations (Phascolarctos cinereus) — monomorphic wild morph in nature.
+pub static KOALA_VARIATIONS: [NaturalPaletteVariation; 1] = [
+    NaturalPaletteVariation {
+        name: "Ashen Grey (Eucalyptus Wild)",
+        description: "Dense silver-grey wool with black leathery nose, white ear tufts, and dark eyes.",
+        palette: ["#90a4ae", "#37474f", "#cfd8dc", "#263238", "#ffffff"],
+        rgb: [(144, 164, 174), (55, 71, 79), (207, 216, 220), (38, 50, 56), (255, 255, 255)],
+    },
+];
+
+/// Elephant variations (Elephantidae).
+pub static ELEPHANT_VARIATIONS: [NaturalPaletteVariation; 2] = [
+    NaturalPaletteVariation {
+        name: "African Savanna Elephant (Slate Grey)",
+        description: "Wrinkled dusty slate-grey skin with dark ivory tusks.",
+        palette: ["#78909c", "#546e7a", "#cfd8dc", "#37474f", "#212121"],
+        rgb: [(120, 144, 156), (84, 110, 122), (207, 216, 220), (55, 71, 79), (33, 33, 33)],
+    },
+    NaturalPaletteVariation {
+        name: "Asian Forest Elephant (Earthy Brown & Pink Mottle)",
+        description: "Dark earthy brown skin with pink depigmentation mottling across ears and trunk.",
+        palette: ["#8d6e63", "#5d4037", "#ffcdd2", "#3e2723", "#212121"],
+        rgb: [(141, 110, 99), (93, 64, 55), (255, 205, 210), (62, 39, 35), (33, 33, 33)],
+    },
+];
+
+/// Penguin variations (Spheniscidae).
+pub static PENGUIN_VARIATIONS: [NaturalPaletteVariation; 2] = [
+    NaturalPaletteVariation {
+        name: "Emperor Penguin",
+        description: "Jet-black back, stark white breast, and glowing yellow/orange neck auricles.",
+        palette: ["#1a1a1a", "#ffffff", "#ffd54f", "#ff9800", "#212121"],
+        rgb: [(26, 26, 26), (255, 255, 255), (255, 213, 79), (255, 152, 0), (33, 33, 33)],
+    },
+    NaturalPaletteVariation {
+        name: "Adélie Penguin",
+        description: "Classic tuxedo black and white plumage with distinctive white eye ring.",
+        palette: ["#1a1a1a", "#ffffff", "#424242", "#ffffff", "#212121"],
+        rgb: [(26, 26, 26), (255, 255, 255), (66, 66, 66), (255, 255, 255), (33, 33, 33)],
+    },
+];
+
+/// Whale variations (Cetacea).
+pub static WHALE_VARIATIONS: [NaturalPaletteVariation; 2] = [
+    NaturalPaletteVariation {
+        name: "Blue Whale (Oceanic Mottled)",
+        description: "Mottled deep slate blue and cerulean dorsal with pale throat grooves.",
+        palette: ["#37474f", "#263238", "#78909c", "#90a4ae", "#ffffff"],
+        rgb: [(55, 71, 79), (38, 50, 56), (120, 144, 156), (144, 164, 174), (255, 255, 255)],
+    },
+    NaturalPaletteVariation {
+        name: "Humpback Whale",
+        description: "Dark charcoal-black back with bright white underbelly and pectoral fins.",
+        palette: ["#212121", "#ffffff", "#424242", "#90a4ae", "#ffffff"],
+        rgb: [(33, 33, 33), (255, 255, 255), (66, 66, 66), (144, 164, 174), (255, 255, 255)],
+    },
+];
+
+/// Dolphin variations (Delphinidae).
+pub static DOLPHIN_VARIATIONS: [NaturalPaletteVariation; 2] = [
+    NaturalPaletteVariation {
+        name: "Bottlenose Dolphin (Slate & Pearl)",
+        description: "Sleek slate-grey dorsal blending into pearl-white abdominal belly.",
+        palette: ["#607d8b", "#37474f", "#eceff1", "#90a4ae", "#212121"],
+        rgb: [(96, 125, 139), (55, 71, 79), (236, 239, 241), (144, 164, 174), (33, 33, 33)],
+    },
+    NaturalPaletteVariation {
+        name: "Amazon River Dolphin (Pink Boto)",
+        description: "Unique blushing bubblegum-pink freshwater river dolphin.",
+        palette: ["#f48fb1", "#ec407a", "#fce4ec", "#c2185b", "#212121"],
+        rgb: [(244, 143, 177), (236, 64, 122), (252, 228, 236), (194, 24, 91), (33, 33, 33)],
+    },
+];
+
+/// Turtle variations (Testudines).
+pub static TURTLE_VARIATIONS: [NaturalPaletteVariation; 2] = [
+    NaturalPaletteVariation {
+        name: "Green Sea Turtle",
+        description: "Hydrodynamic olive-green and golden-amber sunburst carapace plates.",
+        palette: ["#2e7d32", "#1b5e20", "#c8e6c9", "#fff9c4", "#212121"],
+        rgb: [(46, 125, 50), (27, 94, 32), (200, 230, 201), (255, 249, 196), (33, 33, 33)],
+    },
+    NaturalPaletteVariation {
+        name: "Galapagos Giant Tortoise",
+        description: "Massive dark weathered obsidian carapace with leathery dark limbs.",
+        palette: ["#424242", "#212121", "#616161", "#8d6e63", "#212121"],
+        rgb: [(66, 66, 66), (33, 33, 33), (97, 97, 97), (141, 110, 99), (33, 33, 33)],
+    },
+];
+
+/// Cephalopod variations (Octopoda / Teuthida).
+pub static CEPHALOPOD_VARIATIONS: [NaturalPaletteVariation; 2] = [
+    NaturalPaletteVariation {
+        name: "Coral Reef Octopus (Terracotta)",
+        description: "Bioluminescent terracotta rust red with pale chromatophore suction cups.",
+        palette: ["#d84315", "#bf360c", "#ff8a65", "#ffccbc", "#212121"],
+        rgb: [(216, 67, 21), (191, 54, 12), (255, 138, 101), (255, 204, 188), (33, 33, 33)],
+    },
+    NaturalPaletteVariation {
+        name: "Deep Sea Giant Squid (Crimson & Pearl)",
+        description: "Dark abyssal crimson mantle with opalescent pearlescent tentacles.",
+        palette: ["#880e4f", "#4a148c", "#e1bee7", "#f8bbd0", "#ffffff"],
+        rgb: [(136, 14, 79), (74, 20, 140), (225, 190, 231), (248, 187, 208), (255, 255, 255)],
+    },
+];
+
+/// Amphibian / Frog variations.
+pub static FROG_VARIATIONS: [NaturalPaletteVariation; 2] = [
+    NaturalPaletteVariation {
+        name: "Tree Frog (Emerald Green)",
+        description: "Bright leaf-green skin with yellow throat and suction-cup pads.",
+        palette: ["#43a047", "#1b5e20", "#a5d6a7", "#ffeb3b", "#212121"],
+        rgb: [(67, 160, 71), (27, 94, 32), (165, 214, 167), (255, 235, 59), (33, 33, 33)],
+    },
+    NaturalPaletteVariation {
+        name: "Poison Dart Frog (Cobalt & Gold)",
+        description: "Electric sapphire blue body with brilliant sunshine-yellow dorsal stripe.",
+        palette: ["#1976d2", "#0d47a1", "#ffd600", "#ffea00", "#212121"],
+        rgb: [(25, 118, 210), (13, 71, 161), (255, 214, 0), (255, 234, 0), (33, 33, 33)],
+    },
+];
+
+/// Monomorphic fallback variation for species with a single canonical natural phenotype.
+pub static DEFAULT_VARIATION: [NaturalPaletteVariation; 1] = [
+    NaturalPaletteVariation {
+        name: "Natural Habitat Coat",
+        description: "Standard natural pigmentation and markings authentic to species biology.",
+        palette: ["#ffffff", "#1a1a1a", "#2c2c2c", "#ffb6c1", "#ffffff"],
+        rgb: [(255, 255, 255), (26, 26, 26), (44, 44, 44), (255, 182, 193), (255, 255, 255)],
+    },
+];
+
+/// Retrieve authentic biological natural color variations for any mascot.
+pub fn get_mascot_variations(animal: &str) -> &'static [NaturalPaletteVariation] {
+    let clean = animal
+        .trim()
+        .trim_end_matches(".cow")
+        .to_ascii_lowercase();
+
+    match clean.as_str() {
+        "default" | "cow" | "cowsay" | "charlie" | "fat-cow" | "cowfee" | "cower" | "spidercow" => &CATTLE_VARIATIONS,
+        "tiger" => &TIGER_VARIATIONS,
+        "cat" | "cat2" | "catfence" | "kitty" | "kitten" | "kittens" | "meow" | "bill-the-cat" => &FELINE_VARIATIONS,
+        "wolf" => &CANINE_VARIATIONS,
+        "bearface" | "telebears" => &BEAR_VARIATIONS,
+        "fox" | "vulpix" => &FOX_VARIATIONS,
+        "sheep" | "lamb" | "lamb2" | "ram" | "flaming-sheep" => &SHEEP_VARIATIONS,
+        "bunny" | "rabbit" => &BUNNY_VARIATIONS,
+        "duck" => &DUCK_VARIATIONS,
+        "owl" => &OWL_VARIATIONS,
+        "mule" => &EQUINE_VARIATIONS,
+        "doge" | "corgi" | "shiba" | "shibu" | "shiba-inu" => &DOGE_VARIATIONS,
+        "koala" | "luke-koala" => &KOALA_VARIATIONS,
+        "elephant" | "elephant2" | "elephant-in-snake" => &ELEPHANT_VARIATIONS,
+        "tux" | "tux-big" => &PENGUIN_VARIATIONS,
+        "whale" | "happy-whale" | "docker-whale" => &WHALE_VARIATIONS,
+        "dolphin" => &DOLPHIN_VARIATIONS,
+        "turtle" | "tortoise" => &TURTLE_VARIATIONS,
+        "octopus" | "smiling-octopus" | "squid" => &CEPHALOPOD_VARIATIONS,
+        "bud-frogs" => &FROG_VARIATIONS,
+        _ => &DEFAULT_VARIATION,
+    }
+}
+
 
 /// Retrieve the recommended scenery triad (Environment, Road, Mountain) for any mascot.
 pub fn get_recommended_scenery(animal: &str) -> (&'static str, &'static str, &'static str) {

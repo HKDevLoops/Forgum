@@ -448,3 +448,41 @@ fn shell_subcommand_forwarding_includes_interactive_commands() {
         }
     }
 }
+
+#[test]
+fn test_shell_attach_modes_hooks_contain_startup_clear_and_prompt_handlers() {
+    for shell in [
+        Shell::Bash,
+        Shell::Zsh,
+        Shell::Fish,
+        Shell::Pwsh,
+        Shell::PowerShell,
+    ] {
+        let hook = generate_hook(shell, ENGINE);
+
+        // 1. Startup banner support: must include --banner --duration 0
+        assert!(
+            hook.contains("--banner --duration 0"),
+            "shell {shell} hook must support Fastfetch-style startup static banner"
+        );
+
+        // 2. Clear command re-render: must support re-rendering banner after clear
+        assert!(
+            hook.contains("render --banner"),
+            "shell {shell} hook must support re-rendering on clear/cls"
+        );
+
+        // 3. Prompt hook: must support recurring background animation
+        assert!(
+            hook.contains("--background --daemon"),
+            "shell {shell} hook must support prompt recurring animation"
+        );
+
+        // 4. Split-scroll hook: must support DECSTBM split reservation
+        assert!(
+            hook.contains("--split-scroll --daemon"),
+            "shell {shell} hook must support split-scroll margin reservation"
+        );
+    }
+}
+

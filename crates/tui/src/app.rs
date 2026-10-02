@@ -57,6 +57,10 @@ pub mod tailwind {
     pub const AMBER_500: Color = Color::Rgb(245, 158, 11);
     pub const AMBER_400: Color = Color::Rgb(251, 191, 36);
 
+    pub const PURPLE_400: Color = Color::Rgb(192, 132, 252);
+    pub const TEAL_400: Color = Color::Rgb(45, 212, 191);
+    pub const AMBER_300: Color = Color::Rgb(252, 211, 77);
+
     pub const ROSE_500: Color = Color::Rgb(244, 63, 94);
     pub const ROSE_400: Color = Color::Rgb(251, 113, 133);
 }
@@ -277,7 +281,7 @@ pub const ANIMATION_TYPE_OPTIONS: &[&str] = &[
 ];
 
 /// Dropdown option choices for ShellAttachMode.
-pub const SHELL_ATTACH_OPTIONS: &[&str] = &["banner", "split", "reactive", "manual", "none"];
+pub const SHELL_ATTACH_OPTIONS: &[&str] = &["startup", "prompt", "clear", "split", "pane"];
 
 /// Dropdown option choices for SplitMode.
 pub const SPLIT_MODE_OPTIONS: &[&str] = &[
@@ -738,6 +742,38 @@ impl ConfigField {
         }
     }
 
+    pub fn category_badge(self) -> (&'static str, Color) {
+        match self {
+            ConfigField::ColorMode
+            | ConfigField::Palette
+            | ConfigField::ContrastMode
+            | ConfigField::Eyes
+            | ConfigField::Tongue
+            | ConfigField::Image => ("Visual", tailwind::PURPLE_400),
+            ConfigField::Animation
+            | ConfigField::AnimationType
+            | ConfigField::Duration
+            | ConfigField::Fps => ("Motion", tailwind::AMBER_400),
+            ConfigField::Environment
+            | ConfigField::Road
+            | ConfigField::Mountain
+            | ConfigField::Random => ("Scenery", tailwind::EMERALD_400),
+            ConfigField::Text | ConfigField::Think | ConfigField::ThoughtInterval => {
+                ("Speech", tailwind::SKY_400)
+            }
+            ConfigField::ShellAttachMode
+            | ConfigField::DefaultShell
+            | ConfigField::AutoRenderOnPrompt
+            | ConfigField::Background
+            | ConfigField::SplitMode
+            | ConfigField::SplitScroll
+            | ConfigField::SplitRatio
+            | ConfigField::ReserveRows
+            | ConfigField::ReserveCols => ("Shell", tailwind::TEAL_400),
+            ConfigField::Editor | ConfigField::ConfigFormat => ("System", tailwind::ROSE_400),
+        }
+    }
+
     pub fn desc(self) -> &'static str {
         match self {
             ConfigField::Duration => "Animation lifetime in seconds (0 = infinite / until signal)",
@@ -747,8 +783,8 @@ impl ConfigField {
             ConfigField::ThoughtInterval => "Interval in seconds between rotating thought quotes in background mode (0 = permanent)",
             ConfigField::Eyes => "ASCII characters for eyes (e.g. 'oo', '$$', 'XX', '@@')",
             ConfigField::Tongue => "ASCII characters for tongue (e.g. 'U ', '  ', '||')",
-            ConfigField::ColorMode => "Color rendering palette mode: natural, animal, rainbow, solid, none",
-            ConfigField::Palette => "Custom Hex Gradient Override (optional, comma-separated)",
+            ConfigField::ColorMode => "Color rendering mode: natural (enables authentic animal coat variations), animal, rainbow, solid, none",
+            ConfigField::Palette => "Biological coat morph or custom hex palette (active when Color Mode is 'natural')",
             ConfigField::Environment => "Atmospheric particle system: pasture, inferno, ocean, arctic, city, forest, savanna, swamp, space, cyber, graveyard, jurassic, hive, throne, none",
             ConfigField::Road => "Ground terrain surface style: dirt, cobblestone, magma, ice, seabed, sidewalk, roof, grid, crypt, savanna, mud, tracks, checkerboard, none",
             ConfigField::Mountain => "Horizon background silhouette: hills, peaks, volcano, iceberg, skyline, seamount, plateau, crater, gothic, castle, garden, none",
@@ -756,7 +792,7 @@ impl ConfigField {
             ConfigField::AnimationType => "Kinematic animation driver: animal_natural, walk, breathe, float, fly, talk, sway, pulse, glitch, particles, dissolve",
             ConfigField::Background => "Daemon non-blocking prompt overlay mode (true/false)",
             ConfigField::AutoRenderOnPrompt => "Trigger mascot automatically on shell prompt enter",
-            ConfigField::ShellAttachMode => "Prompt hook integration: split (DECSTBM hardware pane), banner (top of prompt), reactive (live trigger), manual, none",
+            ConfigField::ShellAttachMode => "Universal execution mode: startup (launch once, 0 prompt cost), prompt (every command), clear (after clear/cls), split (DECSTBM margin), pane (dedicated pane)",
             ConfigField::DefaultShell => "Default shell used for hook generation and prompts: auto, bash, zsh, fish, pwsh, nu",
             ConfigField::SplitMode => "Split execution mode: decstbm (hardware scroll margins), seamless (simultaneous in same pane), auto, native, precmd, disabled",
             ConfigField::SplitScroll => "Terminal margin split scrolling (DECSTBM hardware scroll region, syncs with shell_attach_mode='split')",
@@ -911,8 +947,14 @@ impl ConfigApp {
             vec!["dynamic", "static"],
             config.animation.as_deref().unwrap_or("dynamic"),
         );
+        let initial_attach = match config.shell_attach_mode.as_str() {
+            "banner" => "startup",
+            "reactive" => "prompt",
+            "manual" => "pane",
+            other => other,
+        };
         let attach_mode_dropdown =
-            Dropdown::new(SHELL_ATTACH_OPTIONS.to_vec(), &config.shell_attach_mode);
+            Dropdown::new(SHELL_ATTACH_OPTIONS.to_vec(), initial_attach);
         let format_dropdown = Dropdown::new(vec!["json", "yaml", "toml"], format.extension());
         let split_mode_dropdown = Dropdown::new(
             SPLIT_MODE_OPTIONS.to_vec(),
@@ -2733,45 +2775,52 @@ export extern "forgum" [
                     .iter()
                     .position(|(c, _)| c.eq_ignore_ascii_case(&current))
                     .unwrap_or(0);
+                if current.eq_ignore_ascii_case("natural") || current.eq_ignore_ascii_case("animal") {
+                    let vars = forgum_platform::biome::get_mascot_variations(&self.config.cow);
+                    if !vars.is_empty() {
+                        self.config.palette = Some(vars[0].palette.join(","));
+                    }
+                }
+                self.cow_cache.clear();
+                self.ensure_cow_cached(&self.config.cow.clone());
                 self.saved = false;
-                self.status_message = format!("Color mode switched to {}", current);
+                self.status_message = if current.eq_ignore_ascii_case("natural") || current.eq_ignore_ascii_case("animal") {
+                    format!("Color mode: natural (Color Palette UNLOCKED for {} morphs!)", self.config.cow)
+                } else {
+                    format!("Color mode: {} (Color Palette LOCKED)", current)
+                };
             }
             ConfigField::Palette => {
-                const PALETTE_PRESETS: [&str; 5] = [
-                    "",
-                    "#ff007f,#00e5ff,#ffff00",
-                    "#ff5555,#50fa7b,#8be9fd",
-                    "#e67e22,#f39c12,#d35400",
-                    "#38ef7d,#11998e",
-                ];
-                let current = self.config.palette.as_deref().unwrap_or("");
-                let next = if forward {
-                    if let Some(pos) = PALETTE_PRESETS.iter().position(|&p| p == current) {
-                        PALETTE_PRESETS[(pos + 1) % PALETTE_PRESETS.len()]
-                    } else {
-                        PALETTE_PRESETS[1]
-                    }
+                let is_natural = self.config.color_mode.eq_ignore_ascii_case("natural")
+                    || self.config.color_mode.eq_ignore_ascii_case("animal");
+                if !is_natural {
+                    self.status_message = "🔒 Color Palette is locked: select 'natural' Color Mode to cycle authentic animal morphs!".to_string();
+                    return;
+                }
+                let vars = forgum_platform::biome::get_mascot_variations(&self.config.cow);
+                if vars.is_empty() {
+                    return;
+                }
+                let cur_idx = self.current_variation_index(vars);
+                let next_idx = if forward {
+                    (cur_idx + 1) % vars.len()
+                } else if cur_idx == 0 {
+                    vars.len() - 1
                 } else {
-                    if let Some(pos) = PALETTE_PRESETS.iter().position(|&p| p == current) {
-                        PALETTE_PRESETS[(pos + PALETTE_PRESETS.len() - 1) % PALETTE_PRESETS.len()]
-                    } else {
-                        PALETTE_PRESETS[PALETTE_PRESETS.len() - 1]
-                    }
+                    cur_idx - 1
                 };
-                self.config.palette = if next.is_empty() {
-                    None
-                } else {
-                    Some(next.to_string())
-                };
+                let selected = &vars[next_idx];
+                self.config.palette = Some(selected.palette.join(","));
+                self.cow_cache.clear();
+                self.ensure_cow_cached(&self.config.cow.clone());
                 self.saved = false;
-                self.status_message = if next.is_empty() {
-                    "Palette set to default (mascot DNA) [Space/←/→: Cycle | e: Custom]".into()
-                } else {
-                    format!(
-                        "Palette cycled to '{}' [Space/←/→: Cycle | e: Custom]",
-                        next
-                    )
-                };
+                self.status_message = format!(
+                    "🎨 Natural Morph [{}/{}]: {} — {}",
+                    next_idx + 1,
+                    vars.len(),
+                    selected.name,
+                    selected.description
+                );
             }
             ConfigField::Environment => {
                 self.environment_dropdown.cycle(forward);
@@ -2842,17 +2891,44 @@ export extern "forgum" [
                 self.attach_mode_dropdown.cycle(forward);
                 let mode = self.attach_mode_dropdown.current();
                 self.config.shell_attach_mode = mode.clone();
-                if mode == "split" {
-                    self.config.split_scroll = true;
-                    self.config.split_mode = Some("decstbm".to_string());
-                    self.split_mode_dropdown =
-                        Dropdown::new(SPLIT_MODE_OPTIONS.to_vec(), "decstbm");
-                } else if mode == "banner" || mode == "none" {
-                    self.config.split_scroll = false;
+                match mode.as_str() {
+                    "split" => {
+                        self.config.split_scroll = true;
+                        self.config.split_mode = Some("decstbm".to_string());
+                        self.split_mode_dropdown =
+                            Dropdown::new(SPLIT_MODE_OPTIONS.to_vec(), "decstbm");
+                        self.status_message =
+                            "Shell mode: split (DECSTBM hardware scroll margins)".to_string();
+                    }
+                    "startup" => {
+                        self.config.split_scroll = false;
+                        self.config.auto_render_on_prompt = false;
+                        self.status_message =
+                            "Shell mode: startup (Runs once on shell launch, 0 prompt cost)".to_string();
+                    }
+                    "prompt" => {
+                        self.config.split_scroll = false;
+                        self.config.auto_render_on_prompt = true;
+                        self.status_message =
+                            "Shell mode: prompt (Renders dynamically on each command prompt)".to_string();
+                    }
+                    "clear" => {
+                        self.config.split_scroll = false;
+                        self.config.auto_render_on_prompt = false;
+                        self.status_message =
+                            "Shell mode: clear (Runs on shell launch and after clear/cls commands)".to_string();
+                    }
+                    "pane" => {
+                        self.config.split_scroll = false;
+                        self.status_message =
+                            "Shell mode: pane (Dedicated pane / daemon in multiplexer)".to_string();
+                    }
+                    _ => {
+                        self.config.split_scroll = false;
+                        self.status_message = format!("Shell attach mode: {}", mode);
+                    }
                 }
                 self.saved = false;
-                self.status_message =
-                    format!("Shell attach mode: {}", self.config.shell_attach_mode);
             }
             ConfigField::ConfigFormat => {
                 self.format_dropdown.cycle(forward);
@@ -4098,9 +4174,19 @@ export extern "forgum" [
         }
 
         // ── Standard / Wide Mode: side-by-side split layout ──────────────────
-        // Standard: 30% list / 70% preview — Wide: 25% list / 75% preview.
-        let left_pct: u16 = if bp == Breakpoint::Wide { 25 } else { 30 };
-        let left_width = (width * left_pct / 100).clamp(24, 50);
+        // For Tab::Config: allocate 56-58% of screen width (50..100 cols) to provide
+        // a spacious, clean, and properly aligned settings page, leaving ~42-44% for live preview.
+        // For other tabs (Mascots, Scenery, Effects): allocate 36-38% (30..60 cols).
+        let (left_pct, min_w, max_w) = if self.current_tab == Tab::Config {
+            let pct: u16 = if bp == Breakpoint::Wide { 56 } else { 58 };
+            (pct, 50, 100)
+        } else {
+            let pct: u16 = if bp == Breakpoint::Wide { 36 } else { 38 };
+            (pct, 30, 60)
+        };
+        let left_width = (width * left_pct / 100)
+            .clamp(min_w, max_w)
+            .min(width.saturating_sub(25));
         let right_width = width.saturating_sub(left_width);
 
         let left_rect = Rect {
@@ -5116,16 +5202,18 @@ export extern "forgum" [
                 format!("{} (←/→ cycle)", self.config.color_mode)
             }
             ConfigField::Palette => {
-                if is_sel && self.editing_config {
+                let is_natural = self.config.color_mode.eq_ignore_ascii_case("natural")
+                    || self.config.color_mode.eq_ignore_ascii_case("animal");
+                if !is_natural {
+                    "🔒 [Locked: Select 'natural' Color Mode]".into()
+                } else if is_sel && self.editing_config {
                     format!("✎ [ {}_ ]", self.config_edit_buffer)
-                } else if let Some(pal) = &self.config.palette {
-                    if pal.is_empty() {
-                        "none (mascot DNA) [Enter to edit]".into()
-                    } else {
-                        format!("'{}' [Enter to edit]", pal)
-                    }
                 } else {
-                    "none (mascot DNA) [Enter to edit]".into()
+                    let vars = forgum_platform::biome::get_mascot_variations(&self.config.cow);
+                    let idx = self.current_variation_index(vars);
+                    let total = vars.len();
+                    let v = &vars[idx];
+                    format!("[Variant {}/{}] {} (←/→ cycle)", idx + 1, total, v.name)
                 }
             }
             ConfigField::Environment => {
@@ -5176,14 +5264,15 @@ export extern "forgum" [
                 }
             }
             ConfigField::ShellAttachMode => {
-                if self.config.shell_attach_mode == "split" {
-                    format!(
-                        "{} (split_scroll ON) (←/→ cycle)",
-                        self.config.shell_attach_mode
-                    )
-                } else {
-                    format!("{} (←/→ cycle)", self.config.shell_attach_mode)
-                }
+                let desc = match self.config.shell_attach_mode.as_str() {
+                    "startup" | "banner" => " (Launch once, 0 prompt cost)",
+                    "prompt" | "reactive" => " (Every command prompt hook)",
+                    "clear" => " (Launch + after clear/cls)",
+                    "split" => " (DECSTBM top margin reservation)",
+                    "pane" => " (Dedicated split pane / daemon)",
+                    _ => "",
+                };
+                format!("{}{desc} (←/→ cycle)", self.config.shell_attach_mode)
             }
             ConfigField::DefaultShell => {
                 if is_sel && self.editing_config {
@@ -5293,7 +5382,7 @@ export extern "forgum" [
         let bp = Breakpoint::from_size(area.width, area.height);
 
         // Label column width: shorter in Compact to conserve horizontal space.
-        let label_width: usize = if bp == Breakpoint::Compact { 12 } else { 20 };
+        let label_width: usize = if bp == Breakpoint::Compact { 14 } else { 22 };
 
         let items: Vec<ListItem> = ConfigField::ALL
             .iter()
@@ -5313,6 +5402,13 @@ export extern "forgum" [
                 };
                 let val_str = self.field_value(*field, is_sel);
 
+                let (cat_name, cat_color) = field.category_badge();
+                let cat_badge = if bp == Breakpoint::Compact {
+                    format!("[{}] ", &cat_name[..1])
+                } else {
+                    format!("[{:<7}] ", cat_name)
+                };
+
                 let (label_style, line_style) = if is_sel {
                     (
                         Style::default()
@@ -5328,6 +5424,10 @@ export extern "forgum" [
                     tailwind::EMERALD_400
                 } else if val_str.contains("✖ OFF") {
                     tailwind::ROSE_400
+                } else if val_str.contains("🔒") {
+                    tailwind::SLATE_400
+                } else if val_str.contains("[Variant") {
+                    tailwind::AMBER_400
                 } else if val_str.contains("seamless") {
                     tailwind::VIOLET_400
                 } else if is_sel {
@@ -5345,6 +5445,7 @@ export extern "forgum" [
                 let spans = if self.h_scroll == 0 {
                     vec![
                         Span::styled(prefix, Style::default().fg(prefix_color)),
+                        Span::styled(cat_badge, Style::default().fg(cat_color)),
                         Span::styled(
                             format!("{:<width$}", field.label(), width = label_width),
                             label_style,
@@ -5356,6 +5457,7 @@ export extern "forgum" [
                     let label_part: String = formatted_label.chars().skip(self.h_scroll).collect();
                     vec![
                         Span::styled(prefix, Style::default().fg(prefix_color)),
+                        Span::styled(cat_badge, Style::default().fg(cat_color)),
                         Span::styled(label_part, label_style),
                         Span::styled(val_str, Style::default().fg(val_color)),
                     ]
@@ -5369,6 +5471,7 @@ export extern "forgum" [
                     };
                     vec![
                         Span::styled(prefix, Style::default().fg(prefix_color)),
+                        Span::styled(cat_badge, Style::default().fg(cat_color)),
                         Span::styled(display_val, Style::default().fg(val_color)),
                     ]
                 };
@@ -5400,7 +5503,7 @@ export extern "forgum" [
         } else {
             String::new()
         };
-        let config_title = format!(" ⚙️ Configuration Matrix (100% Parity){} ", scroll_badge);
+        let config_title = format!(" ⚙️ Configuration Settings (Tab 5/5){} ", scroll_badge);
 
         if border_overhead == 0 {
             // ── Ultra-compact: borderless list, maximum rows visible ──────────
@@ -5460,6 +5563,23 @@ export extern "forgum" [
     /// Authentic God-given natural color palettes (RGB tuples) for all 132 mascots.
     pub fn get_mascot_natural_palette(mascot: &str) -> &'static [(u8, u8, u8)] {
         forgum_platform::biome::get_natural_rgb_palette(mascot)
+    }
+
+    /// Retrieve current natural palette variation index for the active mascot.
+    pub fn current_variation_index(
+        &self,
+        vars: &[forgum_platform::biome::NaturalPaletteVariation],
+    ) -> usize {
+        if vars.is_empty() {
+            return 0;
+        }
+        let cur = self.config.palette.as_deref().unwrap_or("");
+        for (i, v) in vars.iter().enumerate() {
+            if cur.eq_ignore_ascii_case(&v.palette.join(",")) || cur.eq_ignore_ascii_case(v.name) {
+                return i;
+            }
+        }
+        0
     }
 
     /// Dynamically find where the cow art begins in a potentially composed scene.
@@ -5953,8 +6073,35 @@ export extern "forgum" [
                     self.config.color_mode.as_str(),
                     "natural" | "animal_natural" | "animal" | "default"
                 );
-                if is_natural && self.config.palette.is_none() {
-                    let p = Self::get_mascot_natural_palette(&self.config.cow);
+                if is_natural {
+                    let parsed_custom: Option<Vec<(u8, u8, u8)>> = self.config.palette.as_deref().and_then(|pal_str| {
+                        let parts: Vec<(u8, u8, u8)> = pal_str
+                            .split(',')
+                            .filter_map(|hex| {
+                                let h = hex.trim().trim_start_matches('#');
+                                if h.len() == 6 {
+                                    let r = u8::from_str_radix(&h[0..2], 16).ok()?;
+                                    let g = u8::from_str_radix(&h[2..4], 16).ok()?;
+                                    let b = u8::from_str_radix(&h[4..6], 16).ok()?;
+                                    Some((r, g, b))
+                                } else {
+                                    None
+                                }
+                            })
+                            .collect();
+                        if parts.len() >= 3 {
+                            Some(parts)
+                        } else {
+                            None
+                        }
+                    });
+
+                    let mascot_pal = Self::get_mascot_natural_palette(&self.config.cow);
+                    let p: &[(u8, u8, u8)] = match &parsed_custom {
+                        Some(custom) => custom.as_slice(),
+                        None => mascot_pal,
+                    };
+
                     let mut spans = Vec::new();
                     spans.push(Span::raw("  "));
                     for (x, ch) in l.chars().enumerate() {
@@ -6343,6 +6490,19 @@ export extern "forgum" [
                     field.desc(),
                     Style::default().fg(tailwind::SLATE_300),
                 )));
+                if field == ConfigField::Palette {
+                    let is_natural = self.config.color_mode.eq_ignore_ascii_case("natural")
+                        || self.config.color_mode.eq_ignore_ascii_case("animal");
+                    if is_natural {
+                        let vars = forgum_platform::biome::get_mascot_variations(&self.config.cow);
+                        let idx = self.current_variation_index(vars);
+                        let v = &vars[idx];
+                        lines.push(Line::from(vec![
+                            Span::styled("Morph Biology: ", Style::default().fg(tailwind::EMERALD_400).add_modifier(Modifier::BOLD)),
+                            Span::styled(v.description, Style::default().fg(tailwind::AMBER_300)),
+                        ]));
+                    }
+                }
                 lines.push(Line::from(""));
                 lines.push(Line::from(vec![
                     Span::styled("Shortcuts: ", Style::default().fg(tailwind::SLATE_600)),
@@ -7525,6 +7685,100 @@ mod tests {
         for tab in Tab::ALL {
             app.current_tab = tab;
             terminal.draw(|f| app.render(f)).unwrap();
+        }
+    }
+
+    #[test]
+    fn test_biological_color_palette_mascot_variations() {
+        use forgum_platform::biome::get_mascot_variations;
+
+        // Verify cattle/cow has exactly 6 authentic natural morphs as requested:
+        // Holstein, Charolais, Black Angus, Jersey, Normande, Grey Ox
+        let cow_vars = get_mascot_variations("default");
+        assert_eq!(cow_vars.len(), 6, "Cow should have 6 biological variations");
+        assert!(cow_vars[0].name.contains("Holstein"));
+        assert!(cow_vars[1].name.contains("Charolais"));
+        assert!(cow_vars[2].name.contains("Black Angus"));
+        assert!(cow_vars[3].name.contains("Jersey"));
+        assert!(cow_vars[4].name.contains("Normande"));
+        assert!(cow_vars[5].name.contains("Grey Ox"));
+
+        // Verify tiger has exactly 3 authentic natural morphs:
+        // Bengal Tiger, White Bengal Tiger, Royal Bengal
+        let tiger_vars = get_mascot_variations("tiger");
+        assert_eq!(tiger_vars.len(), 3, "Tiger should have 3 biological variations");
+        assert!(tiger_vars[0].name.contains("Bengal Tiger"));
+        assert!(tiger_vars[1].name.contains("White Bengal"));
+        assert!(tiger_vars[2].name.contains("Royal Bengal"));
+
+        // Verify koala has exactly 1 authentic natural morph
+        let koala_vars = get_mascot_variations("koala");
+        assert_eq!(koala_vars.len(), 1, "Koala is monomorphic with 1 biological variation");
+        assert!(koala_vars[0].name.contains("Ashen Grey"));
+
+        // Test TUI app interaction with biological palette
+        let mut app = ConfigApp::new(None, None, Some(Tab::Config));
+        app.config.cow = "default".to_string();
+        app.config.color_mode = "natural".to_string();
+        app.config_field_idx = ConfigField::Palette as usize;
+
+        // Should start at variation 0
+        let val_nat = app.field_value(ConfigField::Palette, false);
+        assert!(val_nat.contains("Variant 1/6"), "Expected Variant 1/6, got: {val_nat}");
+        assert!(val_nat.contains("Holstein"));
+
+        // Cycle to next variation (Charolais)
+        app.cycle_config_field(true);
+        let val_charolais = app.field_value(ConfigField::Palette, false);
+        assert!(val_charolais.contains("Variant 2/6"));
+        assert!(val_charolais.contains("Charolais"));
+        assert!(app.config.palette.is_some());
+
+        // Lock behavior: switch color_mode to rainbow
+        app.config.color_mode = "rainbow".to_string();
+        let val_locked = app.field_value(ConfigField::Palette, false);
+        assert!(val_locked.contains("Locked"), "Expected locked message when color mode != natural");
+
+        // Cycling while locked should not cycle variations
+        app.cycle_config_field(true);
+        let val_locked_after = app.field_value(ConfigField::Palette, false);
+        assert!(val_locked_after.contains("Locked"));
+
+        // Switching back to natural restores/unlocks
+        app.config_field_idx = ConfigField::ColorMode as usize;
+        app.cycle_config_field(true);
+        while app.config.color_mode != "natural" {
+            app.cycle_config_field(true);
+        }
+        app.config_field_idx = ConfigField::Palette as usize;
+        let val_unlocked = app.field_value(ConfigField::Palette, false);
+        assert!(!val_unlocked.contains("Locked"));
+        assert!(val_unlocked.contains("Variant"));
+    }
+
+    #[test]
+    fn test_shell_attach_modes_5_variants_cycling() {
+        let mut app = ConfigApp::new(None, None, Some(Tab::Config));
+        app.config_field_idx = ConfigField::ShellAttachMode as usize;
+        
+        // The 5 official modes: startup, prompt, clear, split, pane
+        let expected_modes = ["startup", "prompt", "clear", "split", "pane"];
+
+        for expected in expected_modes {
+            while app.config.shell_attach_mode != expected {
+                app.cycle_config_field(true);
+            }
+            assert_eq!(app.config.shell_attach_mode, expected);
+            let val = app.field_value(ConfigField::ShellAttachMode, false);
+            assert!(val.contains(expected));
+            match expected {
+                "startup" => assert!(val.contains("Launch once")),
+                "prompt" => assert!(val.contains("Every command prompt")),
+                "clear" => assert!(val.contains("Launch + after clear/cls")),
+                "split" => assert!(val.contains("DECSTBM top margin")),
+                "pane" => assert!(val.contains("Dedicated split pane")),
+                _ => {}
+            }
         }
     }
 }
