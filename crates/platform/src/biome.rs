@@ -63,10 +63,11 @@ impl MascotBiomeInfo {
             | "dragon" | "dragon-and-cow" | "charizardvice" | "daemon" | "nyan"
             | "nyan_cat" | "nyancat" | "unipony" => "aerial",
 
-            // Inanimate objects / structures / chess pieces (14):
+            // Inanimate objects / structures / chess pieces (18):
             "periodic-table" | "mona-lisa" | "fence" | "snoopyhouse" | "snoopysleep"
             | "cower" | "claw-arm" | "supermilker" | "surgery" | "apt"
-            | "king" | "queen" | "rook" | "pawn" => "inanimate",
+            | "king" | "queen" | "rook" | "knight" | "pawn"
+            | "fat-banana" | "lollerskates" | "shrug" => "inanimate",
 
             // Ethereal / Cosmic / Supernatural / Celestial (14):
             "ghost" | "ghostbusters" | "sauron" | "weeping-angel" | "satanic"

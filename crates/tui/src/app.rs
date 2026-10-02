@@ -1942,6 +1942,14 @@ impl ConfigApp {
             }
         }
 
+        // When in natural color mode, automatically set palette to the new mascot's primary authentic variation
+        if self.config.color_mode == "natural" {
+            let vars = biome.variations();
+            if !vars.is_empty() {
+                self.config.palette = Some(vars[0].palette.join(","));
+            }
+        }
+
         self.status_message = format!("🐾 Mascot: {} | 🌿 Biome: {}", name, biome.biome_name);
         self.saved = false;
     }
