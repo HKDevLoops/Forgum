@@ -13,7 +13,7 @@ rust-version = "1.98.0"
 license = "MIT"
 authors = ["harish2222 <harish2222@users.noreply.github.com>"]
 repository = "https://github.com/HKDevLoops/Forgum"
-description = "Cross-platform cowsay+fortune+lolcat with a Rust ANSI animation engine"
+description = "Modern cowsay alternative: terminal animation engine in Rust. ASCII art mascots, lolcat rainbow, fortune, shell animations, TUI, 24-bit color. Cross-platform."
 
 [workspace.lints.rust]
 unsafe_code = "deny"

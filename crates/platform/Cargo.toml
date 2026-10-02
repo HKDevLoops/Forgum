@@ -4,10 +4,10 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
-description = "Cross-platform abstraction layer for the Forgum engine: terminal handles, signal guards, raw mode/alt screen/cursor RAII, output redirection, config paths, detached spawning. All #[cfg] in the Forgum workspace lives in this crate."
+description = "Cross-platform terminal abstraction for the Forgum animation engine: raw mode, alt-screen, signal guards, PTY handles, and config paths for Windows, macOS & Linux."
 repository.workspace = true
 readme = "../../README.md"
-keywords = ["terminal", "tty", "pty", "console", "forgum"]
+keywords = ["terminal", "crossterm", "pty", "console", "shell"]
 categories = ["api-bindings", "command-line-interface", "os"]
 
 [lints]

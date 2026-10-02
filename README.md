@@ -39,6 +39,37 @@
 
 ---
 
+## ✨ The Modern cowsay Alternative for Your Terminal
+
+> **Keywords:** cowsay alternative · terminal animation · shell animations · ASCII art mascots · lolcat replacement · ponysay alternative · terminal eye candy · ascii animation · fortune quotes · rust cli · ricing · dotfiles · shell prompt · tui · terminal customization
+
+**Forgum** is the modern, Rust-powered successor to classic terminal toys like **cowsay**, **ponysay**, **lolcat**, **fortune**, **figlet**, **nyancat**, **asciiquarium**, and **cmatrix**. Instead of static ASCII cows or rainbow pipes, Forgum renders **physically animated mascots** — creatures that genuinely *walk*, *fly*, *drift*, and *rest* across procedural terminal landscapes, with real kinematics, 24-bit TrueColor color gradients, and particle effects.
+
+Whether you're looking for a **cowsay alternative**, a **lolcat replacement**, a **shell animation** tool to beautify your terminal startup, or just want some **terminal eye candy** and **ricing** flair, Forgum delivers it all in a single, zero-dependency binary.
+
+### 🆚 Forgum vs. Classic Terminal Tools
+
+| Feature | **Forgum** 🦁 | cowsay 🐮 | ponysay 🐴 | lolcat 🌈 | fortune 🔮 | figlet/toilet 🔤 | cmatrix 🟩 | asciiquarium 🐠 |
+|:--------|:------------:|:---------:|:----------:|:---------:|:----------:|:----------------:|:----------:|:---------------:|
+| **Language** | Rust | Perl | Python | Ruby/C | C | C | C | Perl |
+| **True physical animation** | ✅ Walk, fly, float | ❌ Static | ❌ Static | ❌ N/A | ❌ N/A | ❌ Static | ⚠️ Loop only | ⚠️ Loop only |
+| **Procedural scenery** | ✅ Mountains, roads, sky | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **24-bit TrueColor** | ✅ HSV manifold | ❌ | ❌ | ✅ | ❌ | ⚠️ Basic | ⚠️ Basic | ❌ |
+| **Particle effects (fire, bubbles, stars)** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ⚠️ Fish only |
+| **Fortune quotes built-in** | ✅ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ |
+| **Shell hook (startup animation)** | ✅ 15 shells | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **Interactive TUI config** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **Cross-platform (Win/Mac/Linux)** | ✅ | ❌ Win only fork | ❌ | ⚠️ | ✅ | ⚠️ | ❌ | ❌ |
+| **Memory footprint** | < 10 MB | < 1 MB | < 50 MB | < 5 MB | < 1 MB | < 1 MB | < 5 MB | < 5 MB |
+| **Single binary install** | ✅ | ❌ Needs Perl | ❌ Needs Python | ❌ | ❌ | ❌ | ❌ Needs ncurses | ❌ Needs Perl |
+| **Stride-velocity coupling** | ✅ Physics math | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **mascot count** | 130+ animals | ~50 cows | ~400 ponies | — | — | — | — | ~10 aquatic |
+| **pkg managers** | scoop/winget/choco/brew/yay/apt/dnf/zypper/nix/cargo | apt/brew | apt/brew | apt/brew | apt/brew | apt/brew | apt | cpan |
+
+> **Also compared with:** `sl` (steam locomotive), `toilet`, `xcowsay`, `dinosay`, `charasay`, `pokemonsay`, `ferris-says`, `nyancat`, `pipes.sh`, `cbonsai`
+
+---
+
 ## 📑 Table of Contents
 
 - [🚀 Installation & Quickstart](#-installation--quickstart)

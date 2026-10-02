@@ -4,10 +4,10 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
-description = "Interactive ratatui/crossterm config editor for Forgum's SceneConfig."
+description = "Interactive TUI config editor for Forgum's terminal animation engine. Built on ratatui & crossterm — theme picker, mascot selector, scene settings."
 repository.workspace = true
 readme = "../../README.md"
-keywords = ["forgum", "tui", "config", "terminal", "ratatui"]
+keywords = ["tui", "ratatui", "terminal-ui", "config", "crossterm"]
 categories = ["command-line-interface", "config"]
 
 [dependencies]
