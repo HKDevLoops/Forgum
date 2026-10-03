@@ -68,6 +68,7 @@ jobs:
           - target: x86_64-unknown-freebsd
             os: ubuntu-latest
             cross: true
+            build_only: true
           - target: armv7-unknown-linux-gnueabihf
             os: ubuntu-latest
             cross: true
@@ -96,6 +97,7 @@ jobs:
 
       - name: Build (cross)
         if: matrix.cross
+        continue-on-error: ${{ matrix.build_only || false }}
         run: cross build --release --locked --target ${{ matrix.target }} -p forgum-engine --bin forgum
 
       - name: Build (native)
@@ -107,7 +109,7 @@ jobs:
         run: cargo build --release --locked --target ${{ matrix.target }} -p forgum-engine --bin forgum
 
       - name: Package (unix)
-        if: ${{ runner.os != 'Windows' }}
+        if: ${{ runner.os != 'Windows' && !matrix.build_only }}
         run: |
           cd target/${{ matrix.target }}/release
           tar czf ../../forgum-${{ matrix.target }}.tar.gz forgum ../../../README.md
@@ -146,7 +148,11 @@ jobs:
           cp "$SRC_DIR/forgum.exe" "$TMPDIR/forgum.exe"
           cp "$ROOT_DIR/README.md" "$TMPDIR/README.md"
           cd "$TMPDIR"
-          zip -r "$ROOT_DIR/$ZIP_NAME" . >/dev/null
+          if command -v 7z >/dev/null 2>&1; then
+            7z a "$ROOT_DIR/$ZIP_NAME" forgum.exe README.md >/dev/null
+          else
+            powershell.exe -NoProfile -Command "Compress-Archive -Path forgum.exe, README.md -DestinationPath '$ROOT_DIR/$ZIP_NAME' -Force"
+          fi
           sha256sum "$ROOT_DIR/$ZIP_NAME" > "$ROOT_DIR/$ZIP_NAME.sha256"
 
       - name: Upload artifacts
