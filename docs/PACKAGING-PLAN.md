@@ -485,7 +485,7 @@ build() {
   cd "Forgum-${pkgver}"
   export RUSTUP_TOOLCHAIN=stable
   export CARGO_TARGET_DIR=target
-  cargo build --frozen --release -p forgum-engine --bin forgum
+  cargo build --frozen --release --bin forgum
 }
 
 check() {
@@ -594,7 +594,7 @@ split-terminal shell prompt multitasking.
 %autosetup -n Forgum-%{version}
 
 %build
-cargo build --release --locked -p forgum-engine --bin forgum
+cargo build --release --locked --bin forgum
 
 %install
 rm -rf %{buildroot}
@@ -661,7 +661,7 @@ rustPlatform.buildRustPackage rec {
 
   nativeBuildInputs = [ installShellFiles ];
 
-  cargoBuildFlags = [ "-p" "forgum-engine" "--bin" "forgum" ];
+  cargoBuildFlags = [ "--bin" "forgum" ];
   cargoTestFlags = [ "-p" "forgum-platform" ];
 
   postInstall = ''
@@ -714,7 +714,7 @@ prepare() {
 }
 
 build() {
-    cargo build --frozen --release -p forgum-engine --bin forgum
+    cargo build --frozen --release --bin forgum
 }
 
 check() {
@@ -744,7 +744,7 @@ package() {
 Forgum's architecture separates core platform primitives from the engine and TUI widgets:
 1. `forgum-platform` (`crates/platform`): OS hooks, DECSTBM, cross-platform terminal handles.
 2. `forgum-tui` (`crates/tui`): TrueColor ANSI widgets and menu UI.
-3. `forgum-engine` (`crates/engine`): Animation loops, command handlers, and the `forgum` binary.
+3. `forgum` (`crates/engine`): Animation loops, command handlers, and the `forgum` binary.
 
 #### Publishing Dependency Order
 Due to Cargo inter-crate dependencies, publishing must occur in topological sequence:
@@ -770,7 +770,7 @@ To comply with Crates.io 10MB package limits and avoid publishing non-essential 
 
 ```toml
 [package]
-name = "forgum-engine"
+name = "forgum"
 version = "1.0.0"
 edition = "2021"
 license = "MIT"
@@ -913,9 +913,9 @@ jobs:
       - name: Compile Release Binary
         run: |
           if [ "${{ matrix.use_cross }}" = "true" ]; then
-            cross build --release --locked --target ${{ matrix.target }} -p forgum-engine --bin forgum
+            cross build --release --locked --target ${{ matrix.target }} --bin forgum
           else
-            cargo build --release --locked --target ${{ matrix.target }} -p forgum-engine --bin forgum
+            cargo build --release --locked --target ${{ matrix.target }} --bin forgum
           fi
         shell: bash
 
@@ -1101,7 +1101,7 @@ jobs:
           sleep 30
           cargo publish --locked -p forgum-tui
           sleep 30
-          cargo publish --locked -p forgum-engine
+          cargo publish --locked -p forgum
 ```
 
 ---
@@ -1171,7 +1171,7 @@ In the critical event that a release causes breaking terminal corruption or regr
    Mark the release as "Pre-release" on GitHub Releases or delete the tag to halt automated downloads.
 2. **Crates.io Yank**:
    ```bash
-   cargo yank --version 1.0.0 forgum-engine
+   cargo yank --version 1.0.0 forgum
    ```
 3. **Package Manager Rollback Instructions**:
    - **Scoop**: Run `scoop reset forgum@<previous-version>` or revert commit in `HKDevLoops/scoop-bucket`.
