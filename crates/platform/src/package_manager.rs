@@ -391,18 +391,14 @@ pub fn detect_available_package_managers() -> Vec<(PackageManager, bool)> {
 /// Execute standalone binary upgrade via the celestial installer.
 pub fn execute_standalone_update(channel: ReleaseChannel) -> Result<String, String> {
     let channel_name = channel.as_str();
+    let ref_name = channel.git_ref();
     #[cfg(windows)]
     {
+        let cmd = format!(
+            "try {{ $c = irm 'https://raw.githubusercontent.com/HKDevLoops/Forgum/{ref_name}/install.ps1' -ErrorAction Stop; & ([scriptblock]::Create($c)) -Channel '{channel_name}' }} catch {{ $c = irm 'https://raw.githubusercontent.com/HKDevLoops/Forgum/dev/install.ps1'; & ([scriptblock]::Create($c)) -Channel '{channel_name}' }}"
+        );
         let status = Command::new("powershell")
-            .args([
-                "-NoProfile",
-                "-ExecutionPolicy",
-                "Bypass",
-                "-Command",
-                &format!(
-                    "irm https://raw.githubusercontent.com/HKDevLoops/Forgum/{channel_name}/install.ps1 | iex"
-                ),
-            ])
+            .args(["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", &cmd])
             .status()
             .map_err(|e| format!("Failed to invoke PowerShell upgrade: {e}"))?;
 
@@ -416,11 +412,12 @@ pub fn execute_standalone_update(channel: ReleaseChannel) -> Result<String, Stri
     }
     #[cfg(not(windows))]
     {
+        let cmd = format!(
+            "curl -4 -fsSL --connect-timeout 5 'https://raw.githubusercontent.com/HKDevLoops/Forgum/{ref_name}/install.sh' 2>/dev/null | bash -s -- --channel {channel_name} --headless -y || curl -4 -fsSL --connect-timeout 5 'https://raw.githubusercontent.com/HKDevLoops/Forgum/dev/install.sh' | bash -s -- --channel {channel_name} --headless -y"
+        );
         let status = Command::new("bash")
             .arg("-c")
-            .arg(format!(
-                "curl -4 -fsSL --connect-timeout 5 https://raw.githubusercontent.com/HKDevLoops/Forgum/{channel_name}/install.sh | bash -s -- --channel {channel_name} --headless -y"
-            ))
+            .arg(cmd)
             .status()
             .map_err(|e| format!("Failed to invoke bash upgrade: {e}"))?;
 
@@ -535,6 +532,15 @@ impl ReleaseChannel {
             Self::Alpha => "alpha",
             Self::Nightly => "nightly",
             Self::Dev => "dev",
+        }
+    }
+
+    /// Corresponding Git branch or ref name on GitHub.
+    #[must_use]
+    pub const fn git_ref(&self) -> &'static str {
+        match self {
+            Self::Stable => "main",
+            Self::Alpha | Self::Nightly | Self::Dev => "dev",
         }
     }
 

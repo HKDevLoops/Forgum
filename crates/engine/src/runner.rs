@@ -2281,14 +2281,15 @@ fn handle_update_command(check: bool, channel_flag: Option<&str>) -> ExitCode {
                 }
             };
             let channel_name = channel.as_str();
+            let ref_name = channel.git_ref();
             if check {
                 println!(
                     "Forgum v{version} is running as a Standalone Binary.\n\
                      Target stream for channel {channel}:\n\
                      {channel_stream}\n\n\
                      Instant update commands via celestial installer scripts:\n\
-                       PowerShell: irm https://raw.githubusercontent.com/HKDevLoops/Forgum/{channel_name}/install.ps1 | iex\n\
-                       Bash/Zsh:   curl -4 -fsSL --connect-timeout 5 https://raw.githubusercontent.com/HKDevLoops/Forgum/{channel_name}/install.sh | bash -s -- --channel {channel_name}"
+                       PowerShell: irm https://raw.githubusercontent.com/HKDevLoops/Forgum/{ref_name}/install.ps1 | iex\n\
+                       Bash/Zsh:   curl -4 -fsSL --connect-timeout 5 https://raw.githubusercontent.com/HKDevLoops/Forgum/{ref_name}/install.sh | bash -s -- --channel {channel_name}"
                 );
                 ExitCode::SUCCESS
             } else {
