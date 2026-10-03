@@ -207,7 +207,7 @@ jobs:
         with:
           entrypoint: bash
           args: >-
-            -c "pacman -Syu --noconfirm base-devel &&
+            -c "pacman -Syu --noconfirm base-devel rust &&
                 chmod +x packaging/pacman/build-pacman.sh &&
                 ./packaging/pacman/build-pacman.sh"
 
