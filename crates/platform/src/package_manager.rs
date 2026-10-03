@@ -1207,7 +1207,7 @@ mod tests {
     fn detect_from_nix_and_macports_paths() {
         assert_eq!(
             detect_source_from_path(&PathBuf::from(
-                "/nix/store/abc-forgum-0.0.2-beta/bin/forgum"
+                "/nix/store/abc-forgum-0.0.3-beta/bin/forgum"
             )),
             PackageManager::Nix
         );
@@ -1269,7 +1269,7 @@ mod tests {
         let receipt = Receipt {
             installer_source: PackageManager::DirectBinary,
             channel: ReleaseChannel::Nightly,
-            version: "0.0.2-beta".to_string(),
+            version: "0.0.3-beta".to_string(),
             bin_path: temp_dir.path().join("forgum"),
             timestamp: 1700000000,
         };
@@ -1282,7 +1282,7 @@ mod tests {
 
         assert_eq!(parsed.channel, ReleaseChannel::Nightly);
         assert_eq!(parsed.installer_source, PackageManager::DirectBinary);
-        assert_eq!(parsed.version, "0.0.2-beta");
+        assert_eq!(parsed.version, "0.0.3-beta");
     }
 
     #[test]
@@ -1290,7 +1290,7 @@ mod tests {
         let script_receipt_json = r#"{
   "installer_source": "standalone",
   "channel": "dev",
-  "version": "0.0.2-beta",
+  "version": "0.0.3-beta",
   "bin_path": "/home/hkdevs/.local/bin/forgum",
   "installed_at": 1790595540,
   "platform": "linux",
@@ -1305,7 +1305,7 @@ mod tests {
             .expect("must parse install.sh receipt without error");
         assert_eq!(parsed.installer_source, PackageManager::DirectBinary);
         assert_eq!(parsed.channel, ReleaseChannel::Dev);
-        assert_eq!(parsed.version, "0.0.2-beta");
+        assert_eq!(parsed.version, "0.0.3-beta");
         assert_eq!(parsed.timestamp, 1790595540);
     }
 

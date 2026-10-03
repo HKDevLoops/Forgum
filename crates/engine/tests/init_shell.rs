@@ -485,4 +485,3 @@ fn test_shell_attach_modes_hooks_contain_startup_clear_and_prompt_handlers() {
         );
     }
 }
-

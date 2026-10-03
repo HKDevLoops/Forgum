@@ -140,8 +140,7 @@ fn test_all_132_canonical_mascots_corrupted_simultaneously_recover() {
             BaseAnim::Walk
         };
         assert_eq!(
-            dna.base,
-            expected_base,
+            dna.base, expected_base,
             "Recovered mascot '{}' must have expected habitat base anim",
             mascot.name
         );

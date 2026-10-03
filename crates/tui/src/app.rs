@@ -215,12 +215,8 @@ pub const CONTRAST_OPTIONS: &[(&str, &str, ContrastMode)] = &[
     ("vibrant", "Vibrant (Chroma Boost)", ContrastMode::Vibrant),
 ];
 
-pub const CONTRAST_MODE_OPTIONS: &[&str] = &[
-    "standard",
-    "acrylic_glass",
-    "high_contrast",
-    "vibrant",
-];
+pub const CONTRAST_MODE_OPTIONS: &[&str] =
+    &["standard", "acrylic_glass", "high_contrast", "vibrant"];
 
 /// Dropdown option choices for Environment.
 pub const ENVIRONMENT_OPTIONS: &[&str] = &[
@@ -953,8 +949,7 @@ impl ConfigApp {
             "manual" => "pane",
             other => other,
         };
-        let attach_mode_dropdown =
-            Dropdown::new(SHELL_ATTACH_OPTIONS.to_vec(), initial_attach);
+        let attach_mode_dropdown = Dropdown::new(SHELL_ATTACH_OPTIONS.to_vec(), initial_attach);
         let format_dropdown = Dropdown::new(vec!["json", "yaml", "toml"], format.extension());
         let split_mode_dropdown = Dropdown::new(
             SPLIT_MODE_OPTIONS.to_vec(),
@@ -1628,10 +1623,8 @@ impl ConfigApp {
                                     self.fx_sub_focus = 2;
                                     let c = CONTRAST_OPTIONS[self.contrast_idx].0.to_string();
                                     self.config.contrast_mode = Some(c.clone());
-                                    self.contrast_mode_dropdown = Dropdown::new(
-                                        CONTRAST_MODE_OPTIONS.to_vec(),
-                                        &c,
-                                    );
+                                    self.contrast_mode_dropdown =
+                                        Dropdown::new(CONTRAST_MODE_OPTIONS.to_vec(), &c);
                                     self.saved = false;
                                 }
                             }
@@ -1714,7 +1707,8 @@ impl ConfigApp {
                         self.contrast_idx = (self.contrast_idx + 1) % CONTRAST_OPTIONS.len();
                         let c = CONTRAST_OPTIONS[self.contrast_idx].0.to_string();
                         self.config.contrast_mode = Some(c.clone());
-                        self.contrast_mode_dropdown = Dropdown::new(CONTRAST_MODE_OPTIONS.to_vec(), &c);
+                        self.contrast_mode_dropdown =
+                            Dropdown::new(CONTRAST_MODE_OPTIONS.to_vec(), &c);
                     }
                     self.saved = false;
                 }
@@ -1793,7 +1787,8 @@ impl ConfigApp {
                         }
                         let c = CONTRAST_OPTIONS[self.contrast_idx].0.to_string();
                         self.config.contrast_mode = Some(c.clone());
-                        self.contrast_mode_dropdown = Dropdown::new(CONTRAST_MODE_OPTIONS.to_vec(), &c);
+                        self.contrast_mode_dropdown =
+                            Dropdown::new(CONTRAST_MODE_OPTIONS.to_vec(), &c);
                     }
                     self.saved = false;
                 }
@@ -2479,16 +2474,14 @@ export extern "forgum" [
                     self.cycle_config_field(true);
                 }
             }
-            KeyCode::Char('H')
-            | KeyCode::Left
+            KeyCode::Char('H') | KeyCode::Left
                 if key.modifiers.contains(KeyModifiers::SHIFT)
                     || key.modifiers.contains(KeyModifiers::CONTROL) =>
             {
                 self.h_scroll = self.h_scroll.saturating_sub(4);
                 self.status_message = format!("Horizontal scroll: column {}", self.h_scroll);
             }
-            KeyCode::Char('L')
-            | KeyCode::Right
+            KeyCode::Char('L') | KeyCode::Right
                 if key.modifiers.contains(KeyModifiers::SHIFT)
                     || key.modifiers.contains(KeyModifiers::CONTROL) =>
             {
@@ -2503,16 +2496,10 @@ export extern "forgum" [
                 self.h_scroll = (self.h_scroll + 4).min(50);
                 self.status_message = format!("Horizontal scroll: column {}", self.h_scroll);
             }
-            KeyCode::Char('+')
-            | KeyCode::Char('=')
-            | KeyCode::Right
-            | KeyCode::Char(']') => {
+            KeyCode::Char('+') | KeyCode::Char('=') | KeyCode::Right | KeyCode::Char(']') => {
                 self.cycle_config_field(true);
             }
-            KeyCode::Char('-')
-            | KeyCode::Char('_')
-            | KeyCode::Left
-            | KeyCode::Char('[') => {
+            KeyCode::Char('-') | KeyCode::Char('_') | KeyCode::Left | KeyCode::Char('[') => {
                 self.cycle_config_field(false);
             }
             KeyCode::Char('o') | KeyCode::Char('O') => {
@@ -2783,7 +2770,8 @@ export extern "forgum" [
                     .iter()
                     .position(|(c, _)| c.eq_ignore_ascii_case(&current))
                     .unwrap_or(0);
-                if current.eq_ignore_ascii_case("natural") || current.eq_ignore_ascii_case("animal") {
+                if current.eq_ignore_ascii_case("natural") || current.eq_ignore_ascii_case("animal")
+                {
                     let vars = forgum_platform::biome::get_mascot_variations(&self.config.cow);
                     if !vars.is_empty() {
                         self.config.palette = Some(vars[0].palette.join(","));
@@ -2792,8 +2780,13 @@ export extern "forgum" [
                 self.cow_cache.clear();
                 self.ensure_cow_cached(&self.config.cow.clone());
                 self.saved = false;
-                self.status_message = if current.eq_ignore_ascii_case("natural") || current.eq_ignore_ascii_case("animal") {
-                    format!("Color mode: natural (Color Palette UNLOCKED for {} morphs!)", self.config.cow)
+                self.status_message = if current.eq_ignore_ascii_case("natural")
+                    || current.eq_ignore_ascii_case("animal")
+                {
+                    format!(
+                        "Color mode: natural (Color Palette UNLOCKED for {} morphs!)",
+                        self.config.cow
+                    )
                 } else {
                     format!("Color mode: {} (Color Palette LOCKED)", current)
                 };
@@ -2912,19 +2905,22 @@ export extern "forgum" [
                         self.config.split_scroll = false;
                         self.config.auto_render_on_prompt = false;
                         self.status_message =
-                            "Shell mode: startup (Runs once on shell launch, 0 prompt cost)".to_string();
+                            "Shell mode: startup (Runs once on shell launch, 0 prompt cost)"
+                                .to_string();
                     }
                     "prompt" => {
                         self.config.split_scroll = false;
                         self.config.auto_render_on_prompt = true;
                         self.status_message =
-                            "Shell mode: prompt (Renders dynamically on each command prompt)".to_string();
+                            "Shell mode: prompt (Renders dynamically on each command prompt)"
+                                .to_string();
                     }
                     "clear" => {
                         self.config.split_scroll = false;
                         self.config.auto_render_on_prompt = false;
                         self.status_message =
-                            "Shell mode: clear (Runs on shell launch and after clear/cls commands)".to_string();
+                            "Shell mode: clear (Runs on shell launch and after clear/cls commands)"
+                                .to_string();
                     }
                     "pane" => {
                         self.config.split_scroll = false;
@@ -6082,27 +6078,28 @@ export extern "forgum" [
                     "natural" | "animal_natural" | "animal" | "default"
                 );
                 if is_natural {
-                    let parsed_custom: Option<Vec<(u8, u8, u8)>> = self.config.palette.as_deref().and_then(|pal_str| {
-                        let parts: Vec<(u8, u8, u8)> = pal_str
-                            .split(',')
-                            .filter_map(|hex| {
-                                let h = hex.trim().trim_start_matches('#');
-                                if h.len() == 6 {
-                                    let r = u8::from_str_radix(&h[0..2], 16).ok()?;
-                                    let g = u8::from_str_radix(&h[2..4], 16).ok()?;
-                                    let b = u8::from_str_radix(&h[4..6], 16).ok()?;
-                                    Some((r, g, b))
-                                } else {
-                                    None
-                                }
-                            })
-                            .collect();
-                        if parts.len() >= 3 {
-                            Some(parts)
-                        } else {
-                            None
-                        }
-                    });
+                    let parsed_custom: Option<Vec<(u8, u8, u8)>> =
+                        self.config.palette.as_deref().and_then(|pal_str| {
+                            let parts: Vec<(u8, u8, u8)> = pal_str
+                                .split(',')
+                                .filter_map(|hex| {
+                                    let h = hex.trim().trim_start_matches('#');
+                                    if h.len() == 6 {
+                                        let r = u8::from_str_radix(&h[0..2], 16).ok()?;
+                                        let g = u8::from_str_radix(&h[2..4], 16).ok()?;
+                                        let b = u8::from_str_radix(&h[4..6], 16).ok()?;
+                                        Some((r, g, b))
+                                    } else {
+                                        None
+                                    }
+                                })
+                                .collect();
+                            if parts.len() >= 3 {
+                                Some(parts)
+                            } else {
+                                None
+                            }
+                        });
 
                     let mascot_pal = Self::get_mascot_natural_palette(&self.config.cow);
                     let p: &[(u8, u8, u8)] = match &parsed_custom {
@@ -6146,10 +6143,7 @@ export extern "forgum" [
                     if contrast.requires_bold() {
                         style = style.add_modifier(Modifier::BOLD);
                     }
-                    lines.push(Line::from(Span::styled(
-                        format!("  {l}{sparkle}"),
-                        style,
-                    )));
+                    lines.push(Line::from(Span::styled(format!("  {l}{sparkle}"), style)));
                 }
             }
         }
@@ -6506,7 +6500,12 @@ export extern "forgum" [
                         let idx = self.current_variation_index(vars);
                         let v = &vars[idx];
                         lines.push(Line::from(vec![
-                            Span::styled("Morph Biology: ", Style::default().fg(tailwind::EMERALD_400).add_modifier(Modifier::BOLD)),
+                            Span::styled(
+                                "Morph Biology: ",
+                                Style::default()
+                                    .fg(tailwind::EMERALD_400)
+                                    .add_modifier(Modifier::BOLD),
+                            ),
                             Span::styled(v.description, Style::default().fg(tailwind::AMBER_300)),
                         ]));
                     }
@@ -7545,17 +7544,26 @@ mod tests {
         assert_eq!(app.h_scroll, 0);
 
         // 'l' or Right in narrow mode increases h_scroll
-        app.handle_event(Event::Key(KeyEvent::new(KeyCode::Char('l'), KeyModifiers::NONE)))
-            .unwrap();
+        app.handle_event(Event::Key(KeyEvent::new(
+            KeyCode::Char('l'),
+            KeyModifiers::NONE,
+        )))
+        .unwrap();
         assert_eq!(app.h_scroll, 2);
 
-        app.handle_event(Event::Key(KeyEvent::new(KeyCode::Right, KeyModifiers::NONE)))
-            .unwrap();
+        app.handle_event(Event::Key(KeyEvent::new(
+            KeyCode::Right,
+            KeyModifiers::NONE,
+        )))
+        .unwrap();
         assert_eq!(app.h_scroll, 4);
 
         // 'h' or Left in narrow mode decreases h_scroll
-        app.handle_event(Event::Key(KeyEvent::new(KeyCode::Char('h'), KeyModifiers::NONE)))
-            .unwrap();
+        app.handle_event(Event::Key(KeyEvent::new(
+            KeyCode::Char('h'),
+            KeyModifiers::NONE,
+        )))
+        .unwrap();
         assert_eq!(app.h_scroll, 2);
 
         app.handle_event(Event::Key(KeyEvent::new(KeyCode::Left, KeyModifiers::NONE)))
@@ -7570,18 +7578,27 @@ mod tests {
         // Shift+Right or 'L' scrolls regardless of breakpoint
         app.last_terminal_size = (120, 30);
         assert_eq!(app.current_breakpoint(), Breakpoint::Standard);
-        app.handle_event(Event::Key(KeyEvent::new(KeyCode::Char('L'), KeyModifiers::NONE)))
-            .unwrap();
+        app.handle_event(Event::Key(KeyEvent::new(
+            KeyCode::Char('L'),
+            KeyModifiers::NONE,
+        )))
+        .unwrap();
         assert_eq!(app.h_scroll, 2);
 
-        app.handle_event(Event::Key(KeyEvent::new(KeyCode::Right, KeyModifiers::SHIFT)))
-            .unwrap();
+        app.handle_event(Event::Key(KeyEvent::new(
+            KeyCode::Right,
+            KeyModifiers::SHIFT,
+        )))
+        .unwrap();
         assert_eq!(app.h_scroll, 4);
 
         // Category cycling via '[' and ']' resets h_scroll
         let cat_before = app.mascot_category_idx;
-        app.handle_event(Event::Key(KeyEvent::new(KeyCode::Char(']'), KeyModifiers::NONE)))
-            .unwrap();
+        app.handle_event(Event::Key(KeyEvent::new(
+            KeyCode::Char(']'),
+            KeyModifiers::NONE,
+        )))
+        .unwrap();
         assert_eq!(app.mascot_category_idx, (cat_before + 1) % CATEGORIES.len());
         assert_eq!(app.h_scroll, 0);
     }
@@ -7592,18 +7609,27 @@ mod tests {
         assert_eq!(app.h_scroll, 0);
 
         // 'l' scrolls right by 4
-        app.handle_event(Event::Key(KeyEvent::new(KeyCode::Char('l'), KeyModifiers::NONE)))
-            .unwrap();
+        app.handle_event(Event::Key(KeyEvent::new(
+            KeyCode::Char('l'),
+            KeyModifiers::NONE,
+        )))
+        .unwrap();
         assert_eq!(app.h_scroll, 4);
 
         // 'h' scrolls left by 4
-        app.handle_event(Event::Key(KeyEvent::new(KeyCode::Char('h'), KeyModifiers::NONE)))
-            .unwrap();
+        app.handle_event(Event::Key(KeyEvent::new(
+            KeyCode::Char('h'),
+            KeyModifiers::NONE,
+        )))
+        .unwrap();
         assert_eq!(app.h_scroll, 0);
 
         // Shift+Right scrolls right
-        app.handle_event(Event::Key(KeyEvent::new(KeyCode::Right, KeyModifiers::SHIFT)))
-            .unwrap();
+        app.handle_event(Event::Key(KeyEvent::new(
+            KeyCode::Right,
+            KeyModifiers::SHIFT,
+        )))
+        .unwrap();
         assert_eq!(app.h_scroll, 4);
 
         // Tab switch resets h_scroll
@@ -7636,15 +7662,21 @@ mod tests {
         assert_eq!(app.active_contrast_mode(), ContrastMode::Standard);
 
         // Cycle down in Tab::Effects
-        app.handle_event(Event::Key(KeyEvent::new(KeyCode::Char('j'), KeyModifiers::NONE)))
-            .unwrap();
+        app.handle_event(Event::Key(KeyEvent::new(
+            KeyCode::Char('j'),
+            KeyModifiers::NONE,
+        )))
+        .unwrap();
         assert_eq!(app.active_contrast_mode(), ContrastMode::AcrylicGlass);
         assert_eq!(app.config.contrast_mode.as_deref(), Some("acrylic_glass"));
         assert_eq!(app.contrast_mode_dropdown.current(), "acrylic_glass");
 
         // Cycle down again -> HighContrast
-        app.handle_event(Event::Key(KeyEvent::new(KeyCode::Char('j'), KeyModifiers::NONE)))
-            .unwrap();
+        app.handle_event(Event::Key(KeyEvent::new(
+            KeyCode::Char('j'),
+            KeyModifiers::NONE,
+        )))
+        .unwrap();
         assert_eq!(app.active_contrast_mode(), ContrastMode::HighContrast);
         assert_eq!(app.config.contrast_mode.as_deref(), Some("high_contrast"));
 
@@ -7658,8 +7690,11 @@ mod tests {
         assert!(val.contains("maximum luminance floor"));
 
         // Cycle field in Config tab using Right arrow
-        app.handle_event(Event::Key(KeyEvent::new(KeyCode::Right, KeyModifiers::NONE)))
-            .unwrap();
+        app.handle_event(Event::Key(KeyEvent::new(
+            KeyCode::Right,
+            KeyModifiers::NONE,
+        )))
+        .unwrap();
         assert_eq!(app.active_contrast_mode(), ContrastMode::Vibrant);
         assert_eq!(app.contrast_idx, 3); // Syncs back to contrast_idx for Tab 3
     }
@@ -7714,14 +7749,22 @@ mod tests {
         // Verify tiger has exactly 3 authentic natural morphs:
         // Bengal Tiger, White Bengal Tiger, Royal Bengal
         let tiger_vars = get_mascot_variations("tiger");
-        assert_eq!(tiger_vars.len(), 3, "Tiger should have 3 biological variations");
+        assert_eq!(
+            tiger_vars.len(),
+            3,
+            "Tiger should have 3 biological variations"
+        );
         assert!(tiger_vars[0].name.contains("Bengal Tiger"));
         assert!(tiger_vars[1].name.contains("White Bengal"));
         assert!(tiger_vars[2].name.contains("Royal Bengal"));
 
         // Verify koala has exactly 1 authentic natural morph
         let koala_vars = get_mascot_variations("koala");
-        assert_eq!(koala_vars.len(), 1, "Koala is monomorphic with 1 biological variation");
+        assert_eq!(
+            koala_vars.len(),
+            1,
+            "Koala is monomorphic with 1 biological variation"
+        );
         assert!(koala_vars[0].name.contains("Ashen Grey"));
 
         // Test TUI app interaction with biological palette
@@ -7732,7 +7775,10 @@ mod tests {
 
         // Should start at variation 0
         let val_nat = app.field_value(ConfigField::Palette, false);
-        assert!(val_nat.contains("Variant 1/6"), "Expected Variant 1/6, got: {val_nat}");
+        assert!(
+            val_nat.contains("Variant 1/6"),
+            "Expected Variant 1/6, got: {val_nat}"
+        );
         assert!(val_nat.contains("Holstein"));
 
         // Cycle to next variation (Charolais)
@@ -7745,7 +7791,10 @@ mod tests {
         // Lock behavior: switch color_mode to rainbow
         app.config.color_mode = "rainbow".to_string();
         let val_locked = app.field_value(ConfigField::Palette, false);
-        assert!(val_locked.contains("Locked"), "Expected locked message when color mode != natural");
+        assert!(
+            val_locked.contains("Locked"),
+            "Expected locked message when color mode != natural"
+        );
 
         // Cycling while locked should not cycle variations
         app.cycle_config_field(true);
@@ -7768,7 +7817,7 @@ mod tests {
     fn test_shell_attach_modes_5_variants_cycling() {
         let mut app = ConfigApp::new(None, None, Some(Tab::Config));
         app.config_field_idx = ConfigField::ShellAttachMode as usize;
-        
+
         // The 5 official modes: startup, prompt, clear, split, pane
         let expected_modes = ["startup", "prompt", "clear", "split", "pane"];
 

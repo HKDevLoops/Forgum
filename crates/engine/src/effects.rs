@@ -853,7 +853,11 @@ impl Effect for FloatEffect {
             let wave_fg = Color::rgb(72, 202, 228);
             for wx in 0..fb.width {
                 if fb.get(wx, surface_y).ch == ' ' {
-                    let wave_ch = if ((wx + ((time * 3.0) as usize)) % 4) < 2 { '~' } else { '≈' };
+                    let wave_ch = if ((wx + ((time * 3.0) as usize)) % 4) < 2 {
+                        '~'
+                    } else {
+                        '≈'
+                    };
                     let _ = fb.set(wx, surface_y, Cell::new(wave_ch, wave_fg));
                 }
             }
@@ -3191,7 +3195,9 @@ pub fn create_scene_effect(
             }
             _ => eff,
         }
-    } else if matches!(eff.as_str(), "fly" | "flying") && dna.habitat == crate::dna::Habitat::Inanimate {
+    } else if matches!(eff.as_str(), "fly" | "flying")
+        && dna.habitat == crate::dna::Habitat::Inanimate
+    {
         eprintln!(
             "forgum: Mascot is an inanimate structure/object (habitat: inanimate). Remapping incompatible locomotion '{}' -> 'pulse' for physical consistency.",
             eff
@@ -3203,7 +3209,8 @@ pub fn create_scene_effect(
 
     // Ensure aquatic mascots always emit bubbles if particle rate was 0
     let mut dna = dna;
-    if (dna.is_aquatic() || dna.habitat == crate::dna::Habitat::Aquatic) && dna.particles.rate == 0 {
+    if (dna.is_aquatic() || dna.habitat == crate::dna::Habitat::Aquatic) && dna.particles.rate == 0
+    {
         dna.particles.rate = 8;
         dna.particles.r#type = crate::dna::ParticleType::Bubbles;
         dna.particles.palette = vec![
@@ -3340,7 +3347,9 @@ pub fn create_effect(
     let base = match dna.habitat {
         crate::dna::Habitat::Aquatic if base == BaseAnim::Walk => BaseAnim::Float,
         crate::dna::Habitat::Aerial if base == BaseAnim::Walk => BaseAnim::Fly,
-        crate::dna::Habitat::Inanimate if base == BaseAnim::Walk || base == BaseAnim::Fly => BaseAnim::Pulse,
+        crate::dna::Habitat::Inanimate if base == BaseAnim::Walk || base == BaseAnim::Fly => {
+            BaseAnim::Pulse
+        }
         crate::dna::Habitat::Ethereal if base == BaseAnim::Walk => BaseAnim::Float,
         crate::dna::Habitat::Serpentine if base == BaseAnim::Walk => BaseAnim::Sway,
         crate::dna::Habitat::Sedentary if base == BaseAnim::Walk => BaseAnim::Breathe,

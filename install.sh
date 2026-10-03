@@ -14,7 +14,7 @@
 #                [--telemetry allow|decline] [-y|--yes] [--no-deps] [--build-from-source]
 #
 # Environment overrides:
-#   FORGUM_VERSION      release version to install (e.g. 0.0.2-beta)
+#   FORGUM_VERSION      release version to install (e.g. 0.0.3-beta)
 #   FORGUM_CHANNEL      release channel stream (default: stable)
 #   FORGUM_INSTALL_DIR  explicit install directory (must be on PATH)
 #   FORGUM_REPO         owner/name of the GitHub repo (default: HKDevLoops/Forgum)
@@ -550,7 +550,7 @@ resolve_version() {
   fi
 
   # Default fallback constant (never blocks on network)
-  echo "0.0.2-beta"
+  echo "0.0.3-beta"
 }
 
 VERSION="$(resolve_version)"

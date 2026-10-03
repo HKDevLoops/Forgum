@@ -260,7 +260,7 @@ Modeled after Neovim's `:checkhealth`, running `forgum checkhealth` inspects:
 
 ```
 ==============================================================================
-forgum checkhealth — Engine v0.0.2-beta
+forgum checkhealth — Engine v0.0.3-beta
 ==============================================================================
 
 ## System & Platform Environment

@@ -1681,8 +1681,13 @@ pub fn render_environment(
             let wave_fg = Color::rgb(72, 202, 228); // Luminous sea surface cyan
             for x in 0..width {
                 let wave_harmonic = (x as f32 * 0.28 + time * 2.8).sin() * 0.45;
-                let wave_ch = if ((x + (time * 3.0) as usize) % 4) < 2 { '~' } else { '≈' };
-                let y_wave = ((surface_y as f32 + wave_harmonic).round() as usize).min(ground_y.saturating_sub(1));
+                let wave_ch = if ((x + (time * 3.0) as usize) % 4) < 2 {
+                    '~'
+                } else {
+                    '≈'
+                };
+                let y_wave = ((surface_y as f32 + wave_harmonic).round() as usize)
+                    .min(ground_y.saturating_sub(1));
                 let _ = fb.set(x, y_wave, Cell::new(wave_ch, wave_fg));
             }
 
@@ -1691,7 +1696,8 @@ pub fn render_environment(
             for i in 0..8 {
                 let seed = i * 19;
                 let x = (seed + i * 11 + ((time * 1.5) as usize)) % width;
-                let rise = (((time * 2.5) as usize) + i * 2) % (ground_y.saturating_sub(surface_y).max(1) + 1);
+                let rise = (((time * 2.5) as usize) + i * 2)
+                    % (ground_y.saturating_sub(surface_y).max(1) + 1);
                 let y = ground_y.saturating_sub(rise);
                 if y > surface_y && y < ground_y {
                     let ch = if i % 2 == 0 { 'o' } else { '.' };

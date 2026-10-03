@@ -104,7 +104,10 @@ impl ContrastMode {
 
     #[must_use]
     pub fn requires_bold(self) -> bool {
-        matches!(self, ContrastMode::AcrylicGlass | ContrastMode::HighContrast)
+        matches!(
+            self,
+            ContrastMode::AcrylicGlass | ContrastMode::HighContrast
+        )
     }
 
     /// Adjust an RGB color according to this contrast mode.
@@ -838,12 +841,30 @@ mod tests {
 
     #[test]
     fn test_contrast_mode_variants_and_parsing() {
-        assert_eq!(ContrastMode::from_str_loose("standard"), ContrastMode::Standard);
-        assert_eq!(ContrastMode::from_str_loose("acrylic_glass"), ContrastMode::AcrylicGlass);
-        assert_eq!(ContrastMode::from_str_loose("acrylic"), ContrastMode::AcrylicGlass);
-        assert_eq!(ContrastMode::from_str_loose("transparency"), ContrastMode::AcrylicGlass);
-        assert_eq!(ContrastMode::from_str_loose("high_contrast"), ContrastMode::HighContrast);
-        assert_eq!(ContrastMode::from_str_loose("vibrant"), ContrastMode::Vibrant);
+        assert_eq!(
+            ContrastMode::from_str_loose("standard"),
+            ContrastMode::Standard
+        );
+        assert_eq!(
+            ContrastMode::from_str_loose("acrylic_glass"),
+            ContrastMode::AcrylicGlass
+        );
+        assert_eq!(
+            ContrastMode::from_str_loose("acrylic"),
+            ContrastMode::AcrylicGlass
+        );
+        assert_eq!(
+            ContrastMode::from_str_loose("transparency"),
+            ContrastMode::AcrylicGlass
+        );
+        assert_eq!(
+            ContrastMode::from_str_loose("high_contrast"),
+            ContrastMode::HighContrast
+        );
+        assert_eq!(
+            ContrastMode::from_str_loose("vibrant"),
+            ContrastMode::Vibrant
+        );
 
         for mode in ContrastMode::ALL {
             assert!(!mode.as_str().is_empty());
@@ -874,7 +895,10 @@ mod tests {
         assert!(lum >= 118, "Expected lum >= 118, got {}", lum);
 
         let bright_color = (200, 220, 210);
-        assert_eq!(elevate_luminance(bright_color.0, bright_color.1, bright_color.2, 120.0), bright_color);
+        assert_eq!(
+            elevate_luminance(bright_color.0, bright_color.1, bright_color.2, 120.0),
+            bright_color
+        );
     }
 
     #[test]
@@ -885,9 +909,14 @@ mod tests {
         assert!(!ContrastMode::Vibrant.requires_bold());
 
         let faint_color = (30, 40, 30);
-        let adjusted = ContrastMode::AcrylicGlass.adjust_rgb(faint_color.0, faint_color.1, faint_color.2);
+        let adjusted =
+            ContrastMode::AcrylicGlass.adjust_rgb(faint_color.0, faint_color.1, faint_color.2);
         let lum = calculate_luminance(adjusted.0, adjusted.1, adjusted.2);
-        assert!(lum >= 118, "Acrylic glass must elevate minimum luminance floor: got {}", lum);
+        assert!(
+            lum >= 118,
+            "Acrylic glass must elevate minimum luminance floor: got {}",
+            lum
+        );
     }
 
     #[test]

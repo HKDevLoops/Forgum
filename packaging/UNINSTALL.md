@@ -143,7 +143,7 @@ nix-env -e forgum
 
 ```sh
 # From your overlay:
-sudo ebuild /var/db/repos/<overlay>/sys-apps/forgum/forgum-0.0.2.ebuild merge --unmerge
+sudo ebuild /var/db/repos/<overlay>/sys-apps/forgum/forgum-0.0.3.ebuild merge --unmerge
 
 # Or using portage directly:
 sudo emerge --deselect sys-apps/forgum
