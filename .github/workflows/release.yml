@@ -111,10 +111,12 @@ jobs:
       - name: Package (unix)
         if: ${{ runner.os != 'Windows' && !matrix.build_only }}
         run: |
-          cd target/${{ matrix.target }}/release
-          tar czf ../../forgum-${{ matrix.target }}.tar.gz forgum ../../../README.md
-          sha256sum ../../forgum-${{ matrix.target }}.tar.gz > ../../forgum-${{ matrix.target }}.sha256
-          cd ../../..
+          ROOT_DIR="$GITHUB_WORKSPACE"
+          SRC_DIR="$ROOT_DIR/target/${{ matrix.target }}/release"
+          cd "$SRC_DIR"
+          tar czf "$ROOT_DIR/forgum-${{ matrix.target }}.tar.gz" forgum "$ROOT_DIR/README.md"
+          cd "$ROOT_DIR"
+          sha256sum "forgum-${{ matrix.target }}.tar.gz" > "$ROOT_DIR/forgum-${{ matrix.target }}.sha256"
 
       # Windows packaging is restricted to the rigorously-tested x86-64 / arm64 targets.
       # i686 (build_only) is skipped entirely — it is not runtime-tested and does not
@@ -123,10 +125,12 @@ jobs:
         if: ${{ runner.os == 'Windows' && !matrix.build_only }}
         shell: bash
         run: |
-          cd target/${{ matrix.target }}/release
-          tar czf ../../forgum-${{ matrix.target }}.tar.gz forgum.exe ../../../README.md
-          sha256sum ../../forgum-${{ matrix.target }}.tar.gz > ../../forgum-${{ matrix.target }}.sha256
-          cd ../../..
+          ROOT_DIR="$GITHUB_WORKSPACE"
+          SRC_DIR="$ROOT_DIR/target/${{ matrix.target }}/release"
+          cd "$SRC_DIR"
+          tar czf "$ROOT_DIR/forgum-${{ matrix.target }}.tar.gz" forgum.exe "$ROOT_DIR/README.md"
+          cd "$ROOT_DIR"
+          sha256sum "forgum-${{ matrix.target }}.tar.gz" > "$ROOT_DIR/forgum-${{ matrix.target }}.sha256"
 
       # Windows zip artifacts consumed by the winget + scoop manifests.
       - name: Package (windows zip)
@@ -189,12 +193,14 @@ jobs:
           sudo apt-get update && sudo apt-get install -y dpkg-dev
           chmod +x packaging/deb/build-deb.sh
           ./packaging/deb/build-deb.sh
+          cp -f *.deb "$GITHUB_WORKSPACE/" 2>/dev/null || true
 
       - name: Build rpm
         run: |
           sudo apt-get update && sudo apt-get install -y rpm
           chmod +x packaging/rpm/build-rpm.sh
           ./packaging/rpm/build-rpm.sh
+          cp -f rpmbuild/RPMS/*/*.rpm "$GITHUB_WORKSPACE/" 2>/dev/null || true
 
       - name: Install Nix
         uses: cachix/install-nix-action@v27
@@ -216,8 +222,8 @@ jobs:
         with:
           name: release-packages
           path: |
-            forgum-*-linux-*.deb
-            forgum-*-linux-*.rpm
+            *.deb
+            *.rpm
 
   packages-win:
     name: Build release packages (msi, choco)

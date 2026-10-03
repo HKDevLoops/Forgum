@@ -235,13 +235,19 @@ switch ($arch) {
 # Check if local build binary exists first (fast developer install)
 $localDebug = Join-Path $PWD 'target\debug\forgum.exe'
 $localRelease = Join-Path $PWD 'target\release\forgum.exe'
+$localInstalled = $false
 if (Test-Path -LiteralPath $localRelease) {
-    Copy-Item -LiteralPath $localRelease -Destination $binPath -Force
-    Write-Host ">> Installed from local release build: $binPath" -ForegroundColor Green
-} elseif (Test-Path -LiteralPath $localDebug) {
-    Copy-Item -LiteralPath $localDebug -Destination $binPath -Force
-    Write-Host ">> Installed from local debug build: $binPath" -ForegroundColor Green
-} else {
+    $localVer = & $localRelease --version 2>$null
+    if ($localVer -match [regex]::Escape($Version)) {
+        Copy-Item -LiteralPath $localRelease -Destination $binPath -Force
+        Write-Host ">> Installed from local release build ($Version): $binPath" -ForegroundColor Green
+        $localInstalled = $true
+    } else {
+        Write-Host ">> Local release build ($localVer) does not match target ($Version). Fetching release asset..." -ForegroundColor Yellow
+    }
+}
+
+if (-not $localInstalled) {
     $targetArch = switch ($arch) {
         'x64'   { 'x86_64' }
         'arm64' { 'aarch64' }

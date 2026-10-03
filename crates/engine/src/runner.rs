@@ -2222,7 +2222,21 @@ fn handle_update_command(check: bool, channel_flag: Option<&str>) -> ExitCode {
                 }
 
                 if git_status.commits_behind == 0 {
-                    println!("\n\x1b[1;32m✓ Already on latest commit. No update required.\x1b[0m");
+                    println!(
+                        "\n\x1b[1;32m✓ Git tree is synchronized with origin/{}.\x1b[0m",
+                        git_status.remote_branch
+                    );
+                    let version = env!("CARGO_PKG_VERSION");
+                    let target_exe = forgum_platform::local_release_binary_path();
+                    if !target_exe.exists() {
+                        println!("\x1b[36m>> Rebuilding binary from current repository...\x1b[0m");
+                        match forgum_platform::execute_git_update(&git_status) {
+                            Ok(msg) => println!("{msg}"),
+                            Err(e) => eprintln!("\x1b[1;31m✗ Build failed:\x1b[0m {e}"),
+                        }
+                    } else {
+                        println!("\x1b[1;32m✓ Already on latest commit ({version}). No update required.\x1b[0m");
+                    }
                     return ExitCode::SUCCESS;
                 }
 
@@ -2267,15 +2281,29 @@ fn handle_update_command(check: bool, channel_flag: Option<&str>) -> ExitCode {
                 }
             };
             let channel_name = channel.as_str();
-            println!(
-                "Forgum v{version} is running as a Standalone Binary.\n\
-                 Target stream for channel {channel}:\n\
-                 {channel_stream}\n\n\
-                 Instant update commands via celestial installer scripts:\n\
-                   PowerShell: irm https://raw.githubusercontent.com/HKDevLoops/Forgum/{channel_name}/install.ps1 | iex\n\
-                   Bash/Zsh:   curl -4 -fsSL --connect-timeout 5 https://raw.githubusercontent.com/HKDevLoops/Forgum/{channel_name}/install.sh | bash -s -- --channel {channel_name}"
-            );
-            ExitCode::SUCCESS
+            if check {
+                println!(
+                    "Forgum v{version} is running as a Standalone Binary.\n\
+                     Target stream for channel {channel}:\n\
+                     {channel_stream}\n\n\
+                     Instant update commands via celestial installer scripts:\n\
+                       PowerShell: irm https://raw.githubusercontent.com/HKDevLoops/Forgum/{channel_name}/install.ps1 | iex\n\
+                       Bash/Zsh:   curl -4 -fsSL --connect-timeout 5 https://raw.githubusercontent.com/HKDevLoops/Forgum/{channel_name}/install.sh | bash -s -- --channel {channel_name}"
+                );
+                ExitCode::SUCCESS
+            } else {
+                println!("\x1b[36m>> Executing standalone upgrade via celestial installer script...\x1b[0m");
+                match forgum_platform::execute_standalone_update(channel) {
+                    Ok(msg) => {
+                        println!("\n\x1b[1;32m✓ {msg}\x1b[0m");
+                        ExitCode::SUCCESS
+                    }
+                    Err(err) => {
+                        eprintln!("\x1b[1;31m✗ Upgrade failed:\x1b[0m {err}");
+                        ExitCode::from(1)
+                    }
+                }
+            }
         }
         _ => match forgum_platform::execute_package_manager_action(source, check) {
             Ok(output) => {

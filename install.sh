@@ -581,23 +581,29 @@ case "$ARCH" in
 esac
 
 # --- install or compile pipeline --------------------------------------------
+DOWNLOAD_OK=0
 if [ "$BUILD_FROM_SOURCE" -eq 0 ] && [ -f "target/release/forgum" ]; then
-  install -m 0755 "target/release/forgum" "$BIN_PATH"
-  echo -e "\033[32m>> Installed from local release build: $BIN_PATH\033[0m"
-elif [ "$BUILD_FROM_SOURCE" -eq 0 ] && [ -f "target/debug/forgum" ]; then
-  install -m 0755 "target/debug/forgum" "$BIN_PATH"
-  echo -e "\033[32m>> Installed from local debug build: $BIN_PATH\033[0m"
-else
+  LOCAL_BIN_VER="$(./target/release/forgum --version 2>/dev/null | awk '{print $2}' || true)"
+  if [ -n "$LOCAL_BIN_VER" ] && [ "$LOCAL_BIN_VER" = "$VERSION" ]; then
+    install -m 0755 "target/release/forgum" "$BIN_PATH"
+    echo -e "\033[32m>> Installed from local release build ($LOCAL_BIN_VER): $BIN_PATH\033[0m"
+    DOWNLOAD_OK=1
+  else
+    echo -e "\033[33m>> Local build ($LOCAL_BIN_VER) does not match target version ($VERSION). Fetching or compiling target version...\033[0m"
+  fi
+fi
+
+if [ "$DOWNLOAD_OK" -eq 0 ]; then
   TMP="$(mktemp -d 2>/dev/null || mktemp -d -t 'forgum')"
   trap 'rm -rf "$TMP"' EXIT
 
-  DOWNLOAD_OK=0
   if [ "$BUILD_FROM_SOURCE" -eq 0 ]; then
     if [ "$CHANNEL" = "alpha" ]; then
       CANDIDATE_URLS=(
         "https://github.com/${REPO}/releases/download/alpha/forgum-alpha-${TARGET_ARCH}-${TARGET_OS}.tar.gz"
         "https://github.com/${REPO}/releases/download/${TAG}/forgum-${VERSION}-${TARGET_ARCH}-${TARGET_OS}.tar.gz"
         "https://github.com/${REPO}/releases/download/${TAG}/forgum-${TAG}-${TARGET_ARCH}-${TARGET_OS}.tar.gz"
+        "https://github.com/${REPO}/releases/download/${TAG}/forgum-${TARGET_ARCH}-${TARGET_OS}.tar.gz"
         "https://github.com/${REPO}/releases/download/nightly/forgum-nightly-${TARGET_ARCH}-${TARGET_OS}.tar.gz"
         "https://github.com/${REPO}/releases/latest/download/forgum-${TARGET_ARCH}-${TARGET_OS}.tar.gz"
       )
@@ -605,12 +611,14 @@ else
       CANDIDATE_URLS=(
         "https://github.com/${REPO}/releases/download/nightly/forgum-nightly-${TARGET_ARCH}-${TARGET_OS}.tar.gz"
         "https://github.com/${REPO}/releases/download/${TAG}/forgum-${VERSION}-${TARGET_ARCH}-${TARGET_OS}.tar.gz"
+        "https://github.com/${REPO}/releases/download/${TAG}/forgum-${TARGET_ARCH}-${TARGET_OS}.tar.gz"
         "https://github.com/${REPO}/releases/latest/download/forgum-${TARGET_ARCH}-${TARGET_OS}.tar.gz"
       )
     else
       CANDIDATE_URLS=(
         "https://github.com/${REPO}/releases/download/${TAG}/forgum-${VERSION}-${TARGET_ARCH}-${TARGET_OS}.tar.gz"
         "https://github.com/${REPO}/releases/download/${TAG}/forgum-${TAG}-${TARGET_ARCH}-${TARGET_OS}.tar.gz"
+        "https://github.com/${REPO}/releases/download/${TAG}/forgum-${TARGET_ARCH}-${TARGET_OS}.tar.gz"
         "https://github.com/${REPO}/releases/download/nightly/forgum-nightly-${TARGET_ARCH}-${TARGET_OS}.tar.gz"
         "https://github.com/${REPO}/releases/latest/download/forgum-${TARGET_ARCH}-${TARGET_OS}.tar.gz"
       )

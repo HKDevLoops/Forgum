@@ -388,6 +388,63 @@ pub fn detect_available_package_managers() -> Vec<(PackageManager, bool)> {
     managers
 }
 
+/// Execute standalone binary upgrade via the celestial installer.
+pub fn execute_standalone_update(channel: ReleaseChannel) -> Result<String, String> {
+    let channel_name = channel.as_str();
+    #[cfg(windows)]
+    {
+        let status = Command::new("powershell")
+            .args([
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-Command",
+                &format!(
+                    "irm https://raw.githubusercontent.com/HKDevLoops/Forgum/{channel_name}/install.ps1 | iex"
+                ),
+            ])
+            .status()
+            .map_err(|e| format!("Failed to invoke PowerShell upgrade: {e}"))?;
+
+        if status.success() {
+            Ok("Standalone binary upgraded successfully via install.ps1.".to_string())
+        } else {
+            Err(format!(
+                "PowerShell upgrade script exited with status {status}"
+            ))
+        }
+    }
+    #[cfg(not(windows))]
+    {
+        let status = Command::new("bash")
+            .arg("-c")
+            .arg(format!(
+                "curl -4 -fsSL --connect-timeout 5 https://raw.githubusercontent.com/HKDevLoops/Forgum/{channel_name}/install.sh | bash -s -- --channel {channel_name} --headless -y"
+            ))
+            .status()
+            .map_err(|e| format!("Failed to invoke bash upgrade: {e}"))?;
+
+        if status.success() {
+            Ok("Standalone binary upgraded successfully via install.sh.".to_string())
+        } else {
+            Err(format!("Bash upgrade script exited with status {status}"))
+        }
+    }
+}
+
+/// Path to local release binary in target/release/
+#[must_use]
+pub fn local_release_binary_path() -> PathBuf {
+    #[cfg(windows)]
+    {
+        PathBuf::from("target").join("release").join("forgum.exe")
+    }
+    #[cfg(not(windows))]
+    {
+        PathBuf::from("target").join("release").join("forgum")
+    }
+}
+
 /// Execute an update or update-check for the given package manager.
 pub fn execute_package_manager_action(
     pm: PackageManager,
@@ -395,15 +452,19 @@ pub fn execute_package_manager_action(
 ) -> Result<String, String> {
     match pm {
         PackageManager::DirectBinary => {
-            let version = env!("CARGO_PKG_VERSION");
-            Ok(format!(
-                "Forgum v{version} is running as a Standalone Binary.\n\
-                 Latest releases and pre-compiled binaries are published at:\n\
-                 https://github.com/HKDevLoops/Forgum/releases/latest\n\n\
-                 To update automatically via a package manager, install via Scoop or WinGet:\n\
-                   scoop bucket add hkdevloops https://github.com/HKDevLoops/scoop-bucket\n\
-                   scoop install forgum"
-            ))
+            if check_only {
+                let version = env!("CARGO_PKG_VERSION");
+                Ok(format!(
+                    "Forgum v{version} is running as a Standalone Binary.\n\
+                     Latest releases and pre-compiled binaries are published at:\n\
+                     https://github.com/HKDevLoops/Forgum/releases/latest\n\n\
+                     To update automatically via a package manager, install via Scoop or WinGet:\n\
+                       scoop bucket add hkdevloops https://github.com/HKDevLoops/scoop-bucket\n\
+                       scoop install forgum"
+                ))
+            } else {
+                execute_standalone_update(ReleaseChannel::Stable)
+            }
         }
         _ => {
             let cmd_str = if check_only {
@@ -986,7 +1047,13 @@ pub fn detect_git_status(target_channel: ReleaseChannel) -> Option<GitRepoStatus
                 "dev".to_string()
             }
         }
-        ReleaseChannel::Stable => "main".to_string(),
+        ReleaseChannel::Stable => {
+            if branch == "dev" {
+                "dev".to_string()
+            } else {
+                "main".to_string()
+            }
+        }
         ReleaseChannel::Nightly => "dev".to_string(),
     };
 
@@ -1108,6 +1175,24 @@ pub fn execute_git_update(status: &GitRepoStatus) -> Result<String, String> {
                 result_msg.push_str(
                     "\n\x1b[1;32m✓ Successfully rebuilt forgum binary to latest commit!\x1b[0m",
                 );
+                if let Ok(cur_exe) = std::env::current_exe() {
+                    let cur_str = cur_exe.to_string_lossy();
+                    if !cur_str.contains("target") {
+                        let target_bin = if cfg!(windows) {
+                            Path::new("target/release/forgum.exe")
+                        } else {
+                            Path::new("target/release/forgum")
+                        };
+                        if let Ok(bytes) = std::fs::read(target_bin) {
+                            if let Ok(()) = atomic_replace_binary(&cur_exe, &bytes) {
+                                result_msg.push_str(&format!(
+                                    "\n\x1b[1;32m✓ Atomically updated active binary at {}\x1b[0m",
+                                    cur_exe.display()
+                                ));
+                            }
+                        }
+                    }
+                }
             }
             Ok(bo) => {
                 let err = String::from_utf8_lossy(&bo.stderr);
