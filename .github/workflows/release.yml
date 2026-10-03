@@ -200,7 +200,7 @@ jobs:
         uses: cachix/install-nix-action@v27
 
       - name: Nix build
-        run: nix build
+        run: nix build --no-link --print-out-paths ./packaging/nix
 
       - name: Build pacman
         uses: docker://archlinux:latest
