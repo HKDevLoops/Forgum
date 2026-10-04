@@ -326,6 +326,39 @@ pub struct Cli {
     )]
     pub fps: Option<u16>,
 
+    /// Hardware acceleration mode (auto, dedicated, integrated, cpu).
+    #[arg(
+        long,
+        visible_alias = "gpu",
+        visible_alias = "acceleration",
+        global = true,
+        value_name = "MODE",
+        help = "Hardware acceleration mode (auto, dedicated, integrated, cpu)",
+        long_help = "Hardware compute acceleration mode: 'auto' (automatically prefers dedicated GPU, then integrated graphics, then CPU fallback), 'dedicated' (prefer dedicated discrete GPU cores and VRAM), 'integrated' (prefer integrated/internal graphics), 'cpu' (force CPU compute)."
+    )]
+    pub accel: Option<String>,
+
+    /// Viewport aspect ratio preset (auto, 21:9, 16:9, 16:10, 4:3, 1:1, narrow).
+    #[arg(
+        long = "aspect",
+        visible_alias = "aspect-ratio",
+        global = true,
+        value_name = "RATIO",
+        help = "Viewport aspect ratio preset (auto, 21:9, 16:9, 16:10, 4:3, 1:1, narrow)",
+        long_help = "Target aspect ratio preset: 'auto' (detect from terminal width and height), '21:9' (ultrawide panoramic), '16:9' (widescreen), '16:10' (golden tall ratio), '4:3' (classic standard), '1:1' (square), 'narrow' (vertical mobile/split pane)."
+    )]
+    pub aspect: Option<String>,
+
+    /// Viewport aspect ratio adaptation mode (preset, dynamic, auto).
+    #[arg(
+        long = "aspect-mode",
+        global = true,
+        value_name = "MODE",
+        help = "Aspect ratio adaptation mode (preset, dynamic, auto)",
+        long_help = "Aspect ratio adaptation strategy: 'preset' (lock to fixed aspect math), 'dynamic' (recalculate peaks and amplitude live on window resize), 'auto' (dynamic on interactive TUI/split mode, preset on static banners)."
+    )]
+    pub aspect_mode: Option<String>,
+
     /// List available options (animals, effects, scenery, colors, shells) and exit.
     #[arg(
         short = 'l',
@@ -977,6 +1010,9 @@ pub struct Args {
     pub think: bool,
     pub list: Option<String>,
     pub random: Option<String>,
+    pub accel: Option<String>,
+    pub aspect: Option<String>,
+    pub aspect_mode: Option<String>,
 }
 
 /// Error type returned by `parse_args`, carrying the intended process exit code.
@@ -1149,6 +1185,9 @@ pub fn parse_args(argv: Vec<String>) -> Result<(Args, Option<Commands>), CliErro
         think,
         list: cli.list,
         random: cli.random,
+        accel: cli.accel,
+        aspect: cli.aspect,
+        aspect_mode: cli.aspect_mode,
     };
 
     Ok((args, cli.command))
@@ -1359,10 +1398,35 @@ pub fn build_scene_config(args: &Args) -> Result<SceneConfig, String> {
         cfg.think = true;
     }
     if args.banner {
+        cfg.banner = true;
         cfg.shell_attach_mode = "banner".to_string();
+    } else if cfg.banner {
+        cfg.shell_attach_mode = "banner".to_string();
+    }
+    if args.reduce_motion {
+        cfg.reduce_motion = true;
+    }
+    if args.text_only {
+        cfg.text_only = true;
+    }
+    if cfg.reduce_motion
+        && cfg.animation.as_deref() == Some("dynamic")
+        && cfg.animation_type.as_deref() != Some("breathe")
+    {
+        cfg.animation_type = Some("breathe".to_string());
+        cfg.effect = "breathe".to_string();
     }
     if let Some(img) = &args.image {
         cfg.image = Some(img.to_string_lossy().to_string());
+    }
+    if let Some(accel) = &args.accel {
+        cfg.accel_mode = Some(accel.clone());
+    }
+    if let Some(aspect) = &args.aspect {
+        cfg.aspect = Some(aspect.clone());
+    }
+    if let Some(aspect_mode) = &args.aspect_mode {
+        cfg.aspect_mode = Some(aspect_mode.clone());
     }
 
     // Validate mascot taxonomy locomotion consistency

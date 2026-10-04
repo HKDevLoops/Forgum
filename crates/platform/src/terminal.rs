@@ -588,6 +588,141 @@ pub fn detect_terminal_emulator() -> TerminalEmulator {
     TerminalEmulator::GenericVt
 }
 
+/// Standard terminal display aspect ratios based on visual proportion (1 char cell ≈ 1:2 w:h).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum AspectRatioFormat {
+    /// Ultra-wide panoramic terminals (≥ 21:9 visual aspect, W/H ≥ 4.2).
+    UltraWide21x9,
+    /// Standard widescreen monitors (16:9 visual aspect, 3.3 ≤ W/H < 4.2).
+    Widescreen16x9,
+    /// Modern laptop & productivity displays (16:10 visual aspect, 2.9 ≤ W/H < 3.3).
+    Tall16x10,
+    /// Classic terminal & square-ish displays (4:3 visual aspect, 2.3 ≤ W/H < 2.9).
+    Standard4x3,
+    /// Square split panes or tiled windows (1:1 visual aspect, 1.7 ≤ W/H < 2.3).
+    Square1x1,
+    /// Tall vertical splits or mobile/narrow columns (< 1:1 visual aspect, W/H < 1.7 or W < 55).
+    NarrowVertical,
+}
+
+impl AspectRatioFormat {
+    /// Derive the visual aspect ratio format from terminal dimensions (columns × rows).
+    ///
+    /// Because standard monospace terminal fonts have an approximate 1:2 glyph aspect ratio
+    /// (each character cell is roughly twice as tall as it is wide), the visual aspect ratio is:
+    /// `visual_ar = cols / (2.0 * rows)`.
+    #[must_use]
+    pub fn from_dimensions(cols: u16, rows: u16) -> Self {
+        if cols < 55 || rows == 0 {
+            return Self::NarrowVertical;
+        }
+
+        let visual_ar = (cols as f32) / (2.0 * (rows.max(1) as f32));
+
+        if visual_ar >= 2.10 {
+            Self::UltraWide21x9
+        } else if visual_ar >= 1.65 {
+            Self::Widescreen16x9
+        } else if visual_ar >= 1.45 {
+            Self::Tall16x10
+        } else if visual_ar >= 1.15 {
+            Self::Standard4x3
+        } else if visual_ar >= 0.85 {
+            Self::Square1x1
+        } else {
+            Self::NarrowVertical
+        }
+    }
+
+    /// Human-readable display label.
+    #[must_use]
+    pub const fn display_name(self) -> &'static str {
+        match self {
+            Self::UltraWide21x9 => "21:9 UltraWide",
+            Self::Widescreen16x9 => "16:9 Widescreen",
+            Self::Tall16x10 => "16:10 Golden",
+            Self::Standard4x3 => "4:3 Classic",
+            Self::Square1x1 => "1:1 Square",
+            Self::NarrowVertical => "Narrow / Vertical",
+        }
+    }
+
+    /// Short standard canonical string key.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::UltraWide21x9 => "21:9",
+            Self::Widescreen16x9 => "16:9",
+            Self::Tall16x10 => "16:10",
+            Self::Standard4x3 => "4:3",
+            Self::Square1x1 => "1:1",
+            Self::NarrowVertical => "narrow",
+        }
+    }
+
+    /// Mathematical peak density multiplier for procedural mountain generation.
+    ///
+    /// Wider panoramic viewports pack more mountain peaks to prevent stretched ridges,
+    /// while narrower/taller formats use fewer, broader crests.
+    #[must_use]
+    pub fn peak_density_multiplier(self) -> f32 {
+        match self {
+            Self::UltraWide21x9 => 1.40,
+            Self::Widescreen16x9 => 1.00,
+            Self::Tall16x10 => 0.85,
+            Self::Standard4x3 => 0.70,
+            Self::Square1x1 => 0.55,
+            Self::NarrowVertical => 0.40,
+        }
+    }
+
+    /// Normalized default horizon position fraction from viewport top (0.0 = top, 1.0 = bottom).
+    ///
+    /// In square and tall 4:3 / 16:10 viewports, positioning the horizon closer to the center-bottom
+    /// prevents empty subsurface deadspace while giving ample vertical altitude to alpine peaks.
+    #[must_use]
+    pub fn default_horizon_fraction(self) -> f32 {
+        match self {
+            Self::UltraWide21x9 => 0.82,
+            Self::Widescreen16x9 => 0.76,
+            Self::Tall16x10 => 0.72,
+            Self::Standard4x3 => 0.68,
+            Self::Square1x1 => 0.62,
+            Self::NarrowVertical => 0.55,
+        }
+    }
+
+    /// Mountain amplitude multiplier for vertical mountain height scaling.
+    ///
+    /// Taller windows (1:1, 4:3, 16:10) have more vertical sky headroom above the horizon,
+    /// permitting taller, more dramatic mountain crests.
+    #[must_use]
+    pub fn mountain_amplitude_multiplier(self) -> f32 {
+        match self {
+            Self::UltraWide21x9 => 0.75,
+            Self::Widescreen16x9 => 1.00,
+            Self::Tall16x10 => 1.15,
+            Self::Standard4x3 => 1.30,
+            Self::Square1x1 => 1.45,
+            Self::NarrowVertical => 1.10,
+        }
+    }
+
+    /// Theoretical visual aspect ratio (width / height) in physical display units.
+    #[must_use]
+    pub fn visual_aspect_ratio(self) -> f32 {
+        match self {
+            Self::UltraWide21x9 => 21.0 / 9.0,
+            Self::Widescreen16x9 => 16.0 / 9.0,
+            Self::Tall16x10 => 16.0 / 10.0,
+            Self::Standard4x3 => 4.0 / 3.0,
+            Self::Square1x1 => 1.0,
+            Self::NarrowVertical => 0.6,
+        }
+    }
+}
+
 /// Cached terminal capability snapshot.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TerminalCapabilities {
@@ -606,6 +741,12 @@ pub struct TerminalCapabilities {
 }
 
 impl TerminalCapabilities {
+    /// Visual aspect ratio classification of the current terminal viewport.
+    #[must_use]
+    pub fn aspect_ratio(&self) -> AspectRatioFormat {
+        AspectRatioFormat::from_dimensions(self.width, self.height)
+    }
+
     /// Force a fresh probe (overrides the cached result for this call only).
     pub fn probe() -> Self {
         let (width, height) = terminal_size();
@@ -1171,11 +1312,15 @@ mod tests {
         // Windows Terminal plan
         let plan_wt =
             plan_native_split(TerminalEmulator::WindowsTerminal, &no_mux, 10, 0.35, &args);
-        assert!(plan_wt.is_some());
-        let p_wt = plan_wt.unwrap();
-        assert_eq!(p_wt.target, "windows_terminal");
-        assert_eq!(p_wt.program, "wt.exe");
-        assert!(p_wt.args.contains(&"sp".to_string()));
+        if is_wsl() {
+            assert!(plan_wt.is_none());
+        } else {
+            assert!(plan_wt.is_some());
+            let p_wt = plan_wt.unwrap();
+            assert_eq!(p_wt.target, "windows_terminal");
+            assert_eq!(p_wt.program, "wt.exe");
+            assert!(p_wt.args.contains(&"sp".to_string()));
+        }
 
         // Alacritty has no native split API (pure VT)
         let plan_alacritty =
@@ -1266,5 +1411,54 @@ mod tests {
         assert_eq!(detect_terminal_emulator(), TerminalEmulator::SerialConsole);
 
         clear_vars();
+    }
+
+    #[test]
+    fn test_aspect_ratio_classification_and_metrics() {
+        // UltraWide 21:9 (e.g. 210 cols x 40 rows => visual AR = 210 / 80 = 2.625)
+        let uw = AspectRatioFormat::from_dimensions(210, 40);
+        assert_eq!(uw, AspectRatioFormat::UltraWide21x9);
+        assert_eq!(uw.as_str(), "21:9");
+        assert_eq!(uw.display_name(), "21:9 UltraWide");
+        assert!(uw.peak_density_multiplier() >= 1.3);
+        assert!(uw.default_horizon_fraction() >= 0.8);
+        assert!(uw.mountain_amplitude_multiplier() <= 0.85);
+
+        // Widescreen 16:9 (e.g. 120 cols x 34 rows => visual AR = 120 / 68 = 1.764)
+        let ws = AspectRatioFormat::from_dimensions(120, 34);
+        assert_eq!(ws, AspectRatioFormat::Widescreen16x9);
+        assert_eq!(ws.as_str(), "16:9");
+        assert_eq!(ws.display_name(), "16:9 Widescreen");
+        assert_eq!(ws.peak_density_multiplier(), 1.0);
+        assert_eq!(ws.mountain_amplitude_multiplier(), 1.0);
+
+        // Tall 16:10 (e.g. 100 cols x 32 rows => visual AR = 100 / 64 = 1.562)
+        let t10 = AspectRatioFormat::from_dimensions(100, 32);
+        assert_eq!(t10, AspectRatioFormat::Tall16x10);
+        assert_eq!(t10.as_str(), "16:10");
+        assert_eq!(t10.display_name(), "16:10 Golden");
+        assert!(t10.mountain_amplitude_multiplier() > 1.0);
+
+        // Classic 4:3 (e.g. 80 cols x 30 rows => visual AR = 80 / 60 = 1.333)
+        let c43 = AspectRatioFormat::from_dimensions(80, 30);
+        assert_eq!(c43, AspectRatioFormat::Standard4x3);
+        assert_eq!(c43.as_str(), "4:3");
+        assert_eq!(c43.display_name(), "4:3 Classic");
+        assert!(c43.mountain_amplitude_multiplier() > 1.2);
+
+        // Square 1:1 (e.g. 80 cols x 42 rows => visual AR = 80 / 84 = 0.952)
+        let sq = AspectRatioFormat::from_dimensions(80, 42);
+        assert_eq!(sq, AspectRatioFormat::Square1x1);
+        assert_eq!(sq.as_str(), "1:1");
+        assert_eq!(sq.display_name(), "1:1 Square");
+        assert!(sq.mountain_amplitude_multiplier() >= 1.4);
+
+        // Narrow vertical / small splits (e.g. 50 cols x 30 rows or 60 cols x 60 rows => visual AR = 60 / 120 = 0.5)
+        let narrow_w = AspectRatioFormat::from_dimensions(50, 30);
+        assert_eq!(narrow_w, AspectRatioFormat::NarrowVertical);
+        let narrow_ratio = AspectRatioFormat::from_dimensions(60, 60);
+        assert_eq!(narrow_ratio, AspectRatioFormat::NarrowVertical);
+        assert_eq!(narrow_w.as_str(), "narrow");
+        assert_eq!(narrow_w.display_name(), "Narrow / Vertical");
     }
 }

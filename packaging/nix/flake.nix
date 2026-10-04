@@ -13,7 +13,7 @@
 
         forgum = pkgs.rustPlatform.buildRustPackage {
           pname = "forgum";
-          version = "0.0.3-beta";
+          version = "0.0.4-beta";
 
           src = ../..;
 

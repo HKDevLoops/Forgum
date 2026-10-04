@@ -1,5 +1,5 @@
 Name:           forgum
-Version:        0.0.3
+Version:        0.0.4
 Release:        1%{?dist}
 Summary:        Cross-platform ANSI animation mascot and shell integration engine
 
@@ -21,6 +21,8 @@ install -m 755 forgum %{buildroot}%{_bindir}/forgum
 %{_bindir}/forgum
 
 %changelog
+* Sun Oct 04 2026 harish2222 <harish2222@users.noreply.github.com> - 0.0.4-1
+- Release 0.0.4 beta: Moonwalk reverse locomotion, universal aspect ratios, and full CLI audit
 * Fri Oct 02 2026 harish2222 <harish2222@users.noreply.github.com> - 0.0.3-1
 - Release 0.0.3 beta: Biological coat polymorphism, 5 shell attach modes, responsive TUI
 * Sun Sep 28 2026 harish2222 <harish2222@users.noreply.github.com> - 0.0.2-1

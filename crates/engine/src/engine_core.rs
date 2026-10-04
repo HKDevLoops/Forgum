@@ -851,6 +851,20 @@ impl RenderState {
             let _ = self.out.flush();
         }
 
+        if dims_changed && self.is_banner {
+            let max_r = self.banner_rows.max(frame.rows);
+            for y in 0..max_r {
+                let _ = self.out.write_all(b"\x1b8");
+                if y > 0 {
+                    let _ = self.out.write_all(format!("\x1b[{}B", y).as_bytes());
+                }
+                let _ = self.out.write_all(b"\x1b[2K");
+            }
+            let _ = self.out.write_all(b"\x1b8");
+            self.banner_rows = frame.rows;
+            let _ = self.out.flush();
+        }
+
         if (frame.full_redraw || dims_changed) && !self.is_banner && !self.is_overlay {
             let _ = self.out.write_all(b"\x1b[2J\x1b[H");
         }
@@ -1207,7 +1221,18 @@ pub fn run_engine_banner(
         })?;
 
     // In banner mode, strictly no tty reads — wait for frames or signal
+    let mut cur_cols = cols;
+    let cur_rows = rows;
     while !shutdown.is_shutdown() {
+        let (w_u16, _) = forgum_platform::terminal_size();
+        let w = (w_u16.max(20)) as usize;
+        if w != cur_cols {
+            cur_cols = w;
+            let _ = control_tx.send(ControlMsg::Resize {
+                cols: w as u16,
+                rows: cur_rows as u16,
+            });
+        }
         std::thread::sleep(Duration::from_millis(50));
     }
 

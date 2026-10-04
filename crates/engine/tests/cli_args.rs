@@ -110,9 +110,12 @@ fn build_scene_text_only_does_not_change_config() {
         "--text-only",
     ]))
     .unwrap();
-    assert!(a.text_only);
     let cfg = build_scene_config(&a).unwrap();
-    assert_eq!(cfg, SceneConfig::default());
+    let expected = SceneConfig {
+        text_only: true,
+        ..SceneConfig::default()
+    };
+    assert_eq!(cfg, expected);
 }
 
 #[test]

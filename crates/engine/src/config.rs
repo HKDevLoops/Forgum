@@ -195,6 +195,13 @@ pub fn merge(base: SceneConfig, overlay: SceneConfig) -> SceneConfig {
         editor: overlay.editor.or(base.editor),
         random: overlay.random.or(base.random),
         contrast_mode: overlay.contrast_mode.or(base.contrast_mode),
+        accel_mode: overlay.accel_mode.or(base.accel_mode),
+        reduce_motion: overlay.reduce_motion || base.reduce_motion,
+        text_only: overlay.text_only || base.text_only,
+        banner: overlay.banner || base.banner,
+        aspect: overlay.aspect.or(base.aspect),
+        aspect_mode: overlay.aspect_mode.or(base.aspect_mode),
+        keybindings: overlay.keybindings.or(base.keybindings),
     }
 }
 

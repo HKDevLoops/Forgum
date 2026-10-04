@@ -145,7 +145,7 @@ if (Test-Path -LiteralPath $cargoBin) {
     $existingInstallations += [PSCustomObject]@{
         Manager = 'Cargo'
         Path = $cargoBin
-        UpdateCmd = 'cargo install --force forgum-cli'
+        UpdateCmd = 'cargo install --force forgum'
     }
 }
 
@@ -210,7 +210,7 @@ if (-not $Version) {
     } catch {}
 }
 if (-not $Version) {
-    $Version = "0.0.3-beta"
+    $Version = "0.0.4-beta"
 }
 
 $Tag = "v$Version"

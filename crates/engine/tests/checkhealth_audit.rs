@@ -6,10 +6,10 @@ fn checkhealth_report_structure_and_counts() {
 
     assert_eq!(
         report.sections.len(),
-        7,
-        "Report must contain 7 diagnostic sections"
+        8,
+        "Report must contain 8 diagnostic sections"
     );
-    assert!(report.total_count >= 7, "Total checks must be at least 7");
+    assert!(report.total_count >= 8, "Total checks must be at least 8");
     assert_eq!(
         report.ok_count + report.warn_count + report.error_count,
         report.total_count,
@@ -24,6 +24,7 @@ fn checkhealth_report_structure_and_counts() {
     assert!(section_names.contains(&"Shell Integration & Prompt Hooks"));
     assert!(section_names.contains(&"Daemon & IPC Subsystem"));
     assert!(section_names.contains(&"Structured Logging & Traceability"));
+    assert!(section_names.contains(&"Hardware Acceleration & GPU Compute Subsystem"));
 }
 
 #[test]

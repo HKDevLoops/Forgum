@@ -271,6 +271,36 @@ pub fn run_tui(
                             app.config_path = Some(target_path);
                             app.mark_saved();
                         }
+                        app::Action::SaveAndQuit => {
+                            let fmt = app.config_format();
+                            let text = app
+                                .config()
+                                .serialize_with_format(fmt)
+                                .map_err(|e| anyhow::anyhow!("serialize config: {e}"))?;
+
+                            let target_path: PathBuf = match &app.config_path {
+                                Some(p) => {
+                                    if let Some(parent) = p.parent() {
+                                        let _ = fs::create_dir_all(parent);
+                                        parent.join(format!("config.{}", fmt.extension()))
+                                    } else {
+                                        p.clone()
+                                    }
+                                }
+                                None => {
+                                    let default_dir = forgum_platform::paths::config_dir()
+                                        .unwrap_or_else(|_| PathBuf::from("."));
+                                    let _ = fs::create_dir_all(&default_dir);
+                                    default_dir.join(format!("config.{}", fmt.extension()))
+                                }
+                            };
+
+                            fs::write(&target_path, text)
+                                .with_context(|| format!("write {}", target_path.display()))?;
+
+                            shutdown_for_closure.store(true, std::sync::atomic::Ordering::Relaxed);
+                            return Ok(());
+                        }
                         app::Action::OpenEditor(target_path) => {
                             // Ensure target config file exists on disk
                             if !target_path.is_file() {

@@ -15,6 +15,8 @@ use serde::{Deserialize, Serialize};
 pub enum BaseAnim {
     #[default]
     Walk,
+    /// Legendary reverse-glide moonwalk with sliding hooves and backward drift.
+    Moonwalk,
     Breathe,
     Float,
     Particles,
@@ -41,6 +43,7 @@ pub enum BaseAnim {
 impl BaseAnim {
     pub fn parse(s: &str) -> Option<Self> {
         match s.trim().to_ascii_lowercase().as_str() {
+            "moonwalk" | "moon-walk" | "moon_walk" | "moon" | "moonwalking" => Some(Self::Moonwalk),
             "walk" | "walks" | "walking" => Some(Self::Walk),
             "breathe" | "breath" | "breathing" => Some(Self::Breathe),
             "float" | "floating" | "hover" | "levitate" => Some(Self::Float),
@@ -64,6 +67,7 @@ impl BaseAnim {
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::Walk => "walk",
+            Self::Moonwalk => "moonwalk",
             Self::Breathe => "breathe",
             Self::Float => "float",
             Self::Particles => "particles",

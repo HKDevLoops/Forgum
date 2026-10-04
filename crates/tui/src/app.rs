@@ -58,8 +58,10 @@ pub mod tailwind {
     pub const AMBER_400: Color = Color::Rgb(251, 191, 36);
 
     pub const PURPLE_400: Color = Color::Rgb(192, 132, 252);
+    pub const FUCHSIA_400: Color = Color::Rgb(232, 121, 249);
     pub const TEAL_400: Color = Color::Rgb(45, 212, 191);
     pub const AMBER_300: Color = Color::Rgb(252, 211, 77);
+    pub const EMERALD_300: Color = Color::Rgb(110, 231, 183);
 
     pub const ROSE_500: Color = Color::Rgb(244, 63, 94);
     pub const ROSE_400: Color = Color::Rgb(251, 113, 133);
@@ -165,6 +167,35 @@ impl Breakpoint {
     }
 }
 
+/// Active Vim editing mode in the TUI dashboard.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum VimMode {
+    #[default]
+    Normal,
+    Insert,
+    Search,
+}
+
+impl VimMode {
+    #[must_use]
+    pub const fn badge(self) -> &'static str {
+        match self {
+            Self::Normal => " NORMAL ",
+            Self::Insert => " INSERT ",
+            Self::Search => " SEARCH ",
+        }
+    }
+
+    #[must_use]
+    pub fn badge_colors(self) -> (Color, Color) {
+        match self {
+            Self::Normal => (tailwind::SLATE_800, tailwind::EMERALD_400),
+            Self::Insert => (tailwind::SLATE_800, tailwind::AMBER_400),
+            Self::Search => (tailwind::SLATE_800, tailwind::PURPLE_400),
+        }
+    }
+}
+
 /// A dropdown or cyclic selection backed by a fixed list of string options.
 #[derive(Debug, Clone)]
 pub struct Dropdown {
@@ -218,6 +249,45 @@ pub const CONTRAST_OPTIONS: &[(&str, &str, ContrastMode)] = &[
 pub const CONTRAST_MODE_OPTIONS: &[&str] =
     &["standard", "acrylic_glass", "high_contrast", "vibrant"];
 
+/// Dropdown option choices for Hardware Acceleration.
+pub const ACCEL_MODE_OPTIONS: &[&str] = &["auto", "dedicated", "integrated", "npu", "cpu"];
+
+/// Helpful display tuples for Hardware Acceleration: (key, DisplayName, Description, Badge).
+pub const ACCEL_OPTIONS: &[(&str, &str, &str, &str)] = &[
+    (
+        "auto",
+        "Auto",
+        "Automatically prefers Dedicated GPU, then Integrated GPU, then NPU, with CPU fallback.",
+        "✨ AUTO SELECT",
+    ),
+    (
+        "dedicated",
+        "Dedicated",
+        "High-performance discrete GPU cores and VRAM (NVIDIA / AMD Radeon RX).",
+        "⚡ DEDICATED GPU",
+    ),
+    (
+        "integrated",
+        "Integrated",
+        "Internal graphics / APU (AMD Radeon Graphics, Intel Iris/UHD, Apple M-series).",
+        "🔋 INTEGRATED APU",
+    ),
+    (
+        "npu",
+        "NPU",
+        "Hardware Neural Processing Unit (DirectML / CoreML / AI Boost / Ryzen AI).",
+        "🧠 NEURAL NPU",
+    ),
+    ("cpu", "Cpu", "Pure CPU computing.", "💻 CPU COMPUTE"),
+];
+
+/// Dropdown option choices for Aspect Ratio presets.
+pub const ASPECT_RATIO_OPTIONS: &[&str] =
+    &["auto", "21:9", "16:9", "16:10", "4:3", "1:1", "narrow"];
+
+/// Dropdown option choices for Aspect Ratio adaptation modes.
+pub const ASPECT_MODE_OPTIONS: &[&str] = &["preset", "dynamic", "auto"];
+
 /// Dropdown option choices for Environment.
 pub const ENVIRONMENT_OPTIONS: &[&str] = &[
     "pasture",
@@ -264,6 +334,7 @@ pub const MOUNTAIN_OPTIONS: &[&str] = &[
 /// Dropdown option choices for AnimationType.
 pub const ANIMATION_TYPE_OPTIONS: &[&str] = &[
     "animal_natural",
+    "moonwalk",
     "walk",
     "breathe",
     "float",
@@ -283,6 +354,42 @@ pub const SHELL_ATTACH_OPTIONS: &[&str] = &["startup", "prompt", "clear", "split
 pub const SPLIT_MODE_OPTIONS: &[&str] = &[
     "seamless", "auto", "decstbm", "native", "precmd", "disabled",
 ];
+
+/// Curated catalog of interactive feature discovery suggestions and tips for Forgum.
+pub const FEATURE_SUGGESTIONS: &[&str] = &[
+    "Mascot Polymorphism: Select 'natural' color mode in Tab 3 or Tab 5 to unlock authentic biological coat morphs (e.g. 6 cattle breeds, 3 tiger phenotypes)!",
+    "Aquatic Kinematics: Whales, dolphins, and octopuses naturally swim and emit bubble particles submerged beneath the ocean line instead of walking!",
+    "Instant Search: In Normal mode, press '/' to instantly fuzzy-search and jump to any of the 132 animal mascots across all 8 biomes!",
+    "Vim Cheatsheet: Press '?' anytime to toggle the interactive Vim modal cheatsheet overlay (gg/G, gt/gT, Ctrl+d/u half-page, ZZ save&quit)!",
+    "Fastfetch Banner Mode: Set 'shell_attach_mode = startup' in Config for an instant terminal welcome banner on shell launch with 0 recurring prompt latency!",
+    "DECSTBM Hardware Scroll Split: Set 'shell_attach_mode = split' to reserve a hardware top margin so terminal commands scroll cleanly underneath the mascot canvas!",
+    "Vulkan & Metal Acceleration: Forgum offloads harmonic mountain generation and silhouette occlusion to GPU compute with a strict <100MB RAM ceiling!",
+    "Universal Randomization: Press 'r' in Tab 1-3, or set 'random = all' in Config to randomize mascot, scenery, effects, and thought fortunes on every launch!",
+    "Acrylic & Glass Transparency: Using Windows Terminal Acrylic or Alacritty opacity? Switch 'contrast_mode' to 'acrylic_glass' for vivid boosted contrast!",
+    "Accessibility & Reduced Motion: Toggle 'reduce_motion = true' in Tab 5 to disable rapid kinetic motions while keeping smooth ambient color fades!",
+    "Text-Only Fortune Output: Run 'forgum fortune' or set 'text_only = true' in Tab 5 when you want pure philosophical quotes without ASCII cow art!",
+    "ASCII Mascot Battle Arena: Run 'forgum battle --name1 Tux --name2 Dragon' for a kinetic ASCII jousting battle or rock-paper-scissors terminal arena!",
+    "Command Speech Wrapper: Run 'forgum say -- cargo test' or 'forgum timer -- sleep 2' to wrap command outputs and execution durations in animated speech bubbles!",
+    "Image to ASCII Mascot: Convert any PNG, JPG, or WEBP image to custom ASCII art using 'forgum image <file>' or configure the 'image' field in Config!",
+    "Harmonic Alpine Mountains: Scenery uses sinusoidal harmonic superposition for realistic geological crests and erosion valleys. Explore 15 biomes in Tab 2!",
+    "Responsive Narrow Compaction: Dragging your window narrow? Forgum collapses into compact views and supports horizontal scrolling with 'h'/'l' and arrows!",
+    "Desktop Folder & Editor Launch: In Tab 5, press 'o' to open your config folder in Windows Explorer / Finder, or set 'editor' to launch Neovim/Helix/VSCode!",
+    "Health Diagnostics & Doctor: Run 'forgum checkhealth' to diagnose your terminal, GPU shaders, and shell hooks, or 'forgum logs -w' to stream live telemetry!",
+    "Custom TrueColor Gradients: Set 'palette' to comma-separated hex codes (e.g. '#ff007f,#00f0ff,#ffe600') for custom 24-bit TrueColor waveform gradients!",
+    "Multi-Format Config Migration: Forgum seamlessly supports JSON, YAML, and TOML. Cycle 'config_format' in Tab 5 or run 'forgum config --migrate toml'!",
+    "Multi-Channel Packaging: Update cleanly across Scoop, Winget, Chocolatey, Homebrew, Arch AUR, Cargo, and native installers with zero vendor lock-in!",
+    "15-Shell Automated Setup: Forgum generates isolated, idempotent prompt hooks for Bash, Zsh, Fish, Pwsh, PowerShell, Nushell, Elvish, Xonsh, and more in Tab 4!",
+    "Universal Aspect Ratios: UltraWide 21:9, 16:9, 16:10, 4:3, 1:1, and Narrow. Configure 'aspect' in Tab 5 or pass '--aspect 21:9' for tailored mountain peaks!",
+];
+
+#[must_use]
+pub fn get_random_suggestion_index() -> usize {
+    let nanos = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.subsec_nanos() as usize)
+        .unwrap_or(0);
+    nanos % FEATURE_SUGGESTIONS.len()
+}
 
 /// Available Scenery Archetypes.
 pub const SCENERY_OPTIONS: &[(&str, &str)] = &[
@@ -399,8 +506,12 @@ pub const ROAD_OPTIONS: &[(&str, &str)] = &[
 /// Available Kinematics Effects.
 pub const EFFECT_OPTIONS: &[(&str, &str)] = &[
     (
+        "moonwalk",
+        "Legendary reverse-glide moonwalk with sliding hooves and smooth backward drift",
+    ),
+    (
         "walk",
-        "Dynamic 4-phase quadruped leg gait cycle moving with forward cadence",
+        "Dynamic 4-phase quadruped leg gait cycle moving with forward cadence (alias for moonwalk)",
     ),
     (
         "breathe",
@@ -635,6 +746,7 @@ pub struct ShellInfo {
 pub enum Action {
     Quit,
     Save,
+    SaveAndQuit,
     OpenEditor(PathBuf),
     OpenSystemEditor(PathBuf),
     InstallTerminalEditor,
@@ -671,10 +783,20 @@ pub enum ConfigField {
     ConfigFormat = 25,
     Random = 26,
     ContrastMode = 27,
+    HardwareAccel = 28,
+    ReduceMotion = 29,
+    TextOnly = 30,
+    Banner = 31,
+    Aspect = 32,
+    AspectMode = 33,
 }
 
 impl ConfigField {
-    pub const ALL: [ConfigField; 28] = [
+    pub const ACCEL_MODE: ConfigField = ConfigField::HardwareAccel;
+    #[allow(non_upper_case_globals)]
+    pub const AccelMode: ConfigField = ConfigField::HardwareAccel;
+
+    pub const ALL: [ConfigField; 34] = [
         ConfigField::Duration,
         ConfigField::Fps,
         ConfigField::Text,
@@ -703,6 +825,12 @@ impl ConfigField {
         ConfigField::ConfigFormat,
         ConfigField::Random,
         ConfigField::ContrastMode,
+        ConfigField::HardwareAccel,
+        ConfigField::ReduceMotion,
+        ConfigField::TextOnly,
+        ConfigField::Banner,
+        ConfigField::Aspect,
+        ConfigField::AspectMode,
     ];
 
     pub fn label(self) -> &'static str {
@@ -735,6 +863,12 @@ impl ConfigField {
             ConfigField::ConfigFormat => "config_format",
             ConfigField::Random => "random",
             ConfigField::ContrastMode => "contrast_mode",
+            ConfigField::HardwareAccel => "accel_mode",
+            ConfigField::ReduceMotion => "reduce_motion",
+            ConfigField::TextOnly => "text_only",
+            ConfigField::Banner => "banner",
+            ConfigField::Aspect => "aspect",
+            ConfigField::AspectMode => "aspect_mode",
         }
     }
 
@@ -749,14 +883,16 @@ impl ConfigField {
             ConfigField::Animation
             | ConfigField::AnimationType
             | ConfigField::Duration
-            | ConfigField::Fps => ("Motion", tailwind::AMBER_400),
+            | ConfigField::Fps
+            | ConfigField::ReduceMotion => ("Motion", tailwind::AMBER_400),
             ConfigField::Environment
             | ConfigField::Road
             | ConfigField::Mountain
             | ConfigField::Random => ("Scenery", tailwind::EMERALD_400),
-            ConfigField::Text | ConfigField::Think | ConfigField::ThoughtInterval => {
-                ("Speech", tailwind::SKY_400)
-            }
+            ConfigField::Text
+            | ConfigField::Think
+            | ConfigField::ThoughtInterval
+            | ConfigField::TextOnly => ("Speech", tailwind::SKY_400),
             ConfigField::ShellAttachMode
             | ConfigField::DefaultShell
             | ConfigField::AutoRenderOnPrompt
@@ -765,8 +901,12 @@ impl ConfigField {
             | ConfigField::SplitScroll
             | ConfigField::SplitRatio
             | ConfigField::ReserveRows
-            | ConfigField::ReserveCols => ("Shell", tailwind::TEAL_400),
-            ConfigField::Editor | ConfigField::ConfigFormat => ("System", tailwind::ROSE_400),
+            | ConfigField::ReserveCols
+            | ConfigField::Banner => ("Shell", tailwind::TEAL_400),
+            ConfigField::Editor | ConfigField::ConfigFormat | ConfigField::HardwareAccel => {
+                ("System", tailwind::ROSE_400)
+            }
+            ConfigField::Aspect | ConfigField::AspectMode => ("Display", tailwind::INDIGO_400),
         }
     }
 
@@ -785,7 +925,7 @@ impl ConfigField {
             ConfigField::Road => "Ground terrain surface style: dirt, cobblestone, magma, ice, seabed, sidewalk, roof, grid, crypt, savanna, mud, tracks, checkerboard, none",
             ConfigField::Mountain => "Horizon background silhouette: hills, peaks, volcano, iceberg, skyline, seamount, plateau, crater, gothic, castle, garden, none",
             ConfigField::Animation => "Animation mode: dynamic (continuous simulation frames) or static (frozen single frame)",
-            ConfigField::AnimationType => "Kinematic animation driver: animal_natural, walk, breathe, float, fly, talk, sway, pulse, glitch, particles, dissolve",
+            ConfigField::AnimationType => "Kinematic animation driver: animal_natural, moonwalk, walk, breathe, float, fly, talk, sway, pulse, glitch, particles, dissolve",
             ConfigField::Background => "Daemon non-blocking prompt overlay mode (true/false)",
             ConfigField::AutoRenderOnPrompt => "Trigger mascot automatically on shell prompt enter",
             ConfigField::ShellAttachMode => "Universal execution mode: startup (launch once, 0 prompt cost), prompt (every command), clear (after clear/cls), split (DECSTBM margin), pane (dedicated pane)",
@@ -800,6 +940,12 @@ impl ConfigField {
             ConfigField::ConfigFormat => "File serialization syntax: JSON, YAML, or TOML",
             ConfigField::Random => "Universally randomize mascot, scenery, fx, and thoughts on startup",
             ConfigField::ContrastMode => "Background contrast profile: standard, acrylic_glass (transparency), high_contrast, vibrant",
+            ConfigField::HardwareAccel => "Hardware acceleration engine: auto (preferred GPU with CPU fallback), dedicated (discrete GPU), integrated (APU/iGPU), cpu (pure CPU)",
+            ConfigField::ReduceMotion => "Accessibility mode: disable kinetic motion & heavy particles (gentle fades only)",
+            ConfigField::TextOnly => "Print speech bubble text directly without ASCII cow mascot art",
+            ConfigField::Banner => "Inline fastfetch-style banner output without switching alternate screen",
+            ConfigField::Aspect => "Target aspect ratio preset: auto (detect from terminal), 21:9 (ultrawide), 16:9 (widescreen), 16:10 (tall), 4:3 (classic), 1:1 (square), narrow (split)",
+            ConfigField::AspectMode => "Aspect ratio adaptation strategy: preset (lock to fixed aspect math), dynamic (recalculate on resize), auto (context-aware)",
         }
     }
 
@@ -855,6 +1001,9 @@ pub struct ConfigApp {
     pub split_mode_dropdown: Dropdown,
     pub editor_dropdown: Dropdown,
     pub contrast_mode_dropdown: Dropdown,
+    pub accel_mode_dropdown: Dropdown,
+    pub aspect_dropdown: Dropdown,
+    pub aspect_mode_dropdown: Dropdown,
 
     // Shared state
     pub saved: bool,
@@ -868,6 +1017,16 @@ pub struct ConfigApp {
     pub last_terminal_size: (u16, u16),
     /// Horizontal scroll offset (in columns) across wide lists, tables, and config panels.
     pub h_scroll: usize,
+    /// Active Vim editing mode (Normal, Insert, Search).
+    pub vim_mode: VimMode,
+    /// Pending multi-key Vim sequence prefix (e.g. 'g' for gg/gt/gT, 'Z' for ZZ/ZQ).
+    pub pending_vim_prefix: Option<char>,
+    /// Search query string when in Vim search mode ('/').
+    pub mascot_search_query: String,
+    /// Whether the interactive Vim control cheatsheet overlay is visible ('?').
+    pub show_vim_help: bool,
+    /// Active feature discovery suggestion index.
+    pub suggestion_idx: usize,
 }
 
 /// Detect the active host terminal name from environment markers.
@@ -968,6 +1127,12 @@ impl ConfigApp {
             .iter()
             .position(|(c, _, _)| c.eq_ignore_ascii_case(contrast_mode_str))
             .unwrap_or(0);
+        let accel_mode_str = config.accel_mode.as_deref().unwrap_or("auto");
+        let accel_mode_dropdown = Dropdown::new(ACCEL_MODE_OPTIONS.to_vec(), accel_mode_str);
+        let aspect_str = config.aspect.as_deref().unwrap_or("auto");
+        let aspect_dropdown = Dropdown::new(ASPECT_RATIO_OPTIONS.to_vec(), aspect_str);
+        let aspect_mode_str = config.aspect_mode.as_deref().unwrap_or("auto");
+        let aspect_mode_dropdown = Dropdown::new(ASPECT_MODE_OPTIONS.to_vec(), aspect_mode_str);
 
         // Find initial mascot indices
         let mut init_cat = 0;
@@ -1036,6 +1201,8 @@ impl ConfigApp {
             initial_log.push("▶ Setup Wizard active. Press 'i' to install shell integration, 'l' for license/terms.".to_string());
         }
 
+        let init_sug_idx = get_random_suggestion_index();
+
         let mut app = Self {
             current_tab: initial_tab.unwrap_or(Tab::Mascots),
             config,
@@ -1071,20 +1238,48 @@ impl ConfigApp {
             split_mode_dropdown,
             editor_dropdown,
             contrast_mode_dropdown,
+            accel_mode_dropdown,
+            aspect_dropdown,
+            aspect_mode_dropdown,
             saved: false,
-            status_message: "Welcome to Forgum! Use <Tab> to navigate, 'i' to install shell hooks."
-                .into(),
+            status_message: format!(
+                "💡 Pro-Tip: {} (<T> next tip | <?> help)",
+                FEATURE_SUGGESTIONS[init_sug_idx]
+            ),
             animation_time: 0.0,
             cow_cache: HashMap::new(),
             show_editor_modal: false,
             original_edit_value: String::new(),
             last_terminal_size: (0, 0),
             h_scroll: 0,
+            vim_mode: VimMode::Normal,
+            pending_vim_prefix: None,
+            mascot_search_query: String::new(),
+            show_vim_help: false,
+            suggestion_idx: init_sug_idx,
         };
 
         // Cache the initial cow
         app.ensure_cow_cached(&app.config.cow.clone());
         app
+    }
+
+    /// Return the currently active feature suggestion tip.
+    #[must_use]
+    pub fn current_suggestion(&self) -> &'static str {
+        FEATURE_SUGGESTIONS[self.suggestion_idx % FEATURE_SUGGESTIONS.len()]
+    }
+
+    /// Cycle to the next feature suggestion and return it.
+    pub fn next_suggestion(&mut self) -> &'static str {
+        self.suggestion_idx = (self.suggestion_idx + 1) % FEATURE_SUGGESTIONS.len();
+        FEATURE_SUGGESTIONS[self.suggestion_idx]
+    }
+
+    /// Display a fresh random feature discovery suggestion in the status line.
+    pub fn show_random_suggestion(&mut self) {
+        let tip = self.next_suggestion();
+        self.status_message = format!("💡 Pro-Tip: {} (<T> next tip)", tip);
     }
 
     /// Detect installed shells and current configuration hook / completion status.
@@ -1254,6 +1449,12 @@ impl ConfigApp {
             .iter()
             .position(|(c, _, _)| c.eq_ignore_ascii_case(contrast_mode_str))
             .unwrap_or(0);
+        let accel_mode_str = self.config.accel_mode.as_deref().unwrap_or("auto");
+        self.accel_mode_dropdown = Dropdown::new(ACCEL_MODE_OPTIONS.to_vec(), accel_mode_str);
+        let aspect_str = self.config.aspect.as_deref().unwrap_or("auto");
+        self.aspect_dropdown = Dropdown::new(ASPECT_RATIO_OPTIONS.to_vec(), aspect_str);
+        let aspect_mode_str = self.config.aspect_mode.as_deref().unwrap_or("auto");
+        self.aspect_mode_dropdown = Dropdown::new(ASPECT_MODE_OPTIONS.to_vec(), aspect_mode_str);
         self.cow_cache.clear();
         self.ensure_cow_cached(&self.config.cow.clone());
     }
@@ -1281,6 +1482,56 @@ impl ConfigApp {
             Dropdown::new(CONTRAST_MODE_OPTIONS.to_vec(), contrast_mode_str);
     }
 
+    /// Return active hardware acceleration mode key ("auto", "dedicated", "integrated", "cpu").
+    #[must_use]
+    pub fn active_accel_mode(&self) -> &str {
+        self.config.accel_mode.as_deref().unwrap_or("auto")
+    }
+
+    /// Return active hardware acceleration display label ("Auto", "Dedicated", "Integrated", "NPU", "Cpu").
+    #[must_use]
+    pub fn active_accel_display(&self) -> &'static str {
+        match self.active_accel_mode().to_ascii_lowercase().as_str() {
+            "dedicated" => "Dedicated",
+            "integrated" => "Integrated",
+            "npu" => "NPU",
+            "cpu" => "Cpu",
+            _ => "Auto",
+        }
+    }
+
+    /// Return active hardware acceleration badge.
+    #[must_use]
+    pub fn active_accel_badge(&self) -> &'static str {
+        match self.active_accel_mode().to_ascii_lowercase().as_str() {
+            "dedicated" => "⚡ DEDICATED GPU",
+            "integrated" => "🔋 INTEGRATED APU",
+            "npu" => "🧠 NEURAL NPU",
+            "cpu" => "💻 CPU COMPUTE",
+            _ => "✨ AUTO SELECT",
+        }
+    }
+
+    /// Return active hardware acceleration description.
+    #[must_use]
+    pub fn active_accel_desc(&self) -> &'static str {
+        match self.active_accel_mode().to_ascii_lowercase().as_str() {
+            "dedicated" => "High-performance discrete GPU cores and VRAM (NVIDIA / AMD Radeon RX).",
+            "integrated" => {
+                "Internal graphics / APU (AMD Radeon Graphics, Intel Iris/UHD, Apple M-series)."
+            }
+            "npu" => "Hardware Neural Processing Unit (DirectML / CoreML / AI Boost / Ryzen AI).",
+            "cpu" => "Pure CPU computing.",
+            _ => "Automatically prefers Dedicated GPU, then Integrated GPU, then NPU, with CPU fallback.",
+        }
+    }
+
+    /// Sync hardware acceleration dropdown from config.
+    pub fn sync_accel_from_config(&mut self) {
+        let accel_mode_str = self.config.accel_mode.as_deref().unwrap_or("auto");
+        self.accel_mode_dropdown = Dropdown::new(ACCEL_MODE_OPTIONS.to_vec(), accel_mode_str);
+    }
+
     /// Open the interactive modal requesting permission to open with system editor or install terminal editor.
     pub fn open_editor_modal(&mut self) {
         self.show_editor_modal = true;
@@ -1305,6 +1556,44 @@ impl ConfigApp {
             let default_dir =
                 forgum_platform::paths::config_dir().unwrap_or_else(|_| PathBuf::from("."));
             default_dir.join(format!("config.{}", self.config_format().extension()))
+        }
+    }
+
+    /// Match a keyboard event against a user-configured keybinding string (e.g. "q", "ZZ", "Ctrl+d", "Esc").
+    fn matches_binding(key: &crossterm::event::KeyEvent, binding_str: &str) -> bool {
+        let s = binding_str.trim();
+        if s.is_empty() {
+            return false;
+        }
+        let lower = s.to_ascii_lowercase();
+        if lower.starts_with("ctrl+") || lower.starts_with("c-") {
+            let ch = lower.chars().last().unwrap_or(' ');
+            key.modifiers.contains(KeyModifiers::CONTROL) && key.code == KeyCode::Char(ch)
+        } else if lower.starts_with("alt+") || lower.starts_with("m-") {
+            let ch = lower.chars().last().unwrap_or(' ');
+            key.modifiers.contains(KeyModifiers::ALT) && key.code == KeyCode::Char(ch)
+        } else if s.eq_ignore_ascii_case("esc") || s.eq_ignore_ascii_case("escape") {
+            key.code == KeyCode::Esc
+        } else if s.eq_ignore_ascii_case("enter") || s.eq_ignore_ascii_case("return") {
+            key.code == KeyCode::Enter
+        } else if s.eq_ignore_ascii_case("tab") {
+            key.code == KeyCode::Tab
+        } else if s.eq_ignore_ascii_case("backtab") {
+            key.code == KeyCode::BackTab
+        } else if s.len() == 1 {
+            let c = s.chars().next().unwrap();
+            if c.is_uppercase() {
+                key.code == KeyCode::Char(c)
+                    && !key.modifiers.contains(KeyModifiers::CONTROL)
+                    && !key.modifiers.contains(KeyModifiers::ALT)
+            } else {
+                (key.code == KeyCode::Char(c.to_ascii_lowercase())
+                    || key.code == KeyCode::Char(c.to_ascii_uppercase()))
+                    && !key.modifiers.contains(KeyModifiers::CONTROL)
+                    && !key.modifiers.contains(KeyModifiers::ALT)
+            }
+        } else {
+            false
         }
     }
 
@@ -1338,9 +1627,215 @@ impl ConfigApp {
                     }
                 }
 
+                // If interactive Vim search mode is active ('/')
+                if self.vim_mode == VimMode::Search {
+                    match key.code {
+                        KeyCode::Esc => {
+                            self.vim_mode = VimMode::Normal;
+                            self.mascot_search_query.clear();
+                            self.status_message = "Search cancelled.".to_string();
+                            return Ok(None);
+                        }
+                        KeyCode::Char('[') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                            self.vim_mode = VimMode::Normal;
+                            self.mascot_search_query.clear();
+                            self.status_message = "Search cancelled.".to_string();
+                            return Ok(None);
+                        }
+                        KeyCode::Enter => {
+                            self.vim_mode = VimMode::Normal;
+                            self.status_message = format!("Selected: {}", self.config.cow);
+                            return Ok(None);
+                        }
+                        KeyCode::Backspace => {
+                            self.mascot_search_query.pop();
+                            self.execute_mascot_search();
+                            return Ok(None);
+                        }
+                        KeyCode::Char(c) => {
+                            self.mascot_search_query.push(c);
+                            self.execute_mascot_search();
+                            return Ok(None);
+                        }
+                        _ => return Ok(None),
+                    }
+                }
+
+                // If Vim cheatsheet modal is active ('?')
+                if self.show_vim_help {
+                    match key.code {
+                        KeyCode::Esc | KeyCode::Char('?') | KeyCode::Char('q') => {
+                            self.show_vim_help = false;
+                            return Ok(None);
+                        }
+                        _ => return Ok(None),
+                    }
+                }
+
                 // If currently editing text field on Config tab
                 if self.editing_config {
                     return self.handle_config_edit_key(key);
+                }
+
+                // Custom user-configured keybindings from config.toml/config.json ([keybindings])
+                if let Some(ref kb) = self.config.keybindings {
+                    if let Some(ref k) = kb.quit {
+                        if Self::matches_binding(&key, k) {
+                            return Ok(Some(Action::Quit));
+                        }
+                    }
+                    if let Some(ref k) = kb.save_and_quit {
+                        if Self::matches_binding(&key, k) {
+                            return Ok(Some(Action::SaveAndQuit));
+                        }
+                    }
+                    if let Some(ref k) = kb.help {
+                        if Self::matches_binding(&key, k) {
+                            self.show_vim_help = !self.show_vim_help;
+                            return Ok(None);
+                        }
+                    }
+                    if let Some(ref k) = kb.search {
+                        if Self::matches_binding(&key, k) && self.current_tab == Tab::Mascots {
+                            self.vim_mode = VimMode::Search;
+                            self.mascot_search_query.clear();
+                            self.status_message =
+                                "/ (type mascot name, Enter: confirm, Esc: cancel)".into();
+                            return Ok(None);
+                        }
+                    }
+                    if let Some(ref k) = kb.jump_top {
+                        if Self::matches_binding(&key, k) {
+                            self.vim_jump_to_top();
+                            return Ok(None);
+                        }
+                    }
+                    if let Some(ref k) = kb.jump_bottom {
+                        if Self::matches_binding(&key, k) {
+                            self.vim_jump_to_bottom();
+                            return Ok(None);
+                        }
+                    }
+                    if let Some(ref k) = kb.scroll_down {
+                        if Self::matches_binding(&key, k) {
+                            self.vim_half_page_scroll(true);
+                            return Ok(None);
+                        }
+                    }
+                    if let Some(ref k) = kb.scroll_up {
+                        if Self::matches_binding(&key, k) {
+                            self.vim_half_page_scroll(false);
+                            return Ok(None);
+                        }
+                    }
+                    if let Some(ref k) = kb.next_tab {
+                        if Self::matches_binding(&key, k) {
+                            let next = (self.current_tab as usize + 1) % Tab::ALL.len();
+                            self.current_tab = Tab::ALL[next];
+                            self.h_scroll = 0;
+                            self.status_message =
+                                format!("Switched to {}", self.current_tab.mode_label());
+                            return Ok(None);
+                        }
+                    }
+                    if let Some(ref k) = kb.prev_tab {
+                        if Self::matches_binding(&key, k) {
+                            let prev = if self.current_tab as usize == 0 {
+                                Tab::ALL.len() - 1
+                            } else {
+                                self.current_tab as usize - 1
+                            };
+                            self.current_tab = Tab::ALL[prev];
+                            self.h_scroll = 0;
+                            self.status_message =
+                                format!("Switched to {}", self.current_tab.mode_label());
+                            return Ok(None);
+                        }
+                    }
+                }
+
+                // Multi-key Vim sequence prefix handling ('g' prefix or 'Z' prefix)
+                if let Some(prefix) = self.pending_vim_prefix.take() {
+                    match (prefix, key.code) {
+                        ('g', KeyCode::Char('g')) => {
+                            self.vim_jump_to_top();
+                            return Ok(None);
+                        }
+                        ('g', KeyCode::Char('t')) => {
+                            let next = (self.current_tab as usize + 1) % Tab::ALL.len();
+                            self.current_tab = Tab::ALL[next];
+                            self.h_scroll = 0;
+                            self.status_message =
+                                format!("Switched to {} [gt]", self.current_tab.mode_label());
+                            return Ok(None);
+                        }
+                        ('g', KeyCode::Char('T')) => {
+                            let prev = if self.current_tab as usize == 0 {
+                                Tab::ALL.len() - 1
+                            } else {
+                                self.current_tab as usize - 1
+                            };
+                            self.current_tab = Tab::ALL[prev];
+                            self.h_scroll = 0;
+                            self.status_message =
+                                format!("Switched to {} [gT]", self.current_tab.mode_label());
+                            return Ok(None);
+                        }
+                        ('Z', KeyCode::Char('Z')) => {
+                            return Ok(Some(Action::SaveAndQuit));
+                        }
+                        ('Z', KeyCode::Char('Q')) => {
+                            return Ok(Some(Action::Quit));
+                        }
+                        _ => {
+                            // Prefix cancelled, fall through to process key.code normally
+                        }
+                    }
+                }
+
+                // Vim multi-key prefix triggers
+                if key.code == KeyCode::Char('g') && key.modifiers.is_empty() {
+                    self.pending_vim_prefix = Some('g');
+                    self.status_message = "g- [g: top | t: next tab | T: prev tab]".to_string();
+                    return Ok(None);
+                }
+                if key.code == KeyCode::Char('Z') {
+                    self.pending_vim_prefix = Some('Z');
+                    self.status_message =
+                        "Z- [Z: save & quit | Q: quit without saving]".to_string();
+                    return Ok(None);
+                }
+
+                // Global Vim single-key commands
+                if key.code == KeyCode::Char('G')
+                    && !key.modifiers.contains(KeyModifiers::CONTROL)
+                    && !key.modifiers.contains(KeyModifiers::ALT)
+                {
+                    self.vim_jump_to_bottom();
+                    return Ok(None);
+                }
+                if key.code == KeyCode::Char('d') && key.modifiers.contains(KeyModifiers::CONTROL) {
+                    self.vim_half_page_scroll(true);
+                    return Ok(None);
+                }
+                if key.code == KeyCode::Char('u') && key.modifiers.contains(KeyModifiers::CONTROL) {
+                    self.vim_half_page_scroll(false);
+                    return Ok(None);
+                }
+                if key.code == KeyCode::Char('?') {
+                    self.show_vim_help = !self.show_vim_help;
+                    return Ok(None);
+                }
+                if key.code == KeyCode::Char('T') || key.code == KeyCode::F(1) {
+                    self.show_random_suggestion();
+                    return Ok(None);
+                }
+                if key.code == KeyCode::Char('/') && self.current_tab == Tab::Mascots {
+                    self.vim_mode = VimMode::Search;
+                    self.mascot_search_query.clear();
+                    self.status_message =
+                        "/ (type mascot name, Enter: confirm, Esc: cancel)".into();
+                    return Ok(None);
                 }
 
                 // Global keybindings
@@ -1436,6 +1931,10 @@ impl ConfigApp {
                     Tab::Installer => self.handle_installer_key(key),
                     Tab::Config => self.handle_config_key(key),
                 }
+            }
+            Event::Resize(width, height) => {
+                self.last_terminal_size = (width, height);
+                Ok(None)
             }
             _ => Ok(None),
         }
@@ -1910,6 +2409,9 @@ impl ConfigApp {
                 self.apply_selected_mascot();
                 self.sync_mascot_scenery();
             }
+            KeyCode::Char('t') => {
+                self.show_random_suggestion();
+            }
             _ => {}
         }
         Ok(None)
@@ -1994,6 +2496,256 @@ impl ConfigApp {
         self.sync_mascot_scenery();
     }
 
+    /// Vim 'gg': Jump directly to the top item of the active tab.
+    pub fn vim_jump_to_top(&mut self) {
+        match self.current_tab {
+            Tab::Mascots => {
+                self.mascot_item_idx = 0;
+                self.apply_selected_mascot();
+            }
+            Tab::Scenery => {
+                if self.scenery_sub_focus == 0 {
+                    self.scenery_idx = 0;
+                    let env = SCENERY_OPTIONS[0].0.to_string();
+                    self.config.environment = Some(env.clone());
+                    self.environment_dropdown = Dropdown::new(ENVIRONMENT_OPTIONS.to_vec(), &env);
+                } else {
+                    self.road_idx = 0;
+                    let rd = ROAD_OPTIONS[0].0.to_string();
+                    self.config.road = Some(rd.clone());
+                    self.road_dropdown = Dropdown::new(ROAD_STYLE_OPTIONS.to_vec(), &rd);
+                }
+                self.saved = false;
+            }
+            Tab::Effects => {
+                if self.fx_sub_focus == 0 {
+                    self.effect_idx = 0;
+                    let eff = EFFECT_OPTIONS[0].0.to_string();
+                    self.config.effect = eff.clone();
+                    self.config.animation_type = Some(eff.clone());
+                    self.animation_type_dropdown =
+                        Dropdown::new(ANIMATION_TYPE_OPTIONS.to_vec(), &eff);
+                } else if self.fx_sub_focus == 1 {
+                    self.color_idx = 0;
+                    let col = COLOR_OPTIONS[0].0.to_string();
+                    self.config.color_mode = col.clone();
+                    self.color_mode_dropdown = Dropdown::new(COLOR_MODE_OPTIONS.to_vec(), &col);
+                } else {
+                    self.contrast_idx = 0;
+                    let c = CONTRAST_OPTIONS[0].0.to_string();
+                    self.config.contrast_mode = Some(c.clone());
+                    self.contrast_mode_dropdown = Dropdown::new(CONTRAST_MODE_OPTIONS.to_vec(), &c);
+                }
+                self.saved = false;
+            }
+            Tab::Installer => {
+                self.selected_shell_idx = 0;
+            }
+            Tab::Config => {
+                self.config_field_idx = 0;
+            }
+        }
+        self.status_message = "Jumped to top [gg]".into();
+    }
+
+    /// Vim 'G': Jump directly to the bottom item of the active tab.
+    pub fn vim_jump_to_bottom(&mut self) {
+        match self.current_tab {
+            Tab::Mascots => {
+                let cows = CATEGORIES[self.mascot_category_idx].1;
+                self.mascot_item_idx = cows.len().saturating_sub(1);
+                self.apply_selected_mascot();
+            }
+            Tab::Scenery => {
+                if self.scenery_sub_focus == 0 {
+                    self.scenery_idx = SCENERY_OPTIONS.len().saturating_sub(1);
+                    let env = SCENERY_OPTIONS[self.scenery_idx].0.to_string();
+                    self.config.environment = Some(env.clone());
+                    self.environment_dropdown = Dropdown::new(ENVIRONMENT_OPTIONS.to_vec(), &env);
+                } else {
+                    self.road_idx = ROAD_OPTIONS.len().saturating_sub(1);
+                    let rd = ROAD_OPTIONS[self.road_idx].0.to_string();
+                    self.config.road = Some(rd.clone());
+                    self.road_dropdown = Dropdown::new(ROAD_STYLE_OPTIONS.to_vec(), &rd);
+                }
+                self.saved = false;
+            }
+            Tab::Effects => {
+                if self.fx_sub_focus == 0 {
+                    self.effect_idx = EFFECT_OPTIONS.len().saturating_sub(1);
+                    let eff = EFFECT_OPTIONS[self.effect_idx].0.to_string();
+                    self.config.effect = eff.clone();
+                    self.config.animation_type = Some(eff.clone());
+                    self.animation_type_dropdown =
+                        Dropdown::new(ANIMATION_TYPE_OPTIONS.to_vec(), &eff);
+                } else if self.fx_sub_focus == 1 {
+                    self.color_idx = COLOR_OPTIONS.len().saturating_sub(1);
+                    let col = COLOR_OPTIONS[self.color_idx].0.to_string();
+                    self.config.color_mode = col.clone();
+                    self.color_mode_dropdown = Dropdown::new(COLOR_MODE_OPTIONS.to_vec(), &col);
+                } else {
+                    self.contrast_idx = CONTRAST_OPTIONS.len().saturating_sub(1);
+                    let c = CONTRAST_OPTIONS[self.contrast_idx].0.to_string();
+                    self.config.contrast_mode = Some(c.clone());
+                    self.contrast_mode_dropdown = Dropdown::new(CONTRAST_MODE_OPTIONS.to_vec(), &c);
+                }
+                self.saved = false;
+            }
+            Tab::Installer => {
+                if !self.shells.is_empty() {
+                    self.selected_shell_idx = self.shells.len() - 1;
+                }
+            }
+            Tab::Config => {
+                self.config_field_idx = ConfigField::ALL.len().saturating_sub(1);
+            }
+        }
+        self.status_message = "Jumped to bottom [G]".into();
+    }
+
+    /// Vim 'Ctrl+d' / 'Ctrl+u': Scroll half-page down or up.
+    pub fn vim_half_page_scroll(&mut self, down: bool) {
+        let delta = 5;
+        match self.current_tab {
+            Tab::Mascots => {
+                let cows = CATEGORIES[self.mascot_category_idx].1;
+                if down {
+                    self.mascot_item_idx =
+                        (self.mascot_item_idx + delta).min(cows.len().saturating_sub(1));
+                } else {
+                    self.mascot_item_idx = self.mascot_item_idx.saturating_sub(delta);
+                }
+                self.apply_selected_mascot();
+            }
+            Tab::Scenery => {
+                if self.scenery_sub_focus == 0 {
+                    if down {
+                        self.scenery_idx =
+                            (self.scenery_idx + 3).min(SCENERY_OPTIONS.len().saturating_sub(1));
+                    } else {
+                        self.scenery_idx = self.scenery_idx.saturating_sub(3);
+                    }
+                    let env = SCENERY_OPTIONS[self.scenery_idx].0.to_string();
+                    self.config.environment = Some(env.clone());
+                    self.environment_dropdown = Dropdown::new(ENVIRONMENT_OPTIONS.to_vec(), &env);
+                } else {
+                    if down {
+                        self.road_idx =
+                            (self.road_idx + 3).min(ROAD_OPTIONS.len().saturating_sub(1));
+                    } else {
+                        self.road_idx = self.road_idx.saturating_sub(3);
+                    }
+                    let rd = ROAD_OPTIONS[self.road_idx].0.to_string();
+                    self.config.road = Some(rd.clone());
+                    self.road_dropdown = Dropdown::new(ROAD_STYLE_OPTIONS.to_vec(), &rd);
+                }
+                self.saved = false;
+            }
+            Tab::Effects => {
+                if self.fx_sub_focus == 0 {
+                    if down {
+                        self.effect_idx =
+                            (self.effect_idx + 3).min(EFFECT_OPTIONS.len().saturating_sub(1));
+                    } else {
+                        self.effect_idx = self.effect_idx.saturating_sub(3);
+                    }
+                    let eff = EFFECT_OPTIONS[self.effect_idx].0.to_string();
+                    self.config.effect = eff.clone();
+                    self.config.animation_type = Some(eff.clone());
+                    self.animation_type_dropdown =
+                        Dropdown::new(ANIMATION_TYPE_OPTIONS.to_vec(), &eff);
+                } else if self.fx_sub_focus == 1 {
+                    if down {
+                        self.color_idx =
+                            (self.color_idx + 3).min(COLOR_OPTIONS.len().saturating_sub(1));
+                    } else {
+                        self.color_idx = self.color_idx.saturating_sub(3);
+                    }
+                    let col = COLOR_OPTIONS[self.color_idx].0.to_string();
+                    self.config.color_mode = col.clone();
+                    self.color_mode_dropdown = Dropdown::new(COLOR_MODE_OPTIONS.to_vec(), &col);
+                } else {
+                    if down {
+                        self.contrast_idx =
+                            (self.contrast_idx + 2).min(CONTRAST_OPTIONS.len().saturating_sub(1));
+                    } else {
+                        self.contrast_idx = self.contrast_idx.saturating_sub(2);
+                    }
+                    let c = CONTRAST_OPTIONS[self.contrast_idx].0.to_string();
+                    self.config.contrast_mode = Some(c.clone());
+                    self.contrast_mode_dropdown = Dropdown::new(CONTRAST_MODE_OPTIONS.to_vec(), &c);
+                }
+                self.saved = false;
+            }
+            Tab::Installer => {
+                if !self.shells.is_empty() {
+                    if down {
+                        self.selected_shell_idx =
+                            (self.selected_shell_idx + 3).min(self.shells.len() - 1);
+                    } else {
+                        self.selected_shell_idx = self.selected_shell_idx.saturating_sub(3);
+                    }
+                }
+            }
+            Tab::Config => {
+                if down {
+                    self.config_field_idx =
+                        (self.config_field_idx + delta).min(ConfigField::ALL.len() - 1);
+                } else {
+                    self.config_field_idx = self.config_field_idx.saturating_sub(delta);
+                }
+            }
+        }
+        self.status_message = if down {
+            "Half-page down [Ctrl+d]".into()
+        } else {
+            "Half-page up [Ctrl+u]".into()
+        };
+    }
+
+    /// Vim '/': Instant search & filter mascots across categories.
+    pub fn execute_mascot_search(&mut self) {
+        let q = self.mascot_search_query.trim().to_ascii_lowercase();
+        if q.is_empty() {
+            self.status_message = "/ (type mascot name, Enter: confirm, Esc: cancel)".into();
+            return;
+        }
+
+        // 1. Search current category first
+        let current_cows = CATEGORIES[self.mascot_category_idx].1;
+        if let Some(pos) = current_cows
+            .iter()
+            .position(|c| c.to_ascii_lowercase().contains(&q))
+        {
+            self.mascot_item_idx = pos;
+            self.apply_selected_mascot();
+            self.status_message = format!(
+                "/{} [Found: {} in current category]",
+                self.mascot_search_query, current_cows[pos]
+            );
+            return;
+        }
+
+        // 2. Search all categories
+        for (cat_idx, (_, cows)) in CATEGORIES.iter().enumerate() {
+            if let Some(pos) = cows
+                .iter()
+                .position(|c| c.to_ascii_lowercase().contains(&q))
+            {
+                self.mascot_category_idx = cat_idx;
+                self.mascot_item_idx = pos;
+                self.apply_selected_mascot();
+                self.status_message = format!(
+                    "/{} [Found: {} in {}]",
+                    self.mascot_search_query, cows[pos], CATEGORIES[cat_idx].0
+                );
+                return;
+            }
+        }
+
+        self.status_message = format!("/{} [No matching mascot found]", self.mascot_search_query);
+    }
+
     fn handle_scenery_key(&mut self, key: KeyEvent) -> anyhow::Result<Option<Action>> {
         match key.code {
             KeyCode::Tab
@@ -2051,6 +2803,9 @@ impl ConfigApp {
             }
             KeyCode::Char('b') | KeyCode::Char('r') => {
                 self.sync_mascot_scenery();
+            }
+            KeyCode::Char('t') => {
+                self.show_random_suggestion();
             }
             _ => {}
         }
@@ -2147,6 +2902,9 @@ impl ConfigApp {
                     "Effect: '{}' | Color: '{}' | Contrast: '{}'",
                     self.config.effect, self.config.color_mode, c
                 );
+            }
+            KeyCode::Char('t') => {
+                self.show_random_suggestion();
             }
             _ => {}
         }
@@ -2444,7 +3202,13 @@ export extern "forgum" [
                     self.cycle_config_field(true);
                 }
             }
-            KeyCode::Char('e') | KeyCode::Char('E') | KeyCode::Char('i') | KeyCode::Char('I') => {
+            KeyCode::Char('e')
+            | KeyCode::Char('E')
+            | KeyCode::Char('i')
+            | KeyCode::Char('I')
+            | KeyCode::Char('a')
+            | KeyCode::Char('A') => {
+                self.vim_mode = VimMode::Insert;
                 self.enter_config_edit();
             }
             KeyCode::Char(c @ '0'..='9') => {
@@ -2458,6 +3222,7 @@ export extern "forgum" [
                 {
                     self.config_edit_buffer = c.to_string();
                     self.editing_config = true;
+                    self.vim_mode = VimMode::Insert;
                     self.edit_initial = false;
                     self.status_message = format!(
                         "Editing {}: typing '{}' (Enter to confirm, Esc to cancel)",
@@ -2474,14 +3239,28 @@ export extern "forgum" [
                     self.cycle_config_field(true);
                 }
             }
-            KeyCode::Char('H') | KeyCode::Left
+            KeyCode::Char('H')
                 if key.modifiers.contains(KeyModifiers::SHIFT)
                     || key.modifiers.contains(KeyModifiers::CONTROL) =>
             {
                 self.h_scroll = self.h_scroll.saturating_sub(4);
                 self.status_message = format!("Horizontal scroll: column {}", self.h_scroll);
             }
-            KeyCode::Char('L') | KeyCode::Right
+            KeyCode::Char('L')
+                if key.modifiers.contains(KeyModifiers::SHIFT)
+                    || key.modifiers.contains(KeyModifiers::CONTROL) =>
+            {
+                self.h_scroll = (self.h_scroll + 4).min(50);
+                self.status_message = format!("Horizontal scroll: column {}", self.h_scroll);
+            }
+            KeyCode::Left
+                if key.modifiers.contains(KeyModifiers::SHIFT)
+                    || key.modifiers.contains(KeyModifiers::CONTROL) =>
+            {
+                self.h_scroll = self.h_scroll.saturating_sub(4);
+                self.status_message = format!("Horizontal scroll: column {}", self.h_scroll);
+            }
+            KeyCode::Right
                 if key.modifiers.contains(KeyModifiers::SHIFT)
                     || key.modifiers.contains(KeyModifiers::CONTROL) =>
             {
@@ -2489,12 +3268,20 @@ export extern "forgum" [
                 self.status_message = format!("Horizontal scroll: column {}", self.h_scroll);
             }
             KeyCode::Char('h') => {
-                self.h_scroll = self.h_scroll.saturating_sub(4);
-                self.status_message = format!("Horizontal scroll: column {}", self.h_scroll);
+                if self.current_breakpoint().is_compact_or_narrow() {
+                    self.h_scroll = self.h_scroll.saturating_sub(4);
+                    self.status_message = format!("Horizontal scroll: column {}", self.h_scroll);
+                } else {
+                    self.cycle_config_field(false);
+                }
             }
             KeyCode::Char('l') => {
-                self.h_scroll = (self.h_scroll + 4).min(50);
-                self.status_message = format!("Horizontal scroll: column {}", self.h_scroll);
+                if self.current_breakpoint().is_compact_or_narrow() {
+                    self.h_scroll = (self.h_scroll + 4).min(50);
+                    self.status_message = format!("Horizontal scroll: column {}", self.h_scroll);
+                } else {
+                    self.cycle_config_field(true);
+                }
             }
             KeyCode::Char('+') | KeyCode::Char('=') | KeyCode::Right | KeyCode::Char(']') => {
                 self.cycle_config_field(true);
@@ -2641,6 +3428,9 @@ export extern "forgum" [
                 self.edit_initial = false;
                 self.cycle_config_field(true);
             }
+        }
+        if self.editing_config {
+            self.vim_mode = VimMode::Insert;
         }
     }
 
@@ -3279,6 +4069,79 @@ export extern "forgum" [
                     current
                 );
             }
+            ConfigField::HardwareAccel => {
+                self.accel_mode_dropdown.cycle(forward);
+                let current = self.accel_mode_dropdown.current();
+                self.config.accel_mode = Some(current.clone());
+                self.sync_accel_from_config();
+                self.saved = false;
+                self.status_message = format!(
+                    "Hardware acceleration switched to {} [{}]",
+                    self.active_accel_display(),
+                    self.active_accel_badge()
+                );
+            }
+            ConfigField::ReduceMotion => {
+                self.config.reduce_motion = !self.config.reduce_motion;
+                self.saved = false;
+                self.status_message = format!(
+                    "Reduce motion {}",
+                    if self.config.reduce_motion {
+                        "ENABLED (gentle fades only)"
+                    } else {
+                        "DISABLED (full kinetic motion)"
+                    }
+                );
+            }
+            ConfigField::TextOnly => {
+                self.config.text_only = !self.config.text_only;
+                self.saved = false;
+                self.status_message = format!(
+                    "Text-only mode {}",
+                    if self.config.text_only {
+                        "ENABLED (print fortune text only)"
+                    } else {
+                        "DISABLED (render ASCII mascot art)"
+                    }
+                );
+            }
+            ConfigField::Banner => {
+                self.config.banner = !self.config.banner;
+                if self.config.banner {
+                    self.config.shell_attach_mode = "banner".to_string();
+                }
+                self.saved = false;
+                self.status_message = format!(
+                    "Banner mode {}",
+                    if self.config.banner {
+                        "ENABLED (inline fastfetch banner)"
+                    } else {
+                        "DISABLED (standard canvas)"
+                    }
+                );
+            }
+            ConfigField::Aspect => {
+                self.aspect_dropdown.cycle(forward);
+                let current = self.aspect_dropdown.current();
+                self.config.aspect = if current == "auto" {
+                    None
+                } else {
+                    Some(current.clone())
+                };
+                self.saved = false;
+                self.status_message = format!("Aspect ratio preset switched to {}", current);
+            }
+            ConfigField::AspectMode => {
+                self.aspect_mode_dropdown.cycle(forward);
+                let current = self.aspect_mode_dropdown.current();
+                self.config.aspect_mode = if current == "auto" {
+                    None
+                } else {
+                    Some(current.clone())
+                };
+                self.saved = false;
+                self.status_message = format!("Aspect adaptation mode switched to {}", current);
+            }
         }
     }
 
@@ -3288,8 +4151,11 @@ export extern "forgum" [
             KeyCode::Enter => {
                 self.commit_config_edit();
                 self.editing_config = false;
+                self.vim_mode = VimMode::Normal;
             }
-            KeyCode::Esc => {
+            KeyCode::Esc | KeyCode::Char('[')
+                if key.modifiers.contains(KeyModifiers::CONTROL) || key.code == KeyCode::Esc =>
+            {
                 match field {
                     ConfigField::Duration => {
                         if let Ok(v) = self.original_edit_value.parse::<u32>() {
@@ -3527,6 +4393,9 @@ export extern "forgum" [
                 }
             }
             _ => {}
+        }
+        if !self.editing_config {
+            self.vim_mode = VimMode::Normal;
         }
         Ok(None)
     }
@@ -3939,6 +4808,9 @@ export extern "forgum" [
         if self.show_editor_modal {
             self.render_editor_modal(f, size);
         }
+        if self.show_vim_help {
+            self.render_vim_help_modal(f, size);
+        }
     }
 
     /// Render centered modal dialog requesting action when no terminal editor is found.
@@ -4018,6 +4890,217 @@ export extern "forgum" [
             .alignment(ratatui::layout::Alignment::Center)
             .wrap(Wrap { trim: true });
         f.render_widget(paragraph, inner);
+    }
+
+    /// Render interactive Vim control and navigation cheatsheet modal.
+    fn render_vim_help_modal(&self, f: &mut Frame, area: Rect) {
+        let width = 78.min(area.width.saturating_sub(4));
+        let height = 22.min(area.height.saturating_sub(2));
+        let x = area.x + (area.width.saturating_sub(width)) / 2;
+        let y = area.y + (area.height.saturating_sub(height)) / 2;
+        let modal_area = Rect::new(x, y, width, height);
+
+        f.render_widget(Clear, modal_area);
+
+        let lines = vec![
+            Line::from(vec![
+                Span::styled(
+                    "  j / k          ",
+                    Style::default()
+                        .fg(tailwind::AMBER_400)
+                        .add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(
+                    "Move selection down / up",
+                    Style::default().fg(tailwind::SLATE_200),
+                ),
+            ]),
+            Line::from(vec![
+                Span::styled(
+                    "  h / l          ",
+                    Style::default()
+                        .fg(tailwind::AMBER_400)
+                        .add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(
+                    "Switch sub-focus / cycle option backward & forward",
+                    Style::default().fg(tailwind::SLATE_200),
+                ),
+            ]),
+            Line::from(vec![
+                Span::styled(
+                    "  gg / G         ",
+                    Style::default()
+                        .fg(tailwind::EMERALD_400)
+                        .add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(
+                    "Jump directly to top / bottom of active list",
+                    Style::default().fg(tailwind::SLATE_200),
+                ),
+            ]),
+            Line::from(vec![
+                Span::styled(
+                    "  Ctrl+d / Ctrl+u",
+                    Style::default()
+                        .fg(tailwind::EMERALD_400)
+                        .add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(
+                    "Scroll half-page down / up (5 items)",
+                    Style::default().fg(tailwind::SLATE_200),
+                ),
+            ]),
+            Line::from(vec![
+                Span::styled(
+                    "  gt / gT        ",
+                    Style::default()
+                        .fg(tailwind::SKY_400)
+                        .add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(
+                    "Switch to next / previous tab",
+                    Style::default().fg(tailwind::SLATE_200),
+                ),
+            ]),
+            Line::from(vec![
+                Span::styled(
+                    "  1 .. 5         ",
+                    Style::default()
+                        .fg(tailwind::SKY_400)
+                        .add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(
+                    "Direct jump to tab (1:Mascots 2:Scenery 3:FX 4:Setup 5:Config)",
+                    Style::default().fg(tailwind::SLATE_200),
+                ),
+            ]),
+            Line::from(vec![
+                Span::styled(
+                    "  /              ",
+                    Style::default()
+                        .fg(tailwind::PURPLE_400)
+                        .add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(
+                    "Instant quick-search mascot by name across categories",
+                    Style::default().fg(tailwind::SLATE_200),
+                ),
+            ]),
+            Line::from(vec![
+                Span::styled(
+                    "  i / a / Enter  ",
+                    Style::default()
+                        .fg(tailwind::AMBER_400)
+                        .add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(
+                    "Enter INSERT mode on editable fields",
+                    Style::default().fg(tailwind::SLATE_200),
+                ),
+            ]),
+            Line::from(vec![
+                Span::styled(
+                    "  Esc / Ctrl+[   ",
+                    Style::default()
+                        .fg(tailwind::ROSE_400)
+                        .add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(
+                    "Exit INSERT / SEARCH mode back to NORMAL mode",
+                    Style::default().fg(tailwind::SLATE_200),
+                ),
+            ]),
+            Line::from(vec![
+                Span::styled(
+                    "  s              ",
+                    Style::default()
+                        .fg(tailwind::CYAN_400)
+                        .add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(
+                    "Save configuration to canonical path (~/.config/forgum/)",
+                    Style::default().fg(tailwind::SLATE_200),
+                ),
+            ]),
+            Line::from(vec![
+                Span::styled(
+                    "  T / F1         ",
+                    Style::default()
+                        .fg(tailwind::FUCHSIA_400)
+                        .add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(
+                    "Cycle random feature discovery tip / pro-tip",
+                    Style::default().fg(tailwind::SLATE_200),
+                ),
+            ]),
+            Line::from(vec![
+                Span::styled(
+                    "  ZZ / q         ",
+                    Style::default()
+                        .fg(tailwind::ROSE_500)
+                        .add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(
+                    "Save & Quit / Clean Quit",
+                    Style::default().fg(tailwind::SLATE_200),
+                ),
+            ]),
+            Line::from(vec![
+                Span::styled(
+                    "  ZQ             ",
+                    Style::default()
+                        .fg(tailwind::ROSE_500)
+                        .add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(
+                    "Force Quit without saving",
+                    Style::default().fg(tailwind::SLATE_200),
+                ),
+            ]),
+            Line::from(vec![
+                Span::styled(
+                    "  ?              ",
+                    Style::default()
+                        .fg(tailwind::VIOLET_400)
+                        .add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(
+                    "Toggle this Vim Cheatsheet modal (Esc or ? to close)",
+                    Style::default().fg(tailwind::SLATE_300),
+                ),
+            ]),
+            Line::from(vec![]),
+            Line::from(vec![
+                Span::styled(
+                    "  💡 Tip: ",
+                    Style::default()
+                        .fg(tailwind::AMBER_400)
+                        .add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(
+                    self.current_suggestion(),
+                    Style::default()
+                        .fg(tailwind::EMERALD_300)
+                        .add_modifier(Modifier::ITALIC),
+                ),
+            ]),
+        ];
+
+        let p = Paragraph::new(lines).wrap(Wrap { trim: true }).block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_type(BorderType::Rounded)
+                .border_style(Style::default().fg(tailwind::AMBER_400))
+                .title(Span::styled(
+                    " ⌨️ Vim Navigation & Feature Discovery Cheatsheet ",
+                    Style::default()
+                        .fg(tailwind::AMBER_300)
+                        .add_modifier(Modifier::BOLD),
+                )),
+        );
+        f.render_widget(p, modal_area);
     }
 
     /// Render Zellij-style top header with active mode badge, tabs, and format badge.
@@ -4901,17 +5984,19 @@ export extern "forgum" [
                 let is_compatible = native_biome.is_effect_compatible(name);
                 let badge = if is_compatible {
                     Span::styled(" [✓ native]", Style::default().fg(tailwind::EMERALD_400))
-                } else if native_biome.is_aquatic() && *name == "walk" {
+                } else if native_biome.is_aquatic() && (*name == "walk" || *name == "moonwalk") {
                     Span::styled(" [✗ land only]", Style::default().fg(Color::DarkGray))
-                } else if native_biome.is_aerial() && *name == "walk" {
+                } else if native_biome.is_aerial() && (*name == "walk" || *name == "moonwalk") {
                     Span::styled(" [✗ flight only]", Style::default().fg(Color::DarkGray))
-                } else if native_biome.is_inanimate() && (*name == "walk" || *name == "fly") {
+                } else if native_biome.is_inanimate()
+                    && (*name == "walk" || *name == "moonwalk" || *name == "fly")
+                {
                     Span::styled(" [✗ static object]", Style::default().fg(Color::DarkGray))
-                } else if native_biome.is_ethereal() && *name == "walk" {
+                } else if native_biome.is_ethereal() && (*name == "walk" || *name == "moonwalk") {
                     Span::styled(" [✗ ethereal entity]", Style::default().fg(Color::DarkGray))
-                } else if native_biome.is_serpentine() && *name == "walk" {
+                } else if native_biome.is_serpentine() && (*name == "walk" || *name == "moonwalk") {
                     Span::styled(" [✗ legless reptile]", Style::default().fg(Color::DarkGray))
-                } else if native_biome.is_sedentary() && *name == "walk" {
+                } else if native_biome.is_sedentary() && (*name == "walk" || *name == "moonwalk") {
                     Span::styled(" [✗ sedentary]", Style::default().fg(Color::DarkGray))
                 } else if native_biome.is_aquatic() {
                     Span::styled(" [✗ non-aquatic]", Style::default().fg(Color::DarkGray))
@@ -5379,6 +6464,55 @@ export extern "forgum" [
                 };
                 format!("{}{} (←/→ cycle)", cur, desc)
             }
+            ConfigField::HardwareAccel => {
+                let display = self.active_accel_display();
+                let badge = self.active_accel_badge();
+                let desc = self.active_accel_desc();
+                format!("{} [{}] - {} (←/→ cycle)", display, badge, desc)
+            }
+            ConfigField::ReduceMotion => {
+                if self.config.reduce_motion {
+                    "✔ ON (gentle fades only) [Space/Enter toggle]".into()
+                } else {
+                    "✖ OFF (full kinetic motion) [Space/Enter toggle]".into()
+                }
+            }
+            ConfigField::TextOnly => {
+                if self.config.text_only {
+                    "✔ ON (print text only) [Space/Enter toggle]".into()
+                } else {
+                    "✖ OFF (render mascot art) [Space/Enter toggle]".into()
+                }
+            }
+            ConfigField::Banner => {
+                if self.config.banner {
+                    "✔ ON (inline fastfetch banner) [Space/Enter toggle]".into()
+                } else {
+                    "✖ OFF (standard canvas) [Space/Enter toggle]".into()
+                }
+            }
+            ConfigField::Aspect => {
+                let cur = self.config.aspect.as_deref().unwrap_or("auto");
+                let desc = match cur {
+                    "21:9" => " (Ultrawide 21:9 panoramic)",
+                    "16:9" => " (Widescreen 16:9 standard)",
+                    "16:10" => " (Golden Tall 16:10)",
+                    "4:3" => " (Classic 4:3 standard)",
+                    "1:1" => " (Square 1:1 display)",
+                    "narrow" => " (Vertical / split pane)",
+                    _ => " (Auto-detect from terminal dimensions)",
+                };
+                format!("{cur}{desc} (←/→ cycle)")
+            }
+            ConfigField::AspectMode => {
+                let cur = self.config.aspect_mode.as_deref().unwrap_or("auto");
+                let desc = match cur {
+                    "preset" => " (Lock to selected aspect preset)",
+                    "dynamic" => " (Live recalculation on window resize)",
+                    _ => " (Auto: dynamic interactive, preset banner)",
+                };
+                format!("{cur}{desc} (←/→ cycle)")
+            }
         }
     }
 
@@ -5662,7 +6796,11 @@ export extern "forgum" [
 
         let mut lines: Vec<Line> = Vec::new();
 
-        // 0. Live HUD Timeline Status Bar
+        // 0. Live HUD Timeline Status Bar & Hardware Acceleration
+        let accel_mode = forgum_platform::AccelerationMode::parse(self.active_accel_mode());
+        let compute = forgum_platform::compute::get_compute_engine(Some(accel_mode));
+        let accel_badge = self.active_accel_badge();
+
         let hud_line = if self.config.duration > 0 {
             let percent = (progress_fraction * 100.0) as u32;
             let bar_width = 14;
@@ -5670,13 +6808,13 @@ export extern "forgum" [
             let empty = bar_width.saturating_sub(filled);
             let bar = format!("[{}{}]", "█".repeat(filled), "░".repeat(empty));
             format!(
-                "⏱ {:.1}s / {}s {} {:>3}% • {} FPS Live",
-                elapsed_display, self.config.duration, bar, percent, self.config.fps
+                "⏱ {:.1}s / {}s {} {:>3}% • {} FPS • {} Live",
+                elapsed_display, self.config.duration, bar, percent, self.config.fps, accel_badge
             )
         } else {
             format!(
-                "⏱ {:.1}s / ∞ (Infinite Loop) • {} FPS Live",
-                elapsed_display, self.config.fps
+                "⏱ {:.1}s / ∞ (Infinite Loop) • {} FPS • {} Live",
+                elapsed_display, self.config.fps, accel_badge
             )
         };
 
@@ -5706,8 +6844,14 @@ export extern "forgum" [
                 _ => "      /\\_ /\\    /\\__      /\\_    /\\/\\    /\\_ /\\    /\\__      /\\_    /\\/\\    ",
             };
             if !mountain_layer.is_empty() {
+                let mut wave = [0.0f32; 1];
+                let amps = [0.5];
+                let phases = [0.0];
+                compute.compute_mountain_harmonic_superposition(
+                    1, 2.0, 16.0, 1.2, t, &amps, &phases, &mut wave,
+                );
                 let m_chars: Vec<char> = mountain_layer.chars().collect();
-                let m_start = (t * 1.5) as usize % m_chars.len();
+                let m_start = (t * 1.5 + wave[0]) as usize % m_chars.len();
                 let m_slice: String = m_chars.iter().cycle().skip(m_start).take(30).collect();
                 let (mr, mg, mb) = contrast.adjust_rgb(110, 110, 110);
                 lines.push(Line::from(Span::styled(
@@ -5732,6 +6876,7 @@ export extern "forgum" [
                 _ => "   .---.       /\\/\\        .---.       /\\/\\        .---.   ",
             };
             if !tree_layer.is_empty() {
+                let _density = compute.compute_foliage_density((t * 0.5).sin(), 0.0, 3.0);
                 let tree_chars: Vec<char> = tree_layer.chars().collect();
                 let tree_start = (t * 2.4) as usize % tree_chars.len();
                 let tree_slice: String = tree_chars
@@ -5886,6 +7031,30 @@ export extern "forgum" [
                                 };
                             }
                         }
+                    }
+                    "moonwalk" => {
+                        // Reverse leg stroke cadence
+                        let rev_phase = (3 - walk_phase) % 4;
+                        if i == leg_line_idx {
+                            if l.contains("||     ||") {
+                                l = match rev_phase {
+                                    0 => l.replace("||     ||", "|/     /|"),
+                                    1 => l.replace("||     ||", "/|     |/"),
+                                    2 => l.replace("||     ||", "|\\     \\|"),
+                                    _ => l.replace("||     ||", "\\|     |\\"),
+                                };
+                            } else if l.contains("/ \\") {
+                                l = match rev_phase {
+                                    0 | 2 => l.replace("/ \\", "| |"),
+                                    1 => l.replace("/ \\", "\\ /"),
+                                    _ => l,
+                                };
+                            }
+                        }
+                        // Smooth horizontal reverse glide drift
+                        let glide_amt = ((t * 3.0).sin() * 2.0) as i32;
+                        let pad = (glide_amt + 2).max(0) as usize;
+                        l = format!("{}{l}", " ".repeat(pad));
                     }
                     "breathe" => {
                         if is_inhale {
@@ -6171,8 +7340,10 @@ export extern "forgum" [
                 _ => "─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ",
             };
             if !ground_pattern.is_empty() {
+                let mut undulation = [0.0f32; 1];
+                compute.compute_road_undulation(1, 10.0, 0.5, t, &mut undulation);
                 let g_chars: Vec<char> = ground_pattern.chars().collect();
-                let g_start = (t * 8.0) as usize % g_chars.len();
+                let g_start = ((t * 8.0) as usize + (undulation[0] as usize)) % g_chars.len();
                 let g_slice: String = g_chars.iter().cycle().skip(g_start).take(32).collect();
                 let (gr, gg, gb) = contrast.adjust_rgb(115, 115, 115);
                 lines.push(Line::from(Span::styled(
@@ -6510,6 +7681,189 @@ export extern "forgum" [
                         ]));
                     }
                 }
+                if field == ConfigField::HardwareAccel {
+                    let accel_mode =
+                        forgum_platform::AccelerationMode::parse(self.active_accel_mode());
+                    let compute = forgum_platform::compute::get_compute_engine(Some(accel_mode));
+
+                    lines.push(Line::from(vec![
+                        Span::styled(
+                            "Acceleration Badge: ",
+                            Style::default()
+                                .fg(tailwind::AMBER_400)
+                                .add_modifier(Modifier::BOLD),
+                        ),
+                        Span::styled(
+                            self.active_accel_badge(),
+                            Style::default()
+                                .fg(tailwind::EMERALD_400)
+                                .add_modifier(Modifier::BOLD),
+                        ),
+                    ]));
+                    lines.push(Line::from(vec![
+                        Span::styled(
+                            "Compute Device: ",
+                            Style::default()
+                                .fg(tailwind::SKY_400)
+                                .add_modifier(Modifier::BOLD),
+                        ),
+                        Span::styled(
+                            compute.device_name(),
+                            Style::default().fg(tailwind::SLATE_100),
+                        ),
+                    ]));
+                    if let Some(info) = compute.device_info() {
+                        lines.push(Line::from(vec![
+                            Span::styled(
+                                "Architecture: ",
+                                Style::default()
+                                    .fg(tailwind::INDIGO_400)
+                                    .add_modifier(Modifier::BOLD),
+                            ),
+                            Span::styled(
+                                format!("{} ({})", info.architecture, info.generation_year),
+                                Style::default().fg(tailwind::SLATE_200),
+                            ),
+                            Span::raw("  │  "),
+                            Span::styled(
+                                "VRAM: ",
+                                Style::default()
+                                    .fg(tailwind::PURPLE_400)
+                                    .add_modifier(Modifier::BOLD),
+                            ),
+                            Span::styled(
+                                info.vram_formatted(),
+                                Style::default().fg(tailwind::SLATE_200),
+                            ),
+                        ]));
+                        lines.push(Line::from(vec![
+                            Span::styled(
+                                "Protocols: ",
+                                Style::default()
+                                    .fg(tailwind::TEAL_400)
+                                    .add_modifier(Modifier::BOLD),
+                            ),
+                            Span::styled(
+                                info.protocols.join(" • "),
+                                Style::default().fg(tailwind::SLATE_300),
+                            ),
+                        ]));
+                    }
+                    lines.push(Line::from(vec![
+                        Span::styled(
+                            "Multi-Threading: ",
+                            Style::default()
+                                .fg(tailwind::EMERALD_400)
+                                .add_modifier(Modifier::BOLD),
+                        ),
+                        Span::styled(
+                            "Active (std::thread::scope parallel nature mathematics)",
+                            Style::default().fg(tailwind::SLATE_200),
+                        ),
+                    ]));
+                }
+                if field == ConfigField::Aspect {
+                    let cur = self.config.aspect.as_deref().unwrap_or("auto");
+                    let (ratio_math, geometry_desc, use_case) = match cur {
+                        "21:9" => (
+                            "21:9 (2.33:1)",
+                            "Ultrawide Panoramic display matrix",
+                            "Multi-monitor tiling, fastfetch wide banner setups",
+                        ),
+                        "16:9" => (
+                            "16:9 (1.78:1)",
+                            "Widescreen standard 16:9 golden canvas",
+                            "Standard desktop terminals, Zellij full-width panes",
+                        ),
+                        "16:10" => (
+                            "16:10 (1.60:1)",
+                            "Golden Tall golden proportion",
+                            "MacBook / Modern laptop displays, high vertical density",
+                        ),
+                        "4:3" => (
+                            "4:3 (1.33:1)",
+                            "Classic CRT / Retro terminal standard",
+                            "Legacy terminals, compact square-ish terminal windows",
+                        ),
+                        "1:1" => (
+                            "1:1 (1.00:1)",
+                            "Square display matrix box",
+                            "Avatar generation, social embeds, quad-split layouts",
+                        ),
+                        "narrow" => (
+                            "9:16 (0.56:1)",
+                            "Vertical split / mobile layout column",
+                            "Vertical splits, sidebar docks, narrow tmux columns",
+                        ),
+                        _ => (
+                            "Auto-adaptive",
+                            "Dynamic query from crossterm::terminal::size()",
+                            "Auto-scaling viewport matching physical terminal geometry",
+                        ),
+                    };
+                    lines.push(Line::from(vec![
+                        Span::styled(
+                            "Aspect Geometry: ",
+                            Style::default()
+                                .fg(tailwind::EMERALD_400)
+                                .add_modifier(Modifier::BOLD),
+                        ),
+                        Span::styled(ratio_math, Style::default().fg(tailwind::AMBER_300)),
+                    ]));
+                    lines.push(Line::from(vec![
+                        Span::styled(
+                            "Display Matrix: ",
+                            Style::default()
+                                .fg(tailwind::SKY_400)
+                                .add_modifier(Modifier::BOLD),
+                        ),
+                        Span::styled(geometry_desc, Style::default().fg(tailwind::SLATE_200)),
+                    ]));
+                    lines.push(Line::from(vec![
+                        Span::styled(
+                            "Recommended For: ",
+                            Style::default()
+                                .fg(tailwind::PURPLE_400)
+                                .add_modifier(Modifier::BOLD),
+                        ),
+                        Span::styled(use_case, Style::default().fg(tailwind::SLATE_300)),
+                    ]));
+                }
+                if field == ConfigField::AspectMode {
+                    let cur = self.config.aspect_mode.as_deref().unwrap_or("auto");
+                    let (mode_desc, behavior) = match cur {
+                        "preset" => (
+                            "Static preset lock",
+                            "Enforces exact aspect ratio bounds; letterboxes or crops content exceeding geometry",
+                        ),
+                        "dynamic" => (
+                            "Live adaptive recalculation",
+                            "Recalculates horizontal & vertical canvas on every crossterm terminal resize event",
+                        ),
+                        _ => (
+                            "Hybrid automatic",
+                            "Uses dynamic interactive viewport in TUI; locks to preset in fastfetch CLI banner",
+                        ),
+                    };
+                    lines.push(Line::from(vec![
+                        Span::styled(
+                            "Mode Strategy: ",
+                            Style::default()
+                                .fg(tailwind::EMERALD_400)
+                                .add_modifier(Modifier::BOLD),
+                        ),
+                        Span::styled(mode_desc, Style::default().fg(tailwind::AMBER_300)),
+                    ]));
+                    lines.push(Line::from(vec![
+                        Span::styled(
+                            "Canvas Behavior: ",
+                            Style::default()
+                                .fg(tailwind::SKY_400)
+                                .add_modifier(Modifier::BOLD),
+                        ),
+                        Span::styled(behavior, Style::default().fg(tailwind::SLATE_200)),
+                    ]));
+                }
                 lines.push(Line::from(""));
                 lines.push(Line::from(vec![
                     Span::styled("Shortcuts: ", Style::default().fg(tailwind::SLATE_600)),
@@ -6544,13 +7898,60 @@ export extern "forgum" [
     fn render_zellij_footer(&self, f: &mut Frame, area: Rect) {
         let bp = Breakpoint::from_size(area.width, area.height);
 
-        // ── Compact Mode: show only the status message (1 line) ──────────────
-        // The full key-hint bar requires 2 lines and looks cramped on tiny screens.
+        // ── Compact Mode: show only the status message (1 line) with Vim badge ──────
         if bp == Breakpoint::Compact {
-            let p = Paragraph::new(Line::from(Span::styled(
-                format!(" {}", self.status_message),
-                Style::default().fg(tailwind::SKY_400),
-            )));
+            let (mode_bg, mode_fg) = self.vim_mode.badge_colors();
+            let p = Paragraph::new(Line::from(vec![
+                Span::styled(
+                    self.vim_mode.badge(),
+                    Style::default()
+                        .bg(mode_bg)
+                        .fg(mode_fg)
+                        .add_modifier(Modifier::BOLD),
+                ),
+                Span::raw(" "),
+                Span::styled(
+                    format!(" {}", self.status_message),
+                    Style::default().fg(tailwind::SKY_400),
+                ),
+            ]));
+            f.render_widget(p, area);
+            return;
+        }
+
+        // ── Interactive Mascot Search Mode ────────────────────────────────────
+        if self.vim_mode == VimMode::Search {
+            let (mode_bg, mode_fg) = self.vim_mode.badge_colors();
+            let p = Paragraph::new(Line::from(vec![
+                Span::styled(
+                    self.vim_mode.badge(),
+                    Style::default()
+                        .bg(mode_bg)
+                        .fg(mode_fg)
+                        .add_modifier(Modifier::BOLD),
+                ),
+                Span::raw(" "),
+                Span::styled(
+                    " <Enter> ",
+                    Style::default()
+                        .bg(tailwind::SLATE_800)
+                        .fg(tailwind::EMERALD_400),
+                ),
+                Span::styled(" Confirm  ", Style::default().fg(tailwind::SLATE_300)),
+                Span::styled(
+                    " <Esc> ",
+                    Style::default()
+                        .bg(tailwind::SLATE_800)
+                        .fg(tailwind::ROSE_400),
+                ),
+                Span::styled(" Cancel  ", Style::default().fg(tailwind::SLATE_300)),
+                Span::styled(
+                    format!(" │ Mascot Search: {}█", self.mascot_search_query),
+                    Style::default()
+                        .fg(tailwind::PURPLE_400)
+                        .add_modifier(Modifier::BOLD),
+                ),
+            ]));
             f.render_widget(p, area);
             return;
         }
@@ -6559,7 +7960,7 @@ export extern "forgum" [
         let help_spans = if self.current_tab == Tab::Installer {
             vec![
                 Span::styled(
-                    " <Tab/1-5> ",
+                    " <Tab/gt> ",
                     Style::default()
                         .bg(tailwind::SLATE_800)
                         .fg(tailwind::SLATE_200),
@@ -6594,21 +7995,21 @@ export extern "forgum" [
                 ),
                 Span::styled(" Test  ", Style::default().fg(tailwind::SLATE_300)),
                 Span::styled(
-                    " <l> ",
+                    " <T> ",
                     Style::default()
                         .bg(tailwind::SLATE_800)
-                        .fg(tailwind::CYAN_400),
+                        .fg(tailwind::FUCHSIA_400),
                 ),
-                Span::styled(" License  ", Style::default().fg(tailwind::SLATE_300)),
+                Span::styled(" Tip  ", Style::default().fg(tailwind::SLATE_300)),
                 Span::styled(
-                    " <p> ",
+                    " <?> ",
                     Style::default()
                         .bg(tailwind::SLATE_800)
-                        .fg(tailwind::VIOLET_400),
+                        .fg(tailwind::SKY_400),
                 ),
-                Span::styled(" Updates  ", Style::default().fg(tailwind::SLATE_300)),
+                Span::styled(" Vim  ", Style::default().fg(tailwind::SLATE_300)),
                 Span::styled(
-                    " <q> ",
+                    " <ZZ/q> ",
                     Style::default()
                         .bg(tailwind::SLATE_800)
                         .fg(tailwind::ROSE_500),
@@ -6664,7 +8065,7 @@ export extern "forgum" [
         } else if self.current_tab == Tab::Config {
             vec![
                 Span::styled(
-                    " <Tab> ",
+                    " <Tab/gt> ",
                     Style::default()
                         .bg(tailwind::SLATE_800)
                         .fg(tailwind::SLATE_200),
@@ -6678,26 +8079,19 @@ export extern "forgum" [
                 ),
                 Span::styled(" Select  ", Style::default().fg(tailwind::SLATE_400)),
                 Span::styled(
-                    " <e/Enter> ",
+                    " <h/l> ",
+                    Style::default()
+                        .bg(tailwind::SLATE_800)
+                        .fg(tailwind::AMBER_400),
+                ),
+                Span::styled(" Cycle  ", Style::default().fg(tailwind::SLATE_300)),
+                Span::styled(
+                    " <i/Enter> ",
                     Style::default()
                         .bg(tailwind::SLATE_800)
                         .fg(tailwind::EMERALD_400),
                 ),
                 Span::styled(" Edit  ", Style::default().fg(tailwind::SLATE_300)),
-                Span::styled(
-                    " <+/-> ",
-                    Style::default()
-                        .bg(tailwind::SLATE_800)
-                        .fg(tailwind::AMBER_400),
-                ),
-                Span::styled(" Step  ", Style::default().fg(tailwind::SLATE_300)),
-                Span::styled(
-                    " <o> ",
-                    Style::default()
-                        .bg(tailwind::SLATE_800)
-                        .fg(tailwind::VIOLET_400),
-                ),
-                Span::styled(" Open Editor  ", Style::default().fg(tailwind::SLATE_300)),
                 Span::styled(
                     " <s> ",
                     Style::default()
@@ -6706,7 +8100,21 @@ export extern "forgum" [
                 ),
                 Span::styled(" Save  ", Style::default().fg(tailwind::SLATE_300)),
                 Span::styled(
-                    " <q> ",
+                    " <T> ",
+                    Style::default()
+                        .bg(tailwind::SLATE_800)
+                        .fg(tailwind::FUCHSIA_400),
+                ),
+                Span::styled(" Tip  ", Style::default().fg(tailwind::SLATE_300)),
+                Span::styled(
+                    " <?> ",
+                    Style::default()
+                        .bg(tailwind::SLATE_800)
+                        .fg(tailwind::SKY_400),
+                ),
+                Span::styled(" Vim  ", Style::default().fg(tailwind::SLATE_300)),
+                Span::styled(
+                    " <ZZ/q> ",
                     Style::default()
                         .bg(tailwind::SLATE_800)
                         .fg(tailwind::ROSE_500),
@@ -6720,12 +8128,12 @@ export extern "forgum" [
         } else {
             vec![
                 Span::styled(
-                    " <Tab/1-5> ",
+                    " <Tab/gt> ",
                     Style::default()
                         .bg(tailwind::SLATE_800)
                         .fg(tailwind::SLATE_200),
                 ),
-                Span::styled(" Switch Tab  ", Style::default().fg(tailwind::SLATE_400)),
+                Span::styled(" Tabs  ", Style::default().fg(tailwind::SLATE_400)),
                 Span::styled(
                     " <j/k> ",
                     Style::default()
@@ -6734,12 +8142,12 @@ export extern "forgum" [
                 ),
                 Span::styled(" Select  ", Style::default().fg(tailwind::SLATE_400)),
                 Span::styled(
-                    " <b> ",
+                    " </> ",
                     Style::default()
                         .bg(tailwind::SLATE_800)
-                        .fg(tailwind::CYAN_400),
+                        .fg(tailwind::PURPLE_400),
                 ),
-                Span::styled(" Native Biome  ", Style::default().fg(tailwind::SLATE_300)),
+                Span::styled(" Search  ", Style::default().fg(tailwind::SLATE_300)),
                 Span::styled(
                     " <Space> ",
                     Style::default()
@@ -6748,19 +8156,12 @@ export extern "forgum" [
                 ),
                 Span::styled(" Toggle  ", Style::default().fg(tailwind::SLATE_300)),
                 Span::styled(
-                    " <o> ",
+                    " <b> ",
                     Style::default()
                         .bg(tailwind::SLATE_800)
-                        .fg(tailwind::VIOLET_400),
+                        .fg(tailwind::CYAN_400),
                 ),
-                Span::styled(" Open Editor  ", Style::default().fg(tailwind::SLATE_300)),
-                Span::styled(
-                    " <r> ",
-                    Style::default()
-                        .bg(tailwind::SLATE_800)
-                        .fg(tailwind::AMBER_400),
-                ),
-                Span::styled(" Random  ", Style::default().fg(tailwind::SLATE_300)),
+                Span::styled(" Biome  ", Style::default().fg(tailwind::SLATE_300)),
                 Span::styled(
                     " <s> ",
                     Style::default()
@@ -6769,7 +8170,21 @@ export extern "forgum" [
                 ),
                 Span::styled(" Save  ", Style::default().fg(tailwind::SLATE_300)),
                 Span::styled(
-                    " <q> ",
+                    " <t> ",
+                    Style::default()
+                        .bg(tailwind::SLATE_800)
+                        .fg(tailwind::FUCHSIA_400),
+                ),
+                Span::styled(" Tip  ", Style::default().fg(tailwind::SLATE_300)),
+                Span::styled(
+                    " <?> ",
+                    Style::default()
+                        .bg(tailwind::SLATE_800)
+                        .fg(tailwind::SKY_400),
+                ),
+                Span::styled(" Vim  ", Style::default().fg(tailwind::SLATE_300)),
+                Span::styled(
+                    " <ZZ/q> ",
                     Style::default()
                         .bg(tailwind::SLATE_800)
                         .fg(tailwind::ROSE_500),
@@ -6782,7 +8197,20 @@ export extern "forgum" [
             ]
         };
 
-        let p = Paragraph::new(Line::from(help_spans));
+        let (mode_bg, mode_fg) = self.vim_mode.badge_colors();
+        let mut final_spans = vec![
+            Span::styled(
+                self.vim_mode.badge(),
+                Style::default()
+                    .bg(mode_bg)
+                    .fg(mode_fg)
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::raw(" "),
+        ];
+        final_spans.extend(help_spans);
+
+        let p = Paragraph::new(Line::from(final_spans));
         f.render_widget(p, area);
     }
 }
@@ -7837,5 +9265,515 @@ mod tests {
                 _ => {}
             }
         }
+    }
+
+    #[test]
+    fn test_hardware_accel_setting_cycling_and_persistence() {
+        let mut app = ConfigApp::new(None, None, Some(Tab::Config));
+        app.config_field_idx = ConfigField::HardwareAccel as usize;
+
+        // Default should be auto
+        assert_eq!(app.active_accel_mode(), "auto");
+        assert_eq!(app.active_accel_display(), "Auto");
+        assert_eq!(app.active_accel_badge(), "✨ AUTO SELECT");
+        assert!(app
+            .active_accel_desc()
+            .contains("Automatically prefers Dedicated GPU"));
+
+        let val_auto = app.field_value(ConfigField::HardwareAccel, false);
+        assert!(val_auto.contains("Auto"));
+        assert!(val_auto.contains("AUTO SELECT"));
+        assert!(val_auto.contains("Automatically prefers Dedicated GPU"));
+
+        // Cycle forward: auto -> dedicated
+        app.cycle_config_field(true);
+        assert_eq!(app.config.accel_mode.as_deref(), Some("dedicated"));
+        assert_eq!(app.active_accel_mode(), "dedicated");
+        assert_eq!(app.active_accel_display(), "Dedicated");
+        assert_eq!(app.active_accel_badge(), "⚡ DEDICATED GPU");
+        assert!(app
+            .active_accel_desc()
+            .contains("discrete GPU cores and VRAM"));
+        let val_ded = app.field_value(ConfigField::HardwareAccel, false);
+        assert!(val_ded.contains("Dedicated"));
+        assert!(val_ded.contains("DEDICATED GPU"));
+
+        // Cycle forward: dedicated -> integrated
+        app.cycle_config_field(true);
+        assert_eq!(app.config.accel_mode.as_deref(), Some("integrated"));
+        assert_eq!(app.active_accel_mode(), "integrated");
+        assert_eq!(app.active_accel_display(), "Integrated");
+        assert_eq!(app.active_accel_badge(), "🔋 INTEGRATED APU");
+        assert!(app.active_accel_desc().contains("Internal graphics / APU"));
+
+        // Cycle forward: integrated -> npu
+        app.cycle_config_field(true);
+        assert_eq!(app.config.accel_mode.as_deref(), Some("npu"));
+        assert_eq!(app.active_accel_mode(), "npu");
+        assert_eq!(app.active_accel_display(), "NPU");
+        assert_eq!(app.active_accel_badge(), "🧠 NEURAL NPU");
+        assert!(app.active_accel_desc().contains("Neural Processing Unit"));
+
+        // Cycle forward: npu -> cpu
+        app.cycle_config_field(true);
+        assert_eq!(app.config.accel_mode.as_deref(), Some("cpu"));
+        assert_eq!(app.active_accel_mode(), "cpu");
+        assert_eq!(app.active_accel_display(), "Cpu");
+        assert_eq!(app.active_accel_badge(), "💻 CPU COMPUTE");
+        assert!(app.active_accel_desc().contains("Pure CPU computing"));
+
+        // Cycle forward: cpu -> auto
+        app.cycle_config_field(true);
+        assert_eq!(app.config.accel_mode.as_deref(), Some("auto"));
+        assert_eq!(app.active_accel_mode(), "auto");
+
+        // Cycle backward: auto -> cpu
+        app.cycle_config_field(false);
+        assert_eq!(app.config.accel_mode.as_deref(), Some("cpu"));
+
+        // Verify serialization / deserialization round-trip preserves accel_mode
+        for fmt in [ConfigFormat::Json, ConfigFormat::Yaml, ConfigFormat::Toml] {
+            let serialized = app
+                .config()
+                .serialize_with_format(fmt)
+                .expect("serialization succeeds");
+            assert!(
+                serialized.contains("accel_mode") || serialized.contains("cpu"),
+                "Expected accel_mode in serialized format: {serialized}"
+            );
+            let deserialized =
+                SceneConfig::parse_with_format(&serialized, fmt).expect("deserialization succeeds");
+            assert_eq!(
+                deserialized.accel_mode.as_deref(),
+                Some("cpu"),
+                "Mismatch on format {:?}",
+                fmt
+            );
+        }
+    }
+
+    #[test]
+    fn test_reduce_motion_text_only_banner_cycling_and_persistence() {
+        let mut app = ConfigApp::new(None, None, Some(Tab::Config));
+
+        // 1. Test reduce_motion
+        app.config_field_idx = ConfigField::ReduceMotion as usize;
+        assert!(!app.config.reduce_motion);
+        let val = app.field_value(ConfigField::ReduceMotion, false);
+        assert!(val.contains("✖ OFF"));
+
+        app.cycle_config_field(true);
+        assert!(app.config.reduce_motion);
+        let val_on = app.field_value(ConfigField::ReduceMotion, false);
+        assert!(val_on.contains("✔ ON"));
+
+        // 2. Test text_only
+        app.config_field_idx = ConfigField::TextOnly as usize;
+        assert!(!app.config.text_only);
+        let val = app.field_value(ConfigField::TextOnly, false);
+        assert!(val.contains("✖ OFF"));
+
+        app.cycle_config_field(true);
+        assert!(app.config.text_only);
+        let val_on = app.field_value(ConfigField::TextOnly, false);
+        assert!(val_on.contains("✔ ON"));
+
+        // 3. Test banner
+        app.config_field_idx = ConfigField::Banner as usize;
+        assert!(!app.config.banner);
+        let val = app.field_value(ConfigField::Banner, false);
+        assert!(val.contains("✖ OFF"));
+
+        app.cycle_config_field(true);
+        assert!(app.config.banner);
+        assert_eq!(app.config.shell_attach_mode, "banner");
+        let val_on = app.field_value(ConfigField::Banner, false);
+        assert!(val_on.contains("✔ ON"));
+
+        // 4. Persistence across all 3 formats
+        for fmt in [ConfigFormat::Json, ConfigFormat::Yaml, ConfigFormat::Toml] {
+            let serialized = app.config().serialize_with_format(fmt).unwrap();
+            let deserialized = SceneConfig::parse_with_format(&serialized, fmt).unwrap();
+            assert!(deserialized.reduce_motion);
+            assert!(deserialized.text_only);
+            assert!(deserialized.banner);
+        }
+    }
+
+    #[test]
+    fn test_aspect_ratio_and_mode_cycling_and_persistence() {
+        let mut app = ConfigApp::new(None, None, Some(Tab::Config));
+
+        // 1. Test Aspect cycling
+        app.config_field_idx = ConfigField::Aspect as usize;
+        assert_eq!(app.config.aspect, None);
+        let val_auto = app.field_value(ConfigField::Aspect, false);
+        assert!(val_auto.contains("auto"));
+
+        // Cycle forward: auto -> 21:9
+        app.cycle_config_field(true);
+        assert_eq!(app.config.aspect.as_deref(), Some("21:9"));
+        let val_21x9 = app.field_value(ConfigField::Aspect, false);
+        assert!(val_21x9.contains("21:9"));
+        assert!(val_21x9.contains("Ultrawide"));
+
+        // Cycle forward: 21:9 -> 16:9
+        app.cycle_config_field(true);
+        assert_eq!(app.config.aspect.as_deref(), Some("16:9"));
+
+        // Cycle forward: 16:9 -> 16:10
+        app.cycle_config_field(true);
+        assert_eq!(app.config.aspect.as_deref(), Some("16:10"));
+
+        // 2. Test AspectMode cycling
+        app.config_field_idx = ConfigField::AspectMode as usize;
+        assert_eq!(app.config.aspect_mode, None);
+
+        // Cycle forward: auto -> preset
+        app.cycle_config_field(true);
+        assert_eq!(app.config.aspect_mode.as_deref(), Some("preset"));
+        let val_preset = app.field_value(ConfigField::AspectMode, false);
+        assert!(val_preset.contains("preset"));
+
+        // Cycle forward: preset -> dynamic
+        app.cycle_config_field(true);
+        assert_eq!(app.config.aspect_mode.as_deref(), Some("dynamic"));
+
+        // 3. Persistence across all 3 formats (JSON, YAML, TOML)
+        for fmt in [ConfigFormat::Json, ConfigFormat::Yaml, ConfigFormat::Toml] {
+            let serialized = app.config().serialize_with_format(fmt).unwrap();
+            let deserialized = SceneConfig::parse_with_format(&serialized, fmt).unwrap();
+            assert_eq!(deserialized.aspect.as_deref(), Some("16:10"));
+            assert_eq!(deserialized.aspect_mode.as_deref(), Some("dynamic"));
+        }
+    }
+
+    #[test]
+    fn test_dynamic_pane_resize_and_layout_responsiveness() {
+        let mut app = ConfigApp::new(None, None, Some(Tab::Config));
+
+        // Test multiple dynamic resize events simulating window dragging or tmux split changes
+        let test_dimensions = [
+            (160, 50, Breakpoint::Wide),
+            (100, 30, Breakpoint::Standard),
+            (80, 24, Breakpoint::Standard),
+            (75, 20, Breakpoint::Compact),
+            (50, 15, Breakpoint::Compact),
+            (20, 5, Breakpoint::Compact),
+            (140, 40, Breakpoint::Wide),
+        ];
+
+        for (width, height, expected_bp) in test_dimensions {
+            // Dispatch dynamic resize event
+            app.handle_event(Event::Resize(width, height))
+                .expect("handle resize event");
+
+            // Verify cached size and breakpoint update immediately
+            assert_eq!(app.last_terminal_size, (width, height));
+            assert_eq!(app.current_breakpoint(), expected_bp);
+
+            // Test draw loop across all tabs at this dimension
+            let backend = ratatui::backend::TestBackend::new(width, height);
+            let mut terminal = ratatui::Terminal::new(backend).unwrap();
+
+            for tab in Tab::ALL {
+                app.current_tab = tab;
+                terminal
+                    .draw(|f| {
+                        app.render(f);
+                    })
+                    .expect("render must succeed at all dimensions");
+            }
+        }
+    }
+
+    #[test]
+    fn test_vim_modes_and_badge_colors() {
+        assert_eq!(VimMode::Normal.badge(), " NORMAL ");
+        assert_eq!(VimMode::Insert.badge(), " INSERT ");
+        assert_eq!(VimMode::Search.badge(), " SEARCH ");
+
+        let (bg, fg) = VimMode::Normal.badge_colors();
+        assert_eq!(bg, tailwind::SLATE_800);
+        assert_eq!(fg, tailwind::EMERALD_400);
+
+        let (bg, fg) = VimMode::Insert.badge_colors();
+        assert_eq!(bg, tailwind::SLATE_800);
+        assert_eq!(fg, tailwind::AMBER_400);
+
+        let (bg, fg) = VimMode::Search.badge_colors();
+        assert_eq!(bg, tailwind::SLATE_800);
+        assert_eq!(fg, tailwind::PURPLE_400);
+    }
+
+    #[test]
+    fn test_vim_gg_and_capital_g_navigation() {
+        let mut app = ConfigApp::new(None, None, Some(Tab::Mascots));
+        assert_eq!(app.mascot_item_idx, 0);
+
+        // Jump to bottom using Vim 'G' (with KeyModifiers::NONE)
+        let event_g = Event::Key(KeyEvent::new(KeyCode::Char('G'), KeyModifiers::NONE));
+        let res = app.handle_event(event_g).expect("handle G");
+        assert_eq!(res, None);
+        assert!(app.mascot_item_idx > 0);
+
+        // Jump to top using Vim 'gg' sequence
+        let event_g_prefix = Event::Key(KeyEvent::new(KeyCode::Char('g'), KeyModifiers::NONE));
+        app.handle_event(event_g_prefix).expect("handle first g");
+        assert_eq!(app.pending_vim_prefix, Some('g'));
+
+        let event_g_second = Event::Key(KeyEvent::new(KeyCode::Char('g'), KeyModifiers::NONE));
+        app.handle_event(event_g_second).expect("handle second g");
+        assert_eq!(app.pending_vim_prefix, None);
+        assert_eq!(app.mascot_item_idx, 0);
+
+        // Jump to bottom using Vim Shift+G (with KeyModifiers::SHIFT from terminal)
+        let event_shift_g = Event::Key(KeyEvent::new(KeyCode::Char('G'), KeyModifiers::SHIFT));
+        let res = app.handle_event(event_shift_g).expect("handle Shift+G");
+        assert_eq!(res, None);
+        assert!(app.mascot_item_idx > 0);
+    }
+
+    #[test]
+    fn test_vim_ctrl_d_and_ctrl_u_half_page_scroll() {
+        let mut app = ConfigApp::new(None, None, Some(Tab::Mascots));
+        assert_eq!(app.mascot_item_idx, 0);
+
+        // Half-page down: Ctrl+d (delta = 5)
+        let event_ctrl_d = Event::Key(KeyEvent::new(KeyCode::Char('d'), KeyModifiers::CONTROL));
+        app.handle_event(event_ctrl_d).expect("handle Ctrl+d");
+        assert_eq!(app.mascot_item_idx, 5);
+
+        // Half-page up: Ctrl+u
+        let event_ctrl_u = Event::Key(KeyEvent::new(KeyCode::Char('u'), KeyModifiers::CONTROL));
+        app.handle_event(event_ctrl_u).expect("handle Ctrl+u");
+        assert_eq!(app.mascot_item_idx, 0);
+    }
+
+    #[test]
+    fn test_vim_gt_and_g_capital_t_tab_switching() {
+        let mut app = ConfigApp::new(None, None, Some(Tab::Mascots));
+        assert_eq!(app.current_tab, Tab::Mascots);
+
+        // Next tab: 'gt'
+        let event_g = Event::Key(KeyEvent::new(KeyCode::Char('g'), KeyModifiers::NONE));
+        app.handle_event(event_g).expect("handle g");
+        let event_t = Event::Key(KeyEvent::new(KeyCode::Char('t'), KeyModifiers::NONE));
+        app.handle_event(event_t).expect("handle t");
+        assert_eq!(app.current_tab, Tab::Scenery);
+
+        // Next tab: 'gt' again -> Tab::Effects
+        let event_g = Event::Key(KeyEvent::new(KeyCode::Char('g'), KeyModifiers::NONE));
+        app.handle_event(event_g).expect("handle g");
+        let event_t = Event::Key(KeyEvent::new(KeyCode::Char('t'), KeyModifiers::NONE));
+        app.handle_event(event_t).expect("handle t");
+        assert_eq!(app.current_tab, Tab::Effects);
+
+        // Prev tab: 'gT' -> back to Tab::Scenery
+        let event_g = Event::Key(KeyEvent::new(KeyCode::Char('g'), KeyModifiers::NONE));
+        app.handle_event(event_g).expect("handle g");
+        let event_t_upper = Event::Key(KeyEvent::new(KeyCode::Char('T'), KeyModifiers::NONE));
+        app.handle_event(event_t_upper).expect("handle T");
+        assert_eq!(app.current_tab, Tab::Scenery);
+    }
+
+    #[test]
+    fn test_vim_zz_and_zq_quit_actions() {
+        let mut app = ConfigApp::new(None, None, Some(Tab::Mascots));
+
+        // Save & Quit: 'ZZ'
+        let event_z = Event::Key(KeyEvent::new(KeyCode::Char('Z'), KeyModifiers::NONE));
+        app.handle_event(event_z).expect("handle first Z");
+        assert_eq!(app.pending_vim_prefix, Some('Z'));
+
+        let event_second_z = Event::Key(KeyEvent::new(KeyCode::Char('Z'), KeyModifiers::NONE));
+        let res = app.handle_event(event_second_z).expect("handle second Z");
+        assert_eq!(res, Some(Action::SaveAndQuit));
+
+        // Quit without saving: 'ZQ'
+        let event_z = Event::Key(KeyEvent::new(KeyCode::Char('Z'), KeyModifiers::NONE));
+        app.handle_event(event_z).expect("handle first Z");
+        let event_q = Event::Key(KeyEvent::new(KeyCode::Char('Q'), KeyModifiers::NONE));
+        let res = app.handle_event(event_q).expect("handle Q");
+        assert_eq!(res, Some(Action::Quit));
+    }
+
+    #[test]
+    fn test_vim_search_mode_and_query_filtering() {
+        let mut app = ConfigApp::new(None, None, Some(Tab::Mascots));
+        assert_eq!(app.vim_mode, VimMode::Normal);
+
+        // Enter search mode with '/'
+        let slash = Event::Key(KeyEvent::new(KeyCode::Char('/'), KeyModifiers::NONE));
+        app.handle_event(slash).expect("enter search mode");
+        assert_eq!(app.vim_mode, VimMode::Search);
+
+        // Type query 'd', 'u', 'c', 'k'
+        for c in ['d', 'u', 'c', 'k'] {
+            let key = Event::Key(KeyEvent::new(KeyCode::Char(c), KeyModifiers::NONE));
+            app.handle_event(key).expect("type search character");
+        }
+        assert_eq!(app.mascot_search_query, "duck");
+        assert_eq!(app.config.cow, "duck");
+
+        // Confirm search with Enter
+        let enter = Event::Key(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE));
+        app.handle_event(enter).expect("confirm search");
+        assert_eq!(app.vim_mode, VimMode::Normal);
+        assert_eq!(app.config.cow, "duck");
+
+        // Cancel search with Esc
+        let slash = Event::Key(KeyEvent::new(KeyCode::Char('/'), KeyModifiers::NONE));
+        app.handle_event(slash).expect("enter search mode again");
+        assert_eq!(app.vim_mode, VimMode::Search);
+
+        let esc = Event::Key(KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE));
+        app.handle_event(esc).expect("cancel search");
+        assert_eq!(app.vim_mode, VimMode::Normal);
+    }
+
+    #[test]
+    fn test_vim_insert_mode_config_editing() {
+        let mut app = ConfigApp::new(None, None, Some(Tab::Config));
+        assert_eq!(app.vim_mode, VimMode::Normal);
+        assert!(!app.editing_config);
+
+        // Enter insert mode with 'i'
+        let key_i = Event::Key(KeyEvent::new(KeyCode::Char('i'), KeyModifiers::NONE));
+        app.handle_event(key_i).expect("enter insert mode with i");
+        assert_eq!(app.vim_mode, VimMode::Insert);
+        assert!(app.editing_config);
+
+        // Exit insert mode with Esc
+        let key_esc = Event::Key(KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE));
+        app.handle_event(key_esc)
+            .expect("exit insert mode with Esc");
+        assert_eq!(app.vim_mode, VimMode::Normal);
+        assert!(!app.editing_config);
+
+        // Enter insert mode with 'a'
+        let key_a = Event::Key(KeyEvent::new(KeyCode::Char('a'), KeyModifiers::NONE));
+        app.handle_event(key_a).expect("enter insert mode with a");
+        assert_eq!(app.vim_mode, VimMode::Insert);
+        assert!(app.editing_config);
+
+        // Exit insert mode with Ctrl+[
+        let key_ctrl_bracket = Event::Key(KeyEvent::new(KeyCode::Char('['), KeyModifiers::CONTROL));
+        app.handle_event(key_ctrl_bracket)
+            .expect("exit insert mode with Ctrl+[");
+        assert_eq!(app.vim_mode, VimMode::Normal);
+        assert!(!app.editing_config);
+    }
+
+    #[test]
+    fn test_vim_help_modal_toggle() {
+        let mut app = ConfigApp::new(None, None, Some(Tab::Mascots));
+        assert!(!app.show_vim_help);
+
+        // Toggle help modal on with '?'
+        let key_help = Event::Key(KeyEvent::new(KeyCode::Char('?'), KeyModifiers::NONE));
+        app.handle_event(key_help).expect("show vim help");
+        assert!(app.show_vim_help);
+
+        // Toggle help modal off with '?'
+        let key_help = Event::Key(KeyEvent::new(KeyCode::Char('?'), KeyModifiers::NONE));
+        app.handle_event(key_help).expect("hide vim help");
+        assert!(!app.show_vim_help);
+    }
+
+    #[test]
+    fn test_feature_discovery_suggestions_cycling_and_hotkeys() {
+        let mut app = ConfigApp::new(None, None, Some(Tab::Mascots));
+
+        // Initial suggestion exists and is non-empty
+        let initial_tip = app.current_suggestion();
+        assert!(!initial_tip.is_empty());
+        assert!(app.status_message.starts_with("💡 Pro-Tip: "));
+
+        // Direct cycling advances index and returns valid suggestion
+        let start_idx = app.suggestion_idx;
+        let next_tip = app.next_suggestion();
+        assert_eq!(
+            app.suggestion_idx,
+            (start_idx + 1) % FEATURE_SUGGESTIONS.len()
+        );
+        assert!(!next_tip.is_empty());
+
+        // Full cycle through all suggestions without panic
+        for _ in 0..FEATURE_SUGGESTIONS.len() {
+            let tip = app.next_suggestion();
+            assert!(!tip.is_empty());
+        }
+
+        // Global hotkey 'T' (Shift+T) cycles suggestion and updates status message
+        let key_t = Event::Key(KeyEvent::new(KeyCode::Char('T'), KeyModifiers::NONE));
+        let prev_idx = app.suggestion_idx;
+        app.handle_event(key_t).expect("handle 'T' global hotkey");
+        assert_eq!(
+            app.suggestion_idx,
+            (prev_idx + 1) % FEATURE_SUGGESTIONS.len()
+        );
+        assert!(app.status_message.starts_with("💡 Pro-Tip: "));
+
+        // Global hotkey F1 cycles suggestion and updates status message
+        let key_f1 = Event::Key(KeyEvent::new(KeyCode::F(1), KeyModifiers::NONE));
+        let prev_idx = app.suggestion_idx;
+        app.handle_event(key_f1).expect("handle F1 global hotkey");
+        assert_eq!(
+            app.suggestion_idx,
+            (prev_idx + 1) % FEATURE_SUGGESTIONS.len()
+        );
+        assert!(app.status_message.starts_with("💡 Pro-Tip: "));
+
+        // Tab-specific 't' in Mascots tab
+        let key_lower_t = Event::Key(KeyEvent::new(KeyCode::Char('t'), KeyModifiers::NONE));
+        let prev_idx = app.suggestion_idx;
+        app.handle_event(key_lower_t.clone())
+            .expect("handle 't' in Mascots tab");
+        assert_eq!(
+            app.suggestion_idx,
+            (prev_idx + 1) % FEATURE_SUGGESTIONS.len()
+        );
+
+        // Tab-specific 't' in Scenery tab
+        app.current_tab = Tab::Scenery;
+        let prev_idx = app.suggestion_idx;
+        app.handle_event(key_lower_t.clone())
+            .expect("handle 't' in Scenery tab");
+        assert_eq!(
+            app.suggestion_idx,
+            (prev_idx + 1) % FEATURE_SUGGESTIONS.len()
+        );
+
+        // Tab-specific 't' in Effects tab
+        app.current_tab = Tab::Effects;
+        let prev_idx = app.suggestion_idx;
+        app.handle_event(key_lower_t)
+            .expect("handle 't' in Effects tab");
+        assert_eq!(
+            app.suggestion_idx,
+            (prev_idx + 1) % FEATURE_SUGGESTIONS.len()
+        );
+    }
+
+    #[test]
+    fn test_custom_keybindings_remapping() {
+        let mut app = ConfigApp::new(Some(SceneConfig::default()), None, None);
+        app.config.keybindings = Some(forgum_platform::protocol::KeybindingsConfig {
+            quit: Some("x".to_string()),
+            help: Some("H".to_string()),
+            ..Default::default()
+        });
+
+        // 'x' triggers Action::Quit due to remapping
+        let key_x = Event::Key(KeyEvent::new(KeyCode::Char('x'), KeyModifiers::NONE));
+        let res = app.handle_event(key_x).expect("handle 'x'");
+        assert_eq!(res, Some(Action::Quit));
+
+        // 'H' triggers Vim help modal toggle
+        assert!(!app.show_vim_help);
+        let key_h = Event::Key(KeyEvent::new(KeyCode::Char('H'), KeyModifiers::NONE));
+        let _ = app.handle_event(key_h).expect("handle 'H'");
+        assert!(app.show_vim_help);
     }
 }

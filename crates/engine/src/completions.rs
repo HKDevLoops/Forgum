@@ -158,12 +158,16 @@ fn generate_bash_completions(cmd: &mut clap::Command) -> String {
     // Enrich with discrete value completion lists for bash
     let enrichment = r#"
 # Forgum dynamic value completion helpers for bash
-_forgum_effects="walk breathe float fly talk sway pulse glitch particles dissolve animal_natural natural"
+_forgum_effects="moonwalk walk breathe float fly talk sway pulse glitch particles dissolve animal_natural natural"
 _forgum_mountains="hills peaks volcano iceberg skyline seamount plateau crater gothic castle garden none"
 _forgum_roads="dirt cobblestone magma ice seabed sidewalk roof grid crypt savanna mud tracks checkerboard none"
 _forgum_environments="pasture inferno ocean arctic city forest savanna swamp space cyber graveyard jurassic hive throne none"
 _forgum_colors="natural animal_natural default animal rainbow lolcat solid none"
 _forgum_animals="apt armadillo atat bearface beavis.zen bees bill-the-cat bud-frogs bunny cat cat2 catfence charizardvice charlie claw-arm corgi cower cowfee cthulhu-mini daemon default docker-whale doge dolphin dragon dragon-and-cow duck ebi_furai elephant elephant-in-snake elephant2 eyes fat-banana fat-cow fence flaming-sheep fox ghost ghostbusters glados goat goat2 golden-eagle hamster happy-whale hedgehog hellokitty hippie hiya hypno jellyfish jesus king kiss kitten kitty knight koala kosh lamb lamb2 lobster lollerskates luke-koala mech-and-cow meow minotaur mona-lisa moofasa mooghidjirah moojira moose mule mutilated nyan octopus owl panther pawn periodic-table personality-sphere pig pterodactyl pufferfish queen radioactive-kitty ram ren rhino rook rooster satanic sauron seahorse seahorse-big sheep shikato shrug skeleton sloth small smiling-octopus snoopy snoopyhouse snoopysleep spidercow squid squirrel stegosaurus stimpy supermilker surgery telebears three-eyes tiger tortoise turkey turtle tux tux-big tweety-bird unipony vader viper vulpix walrus weeping-angel whale wizard wolf world yoda random"
+_forgum_accel="auto dedicated integrated npu cpu"
+_forgum_attach_modes="startup prompt clear split pane"
+_forgum_aspects="auto 21:9 16:9 16:10 4:3 1:1 narrow"
+_forgum_aspect_modes="preset dynamic auto"
 
 _forgum_custom_complete() {
     local prev="${COMP_WORDS[COMP_CWORD-1]}"
@@ -193,6 +197,22 @@ _forgum_custom_complete() {
             COMPREPLY=( $(compgen -W "$_forgum_animals" -- "$cur") )
             return 0
             ;;
+        --accel)
+            COMPREPLY=( $(compgen -W "$_forgum_accel" -- "$cur") )
+            return 0
+            ;;
+        --shell-attach-mode|--attach-mode)
+            COMPREPLY=( $(compgen -W "$_forgum_attach_modes" -- "$cur") )
+            return 0
+            ;;
+        --aspect|--aspect-ratio)
+            COMPREPLY=( $(compgen -W "$_forgum_aspects" -- "$cur") )
+            return 0
+            ;;
+        --aspect-mode)
+            COMPREPLY=( $(compgen -W "$_forgum_aspect_modes" -- "$cur") )
+            return 0
+            ;;
     esac
     return 1
 }
@@ -210,7 +230,8 @@ fn generate_zsh_completions(cmd: &mut clap::Command) -> String {
     let zsh_extra = r#"
 # ── forgum value completions for zsh & fzf-tab ──
 _forgum_effects=(
-    'walk:Natural bovine walking animation'
+    'moonwalk:Legendary reverse-glide moonwalk with sliding hooves'
+    'walk:Bovine horizontal walking animation (alias for moonwalk)'
     'breathe:Gentle breathing idle animation'
     'float:Drifting levitation animation'
     'fly:Flying creature animation'
@@ -415,6 +436,34 @@ _forgum_animals=(
     'yoda:Mascot yoda'
     'random:Mascot random'
 )
+_forgum_accel=(
+    'auto:Automatic GPU detection with CPU fallback'
+    'dedicated:Prefer dedicated GPU hardware cores and VRAM (e.g. NVIDIA RTX)'
+    'integrated:Prefer integrated/internal graphics APU (e.g. AMD Radeon / Intel Iris)'
+    'npu:Prefer neural processing unit hardware (DirectML / CoreML / AI Boost)'
+    'cpu:Force pure CPU rendering'
+)
+_forgum_attach_modes=(
+    'startup:Static Fastfetch-style banner on shell launch (0 prompt latency)'
+    'prompt:Interactive prompt hook updating after each command'
+    'clear:Single banner and re-rendering exclusively after clear/cls'
+    'split:Hardware DECSTBM top margin reservation'
+    'pane:Multiplexer split pane or background daemon'
+)
+_forgum_aspects=(
+    'auto:Dynamic detection from active terminal dimensions'
+    '21:9:Ultrawide panoramic display format'
+    '16:9:Widescreen 16:9 standard'
+    '16:10:Golden tall 16:10 ratio'
+    '4:3:Classic standard 4:3 format'
+    '1:1:Square 1:1 display format'
+    'narrow:Vertical mobile & split pane format'
+)
+_forgum_aspect_modes=(
+    'preset:Lock to selected aspect preset'
+    'dynamic:Live recalculation on window resize'
+    'auto:Context-aware adaptation'
+)
 "#;
     script.push_str(zsh_extra);
     script
@@ -449,7 +498,7 @@ complete -c forgum -n '__fish_forgum_no_subcommand' -a 'showcase' -d 'Run 60-sec
 complete -c forgum -n '__fish_forgum_no_subcommand' -a 'say' -d 'Run command and display output in speech bubble'
 
 # Rich option value completions with descriptions
-complete -c forgum -l effect -s e -d 'Animation effect' -x -a 'walk	"Natural bovine walking animation" breathe	"Gentle idle breathing animation" float	"Drifting levitation animation" fly	"Flying creature animation" talk	"Conversational jaw animation" sway	"Swaying pendulum animation" pulse	"Pulsing scale animation" glitch	"Digital cyberpunk glitch animation" particles	"Ambient particle emitter animation" dissolve	"Dissolve and materialize animation" animal_natural	"Unique per-creature natural kinetic animation"'
+complete -c forgum -l effect -s e -d 'Animation effect' -x -a 'moonwalk	"Legendary reverse-glide moonwalk with sliding hooves" walk	"Natural bovine walking animation" breathe	"Gentle idle breathing animation" float	"Drifting levitation animation" fly	"Flying creature animation" talk	"Conversational jaw animation" sway	"Swaying pendulum animation" pulse	"Pulsing scale animation" glitch	"Digital cyberpunk glitch animation" particles	"Ambient particle emitter animation" dissolve	"Dissolve and materialize animation" animal_natural	"Unique per-creature natural kinetic animation"'
 complete -c forgum -l cow -l animal -s c -s a -d 'Animal mascot name' -x -a 'apt	"Mascot apt" armadillo	"Mascot armadillo" atat	"Mascot atat" bearface	"Mascot bearface" beavis.zen	"Mascot beavis.zen" bees	"Mascot bees" bill-the-cat	"Mascot bill-the-cat" bud-frogs	"Mascot bud-frogs" bunny	"Mascot bunny" cat	"Mascot cat" cat2	"Mascot cat2" catfence	"Mascot catfence" charizardvice	"Mascot charizardvice" charlie	"Mascot charlie" claw-arm	"Mascot claw-arm" corgi	"Mascot corgi" cower	"Mascot cower" cowfee	"Mascot cowfee" cthulhu-mini	"Mascot cthulhu-mini" daemon	"Mascot daemon" default	"Mascot default" docker-whale	"Mascot docker-whale" doge	"Mascot doge" dolphin	"Mascot dolphin" dragon	"Mascot dragon" dragon-and-cow	"Mascot dragon-and-cow" duck	"Mascot duck" ebi_furai	"Mascot ebi_furai" elephant	"Mascot elephant" elephant-in-snake	"Mascot elephant-in-snake" elephant2	"Mascot elephant2" eyes	"Mascot eyes" fat-banana	"Mascot fat-banana" fat-cow	"Mascot fat-cow" fence	"Mascot fence" flaming-sheep	"Mascot flaming-sheep" fox	"Mascot fox" ghost	"Mascot ghost" ghostbusters	"Mascot ghostbusters" glados	"Mascot glados" goat	"Mascot goat" goat2	"Mascot goat2" golden-eagle	"Mascot golden-eagle" hamster	"Mascot hamster" happy-whale	"Mascot happy-whale" hedgehog	"Mascot hedgehog" hellokitty	"Mascot hellokitty" hippie	"Mascot hippie" hiya	"Mascot hiya" hypno	"Mascot hypno" jellyfish	"Mascot jellyfish" jesus	"Mascot jesus" king	"Mascot king" kiss	"Mascot kiss" kitten	"Mascot kitten" kitty	"Mascot kitty" knight	"Mascot knight" koala	"Mascot koala" kosh	"Mascot kosh" lamb	"Mascot lamb" lamb2	"Mascot lamb2" lobster	"Mascot lobster" lollerskates	"Mascot lollerskates" luke-koala	"Mascot luke-koala" mech-and-cow	"Mascot mech-and-cow" meow	"Mascot meow" minotaur	"Mascot minotaur" mona-lisa	"Mascot mona-lisa" moofasa	"Mascot moofasa" mooghidjirah	"Mascot mooghidjirah" moojira	"Mascot moojira" moose	"Mascot moose" mule	"Mascot mule" mutilated	"Mascot mutilated" nyan	"Mascot nyan" octopus	"Mascot octopus" owl	"Mascot owl" panther	"Mascot panther" pawn	"Mascot pawn" periodic-table	"Mascot periodic-table" personality-sphere	"Mascot personality-sphere" pig	"Mascot pig" pterodactyl	"Mascot pterodactyl" pufferfish	"Mascot pufferfish" queen	"Mascot queen" radioactive-kitty	"Mascot radioactive-kitty" ram	"Mascot ram" ren	"Mascot ren" rhino	"Mascot rhino" rook	"Mascot rook" rooster	"Mascot rooster" satanic	"Mascot satanic" sauron	"Mascot sauron" seahorse	"Mascot seahorse" seahorse-big	"Mascot seahorse-big" sheep	"Mascot sheep" shikato	"Mascot shikato" shrug	"Mascot shrug" skeleton	"Mascot skeleton" sloth	"Mascot sloth" small	"Mascot small" smiling-octopus	"Mascot smiling-octopus" snoopy	"Mascot snoopy" snoopyhouse	"Mascot snoopyhouse" snoopysleep	"Mascot snoopysleep" spidercow	"Mascot spidercow" squid	"Mascot squid" squirrel	"Mascot squirrel" stegosaurus	"Mascot stegosaurus" stimpy	"Mascot stimpy" supermilker	"Mascot supermilker" surgery	"Mascot surgery" telebears	"Mascot telebears" three-eyes	"Mascot three-eyes" tiger	"Mascot tiger" tortoise	"Mascot tortoise" turkey	"Mascot turkey" turtle	"Mascot turtle" tux	"Mascot tux" tux-big	"Mascot tux-big" tweety-bird	"Mascot tweety-bird" unipony	"Mascot unipony" vader	"Mascot vader" viper	"Mascot viper" vulpix	"Mascot vulpix" walrus	"Mascot walrus" weeping-angel	"Mascot weeping-angel" whale	"Mascot whale" wizard	"Mascot wizard" wolf	"Mascot wolf" world	"Mascot world" yoda	"Mascot yoda" random	"Mascot random"'
 complete -c forgum -l mountain -d 'Mountain/horizon style' -x -a 'hills	"Rolling verdant hills" peaks	"Jagged alpine peaks" volcano	"Active smoldering volcano" iceberg	"Frozen glacier ridges" skyline	"Urban skyscraper silhouette" seamount	"Underwater tectonic ridges" plateau	"Desert mesa and canyon ridges" crater	"Impact rim and astral ridge" gothic	"Spire and cathedral silhouette" castle	"Fortress ramparts" garden	"Terraced hedge and floral ridge" none	"Disable mountain horizon"'
 complete -c forgum -l road -d 'Road/ground style' -x -a 'dirt	"Countryside dirt trail" cobblestone	"Medieval stone pavement" magma	"Cracked volcanic basalt" ice	"Packed crystalline ice" seabed	"Ripple sands and deep coral" sidewalk	"Paved urban asphalt" roof	"Ceramic roof shingles" grid	"Neon vector cyber grid" crypt	"Dark catacomb flagstones" savanna	"Sun-baked arid trail" mud	"Squishy wet soil" tracks	"Railroad ties" checkerboard	"High-contrast dual tiles" none	"Disable ground layer"'
@@ -468,6 +517,10 @@ complete -c forgum -l reserve-cols -d 'Reserve top N columns for animation canva
 complete -c forgum -l split-ratio -d 'Fractional ratio of terminal height to reserve (0.1..0.8)'
 complete -c forgum -l eyes -d 'Custom eyes (e.g. oo, $$, @@)'
 complete -c forgum -l tongue -d 'Custom tongue (e.g. U)'
+complete -c forgum -l accel -d 'Hardware acceleration mode' -x -a 'auto	"Auto GPU with CPU fallback" dedicated	"Prefer dedicated GPU (NVIDIA/AMD)" integrated	"Prefer internal graphics APU" npu	"Prefer neural processing unit (DirectML/CoreML)" cpu	"Force pure CPU computing"'
+complete -c forgum -l shell-attach-mode -d 'Shell integration attach mode' -x -a 'startup	"Static Fastfetch banner on launch" prompt	"Interactive hook every command" clear	"Re-render only after clear/cls" split	"Hardware DECSTBM top margin" pane	"Multiplexer split pane or daemon"'
+complete -c forgum -l aspect -d 'Viewport aspect ratio preset' -x -a 'auto	"Auto-detect from terminal" 21:9	"Ultrawide panoramic (AR>=2.10)" 16:9	"Widescreen standard (16:9)" 16:10	"Golden tall ratio (16:10)" 4:3	"Classic standard (4:3)" 1:1	"Square display (1:1)" narrow	"Vertical mobile/split pane"'
+complete -c forgum -l aspect-mode -d 'Aspect ratio adaptation mode' -x -a 'preset	"Fixed aspect math" dynamic	"Live resize recalculation" auto	"Context-aware adaptation"'
 "#.to_string()
 }
 
@@ -480,7 +533,8 @@ Register-ArgumentCompleter -Native -CommandName 'forgum' -ScriptBlock {
     $prevWord = if ($elements.Count -ge 2) { $elements[-2].Extent.Text } else { '' }
 
     $effects = @{
-        'walk' = 'Natural bovine walking animation'
+        'moonwalk' = 'Legendary reverse-glide moonwalk with sliding hooves'
+        'walk' = 'Natural bovine walking animation (alias for moonwalk)'
         'breathe' = 'Gentle breathing idle animation'
         'float' = 'Drifting levitation animation'
         'fly' = 'Flying creature animation'
@@ -691,6 +745,38 @@ Register-ArgumentCompleter -Native -CommandName 'forgum' -ScriptBlock {
         'random' = 'Mascot random'
     }
 
+    $accelModes = @{
+        'auto' = 'Automatic GPU detection with CPU fallback'
+        'dedicated' = 'Prefer dedicated GPU hardware cores and VRAM (e.g. NVIDIA RTX)'
+        'integrated' = 'Prefer integrated/internal graphics APU (e.g. AMD Radeon / Intel Iris)'
+        'npu' = 'Prefer neural processing unit hardware (DirectML / CoreML / AI Boost)'
+        'cpu' = 'Force pure CPU computing'
+    }
+
+    $attachModes = @{
+        'startup' = 'Static Fastfetch-style banner on shell launch (0 prompt latency)'
+        'prompt' = 'Interactive prompt hook updating after each command'
+        'clear' = 'Single banner and re-rendering exclusively after clear/cls'
+        'split' = 'Hardware DECSTBM top margin reservation'
+        'pane' = 'Multiplexer split pane or background daemon'
+    }
+
+    $aspects = @{
+        'auto' = 'Dynamic detection from active terminal dimensions'
+        '21:9' = 'Ultrawide panoramic display format'
+        '16:9' = 'Widescreen 16:9 standard'
+        '16:10' = 'Golden tall 16:10 ratio'
+        '4:3' = 'Classic standard 4:3 format'
+        '1:1' = 'Square 1:1 display format'
+        'narrow' = 'Vertical mobile & split pane format'
+    }
+
+    $aspectModes = @{
+        'preset' = 'Lock to selected aspect preset'
+        'dynamic' = 'Live recalculation on window resize'
+        'auto' = 'Context-aware adaptation'
+    }
+
     $targetMap = $null
     switch ($prevWord) {
         { $_ -in '--effect', '-e' } { $targetMap = $effects }
@@ -699,6 +785,10 @@ Register-ArgumentCompleter -Native -CommandName 'forgum' -ScriptBlock {
         '--environment' { $targetMap = $environments }
         '--color-mode' { $targetMap = $colors }
         { $_ -in '--cow', '--animal', '-a' } { $targetMap = $animals }
+        '--accel' { $targetMap = $accelModes }
+        { $_ -in '--shell-attach-mode', '--attach-mode' } { $targetMap = $attachModes }
+        { $_ -in '--aspect', '--aspect-ratio' } { $targetMap = $aspects }
+        '--aspect-mode' { $targetMap = $aspectModes }
     }
 
     if ($targetMap) {
@@ -713,7 +803,8 @@ Register-ArgumentCompleter -Native -CommandName 'forgum' -ScriptBlock {
         '--color-mode', '--text', '--think', '--background', '--banner',
         '--duration', '--fps', '--thought-interval', '--split-scroll',
         '--reserve-rows', '--reserve-cols', '--split-ratio',
-        '--eyes', '--tongue', '--palette'
+        '--eyes', '--tongue', '--palette', '--accel', '--shell-attach-mode',
+        '--aspect', '--aspect-ratio', '--aspect-mode'
     )
     $subcommands = @(
         'render', 'think', 'fortune', 'options', 'completions', 'init', 'tui',
@@ -761,11 +852,56 @@ export extern "forgum" [
     --reserve-rows: int                                # Reserve top N rows for persistent animation canvas
     --reserve-cols: int                                # Reserve top N columns for animation canvas
     --split-ratio: string                              # Fractional ratio of terminal height to reserve (0.1..0.8)
+    --accel: string@"nu_forgum_accel"                  # Hardware acceleration mode
+    --shell-attach-mode: string@"nu_forgum_attach_modes" # Shell execution attach mode
+    --aspect: string@"nu_forgum_aspects"               # Viewport aspect ratio preset
+    --aspect-mode: string@"nu_forgum_aspect_modes"     # Aspect ratio adaptation mode
 ]
+
+def "nu_forgum_aspects" [] {
+    [
+        { value: "auto", description: "Auto-detect from terminal" },
+        { value: "21:9", description: "Ultrawide panoramic (AR>=2.10)" },
+        { value: "16:9", description: "Widescreen standard (16:9)" },
+        { value: "16:10", description: "Golden tall ratio (16:10)" },
+        { value: "4:3", description: "Classic standard (4:3)" },
+        { value: "1:1", description: "Square display (1:1)" },
+        { value: "narrow", description: "Vertical mobile/split pane" }
+    ]
+}
+
+def "nu_forgum_aspect_modes" [] {
+    [
+        { value: "preset", description: "Fixed aspect math" },
+        { value: "dynamic", description: "Live resize recalculation" },
+        { value: "auto", description: "Context-aware adaptation" }
+    ]
+}
+
+def "nu_forgum_accel" [] {
+    [
+        { value: "auto", description: "Automatic GPU detection with CPU fallback" },
+        { value: "dedicated", description: "Prefer dedicated GPU hardware cores and VRAM" },
+        { value: "integrated", description: "Prefer integrated/internal graphics APU" },
+        { value: "npu", description: "Prefer neural processing unit hardware (DirectML/CoreML)" },
+        { value: "cpu", description: "Force pure CPU computing" }
+    ]
+}
+
+def "nu_forgum_attach_modes" [] {
+    [
+        { value: "startup", description: "Static Fastfetch-style banner on shell launch" },
+        { value: "prompt", description: "Interactive prompt hook updating after each command" },
+        { value: "clear", description: "Single banner and re-rendering exclusively after clear/cls" },
+        { value: "split", description: "Hardware DECSTBM top margin reservation" },
+        { value: "pane", description: "Multiplexer split pane or background daemon" }
+    ]
+}
 
 def "nu_forgum_effects" [] {
     [
-        { value: "walk", description: "Natural bovine walking animation" },
+        { value: "moonwalk", description: "Legendary reverse-glide moonwalk with sliding hooves" },
+        { value: "walk", description: "Natural bovine walking animation (alias for moonwalk)" },
         { value: "breathe", description: "Gentle breathing idle animation" },
         { value: "float", description: "Drifting levitation animation" },
         { value: "fly", description: "Flying creature animation" },
@@ -1016,11 +1152,19 @@ flags:
   --reserve-rows=: Reserve top N rows for persistent animation canvas
   --reserve-cols=: Reserve top N columns for animation canvas
   --split-ratio=: Fractional ratio of terminal height to reserve (0.1..0.8)
+  --accel=: Hardware acceleration mode (auto, dedicated, integrated, npu, cpu)
+  --shell-attach-mode=: Shell execution attach mode (startup, prompt, clear, split, pane)
+  --aspect=: Viewport aspect ratio preset (auto, 21:9, 16:9, 16:10, 4:3, 1:1, narrow)
+  --aspect-mode=: Aspect ratio adaptation mode (preset, dynamic, auto)
 completion:
   flag:
+    accel: ["auto\tAutomatic GPU detection with CPU fallback", "dedicated\tPrefer dedicated GPU", "integrated\tPrefer internal APU", "npu\tPrefer neural NPU", "cpu\tForce pure CPU"]
+    shell-attach-mode: ["startup\tFastfetch launch banner", "prompt\tInteractive hook on prompt", "clear\tRe-render only after clear/cls", "split\tDECSTBM top margin", "pane\tMultiplexer pane or daemon"]
+    aspect: ["auto\tAuto-detect from terminal", "21:9\tUltrawide panoramic", "16:9\tWidescreen standard", "16:10\tGolden tall ratio", "4:3\tClassic standard", "1:1\tSquare display", "narrow\tVertical mobile/split pane"]
+    aspect-mode: ["preset\tFixed aspect math", "dynamic\tLive resize recalculation", "auto\tContext-aware adaptation"]
     cow: ["apt\tMascot apt", "armadillo\tMascot armadillo", "atat\tMascot atat", "bearface\tMascot bearface", "beavis.zen\tMascot beavis.zen", "bees\tMascot bees", "bill-the-cat\tMascot bill-the-cat", "bud-frogs\tMascot bud-frogs", "bunny\tCute rabbit", "cat\tPlayful feline", "cat2\tMascot cat2", "catfence\tMascot catfence", "charizardvice\tMascot charizardvice", "charlie\tMascot charlie", "claw-arm\tMascot claw-arm", "corgi\tPlayful corgi", "cower\tMascot cower", "cowfee\tMascot cowfee", "cthulhu-mini\tMascot cthulhu-mini", "daemon\tMascot daemon", "default\tStandard bovine mascot", "docker-whale\tMascot docker-whale", "doge\tMascot doge", "dolphin\tMascot dolphin", "dragon\tFire-breathing dragon", "dragon-and-cow\tMascot dragon-and-cow", "duck\tMascot duck", "ebi_furai\tMascot ebi_furai", "elephant\tGentle giant", "elephant-in-snake\tMascot elephant-in-snake", "elephant2\tMascot elephant2", "eyes\tMascot eyes", "fat-banana\tMascot fat-banana", "fat-cow\tMascot fat-cow", "fence\tMascot fence", "flaming-sheep\tMascot flaming-sheep", "fox\tWoodland fox", "ghost\tSpooky phantom", "ghostbusters\tMascot ghostbusters", "glados\tMascot glados", "goat\tMascot goat", "goat2\tMascot goat2", "golden-eagle\tMascot golden-eagle", "hamster\tMascot hamster", "happy-whale\tMascot happy-whale", "hedgehog\tMascot hedgehog", "hellokitty\tMascot hellokitty", "hippie\tMascot hippie", "hiya\tMascot hiya", "hypno\tMascot hypno", "jellyfish\tMascot jellyfish", "jesus\tMascot jesus", "king\tMascot king", "kiss\tMascot kiss", "kitten\tMascot kitten", "kitty\tMascot kitty", "knight\tMascot knight", "koala\tMascot koala", "kosh\tMascot kosh", "lamb\tMascot lamb", "lamb2\tMascot lamb2", "lobster\tMascot lobster", "lollerskates\tMascot lollerskates", "luke-koala\tMascot luke-koala", "mech-and-cow\tMascot mech-and-cow", "meow\tMascot meow", "minotaur\tMascot minotaur", "mona-lisa\tMascot mona-lisa", "moofasa\tMascot moofasa", "mooghidjirah\tMascot mooghidjirah", "moojira\tMascot moojira", "moose\tMascot moose", "mule\tMascot mule", "mutilated\tMascot mutilated", "nyan\tMascot nyan", "octopus\tMascot octopus", "owl\tMascot owl", "panther\tMascot panther", "pawn\tMascot pawn", "periodic-table\tMascot periodic-table", "personality-sphere\tMascot personality-sphere", "pig\tMascot pig", "pterodactyl\tMascot pterodactyl", "pufferfish\tMascot pufferfish", "queen\tMascot queen", "radioactive-kitty\tMascot radioactive-kitty", "ram\tMascot ram", "ren\tMascot ren", "rhino\tMascot rhino", "rook\tMascot rook", "rooster\tMascot rooster", "satanic\tMascot satanic", "sauron\tMascot sauron", "seahorse\tMascot seahorse", "seahorse-big\tMascot seahorse-big", "sheep\tMascot sheep", "shikato\tMascot shikato", "shrug\tMascot shrug", "skeleton\tMascot skeleton", "sloth\tMascot sloth", "small\tMascot small", "smiling-octopus\tMascot smiling-octopus", "snoopy\tMascot snoopy", "snoopyhouse\tMascot snoopyhouse", "snoopysleep\tMascot snoopysleep", "spidercow\tMascot spidercow", "squid\tMascot squid", "squirrel\tMascot squirrel", "stegosaurus\tMascot stegosaurus", "stimpy\tMascot stimpy", "supermilker\tMascot supermilker", "surgery\tMascot surgery", "telebears\tMascot telebears", "three-eyes\tMascot three-eyes", "tiger\tMascot tiger", "tortoise\tMascot tortoise", "turkey\tMascot turkey", "turtle\tMascot turtle", "tux\tLinux penguin", "tux-big\tMascot tux-big", "tweety-bird\tMascot tweety-bird", "unipony\tMascot unipony", "vader\tMascot vader", "viper\tMascot viper", "vulpix\tMascot vulpix", "walrus\tMascot walrus", "weeping-angel\tMascot weeping-angel", "whale\tMascot whale", "wizard\tMascot wizard", "wolf\tMascot wolf", "world\tMascot world", "yoda\tMascot yoda", "random\tPick random mascot"]
     animal: ["apt\tMascot apt", "armadillo\tMascot armadillo", "atat\tMascot atat", "bearface\tMascot bearface", "beavis.zen\tMascot beavis.zen", "bees\tMascot bees", "bill-the-cat\tMascot bill-the-cat", "bud-frogs\tMascot bud-frogs", "bunny\tCute rabbit", "cat\tPlayful feline", "cat2\tMascot cat2", "catfence\tMascot catfence", "charizardvice\tMascot charizardvice", "charlie\tMascot charlie", "claw-arm\tMascot claw-arm", "corgi\tPlayful corgi", "cower\tMascot cower", "cowfee\tMascot cowfee", "cthulhu-mini\tMascot cthulhu-mini", "daemon\tMascot daemon", "default\tStandard bovine mascot", "docker-whale\tMascot docker-whale", "doge\tMascot doge", "dolphin\tMascot dolphin", "dragon\tFire-breathing dragon", "dragon-and-cow\tMascot dragon-and-cow", "duck\tMascot duck", "ebi_furai\tMascot ebi_furai", "elephant\tGentle giant", "elephant-in-snake\tMascot elephant-in-snake", "elephant2\tMascot elephant2", "eyes\tMascot eyes", "fat-banana\tMascot fat-banana", "fat-cow\tMascot fat-cow", "fence\tMascot fence", "flaming-sheep\tMascot flaming-sheep", "fox\tWoodland fox", "ghost\tSpooky phantom", "ghostbusters\tMascot ghostbusters", "glados\tMascot glados", "goat\tMascot goat", "goat2\tMascot goat2", "golden-eagle\tMascot golden-eagle", "hamster\tMascot hamster", "happy-whale\tMascot happy-whale", "hedgehog\tMascot hedgehog", "hellokitty\tMascot hellokitty", "hippie\tMascot hippie", "hiya\tMascot hiya", "hypno\tMascot hypno", "jellyfish\tMascot jellyfish", "jesus\tMascot jesus", "king\tMascot king", "kiss\tMascot kiss", "kitten\tMascot kitten", "kitty\tMascot kitty", "knight\tMascot knight", "koala\tMascot koala", "kosh\tMascot kosh", "lamb\tMascot lamb", "lamb2\tMascot lamb2", "lobster\tMascot lobster", "lollerskates\tMascot lollerskates", "luke-koala\tMascot luke-koala", "mech-and-cow\tMascot mech-and-cow", "meow\tMascot meow", "minotaur\tMascot minotaur", "mona-lisa\tMascot mona-lisa", "moofasa\tMascot moofasa", "mooghidjirah\tMascot mooghidjirah", "moojira\tMascot moojira", "moose\tMascot moose", "mule\tMascot mule", "mutilated\tMascot mutilated", "nyan\tMascot nyan", "octopus\tMascot octopus", "owl\tMascot owl", "panther\tMascot panther", "pawn\tMascot pawn", "periodic-table\tMascot periodic-table", "personality-sphere\tMascot personality-sphere", "pig\tMascot pig", "pterodactyl\tMascot pterodactyl", "pufferfish\tMascot pufferfish", "queen\tMascot queen", "radioactive-kitty\tMascot radioactive-kitty", "ram\tMascot ram", "ren\tMascot ren", "rhino\tMascot rhino", "rook\tMascot rook", "rooster\tMascot rooster", "satanic\tMascot satanic", "sauron\tMascot sauron", "seahorse\tMascot seahorse", "seahorse-big\tMascot seahorse-big", "sheep\tMascot sheep", "shikato\tMascot shikato", "shrug\tMascot shrug", "skeleton\tMascot skeleton", "sloth\tMascot sloth", "small\tMascot small", "smiling-octopus\tMascot smiling-octopus", "snoopy\tMascot snoopy", "snoopyhouse\tMascot snoopyhouse", "snoopysleep\tMascot snoopysleep", "spidercow\tMascot spidercow", "squid\tMascot squid", "squirrel\tMascot squirrel", "stegosaurus\tMascot stegosaurus", "stimpy\tMascot stimpy", "supermilker\tMascot supermilker", "surgery\tMascot surgery", "telebears\tMascot telebears", "three-eyes\tMascot three-eyes", "tiger\tMascot tiger", "tortoise\tMascot tortoise", "turkey\tMascot turkey", "turtle\tMascot turtle", "tux\tLinux penguin", "tux-big\tMascot tux-big", "tweety-bird\tMascot tweety-bird", "unipony\tMascot unipony", "vader\tMascot vader", "viper\tMascot viper", "vulpix\tMascot vulpix", "walrus\tMascot walrus", "weeping-angel\tMascot weeping-angel", "whale\tMascot whale", "wizard\tMascot wizard", "wolf\tMascot wolf", "world\tMascot world", "yoda\tMascot yoda", "random\tPick random mascot"]
-    effect: ["walk\tNatural bovine walking animation", "breathe\tGentle breathing idle animation", "float\tDrifting levitation animation", "fly\tFlying creature animation", "talk\tConversational speech animation", "sway\tSwaying pendulum animation", "pulse\tPulsing scale animation", "glitch\tDigital cyberpunk glitch animation", "particles\tAmbient particle emitter animation", "dissolve\tDissolve and materialize animation", "animal_natural\tPer-creature natural kinetic animation", "natural\tAlias for animal_natural"]
+    effect: ["moonwalk\tLegendary reverse-glide moonwalk with sliding hooves", "walk\tNatural bovine walking animation", "breathe\tGentle breathing idle animation", "float\tDrifting levitation animation", "fly\tFlying creature animation", "talk\tConversational speech animation", "sway\tSwaying pendulum animation", "pulse\tPulsing scale animation", "glitch\tDigital cyberpunk glitch animation", "particles\tAmbient particle emitter animation", "dissolve\tDissolve and materialize animation", "animal_natural\tPer-creature natural kinetic animation", "natural\tAlias for animal_natural"]
     mountain: ["hills\tRolling verdant hills", "peaks\tAlpine peaks", "volcano\tActive volcano", "iceberg\tGlacier ridges", "skyline\tUrban skyline", "seamount\tUnderwater ridges", "plateau\tDesert mesa", "crater\tImpact rim", "gothic\tSpire silhouette", "castle\tFortress ramparts", "garden\tTerraced hedge", "none\tDisable mountains"]
     road: ["dirt\tCountryside dirt trail", "cobblestone\tStone pavement", "magma\tVolcanic basalt", "ice\tPacked crystalline ice", "seabed\tRipple sands", "sidewalk\tPaved asphalt", "roof\tRoof shingles", "grid\tNeon cyber grid", "crypt\tCatacomb flagstones", "savanna\tArid trail", "mud\tSquishy soil", "tracks\tRailroad ties", "checkerboard\tDual tiles", "none\tDisable road"]
     environment: ["pasture\tOpen meadows", "inferno\tBlazing magma", "ocean\tAquatic realm", "arctic\tFrozen tundra", "city\tMetropolitan skyline", "forest\tAncient woodlands", "savanna\tGolden plains", "swamp\tMurky bayou", "space\tCosmos void", "cyber\tDigital matrix", "graveyard\tGothic cemetery", "jurassic\tPrimeval wilds", "hive\tBio hive", "throne\tGothic sanctuary", "none\tDisable particles"]
@@ -1075,6 +1219,7 @@ def _forgum_completer(command):
         "--fps", "--thought-interval", "--eyes", "--tongue", "--palette",
         "--think", "--background", "-b", "--banner", "-B", "--split-scroll",
         "--reserve-rows", "--reserve-cols", "--split-ratio",
+        "--accel", "--shell-attach-mode", "--aspect", "--aspect-mode",
         "render", "think", "fortune", "options", "list", "completions",
         "init", "tui", "status", "doctor", "checkhealth", "config", "logs",
         "herd", "theme", "demo", "showcase", "say", "help"
@@ -1090,12 +1235,16 @@ complete forgum \
   'c/--cow/(apt armadillo atat bearface beavis.zen bees bill-the-cat bud-frogs bunny cat cat2 catfence charizardvice charlie claw-arm corgi cower cowfee cthulhu-mini daemon default docker-whale doge dolphin dragon dragon-and-cow duck ebi_furai elephant elephant-in-snake elephant2 eyes fat-banana fat-cow fence flaming-sheep fox ghost ghostbusters glados goat goat2 golden-eagle hamster happy-whale hedgehog hellokitty hippie hiya hypno jellyfish jesus king kiss kitten kitty knight koala kosh lamb lamb2 lobster lollerskates luke-koala mech-and-cow meow minotaur mona-lisa moofasa mooghidjirah moojira moose mule mutilated nyan octopus owl panther pawn periodic-table personality-sphere pig pterodactyl pufferfish queen radioactive-kitty ram ren rhino rook rooster satanic sauron seahorse seahorse-big sheep shikato shrug skeleton sloth small smiling-octopus snoopy snoopyhouse snoopysleep spidercow squid squirrel stegosaurus stimpy supermilker surgery telebears three-eyes tiger tortoise turkey turtle tux tux-big tweety-bird unipony vader viper vulpix walrus weeping-angel whale wizard wolf world yoda random)/' \
   'c/--animal/(apt armadillo atat bearface beavis.zen bees bill-the-cat bud-frogs bunny cat cat2 catfence charizardvice charlie claw-arm corgi cower cowfee cthulhu-mini daemon default docker-whale doge dolphin dragon dragon-and-cow duck ebi_furai elephant elephant-in-snake elephant2 eyes fat-banana fat-cow fence flaming-sheep fox ghost ghostbusters glados goat goat2 golden-eagle hamster happy-whale hedgehog hellokitty hippie hiya hypno jellyfish jesus king kiss kitten kitty knight koala kosh lamb lamb2 lobster lollerskates luke-koala mech-and-cow meow minotaur mona-lisa moofasa mooghidjirah moojira moose mule mutilated nyan octopus owl panther pawn periodic-table personality-sphere pig pterodactyl pufferfish queen radioactive-kitty ram ren rhino rook rooster satanic sauron seahorse seahorse-big sheep shikato shrug skeleton sloth small smiling-octopus snoopy snoopyhouse snoopysleep spidercow squid squirrel stegosaurus stimpy supermilker surgery telebears three-eyes tiger tortoise turkey turtle tux tux-big tweety-bird unipony vader viper vulpix walrus weeping-angel whale wizard wolf world yoda random)/' \
   'c/-a/(apt armadillo atat bearface beavis.zen bees bill-the-cat bud-frogs bunny cat cat2 catfence charizardvice charlie claw-arm corgi cower cowfee cthulhu-mini daemon default docker-whale doge dolphin dragon dragon-and-cow duck ebi_furai elephant elephant-in-snake elephant2 eyes fat-banana fat-cow fence flaming-sheep fox ghost ghostbusters glados goat goat2 golden-eagle hamster happy-whale hedgehog hellokitty hippie hiya hypno jellyfish jesus king kiss kitten kitty knight koala kosh lamb lamb2 lobster lollerskates luke-koala mech-and-cow meow minotaur mona-lisa moofasa mooghidjirah moojira moose mule mutilated nyan octopus owl panther pawn periodic-table personality-sphere pig pterodactyl pufferfish queen radioactive-kitty ram ren rhino rook rooster satanic sauron seahorse seahorse-big sheep shikato shrug skeleton sloth small smiling-octopus snoopy snoopyhouse snoopysleep spidercow squid squirrel stegosaurus stimpy supermilker surgery telebears three-eyes tiger tortoise turkey turtle tux tux-big tweety-bird unipony vader viper vulpix walrus weeping-angel whale wizard wolf world yoda random)/' \
-  'c/--effect/(walk breathe float fly talk sway pulse glitch particles dissolve animal_natural natural)/' \
-  'c/-e/(walk breathe float fly talk sway pulse glitch particles dissolve animal_natural natural)/' \
+  'c/--effect/(moonwalk walk breathe float fly talk sway pulse glitch particles dissolve animal_natural natural)/' \
+  'c/-e/(moonwalk walk breathe float fly talk sway pulse glitch particles dissolve animal_natural natural)/' \
   'c/--mountain/(hills peaks volcano iceberg skyline seamount plateau crater gothic castle garden none)/' \
   'c/--road/(dirt cobblestone magma ice seabed sidewalk roof grid crypt savanna mud tracks checkerboard none)/' \
   'c/--environment/(pasture inferno ocean arctic city forest savanna swamp space cyber graveyard jurassic hive throne none)/' \
   'c/--color-mode/(default animal natural animal_natural rainbow lolcat solid none)/' \
+  'c/--accel/(auto dedicated integrated npu cpu)/' \
+  'c/--shell-attach-mode/(startup prompt clear split pane)/' \
+  'c/--aspect/(auto 21:9 16:9 16:10 4:3 1:1 narrow)/' \
+  'c/--aspect-mode/(preset dynamic auto)/' \
   'n/completions/(bash zsh fish pwsh powershell elvish nushell carapace xonsh tcsh ksh ion oil yash list)/' \
   'n/init/(bash zsh fish pwsh powershell elvish nushell carapace xonsh tcsh ksh ion oil yash cmd list)/' \
   'p/1/(render think fortune options list completions init tui status doctor checkhealth config logs herd theme demo showcase say install uninstall update help)/'
@@ -1111,11 +1260,15 @@ fn generate_ion_completions() -> String {
 complete -c forgum -a "render think fortune list completions init tui status doctor checkhealth config logs herd theme demo showcase say install uninstall update help"
 complete -c forgum -l animal -a "apt armadillo atat bearface beavis.zen bees bill-the-cat bud-frogs bunny cat cat2 catfence charizardvice charlie claw-arm corgi cower cowfee cthulhu-mini daemon default docker-whale doge dolphin dragon dragon-and-cow duck ebi_furai elephant elephant-in-snake elephant2 eyes fat-banana fat-cow fence flaming-sheep fox ghost ghostbusters glados goat goat2 golden-eagle hamster happy-whale hedgehog hellokitty hippie hiya hypno jellyfish jesus king kiss kitten kitty knight koala kosh lamb lamb2 lobster lollerskates luke-koala mech-and-cow meow minotaur mona-lisa moofasa mooghidjirah moojira moose mule mutilated nyan octopus owl panther pawn periodic-table personality-sphere pig pterodactyl pufferfish queen radioactive-kitty ram ren rhino rook rooster satanic sauron seahorse seahorse-big sheep shikato shrug skeleton sloth small smiling-octopus snoopy snoopyhouse snoopysleep spidercow squid squirrel stegosaurus stimpy supermilker surgery telebears three-eyes tiger tortoise turkey turtle tux tux-big tweety-bird unipony vader viper vulpix walrus weeping-angel whale wizard wolf world yoda random"
 complete -c forgum -l cow -a "apt armadillo atat bearface beavis.zen bees bill-the-cat bud-frogs bunny cat cat2 catfence charizardvice charlie claw-arm corgi cower cowfee cthulhu-mini daemon default docker-whale doge dolphin dragon dragon-and-cow duck ebi_furai elephant elephant-in-snake elephant2 eyes fat-banana fat-cow fence flaming-sheep fox ghost ghostbusters glados goat goat2 golden-eagle hamster happy-whale hedgehog hellokitty hippie hiya hypno jellyfish jesus king kiss kitten kitty knight koala kosh lamb lamb2 lobster lollerskates luke-koala mech-and-cow meow minotaur mona-lisa moofasa mooghidjirah moojira moose mule mutilated nyan octopus owl panther pawn periodic-table personality-sphere pig pterodactyl pufferfish queen radioactive-kitty ram ren rhino rook rooster satanic sauron seahorse seahorse-big sheep shikato shrug skeleton sloth small smiling-octopus snoopy snoopyhouse snoopysleep spidercow squid squirrel stegosaurus stimpy supermilker surgery telebears three-eyes tiger tortoise turkey turtle tux tux-big tweety-bird unipony vader viper vulpix walrus weeping-angel whale wizard wolf world yoda random"
-complete -c forgum -l effect -a "walk breathe float fly talk sway pulse glitch particles dissolve animal_natural"
+complete -c forgum -l effect -a "moonwalk walk breathe float fly talk sway pulse glitch particles dissolve animal_natural"
 complete -c forgum -l mountain -a "hills peaks volcano iceberg skyline seamount plateau crater gothic castle garden none"
 complete -c forgum -l road -a "dirt cobblestone magma ice seabed sidewalk roof grid crypt savanna mud tracks checkerboard none"
 complete -c forgum -l environment -a "pasture inferno ocean arctic city forest savanna swamp space cyber graveyard jurassic hive throne none"
 complete -c forgum -l color-mode -a "default animal natural animal_natural rainbow lolcat solid none"
+complete -c forgum -l accel -a "auto dedicated integrated npu cpu"
+complete -c forgum -l shell-attach-mode -a "startup prompt clear split pane"
+complete -c forgum -l aspect -a "auto 21:9 16:9 16:10 4:3 1:1 narrow"
+complete -c forgum -l aspect-mode -a "preset dynamic auto"
 complete -c forgum -l background
 complete -c forgum -l banner
 "#.to_string()

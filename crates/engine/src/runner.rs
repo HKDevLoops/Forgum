@@ -82,6 +82,22 @@ pub fn run() -> ExitCode {
         }
     };
 
+    let initial_accel = args
+        .accel
+        .as_deref()
+        .map(forgum_platform::gpu::AccelerationMode::parse)
+        .unwrap_or_else(|| {
+            let loaded = forgum_platform::detect_config_file(args.config.as_deref())
+                .ok()
+                .and_then(|(p, _)| crate::config::read_config_file(&p).ok());
+            loaded
+                .and_then(|c| c.accel_mode)
+                .as_deref()
+                .map(forgum_platform::gpu::AccelerationMode::parse)
+                .unwrap_or(forgum_platform::gpu::AccelerationMode::Auto)
+        });
+    forgum_engine::gpu_compute::init_compute_engine(initial_accel);
+
     if let Some(cat) = &args.list {
         let table = forgum_engine::options_table::render_options(cat);
         print!("{table}");
@@ -170,6 +186,24 @@ pub fn run() -> ExitCode {
     if let Some(tongue) = &args.tongue {
         if is_list_query(tongue) {
             print!("{}", forgum_engine::options_table::render_options("tongue"));
+            return ExitCode::SUCCESS;
+        }
+    }
+    if let Some(aspect) = &args.aspect {
+        if is_list_query(aspect) {
+            print!(
+                "{}",
+                forgum_engine::options_table::render_options("aspects")
+            );
+            return ExitCode::SUCCESS;
+        }
+    }
+    if let Some(am) = &args.aspect_mode {
+        if is_list_query(am) {
+            print!(
+                "{}",
+                forgum_engine::options_table::render_options("aspects")
+            );
             return ExitCode::SUCCESS;
         }
     }
@@ -287,6 +321,33 @@ pub fn run() -> ExitCode {
             }
             if let Some(tongue) = &args.tongue {
                 combined_render_args.push(format!("--tongue {tongue}"));
+            }
+            if let Some(aspect) = &args.aspect {
+                combined_render_args.push(format!("--aspect {aspect}"));
+            }
+            if let Some(am) = &args.aspect_mode {
+                combined_render_args.push(format!("--aspect-mode {am}"));
+            }
+            if let Some(accel) = &args.accel {
+                combined_render_args.push(format!("--accel {accel}"));
+            }
+            if let Some(sm) = &args.split_mode {
+                combined_render_args.push(format!("--split-mode {sm}"));
+            }
+            if args.reduce_motion {
+                combined_render_args.push("--reduce-motion".to_string());
+            }
+            if args.text_only {
+                combined_render_args.push("--text-only".to_string());
+            }
+            if args.banner {
+                combined_render_args.push("--banner".to_string());
+            }
+            if let Some(d) = args.duration {
+                combined_render_args.push(format!("--duration {d}"));
+            }
+            if let Some(fps) = args.fps {
+                combined_render_args.push(format!("--fps {fps}"));
             }
             combined_render_args.extend(render_args);
 
@@ -582,6 +643,22 @@ pub fn run() -> ExitCode {
                         "image" => println!("{}", cfg.image.as_deref().unwrap_or("none")),
                         "split_mode" => println!("{}", cfg.split_mode.as_deref().unwrap_or("none")),
                         "editor" => println!("{}", cfg.editor.as_deref().unwrap_or("auto")),
+                        "accel_mode" | "acceleration_mode" | "gpu_mode" | "accel" => {
+                            println!("{}", cfg.accel_mode.as_deref().unwrap_or("auto"))
+                        }
+                        "reduce_motion" | "reduce-motion" | "reduced_motion" | "reduced-motion" => {
+                            println!("{}", cfg.reduce_motion)
+                        }
+                        "text_only" | "text-only" | "fortune_only" | "fortune-only" => {
+                            println!("{}", cfg.text_only)
+                        }
+                        "banner" | "banner_mode" | "banner-mode" => println!("{}", cfg.banner),
+                        "aspect" | "aspect_ratio" | "aspect-ratio" => {
+                            println!("{}", cfg.aspect.as_deref().unwrap_or("auto"))
+                        }
+                        "aspect_mode" | "aspect-mode" => {
+                            println!("{}", cfg.aspect_mode.as_deref().unwrap_or("auto"))
+                        }
                         other => {
                             eprintln!("unknown config key: {other}");
                             eprintln!(
@@ -589,7 +666,8 @@ pub fn run() -> ExitCode {
                                  fps, eyes, tongue, default_shell, auto_render_on_prompt, think, \
                                  color_mode, shell_attach_mode, environment, road, mountain, \
                                  palette, thought_interval, split_scroll, split_mode, reserve_rows, reserve_cols, \
-                                 split_ratio, animation, animation_type, image, editor"
+                                 split_ratio, animation, animation_type, image, editor, accel_mode, \
+                                 reduce_motion, text_only, banner, aspect, aspect_mode"
                             );
                             return ExitCode::from(1);
                         }
@@ -774,6 +852,58 @@ pub fn run() -> ExitCode {
                             };
                             None
                         }
+                        "accel_mode" | "acceleration_mode" | "gpu_mode" | "accel" => {
+                            cfg.accel_mode = if v.is_empty() || v == "auto" {
+                                Some("auto".to_string())
+                            } else {
+                                Some(v)
+                            };
+                            None
+                        }
+                        "reduce_motion" | "reduce-motion" | "reduced_motion" | "reduced-motion" => {
+                            match v.parse::<bool>() {
+                                Ok(b) => {
+                                    cfg.reduce_motion = b;
+                                    None
+                                }
+                                Err(e) => Some(format!("{e}")),
+                            }
+                        }
+                        "text_only" | "text-only" | "fortune_only" | "fortune-only" => {
+                            match v.parse::<bool>() {
+                                Ok(b) => {
+                                    cfg.text_only = b;
+                                    None
+                                }
+                                Err(e) => Some(format!("{e}")),
+                            }
+                        }
+                        "banner" | "banner_mode" | "banner-mode" => match v.parse::<bool>() {
+                            Ok(b) => {
+                                cfg.banner = b;
+                                if b {
+                                    cfg.shell_attach_mode = "banner".to_string();
+                                }
+                                None
+                            }
+                            Err(e) => Some(format!("{e}")),
+                        },
+                        "aspect" | "aspect_ratio" | "aspect-ratio" => {
+                            cfg.aspect = if v.is_empty() || v == "auto" {
+                                Some("auto".to_string())
+                            } else {
+                                Some(v)
+                            };
+                            None
+                        }
+                        "aspect_mode" | "aspect-mode" => {
+                            cfg.aspect_mode = if v.is_empty() || v == "auto" {
+                                Some("auto".to_string())
+                            } else {
+                                Some(v)
+                            };
+                            None
+                        }
                         other => {
                             eprintln!("unknown config key: {other}");
                             eprintln!(
@@ -781,7 +911,8 @@ pub fn run() -> ExitCode {
                                  fps, eyes, tongue, default_shell, auto_render_on_prompt, think, \
                                  color_mode, shell_attach_mode, environment, road, mountain, \
                                  palette, thought_interval, split_scroll, split_mode, reserve_rows, reserve_cols, \
-                                 split_ratio, animation, animation_type, image, editor"
+                                 split_ratio, animation, animation_type, image, editor, accel_mode, \
+                                 reduce_motion, text_only, banner, aspect, aspect_mode"
                             );
                             return ExitCode::from(1);
                         }
@@ -1868,16 +1999,17 @@ fn handle_status_command(args: &cli::Args) -> ExitCode {
     };
 
     let is_tty = crossterm::tty::IsTty::is_tty(&std::io::stdout());
-    let (c_bold, c_cyan, c_green, c_yellow, c_reset) = if is_tty {
+    let (c_bold, c_cyan, c_green, c_yellow, c_magenta, c_reset) = if is_tty {
         (
             "\x1b[1m",
             "\x1b[1;36m",
             "\x1b[1;32m",
             "\x1b[1;33m",
+            "\x1b[1;35m",
             "\x1b[0m",
         )
     } else {
-        ("", "", "", "", "")
+        ("", "", "", "", "", "")
     };
 
     println!("{c_cyan}=============================================================================={c_reset}");
@@ -1983,6 +2115,27 @@ fn handle_status_command(args: &cli::Args) -> ExitCode {
     if let Some(ref mtn) = cfg.mountain {
         println!("  • Mountain Range:   {c_yellow}'{mtn}'{c_reset}");
     }
+    let accel_mode_str = cfg.accel_mode.as_deref().unwrap_or("auto");
+    let (accel_device, accel_info) = forgum_platform::resolve_acceleration(
+        forgum_platform::gpu::AccelerationMode::parse(accel_mode_str),
+    );
+    let accel_badge = match accel_device {
+        forgum_platform::gpu::GpuDeviceType::Dedicated => {
+            format!("{c_green}⚡ Dedicated GPU{c_reset}")
+        }
+        forgum_platform::gpu::GpuDeviceType::Integrated => {
+            format!("{c_cyan}🔋 Integrated APU{c_reset}")
+        }
+        forgum_platform::gpu::GpuDeviceType::Npu => {
+            format!("{c_magenta}🧠 Neural NPU{c_reset}")
+        }
+        forgum_platform::gpu::GpuDeviceType::Cpu => format!("{c_yellow}💻 CPU Compute{c_reset}"),
+    };
+    let dev_name = accel_info
+        .as_ref()
+        .map(|d| d.name.as_str())
+        .unwrap_or("CPU Native Kernel");
+    println!("  • Hardware Accel:   {accel_badge} ({dev_name}, policy: '{accel_mode_str}')");
     let random_display = match &cfg.random {
         Some(forgum_platform::protocol::RandomSetting::Bool(true)) => {
             format!("{c_green}all (universally active on startup){c_reset}")
@@ -3221,7 +3374,7 @@ fn render_subcommand_with_scene(
             .unwrap_or_else(|| "The cow that never moos has the most to say.".to_string());
     }
 
-    if args.text_only {
+    if args.text_only || scene.text_only {
         println!("{}", scene.text);
         return ExitCode::SUCCESS;
     }

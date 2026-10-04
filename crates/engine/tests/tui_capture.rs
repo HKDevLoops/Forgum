@@ -43,9 +43,9 @@ fn video_dir() -> PathBuf {
 
 fn ffmpeg_available() -> bool {
     Command::new("ffmpeg")
-        .arg("-version")
+        .args(["-hide_banner", "-encoders"])
         .output()
-        .map(|o| o.status.success())
+        .map(|o| o.status.success() && String::from_utf8_lossy(&o.stdout).contains("libx264"))
         .unwrap_or(false)
 }
 

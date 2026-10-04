@@ -726,6 +726,8 @@ impl Effect for BreatheEffect {
             _ => {}
         }
     }
+
+    fn on_resize(&mut self, _cols: usize, _rows: usize) {}
 }
 
 // ── Float / Bob ────────────────────────────────────────────────────
@@ -1054,13 +1056,21 @@ impl Effect for FloatEffect {
             _ => {}
         }
     }
+
+    fn on_resize(&mut self, cols: usize, rows: usize) {
+        self.body.on_resize(cols, rows);
+    }
 }
 
-// ── Walk / Trot ────────────────────────────────────────────────────
+// ── Walk / Moonwalk ───────────────────────────────────────────────
 
-/// Bottom-row leg character swap with dynamic pillar detection, whitespace preservation,
-/// physical forward-facing kinematic traversal across the terminal pasture,
-/// and synchronized speech/thought bubble translation.
+/// Legendary reverse-glide moonwalk with sliding hooves and backward kinematic traversal.
+/// Left-facing ASCII creatures glide smoothly backward across the terminal screen
+/// with alternating heel-toe foot slips and synchronized speech bubble translation.
+pub type MoonwalkEffect = WalkEffect;
+
+/// Moonwalk and walk locomotion driver with dynamic leg stroke detection,
+/// whitespace preservation, backward-gliding kinematics, and synchronized bubble translation.
 #[derive(Debug)]
 pub struct WalkEffect {
     cow_text: String,
@@ -1080,10 +1090,30 @@ pub struct WalkEffect {
     elapsed: f32,
     eye_landmarks: Vec<(usize, usize)>,
     cow_start_line: usize,
+    pub is_moonwalk: bool,
 }
 
 impl WalkEffect {
     pub fn new(cow_text: String, dna: &CowDna, instance_id: u32, color_mode: String) -> Self {
+        Self::with_moonwalk(cow_text, dna, instance_id, color_mode, false)
+    }
+
+    pub fn new_moonwalk(
+        cow_text: String,
+        dna: &CowDna,
+        instance_id: u32,
+        color_mode: String,
+    ) -> Self {
+        Self::with_moonwalk(cow_text, dna, instance_id, color_mode, true)
+    }
+
+    pub fn with_moonwalk(
+        cow_text: String,
+        dna: &CowDna,
+        instance_id: u32,
+        color_mode: String,
+        is_moonwalk: bool,
+    ) -> Self {
         let phase = instance_phase(dna.phase_seed, instance_id);
         let line_offsets = compute_line_offsets(&cow_text);
         let lines: Vec<&str> = cow_text.lines().collect();
@@ -1210,6 +1240,7 @@ impl WalkEffect {
             elapsed: 0.0,
             eye_landmarks,
             cow_start_line: cow_start,
+            is_moonwalk,
         }
     }
 }
@@ -1223,13 +1254,28 @@ impl Effect for WalkEffect {
     fn render(&self, fb: &mut FrameBuffer, time: f32) {
         let stride = (time * self.speed + self.phase) % 1.0;
 
-        // 4-phase natural leg stride coupling using clean ASCII:
-        let (leg_l, leg_r) = if stride < 0.25 || (0.50..0.75).contains(&stride) {
-            ('|', '|')
-        } else if stride < 0.50 {
-            ('/', '\\')
+        // Dynamic leg stride coupling:
+        let (leg_l, leg_r) = if self.is_moonwalk {
+            // Moonwalk reverse-slip sliding gait:
+            // One foot flat ('|') while the other slides angled ('/' or '\'), alternating backwards
+            if stride < 0.25 {
+                ('|', '\\')
+            } else if stride < 0.50 {
+                ('|', '|')
+            } else if stride < 0.75 {
+                ('/', '|')
+            } else {
+                ('|', '|')
+            }
         } else {
-            ('\\', '/')
+            // 4-phase natural forward leg stride coupling using clean ASCII:
+            if stride < 0.25 || (0.50..0.75).contains(&stride) {
+                ('|', '|')
+            } else if stride < 0.50 {
+                ('/', '\\')
+            } else {
+                ('\\', '/')
+            }
         };
 
         // Eye blink cycle: every ~3.5 seconds, blink for ~150ms
@@ -1441,6 +1487,10 @@ impl Effect for WalkEffect {
             }
         }
     }
+
+    fn on_resize(&mut self, cols: usize, rows: usize) {
+        self.body.on_resize(cols, rows);
+    }
 }
 
 // ── Particles (Fire/Bubbles/Stars/Zzz/Pulse/Glitch) ────────────────
@@ -1532,6 +1582,10 @@ impl Effect for ParticlesEffect {
         );
         self.pool
             .render_with_cutoff(fb, time, easing::expo_out, self.cow_start_line);
+    }
+
+    fn on_resize(&mut self, cols: usize, rows: usize) {
+        self.pool.on_resize(cols, rows);
     }
 }
 
@@ -1650,6 +1704,8 @@ impl Effect for PulseEffect {
             _ => {}
         }
     }
+
+    fn on_resize(&mut self, _cols: usize, _rows: usize) {}
 }
 
 // ── Glitch ─────────────────────────────────────────────────────────
@@ -2097,6 +2153,10 @@ impl Effect for FlyEffect {
             _ => {}
         }
     }
+
+    fn on_resize(&mut self, cols: usize, rows: usize) {
+        self.body.on_resize(cols, rows);
+    }
 }
 
 // ── Talk / Chew ────────────────────────────────────────────────────
@@ -2405,6 +2465,8 @@ impl Effect for SwayEffect {
             i = i.saturating_add(1);
         });
     }
+
+    fn on_resize(&mut self, _cols: usize, _rows: usize) {}
 }
 
 // ── Dissolve ───────────────────────────────────────────────────────
@@ -3076,6 +3138,7 @@ impl Effect for CompoundSignatureEffect {
 
     fn on_resize(&mut self, cols: usize, rows: usize) {
         self.base_effect.on_resize(cols, rows);
+        self.pool.on_resize(cols, rows);
     }
 }
 
@@ -3083,6 +3146,7 @@ pub const DYNAMIC_ANIMATION_TYPES: &[&str] = &[
     "breathe",
     "float",
     "walk",
+    "moonwalk",
     "particles",
     "pulse",
     "glitch",
@@ -3099,6 +3163,7 @@ pub const ALL_EFFECTS: &[&str] = &[
     "breathe",
     "float",
     "walk",
+    "moonwalk",
     "particles",
     "pulse",
     "glitch",
@@ -3149,7 +3214,17 @@ pub fn create_scene_effect(
     };
 
     // Biological & physical consistency: validate against mascot DNA habitat
-    let eff = if matches!(eff.as_str(), "walk" | "walks" | "walking") {
+    let eff = if matches!(
+        eff.as_str(),
+        "walk"
+            | "walks"
+            | "walking"
+            | "moonwalk"
+            | "moon-walk"
+            | "moon_walk"
+            | "moon"
+            | "moonwalking"
+    ) {
         match dna.habitat {
             crate::dna::Habitat::Aquatic => {
                 eprintln!(
@@ -3243,6 +3318,12 @@ pub fn create_scene_effect(
             color_mode.to_string(),
         )),
         "walk" => Box::new(WalkEffect::new(
+            cow_text.clone(),
+            &dna,
+            instance_id,
+            color_mode.to_string(),
+        )),
+        "moonwalk" | "moon-walk" | "moon_walk" | "moon" => Box::new(WalkEffect::new_moonwalk(
             cow_text.clone(),
             &dna,
             instance_id,
@@ -3345,14 +3426,26 @@ pub fn create_effect(
     color_mode: &str,
 ) -> Box<dyn Effect> {
     let base = match dna.habitat {
-        crate::dna::Habitat::Aquatic if base == BaseAnim::Walk => BaseAnim::Float,
-        crate::dna::Habitat::Aerial if base == BaseAnim::Walk => BaseAnim::Fly,
-        crate::dna::Habitat::Inanimate if base == BaseAnim::Walk || base == BaseAnim::Fly => {
+        crate::dna::Habitat::Aquatic if base == BaseAnim::Walk || base == BaseAnim::Moonwalk => {
+            BaseAnim::Float
+        }
+        crate::dna::Habitat::Aerial if base == BaseAnim::Walk || base == BaseAnim::Moonwalk => {
+            BaseAnim::Fly
+        }
+        crate::dna::Habitat::Inanimate
+            if base == BaseAnim::Walk || base == BaseAnim::Moonwalk || base == BaseAnim::Fly =>
+        {
             BaseAnim::Pulse
         }
-        crate::dna::Habitat::Ethereal if base == BaseAnim::Walk => BaseAnim::Float,
-        crate::dna::Habitat::Serpentine if base == BaseAnim::Walk => BaseAnim::Sway,
-        crate::dna::Habitat::Sedentary if base == BaseAnim::Walk => BaseAnim::Breathe,
+        crate::dna::Habitat::Ethereal if base == BaseAnim::Walk || base == BaseAnim::Moonwalk => {
+            BaseAnim::Float
+        }
+        crate::dna::Habitat::Serpentine if base == BaseAnim::Walk || base == BaseAnim::Moonwalk => {
+            BaseAnim::Sway
+        }
+        crate::dna::Habitat::Sedentary if base == BaseAnim::Walk || base == BaseAnim::Moonwalk => {
+            BaseAnim::Breathe
+        }
         _ => base,
     };
 
@@ -3370,6 +3463,12 @@ pub fn create_effect(
             color_mode.to_string(),
         )),
         BaseAnim::Walk => Box::new(WalkEffect::new(
+            cow_text,
+            &dna,
+            instance_id,
+            color_mode.to_string(),
+        )),
+        BaseAnim::Moonwalk => Box::new(WalkEffect::new_moonwalk(
             cow_text,
             &dna,
             instance_id,
@@ -4423,6 +4522,80 @@ mod tests {
                 "{base:?} zero-size should produce empty damage"
             );
         }
+    }
+
+    #[test]
+    fn effects_on_resize_clamps_body_and_particles() {
+        let dna = CowDna {
+            particles: crate::dna::ParticleDna {
+                r#type: crate::dna::ParticleType::Fire,
+                rate: 20,
+                palette: vec!["#ff0000".into()],
+                ..Default::default()
+            },
+            ..CowDna::default()
+        };
+
+        // WalkEffect resize clamping
+        let mut walk = WalkEffect::new(COW.to_string(), &dna, 0, "static".to_string());
+        walk.body.x = 90.0;
+        walk.body.y = 30.0;
+        walk.on_resize(40, 15);
+        let max_x = 40usize.saturating_sub(walk.body.width) as f32;
+        let max_y = 15usize.saturating_sub(walk.body.height) as f32;
+        assert_eq!(walk.body.x, max_x.max(0.0));
+        assert_eq!(walk.body.y, max_y.max(0.0));
+
+        // FloatEffect resize clamping
+        let mut float = FloatEffect::new(COW.to_string(), &dna, 0, "static".to_string());
+        float.body.x = 90.0;
+        float.body.y = 30.0;
+        float.on_resize(40, 15);
+        assert_eq!(float.body.x, max_x.max(0.0));
+        assert_eq!(float.body.y, max_y.max(0.0));
+
+        // FlyEffect resize clamping
+        let mut fly = FlyEffect::new(COW.to_string(), &dna, 0, "static".to_string());
+        fly.body.x = 90.0;
+        fly.body.y = 30.0;
+        fly.on_resize(40, 15);
+        assert_eq!(fly.body.x, max_x.max(0.0));
+        assert_eq!(fly.body.y, max_y.max(0.0));
+
+        // CompoundSignatureEffect resize delegation
+        let base_walk = Box::new(WalkEffect::new(
+            COW.to_string(),
+            &dna,
+            0,
+            "static".to_string(),
+        ));
+        let mut compound =
+            CompoundSignatureEffect::with_base(COW.to_string(), dna.clone(), 0, base_walk);
+        // Spawn particles in pool
+        compound.pool.spawn(crate::particles::Particle {
+            x: 80.0,
+            y: 25.0,
+            vx: 0.0,
+            vy: 0.0,
+            life: 10.0,
+            max_life: 10.0,
+            ch: '*',
+            color: Color::WHITE,
+        });
+        compound.pool.spawn(crate::particles::Particle {
+            x: 10.0,
+            y: 5.0,
+            vx: 0.0,
+            vy: 0.0,
+            life: 10.0,
+            max_life: 10.0,
+            ch: '*',
+            color: Color::WHITE,
+        });
+        assert_eq!(compound.pool.active_count(), 2);
+        compound.on_resize(40, 15);
+        // Out of bounds particle (80, 25) culled
+        assert_eq!(compound.pool.active_count(), 1);
     }
 
     // ── Edge cases: extreme speed/amplitude ────────────────────────

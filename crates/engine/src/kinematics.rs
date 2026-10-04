@@ -40,6 +40,8 @@ pub struct KinematicBody {
     pub height: usize,
     pub bounds_mode: BoundsMode,
     pub facing_right: bool,
+    pub last_cols: usize,
+    pub last_rows: usize,
 }
 
 impl KinematicBody {
@@ -56,11 +58,38 @@ impl KinematicBody {
             height,
             bounds_mode,
             facing_right: true,
+            last_cols: 0,
+            last_rows: 0,
         }
+    }
+
+    /// Notify of terminal or pane resize.
+    ///
+    /// Immediately recomputes bounds limits and clamps coordinates
+    /// so the creature snaps inside the visible viewport immediately.
+    pub fn on_resize(&mut self, cols: usize, rows: usize) {
+        self.last_cols = cols;
+        self.last_rows = rows;
+        let max_x = cols.saturating_sub(self.width) as f32;
+        let max_y = rows.saturating_sub(self.height) as f32;
+        self.x = self.x.clamp(0.0, max_x.max(0.0));
+        self.y = self.y.clamp(0.0, max_y.max(0.0));
     }
 
     /// Advance kinematic physics by `dt` seconds given terminal dimensions.
     pub fn update(&mut self, dt: f32, total_time: f32, cols: usize, rows: usize) {
+        let max_x = cols.saturating_sub(self.width) as f32;
+        let max_y = rows.saturating_sub(self.height) as f32;
+
+        if (self.last_cols > 0 && cols < self.last_cols)
+            || (self.last_rows > 0 && rows < self.last_rows)
+        {
+            self.x = self.x.clamp(0.0, max_x.max(0.0));
+            self.y = self.y.clamp(0.0, max_y.max(0.0));
+        }
+        self.last_cols = cols;
+        self.last_rows = rows;
+
         match self.bounds_mode {
             BoundsMode::Lissajous {
                 amp_x,
@@ -70,8 +99,6 @@ impl KinematicBody {
                 phase_x,
                 phase_y,
             } => {
-                let max_x = cols.saturating_sub(self.width) as f32;
-                let max_y = rows.saturating_sub(self.height) as f32;
                 let center_x = (max_x / 2.0).max(0.0);
                 let center_y = (max_y / 2.0).max(0.0);
 
@@ -106,8 +133,7 @@ impl KinematicBody {
                     }
                 }
 
-                let max_y = rows.saturating_sub(self.height) as f32;
-                self.y = self.y.clamp(0.0, max_y);
+                self.y = self.y.clamp(0.0, max_y.max(0.0));
             }
             BoundsMode::Bounce => {
                 self.vx += self.ax * dt;
@@ -115,15 +141,15 @@ impl KinematicBody {
                 self.x += self.vx * dt;
                 self.y += self.vy * dt;
 
-                let max_x = cols.saturating_sub(self.width) as f32;
-                let max_y = rows.saturating_sub(self.height) as f32;
+                let limit_x = max_x.max(0.0);
+                let limit_y = max_y.max(0.0);
 
                 if self.x <= 0.0 {
                     self.x = 0.0;
                     self.vx = self.vx.abs();
                     self.facing_right = true;
-                } else if self.x >= max_x && max_x > 0.0 {
-                    self.x = max_x;
+                } else if self.x >= limit_x {
+                    self.x = limit_x;
                     self.vx = -self.vx.abs();
                     self.facing_right = false;
                 }
@@ -131,8 +157,8 @@ impl KinematicBody {
                 if self.y <= 0.0 {
                     self.y = 0.0;
                     self.vy = self.vy.abs();
-                } else if self.y >= max_y && max_y > 0.0 {
-                    self.y = max_y;
+                } else if self.y >= limit_y {
+                    self.y = limit_y;
                     self.vy = -self.vy.abs();
                 }
             }
@@ -141,9 +167,6 @@ impl KinematicBody {
                 self.vy += self.ay * dt;
                 self.x += self.vx * dt;
                 self.y += self.vy * dt;
-
-                let max_x = cols.saturating_sub(self.width) as f32;
-                let max_y = rows.saturating_sub(self.height) as f32;
 
                 self.x = self.x.clamp(0.0, max_x.max(0.0));
                 self.y = self.y.clamp(0.0, max_y.max(0.0));
@@ -240,5 +263,61 @@ mod tests {
         assert_eq!(body.stride_phase(4.0), 0.5);
         body.x = 4.0;
         assert_eq!(body.stride_phase(4.0), 0.0);
+    }
+
+    #[test]
+    fn on_resize_clamps_position_immediately() {
+        let mut body = KinematicBody::new(10, 5, BoundsMode::Wrap);
+        body.x = 85.0;
+        body.y = 20.0;
+        body.on_resize(50, 15);
+        // max_x = 50 - 10 = 40; max_y = 15 - 5 = 10
+        assert_eq!(body.x, 40.0);
+        assert_eq!(body.y, 10.0);
+        assert_eq!(body.last_cols, 50);
+        assert_eq!(body.last_rows, 15);
+    }
+
+    #[test]
+    fn update_shrinking_clamps_across_all_modes() {
+        // Wrap mode shrinking
+        let mut body_wrap = KinematicBody::new(10, 5, BoundsMode::Wrap);
+        body_wrap.update(0.1, 0.1, 100, 30);
+        body_wrap.x = 80.0;
+        body_wrap.y = 22.0;
+        body_wrap.update(0.1, 0.2, 50, 15);
+        assert!(body_wrap.x <= 40.0);
+        assert!(body_wrap.y <= 10.0);
+
+        // Lissajous mode shrinking
+        let mut body_lis = KinematicBody::new(
+            10,
+            5,
+            BoundsMode::Lissajous {
+                amp_x: 20.0,
+                amp_y: 10.0,
+                freq_x: 1.0,
+                freq_y: 1.0,
+                phase_x: 0.0,
+                phase_y: 0.0,
+            },
+        );
+        body_lis.update(0.1, 0.1, 100, 30);
+        body_lis.update(0.1, 0.2, 20, 8);
+        assert!(body_lis.x <= 10.0);
+        assert!(body_lis.y <= 3.0);
+    }
+
+    #[test]
+    fn bounce_clamps_when_max_zero() {
+        let mut body = KinematicBody::new(10, 5, BoundsMode::Bounce);
+        body.x = 25.0;
+        body.y = 12.0;
+        body.vx = 5.0;
+        body.vy = 5.0;
+        // Viewport smaller than entity -> max_x = 0, max_y = 0
+        body.update(0.1, 0.1, 8, 4);
+        assert_eq!(body.x, 0.0);
+        assert_eq!(body.y, 0.0);
     }
 }

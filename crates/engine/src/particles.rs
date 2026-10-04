@@ -146,6 +146,30 @@ impl ParticlePool {
     pub fn clear(&mut self) {
         self.particles.clear();
     }
+
+    /// Handle terminal / viewport resize: cull out-of-bounds particles
+    /// and clamp surviving particles to the new viewport boundaries.
+    pub fn on_resize(&mut self, cols: usize, rows: usize) {
+        if cols == 0 || rows == 0 {
+            self.clear();
+            return;
+        }
+        self.dead_keys.clear();
+        for (key, p) in self.particles.iter() {
+            if p.x < 0.0 || p.x >= cols as f32 || p.y < 0.0 || p.y >= rows as f32 {
+                self.dead_keys.push(key);
+            }
+        }
+        for key in &self.dead_keys {
+            self.particles.remove(*key);
+        }
+        let max_x = cols.saturating_sub(1) as f32;
+        let max_y = rows.saturating_sub(1) as f32;
+        for (_key, p) in self.particles.iter_mut() {
+            p.x = p.x.clamp(0.0, max_x);
+            p.y = p.y.clamp(0.0, max_y);
+        }
+    }
 }
 
 // ── Particle spawners per type ─────────────────────────────────────
@@ -663,5 +687,51 @@ mod tests {
             }
         }
         assert_eq!(count, MAX_PARTICLES);
+    }
+
+    #[test]
+    fn on_resize_culls_out_of_bounds_particles() {
+        let mut pool = ParticlePool::new();
+        // In-bounds particle
+        pool.spawn(Particle {
+            x: 10.0,
+            y: 5.0,
+            vx: 0.0,
+            vy: 0.0,
+            life: 10.0,
+            max_life: 10.0,
+            ch: '*',
+            color: Color::WHITE,
+        });
+        // Out-of-bounds particle (x >= 50)
+        pool.spawn(Particle {
+            x: 60.0,
+            y: 5.0,
+            vx: 0.0,
+            vy: 0.0,
+            life: 10.0,
+            max_life: 10.0,
+            ch: '*',
+            color: Color::WHITE,
+        });
+        // Out-of-bounds particle (y >= 20)
+        pool.spawn(Particle {
+            x: 10.0,
+            y: 25.0,
+            vx: 0.0,
+            vy: 0.0,
+            life: 10.0,
+            max_life: 10.0,
+            ch: '*',
+            color: Color::WHITE,
+        });
+
+        assert_eq!(pool.active_count(), 3);
+        pool.on_resize(50, 20);
+        assert_eq!(pool.active_count(), 1);
+
+        // Test resize to 0 clears everything
+        pool.on_resize(0, 0);
+        assert_eq!(pool.active_count(), 0);
     }
 }

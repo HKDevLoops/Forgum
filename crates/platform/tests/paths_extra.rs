@@ -27,8 +27,11 @@ fn control_socket_path_includes_session() {
     assert!(name.starts_with("ctrl-sess9."));
 }
 
+static ENV_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
 #[test]
 fn config_path_uses_env_override() {
+    let _lock = ENV_LOCK.lock().unwrap();
     std::env::set_var("FORGUM_CONFIG", "/tmp/over/config.json");
     let p = config_path().unwrap();
     assert_eq!(p, Path::new("/tmp/over/config.json"));
@@ -37,6 +40,7 @@ fn config_path_uses_env_override() {
 
 #[test]
 fn resolve_returns_four_paths() {
+    let _lock = ENV_LOCK.lock().unwrap();
     let tmp = tempfile::tempdir().unwrap();
     std::env::set_var("FORGUM_CONFIG", tmp.path().join("config.json"));
     std::env::set_var("FORGUM_DATA", tmp.path().join("data"));

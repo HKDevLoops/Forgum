@@ -25,6 +25,7 @@ pub mod engine_core;
 pub mod error;
 pub mod fortune;
 pub mod framebuffer;
+pub mod gpu_compute;
 pub mod herd;
 pub mod image_ascii;
 pub mod init;

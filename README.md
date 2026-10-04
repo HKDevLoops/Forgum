@@ -415,14 +415,14 @@ forgum config list
 | `completions` | `complete` | `[SHELL]` | Emits or auto-installs syntax autocompletion scripts for `bash`, `zsh`, `fish`, `pwsh`, `cmd`, `carapace`, `nu`, `elvish`. Defaults to listing shells if omitted. | `forgum completions list` |
 | `init` | `hook` | `[SHELL] [--install] [--append]` | Generates or auto-injects shell prompt integration hooks so Forgum animates seamlessly on prompt display. Defaults to listing shells if omitted. | `forgum init list` |
 | `config` | `cfg` | `[KEY] [VALUE] [--tui] [--list] [--migrate <FMT>]` | Reads, writes, migrates (JSON/YAML/TOML), lists all keys in a table, or opens the interactive TUI configuration editor. | `forgum config list` |
-| `theme` | `themes` | `[list &#124; apply <NAME> &#124; save <NAME>]` | Manages pasture themes. Lists 15 built-in themes with preview vibes or applies a theme to your active configuration. | `forgum theme list` |
+| `theme` | `themes` | `[list &#124; apply <NAME> &#124; rotate [MINS] &#124; seasonal]` | Manages pasture themes. Lists 15 built-in themes with preview vibes or applies a theme to your active configuration. | `forgum theme list` |
 | `checkhealth` | `doctor` | `[--json]` | Runs 12 comprehensive diagnostic probes across System, Terminal, TrueColor, DNA profiles, Shell hooks, and Loggers. | `forgum checkhealth` |
 | `logs` | `log`, `view-logs`, `show-logs` | `[-f] [-n <COUNT>] [-l <LEVEL>] [-s <GREP>]` | Displays recent structured engine events in a clean tabular view, filters by severity (`trace`, `debug`, `info`, `warn`, `error`), or follows in real time. | `forgum logs -l warn` |
 | `diagnose` | `triage`, `bugradar` | `[-n <LINES>] [--json]` | Automated diagnostic triage engine analyzing logs and environment to detect issues, root causes, and developer hints. | `forgum diagnose` |
 | `demo` | *(none)* | `[--duration <SECS>]` | Cinematic showcase iterating through the animal mascots, procedural terrains, and visual animation modes. | `forgum demo` |
 | `showcase` | *(none)* | `[--animal <NAME>]` | Interactive preview of any critter mascot with animated expression cycling and color palettes. | `forgum showcase` |
-| `tmux` | `mux` | `[install &#124; remove &#124; status &#124; list]` | Configures tmux, zellij, or wezterm status lines with responsive cow telemetry and mini-status animations. | `forgum tmux list` |
-| `herd` | `cluster` | `[list &#124; spawn &#124; kill]` | Coordinates multiple concurrent animals grazing across split panes and multi-window terminal layouts. | `forgum herd list` |
+| `tmux` | `mux` | `[install &#124; remove &#124; zellij &#124; wezterm &#124; screen &#124; status]` | Configures tmux, zellij, or wezterm status lines with responsive cow telemetry and mini-status animations. | `forgum tmux status` |
+| `herd` | `cluster` | `[list &#124; stop &#124; census &#124; effect &#124; cow &#124; eyes &#124; tongue &#124; color &#124; speed &#124; quiet &#124; follow]` | Coordinates multiple concurrent animals grazing across split panes and multi-window terminal layouts. | `forgum herd list` |
 | `remote` | `peers` | `[list &#124; who &#124; ping]` | Discovers active Forgum pasture peers over local network / SSH clusters and synchronizes session state. | `forgum remote list` |
 | `battle` | `arena` | `[FIGHTER1] [FIGHTER2]` | Turn-based ASCII battle simulation between two mascots with health bars, randomized travel distance kinematics, and combat log. | `forgum battle "Alice" "Bob"` |
 | `rps-battle` | `rps` | `[--player <NAME>] [--cpu <NAME>] [-c <WEAPON>]` | Interactive Rock-Paper-Scissors mascot battle (User vs Computer) featuring cryptographic zero-bias PRNG, full-color ASCII hand showdown, and physical jousting clash! | `forgum rps-battle` |
@@ -439,8 +439,8 @@ forgum config list
 
 | Flag | Short | Value Type | Default | Description | Universal Discovery |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| `--animal`, `--cow` | `-c` | `String` | `"default"` | Mascot character template from the 106 built-in animal catalog. Set to `"random"` for a new mascot on every run. | `--animal list` |
-| `--effect`, `--animation` | `-E`, `-a` | `String` | `"walk"` | Kinematic animation mode driving motion, strides, and particles (`walk`, `fly`, `float`, `breathe`, `ember`, `aurora`, `glitch`, `matrix`, `portal`, `rain`). | `--effect list` |
+| `--animal`, `--cow` | `-c` | `String` | `"default"` | Mascot character template from the 132 built-in animal catalog. Set to `"random"` for a new mascot on every run. | `--animal list` |
+| `--effect`, `--animation` | `-E`, `-a` | `String` | `"moonwalk"` | Kinematic animation mode driving motion, strides, and particles (`moonwalk`, `walk`, `fly`, `float`, `breathe`, `pulse`, `sway`, `glitch`, `particles`, `dissolve`, `swim`, `drift`). | `--effect list` |
 | `--mountain` | *(none)* | `String` | `"smooth"` | Procedural mountain backdrop algorithm (`smooth`, `jagged`, `peaks`, `alpine`, `dunes`, `plateau`, `mesa`, `volcanic`, `rolling`, `sierra`, `ridge`, `flat`, `none`). | `--mountain list` |
 | `--road` | *(none)* | `String` | `"highway"` | Ground terrain and road surface rendering style (`highway`, `trail`, `cobblestone`, `neon`, `dirt`, `gravel`, `railway`, `stream`, `path`, `cyber`, `grid`, `sand`, `grass`, `void`, `none`). | `--road list` |
 | `--env`, `--environment`| *(none)* | `String` | `"pasture"` | Full environmental biome preset coordinating sky gradient, ground tint, lighting, and ambient particle emitters (`pasture`, `sunset`, `cyberpunk`, `matrix`, `vaporwave`, `midnight`, `autumn`, `desert`, `neon`, `arctic`, `deepsea`, `volcano`, `cosmic`, `retro`, `mono`). | `--env list` |
@@ -460,9 +460,12 @@ forgum config list
 | `--thought-interval`| *(none)* | `u64` | `60` | Rotation period in seconds for picking and rendering a new random fortune when running in daemon or continuous mode. | `--thought-interval 30`|
 | `--reduce-motion` | *(none)* | `bool` | `false` | Accessibility flag: freezes translation coordinates while preserving color cycles and text displays. | `--reduce-motion` |
 | `--text-only` | *(none)* | `bool` | `false` | Strips all ANSI color escapes and control characters, outputting pure raw ASCII. Ideal for piping to files or `lpr`. | `--text-only` |
+| `--accel` | *(none)* | `String` | `"auto"` | Hardware compute acceleration mode (`auto`, `dedicated`, `integrated`, `cpu`). Offloads nature math to GPU/APU with CPU fallback. | `--accel dedicated` |
+| `--aspect` | *(none)* | `String` | `"auto"` | Viewport aspect ratio preset (`auto`, `21:9`, `16:9`, `16:10`, `4:3`, `1:1`, `narrow`). | `--aspect 16:9` |
+| `--aspect-mode` | *(none)* | `String` | `"preset"` | Aspect adaptation algorithm (`preset` for tuned brackets, `dynamic` for live SIGWINCH resizing, `auto`). | `--aspect-mode dynamic`|
 | `--file` | *(none)* | `Path` | `None` | Loads a custom scene file (`.json`, `.yaml`, `.toml`) to override pasture parameters. | `--file scene.yaml` |
 | `--config` | *(none)* | `Path` | Default path | Path to configuration file. Defaults to `~/.config/forgum/config.json`. | `--config /path/to/cfg`|
-| `--list` | `-l` | `String` | `"all"` | Displays formatted discovery table for any requested parameter category (`all`, `animals`, `effects`, `mountains`, `roads`, `environments`, `colors`, `shells`, `config`, `muxes`, `eyes`, `tongue`, `scenery`). | `--list effects` |
+| `--list` | `-l` | `String` | `"all"` | Displays formatted discovery table for any requested parameter category (`all`, `animals`, `effects`, `mountains`, `roads`, `environments`, `aspects`, `colors`, `shells`, `config`, `muxes`, `eyes`, `tongue`, `scenery`). | `--list effects` |
 
 ---
 

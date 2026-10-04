@@ -108,8 +108,8 @@ pub struct FrameBuffer {
     damage_list: Vec<(usize, usize)>,
 }
 
-pub const MAX_WIDTH: usize = 2048;
-pub const MAX_HEIGHT: usize = 2048;
+pub const MAX_WIDTH: usize = 8192;
+pub const MAX_HEIGHT: usize = 4096;
 
 impl FrameBuffer {
     #[must_use]

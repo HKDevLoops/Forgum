@@ -5,6 +5,7 @@
 
 use crate::dna::BaseAnim;
 use crate::framebuffer::{Cell, Color, FrameBuffer};
+use forgum_platform::AspectRatioFormat;
 
 /// Mountain and horizon scenery styles.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -513,6 +514,15 @@ pub fn resolve_archetype_with_overrides(
 
 /// Calculate the exact number of natural mountain peaks across viewport width based on tectonic wavelength.
 pub fn calculate_mountain_peaks(width: usize, style: MountainStyle) -> usize {
+    calculate_mountain_peaks_aspect(width, style, None)
+}
+
+/// Calculate the exact number of natural mountain peaks across viewport width based on tectonic wavelength and aspect ratio.
+pub fn calculate_mountain_peaks_aspect(
+    width: usize,
+    style: MountainStyle,
+    aspect: Option<AspectRatioFormat>,
+) -> usize {
     if style == MountainStyle::None || width == 0 {
         return 0;
     }
@@ -531,7 +541,9 @@ pub fn calculate_mountain_peaks(width: usize, style: MountainStyle) -> usize {
         MountainStyle::None => 1.0,
     };
     let phi = 1.618_034_f32;
-    let peak_count = ((width as f32) / (lambda * (phi * 0.5))).round() as usize;
+    let base_peaks = (width as f32) / (lambda * (phi * 0.5));
+    let mult = aspect.map(|a| a.peak_density_multiplier()).unwrap_or(1.0);
+    let peak_count = (base_peaks * mult).round() as usize;
     peak_count.max(1)
 }
 
@@ -543,6 +555,18 @@ pub fn calculate_mountain_height(
     mountain_base_y: usize,
     style: MountainStyle,
     time: f32,
+) -> f32 {
+    calculate_mountain_height_aspect(x, width, mountain_base_y, style, time, None)
+}
+
+/// Mathematical mountain height function using multi-harmonic Fourier synthesis with dynamic aspect ratio adaptation.
+pub fn calculate_mountain_height_aspect(
+    x: f32,
+    width: usize,
+    mountain_base_y: usize,
+    style: MountainStyle,
+    time: f32,
+    aspect: Option<AspectRatioFormat>,
 ) -> f32 {
     let (base_h, max_var): (f32, f32) = match style {
         MountainStyle::Hills => (2.2, 1.2),
@@ -559,13 +583,16 @@ pub fn calculate_mountain_height(
         MountainStyle::None => return 0.0,
     };
 
+    let amp_mult = aspect
+        .map(|a| a.mountain_amplitude_multiplier())
+        .unwrap_or(1.0);
     let scale = ((mountain_base_y as f32) * 0.45).clamp(2.5, 14.0);
-    let scale_mult = scale / 2.5;
+    let scale_mult = (scale / 2.5) * amp_mult;
     let scaled_base_h = base_h * scale_mult;
     let scaled_max_var = max_var * scale_mult;
     let max_allowed = (mountain_base_y as f32 * 0.85).max(3.0);
 
-    let n_peaks = calculate_mountain_peaks(width, style).max(1) as f32;
+    let n_peaks = calculate_mountain_peaks_aspect(width, style, aspect).max(1) as f32;
     let w_f = (width.max(20)) as f32;
     let omega = (2.0 * std::f32::consts::PI * n_peaks) / w_f;
     let t_offset = time * 1.2;
@@ -623,7 +650,7 @@ pub fn calculate_mountain_height(
 
 /// Render mountain / horizon layer directly behind the creature, anchored to the horizon above the road.
 /// Uses a multi-harmonic mathematical algorithm to generate dynamic, non-uniform variable heights
-/// across columns with smooth horizontal parallax scrolling.
+/// across columns with smooth horizontal parallax scrolling and aspect ratio adaptation.
 /// `mountain_base_y` is the row where the base of the mountain meets the ground.
 pub fn render_mountain(
     fb: &mut FrameBuffer,
@@ -635,6 +662,8 @@ pub fn render_mountain(
     if style == MountainStyle::None || fb.height < 2 || width == 0 {
         return;
     }
+
+    let aspect = AspectRatioFormat::from_dimensions(fb.width as u16, fb.height as u16);
 
     let fg = match style {
         MountainStyle::Hills => Color::rgb(28, 68, 32),
@@ -651,117 +680,166 @@ pub fn render_mountain(
         MountainStyle::None => return,
     };
 
-    for x in 0..width {
-        let x_f = x as f32;
-        let h_curr = calculate_mountain_height(x_f, width, mountain_base_y, style, time);
-        let h_prev = calculate_mountain_height(x_f - 1.0, width, mountain_base_y, style, time);
-        let h_next = calculate_mountain_height(x_f + 1.0, width, mountain_base_y, style, time);
+    let compute = crate::gpu_compute::get_compute_engine(None);
+    let mut heights = [0.0f32; 1024];
+    let mut chunk_start = 0;
+    while chunk_start < width {
+        let chunk_len = (width - chunk_start).min(1024);
+        compute.compute_mountain_elevations_chunk(
+            chunk_start,
+            chunk_len,
+            width,
+            mountain_base_y,
+            style,
+            time,
+            Some(aspect),
+            &mut heights[..chunk_len],
+        );
 
-        let h_int = h_curr.round() as usize;
-        let start_y = mountain_base_y.saturating_sub(h_int);
-
-        for y in start_y..=mountain_base_y {
-            if y >= fb.height {
-                continue;
-            }
-            let ch = if y == start_y {
-                // Summit / ridge line glyph based on slope
-                let slope = h_next - h_prev;
-                match style {
-                    MountainStyle::Skyline => {
-                        if x % 3 == 0 {
-                            '|'
-                        } else {
-                            '_'
-                        }
-                    }
-                    MountainStyle::Castle => {
-                        if x % 2 == 0 {
-                            '#'
-                        } else {
-                            '_'
-                        }
-                    }
-                    MountainStyle::Plateau => {
-                        if slope.abs() < 0.2 {
-                            '_'
-                        } else if slope > 0.0 {
-                            '/'
-                        } else {
-                            '\\'
-                        }
-                    }
-                    MountainStyle::Garden => {
-                        if x % 4 == 0 {
-                            '*'
-                        } else {
-                            '^'
-                        }
-                    }
-                    _ => {
-                        if h_curr > h_prev && h_curr > h_next {
-                            '^'
-                        } else if slope > 0.25 {
-                            '/'
-                        } else if slope < -0.25 {
-                            '\\'
-                        } else {
-                            '-'
-                        }
-                    }
-                }
-            } else if y == mountain_base_y {
-                match style {
-                    MountainStyle::Volcano => '~',
-                    MountainStyle::Skyline => '_',
-                    MountainStyle::Seamount => '~',
-                    _ => '.',
-                }
+        for i in 0..chunk_len {
+            let x = chunk_start + i;
+            let h_curr = heights[i];
+            let h_prev = if i > 0 {
+                heights[i - 1]
+            } else if x > 0 {
+                calculate_mountain_height_aspect(
+                    (x - 1) as f32,
+                    width,
+                    mountain_base_y,
+                    style,
+                    time,
+                    Some(aspect),
+                )
             } else {
-                // Body texture
-                match style {
-                    MountainStyle::Skyline => {
-                        if (x + y) % 2 == 0 {
-                            '#'
-                        } else {
-                            '|'
-                        }
-                    }
-                    MountainStyle::Iceberg => {
-                        if (x + y) % 3 == 0 {
-                            '^'
-                        } else {
-                            '|'
-                        }
-                    }
-                    MountainStyle::Volcano => {
-                        if (x + y) % 4 == 0 {
-                            '/'
-                        } else {
-                            '\\'
-                        }
-                    }
-                    MountainStyle::Gothic => {
-                        if x % 3 == 0 {
-                            '|'
-                        } else {
-                            '/'
-                        }
-                    }
-                    _ => {
-                        if (x + y) % 3 == 0 {
-                            '|'
-                        } else {
-                            '/'
-                        }
-                    }
-                }
+                calculate_mountain_height_aspect(
+                    -1.0,
+                    width,
+                    mountain_base_y,
+                    style,
+                    time,
+                    Some(aspect),
+                )
+            };
+            let h_next = if i + 1 < chunk_len {
+                heights[i + 1]
+            } else {
+                calculate_mountain_height_aspect(
+                    (x + 1) as f32,
+                    width,
+                    mountain_base_y,
+                    style,
+                    time,
+                    Some(aspect),
+                )
             };
 
-            if ch != ' ' {
-                let _ = fb.set(x, y, Cell::new(ch, fg));
+            let h_int = h_curr.round() as usize;
+            let start_y = mountain_base_y.saturating_sub(h_int);
+
+            for y in start_y..=mountain_base_y {
+                if y >= fb.height {
+                    continue;
+                }
+                let ch = if y == start_y {
+                    // Summit / ridge line glyph based on slope
+                    let slope = h_next - h_prev;
+                    match style {
+                        MountainStyle::Skyline => {
+                            if x % 3 == 0 {
+                                '|'
+                            } else {
+                                '_'
+                            }
+                        }
+                        MountainStyle::Castle => {
+                            if x % 2 == 0 {
+                                '#'
+                            } else {
+                                '_'
+                            }
+                        }
+                        MountainStyle::Plateau => {
+                            if slope.abs() < 0.2 {
+                                '_'
+                            } else if slope > 0.0 {
+                                '/'
+                            } else {
+                                '\\'
+                            }
+                        }
+                        MountainStyle::Garden => {
+                            if x % 4 == 0 {
+                                '*'
+                            } else {
+                                '^'
+                            }
+                        }
+                        _ => {
+                            if h_curr > h_prev && h_curr > h_next {
+                                '^'
+                            } else if slope > 0.25 {
+                                '/'
+                            } else if slope < -0.25 {
+                                '\\'
+                            } else {
+                                '-'
+                            }
+                        }
+                    }
+                } else if y == mountain_base_y {
+                    match style {
+                        MountainStyle::Volcano => '~',
+                        MountainStyle::Skyline => '_',
+                        MountainStyle::Seamount => '~',
+                        _ => '.',
+                    }
+                } else {
+                    // Body texture
+                    match style {
+                        MountainStyle::Skyline => {
+                            if (x + y) % 2 == 0 {
+                                '#'
+                            } else {
+                                '|'
+                            }
+                        }
+                        MountainStyle::Iceberg => {
+                            if (x + y) % 3 == 0 {
+                                '^'
+                            } else {
+                                '|'
+                            }
+                        }
+                        MountainStyle::Volcano => {
+                            if (x + y) % 4 == 0 {
+                                '/'
+                            } else {
+                                '\\'
+                            }
+                        }
+                        MountainStyle::Gothic => {
+                            if x % 3 == 0 {
+                                '|'
+                            } else {
+                                '/'
+                            }
+                        }
+                        _ => {
+                            if (x + y) % 3 == 0 {
+                                '|'
+                            } else {
+                                '/'
+                            }
+                        }
+                    }
+                };
+
+                if ch != ' ' {
+                    let _ = fb.set(x, y, Cell::new(ch, fg));
+                }
             }
         }
+        chunk_start += chunk_len;
     }
 }
 
@@ -909,7 +987,7 @@ pub fn calculate_tree_height(
     let base_animal_h = animal_height.max(3) as f32;
 
     let anim_mult = match base_anim {
-        BaseAnim::Walk => 1.25_f32,
+        BaseAnim::Walk | BaseAnim::Moonwalk => 1.25_f32,
         BaseAnim::Breathe => 1.35_f32,
         BaseAnim::Float | BaseAnim::Fly | BaseAnim::Abduction => 0.80_f32,
         BaseAnim::Sway => 1.15_f32,
@@ -1596,23 +1674,42 @@ pub fn render_road(
         return;
     }
 
-    // Row 0: Contact surface
-    for x in 0..width {
-        let (ch, fg) = calculate_road_texture(x, style, time);
-        if ch != ' ' {
-            let _ = fb.set(x, cow_bottom_y, Cell::new(ch, fg));
-        }
-    }
+    let compute = crate::gpu_compute::get_compute_engine(None);
+    let mut undulation = [0.0f32; 1024];
+    let mut chunk_start = 0;
+    while chunk_start < width {
+        let chunk_len = (width - chunk_start).min(1024);
+        compute.compute_road_undulation_chunk(
+            chunk_start,
+            chunk_len,
+            cow_bottom_y as f32,
+            1.0,
+            time,
+            &mut undulation[..chunk_len],
+        );
 
-    // Row 1: Subsurface foundation bed
-    let subsurface_y = cow_bottom_y + 1;
-    if subsurface_y < fb.height {
-        for x in 0..width {
-            let (ch, fg) = calculate_road_subsurface(x, style, time);
+        // Row 0: Contact surface
+        for i in 0..chunk_len {
+            let x = chunk_start + i;
+            let (ch, fg) = calculate_road_texture(x, style, time);
             if ch != ' ' {
-                let _ = fb.set(x, subsurface_y, Cell::new(ch, fg));
+                let _ = fb.set(x, cow_bottom_y, Cell::new(ch, fg));
             }
         }
+
+        // Row 1: Subsurface foundation bed
+        let subsurface_y = cow_bottom_y + 1;
+        if subsurface_y < fb.height {
+            for i in 0..chunk_len {
+                let x = chunk_start + i;
+                let (ch, fg) = calculate_road_subsurface(x, style, time);
+                if ch != ' ' {
+                    let _ = fb.set(x, subsurface_y, Cell::new(ch, fg));
+                }
+            }
+        }
+
+        chunk_start += chunk_len;
     }
 }
 
@@ -2054,5 +2151,99 @@ mod tests {
         );
         // Ensure some cells were written
         assert!(fb.back.iter().any(|c| c.alpha != 0));
+    }
+
+    #[test]
+    fn test_mountain_mathematics_with_aspect_ratio_formats() {
+        let width = 120;
+        let p_uw = calculate_mountain_peaks_aspect(
+            width,
+            MountainStyle::Peaks,
+            Some(AspectRatioFormat::UltraWide21x9),
+        );
+        let p_ws = calculate_mountain_peaks_aspect(
+            width,
+            MountainStyle::Peaks,
+            Some(AspectRatioFormat::Widescreen16x9),
+        );
+        let p_sq = calculate_mountain_peaks_aspect(
+            width,
+            MountainStyle::Peaks,
+            Some(AspectRatioFormat::Square1x1),
+        );
+
+        assert!(p_uw > p_ws);
+        assert!(p_ws > p_sq);
+
+        let h_sq = calculate_mountain_height_aspect(
+            15.0,
+            width,
+            20,
+            MountainStyle::Peaks,
+            0.0,
+            Some(AspectRatioFormat::Square1x1),
+        );
+        let h_uw = calculate_mountain_height_aspect(
+            15.0,
+            width,
+            20,
+            MountainStyle::Peaks,
+            0.0,
+            Some(AspectRatioFormat::UltraWide21x9),
+        );
+        assert!(h_sq > h_uw);
+
+        // Verify multi-format scenery rendering without panics or memory overflow
+        let formats = [
+            (210, 40), // 21:9 UltraWide
+            (120, 34), // 16:9 Widescreen
+            (100, 32), // 16:10 Golden
+            (80, 30),  // 4:3 Classic
+            (80, 42),  // 1:1 Square
+            (50, 30),  // Narrow
+        ];
+
+        for (cols, rows) in formats {
+            let mut fb = FrameBuffer::new(cols, rows);
+            let road_y = rows.saturating_sub(4);
+            render_scenery(
+                &mut fb,
+                MountainStyle::Peaks,
+                RoadStyle::Cobblestone,
+                EnvironmentStyle::Pasture,
+                road_y,
+                2.5,
+            );
+            assert!(fb.back.iter().any(|c| c.alpha != 0));
+        }
+    }
+
+    #[test]
+    fn test_arbitrary_width_rendering_exceeding_1024_columns() {
+        // User mandate: "1024 is not the limit the screen width of the user and the terminal width of the window is limit"
+        // Test rendering across 1200, 2048, 2560, and 3840 column viewports.
+        let wide_widths = [1200, 2048, 2560, 3840];
+        for width in wide_widths {
+            let mut fb = FrameBuffer::new(width, 40);
+            let road_y: usize = 35;
+            render_mountain(
+                &mut fb,
+                MountainStyle::Peaks,
+                road_y.saturating_sub(10),
+                width,
+                1.0,
+            );
+            render_road(&mut fb, RoadStyle::Cobblestone, road_y, width, 1.0);
+
+            // Verify that columns far beyond 1024 (e.g. at col 1050, 2000, 3800) have non-empty rendered cells
+            let far_col = width - 10;
+            let cell = fb.get_back(far_col, road_y);
+            assert!(
+                cell.ch != ' ',
+                "Road should render across all columns up to width {} (checked col {})",
+                width,
+                far_col
+            );
+        }
     }
 }

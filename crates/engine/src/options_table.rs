@@ -200,6 +200,13 @@ pub fn render_options(category: &str) -> String {
         || cat == "diagnose"
         || cat == "triage"
         || cat == "bugradar";
+    let show_aspects = show_all
+        || cat == "aspect"
+        || cat == "aspects"
+        || cat == "aspect-ratio"
+        || cat == "aspect_ratio"
+        || cat == "ratio"
+        || cat == "ratios";
 
     if !show_animals
         && !show_effects
@@ -213,6 +220,7 @@ pub fn render_options(category: &str) -> String {
         && !show_eyes
         && !show_tongue
         && !show_logs
+        && !show_aspects
     {
         out.push_str(&format!(
             "\n\x1b[1;33mUnknown options category '{category}'.\x1b[0m\n\n\
@@ -224,6 +232,7 @@ pub fn render_options(category: &str) -> String {
               • \x1b[1mmountains\x1b[0m      - Procedural mountain horizons (--mountain)\n\
               • \x1b[1mroads\x1b[0m          - Ground and terrain surface styles (--road)\n\
               • \x1b[1menvironments\x1b[0m   - Atmospheric particle emitter themes (--env / --environment)\n\
+              • \x1b[1maspects\x1b[0m        - Viewport aspect ratio formats (--aspect)\n\
               • \x1b[1mcolors\x1b[0m         - Chromatic color modes and hex palettes (--color-mode)\n\
               • \x1b[1mshells\x1b[0m         - Supported shells, config paths, and tab completion\n\
               • \x1b[1mconfig\x1b[0m         - Supported configuration keys, types, and schema\n\
@@ -355,7 +364,8 @@ pub fn render_options(category: &str) -> String {
         let headers = ["Effect", "Type", "Motion & Anatomical Cadence Description"];
         let rows = vec![
             vec!["animal_natural", "Signature DNA", "Authentic biological motion and particle effects dynamically derived from the mascot's DNA (alias: natural, default)"],
-            vec!["walk", "Dynamic Movement", "Natural forward leg oscillation with realistic ~2.8s bovine cud chew pacing and peaceful rests"],
+            vec!["moonwalk", "Dynamic Movement", "Legendary reverse-glide moonwalk with sliding hooves, realistic bovine cud chew, and smooth backward drift (alias: walk)"],
+            vec!["walk", "Dynamic Movement", "Horizontal kinematic traversal across the terminal pasture (alias for moonwalk)"],
             vec!["breathe", "Idle Respiration", "Gentle rhythmic chest and torso expansion and contraction idle breathing cycle"],
             vec!["float", "Levitation", "Zero-gravity sinusoidal hovering and gentle vertical drift across the viewport"],
             vec!["fly", "Aerial Trajectory", "Wing-flapping aerial trajectory sweeping across the horizon and mountain summits"],
@@ -606,6 +616,53 @@ pub fn render_options(category: &str) -> String {
             ],
         ];
         out.push_str(&format_table(&e_headers, &e_rows));
+    }
+
+    if show_aspects {
+        out.push_str("\n\x1b[1;35m━━━ Viewport Aspect Ratios (--aspect) ━━━\x1b[0m\n");
+        let a_headers = [
+            "Aspect Ratio",
+            "Resolution / Range",
+            "Visual Geometry & Behavior",
+        ];
+        let a_rows = vec![
+            vec![
+                "auto",
+                "Dynamic Viewport",
+                "Automatically derives dimensions from active terminal cols × rows",
+            ],
+            vec![
+                "21:9",
+                "AR >= 2.10 (e.g. 210×40)",
+                "Ultrawide panoramic display; stretched alpine peaks and wide horizons",
+            ],
+            vec![
+                "16:9",
+                "1.65 <= AR < 2.10 (e.g. 120×34)",
+                "Modern widescreen standard; balanced mountain harmonics and flora density",
+            ],
+            vec![
+                "16:10",
+                "1.45 <= AR < 1.65 (e.g. 100×32)",
+                "Golden tall ratio; tailored for macOS displays and modern productivity laptops",
+            ],
+            vec![
+                "4:3",
+                "1.15 <= AR < 1.45 (e.g. 80×30)",
+                "Classic standard terminal; traditional CRT format and compact mountain crests",
+            ],
+            vec![
+                "1:1",
+                "0.85 <= AR < 1.15 (e.g. 80×42)",
+                "Square display; elevated mountain amplitude and centered mascot staging",
+            ],
+            vec![
+                "narrow",
+                "AR < 0.85 or width < 55 (e.g. 50×30)",
+                "Vertical mobile & split pane; streamlined compact layout and minimum peak count",
+            ],
+        ];
+        out.push_str(&format_table(&a_headers, &a_rows));
     }
 
     if show_colors {
@@ -891,6 +948,48 @@ pub fn render_options(category: &str) -> String {
                 "nvim, vim, emacs, nano, code, notepad, auto",
                 "Preferred text editor command for editing configuration",
             ],
+            vec![
+                "accel_mode",
+                "string",
+                "auto, dedicated, integrated, npu, cpu",
+                "Hardware acceleration engine mode (GPU/NPU offload)",
+            ],
+            vec![
+                "reduce_motion",
+                "boolean",
+                "true, false",
+                "Disable animated motions and particle effects for accessibility",
+            ],
+            vec![
+                "text_only",
+                "boolean",
+                "true, false",
+                "Print fortune/speech text directly without ASCII cow mascot art",
+            ],
+            vec![
+                "banner",
+                "boolean",
+                "true, false",
+                "Render inline animated banner without taking over screen",
+            ],
+            vec![
+                "aspect",
+                "string",
+                "auto, 21:9, 16:9, 16:10, 4:3, 1:1, narrow",
+                "Terminal viewport aspect ratio format preset",
+            ],
+            vec![
+                "aspect_mode",
+                "string",
+                "preset, dynamic, auto",
+                "Aspect ratio adaptation mode (fixed brackets vs live resize)",
+            ],
+            vec![
+                "keybindings",
+                "table",
+                "quit, save_and_quit, search, help, jump_top...",
+                "Custom TUI keybindings table in config.toml/json",
+            ],
         ];
         out.push_str(&format_table(&c_headers, &c_rows));
     }
@@ -1128,5 +1227,21 @@ mod tests {
         assert!(text.contains("animal_natural"));
         assert!(text.contains("Signature DNA"));
         assert!(text.contains("Authentic biological motion"));
+    }
+
+    #[test]
+    fn render_options_aspects_includes_all_formats() {
+        let text = render_options("aspects");
+        assert!(text.contains("Viewport Aspect Ratios"));
+        assert!(text.contains("auto"));
+        assert!(text.contains("21:9"));
+        assert!(text.contains("16:9"));
+        assert!(text.contains("16:10"));
+        assert!(text.contains("4:3"));
+        assert!(text.contains("1:1"));
+        assert!(text.contains("narrow"));
+
+        let text_all = render_options("all");
+        assert!(text_all.contains("Viewport Aspect Ratios"));
     }
 }

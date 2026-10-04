@@ -131,6 +131,84 @@ pub struct SceneConfig {
     /// Background contrast profile: "standard", "acrylic_glass", "high_contrast", "vibrant".
     #[serde(default)]
     pub contrast_mode: Option<String>,
+
+    /// Hardware acceleration mode: "auto", "dedicated", "integrated", "cpu".
+    #[serde(
+        default,
+        alias = "acceleration_mode",
+        alias = "gpu_mode",
+        alias = "accel"
+    )]
+    pub accel_mode: Option<String>,
+
+    /// Accessibility mode: disable kinetic motion & heavy particles (gentle fades only).
+    #[serde(
+        default,
+        alias = "reduce-motion",
+        alias = "reduced_motion",
+        alias = "reduced-motion"
+    )]
+    pub reduce_motion: bool,
+
+    /// Print speech bubble text directly without ASCII cow mascot art.
+    #[serde(
+        default,
+        alias = "text-only",
+        alias = "fortune_only",
+        alias = "fortune-only"
+    )]
+    pub text_only: bool,
+
+    /// Render inline animated banner without taking over screen.
+    #[serde(default, alias = "banner_mode", alias = "banner-mode")]
+    pub banner: bool,
+
+    /// Viewport aspect ratio preset: "auto", "21:9", "16:9", "16:10", "4:3", "1:1", "narrow".
+    #[serde(default, alias = "aspect_ratio", alias = "aspect-ratio")]
+    pub aspect: Option<String>,
+
+    /// Viewport aspect ratio adaptation mode: "preset", "dynamic", "auto".
+    #[serde(default, alias = "aspect-mode")]
+    pub aspect_mode: Option<String>,
+
+    /// Custom TUI keybindings configuration mapping.
+    #[serde(default)]
+    pub keybindings: Option<KeybindingsConfig>,
+}
+
+/// Custom TUI keybindings configuration.
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub struct KeybindingsConfig {
+    /// Key to quit the application (default: "q", "Esc").
+    #[serde(default)]
+    pub quit: Option<String>,
+    /// Key to save configuration and quit (default: "ZZ").
+    #[serde(default)]
+    pub save_and_quit: Option<String>,
+    /// Key to trigger interactive fuzzy search (default: "/").
+    #[serde(default)]
+    pub search: Option<String>,
+    /// Key to toggle Vim cheatsheet help modal (default: "?").
+    #[serde(default)]
+    pub help: Option<String>,
+    /// Key to jump to top of lists/panels (default: "gg").
+    #[serde(default)]
+    pub jump_top: Option<String>,
+    /// Key to jump to bottom of lists/panels (default: "G").
+    #[serde(default)]
+    pub jump_bottom: Option<String>,
+    /// Key to cycle to next tab (default: "gt", "Tab").
+    #[serde(default)]
+    pub next_tab: Option<String>,
+    /// Key to cycle to previous tab (default: "gT", "BackTab").
+    #[serde(default)]
+    pub prev_tab: Option<String>,
+    /// Key to scroll down half page (default: "Ctrl+d").
+    #[serde(default)]
+    pub scroll_down: Option<String>,
+    /// Key to scroll up half page (default: "Ctrl+u").
+    #[serde(default)]
+    pub scroll_up: Option<String>,
 }
 
 /// Universal random configuration setting.
@@ -394,6 +472,13 @@ impl Default for SceneConfig {
             editor: None,
             random: None,
             contrast_mode: None,
+            accel_mode: None,
+            reduce_motion: false,
+            text_only: false,
+            banner: false,
+            aspect: None,
+            aspect_mode: None,
+            keybindings: None,
         }
     }
 }
@@ -514,6 +599,13 @@ mod tests {
             editor: Some("nvim".into()),
             random: Some(RandomSetting::Bool(true)),
             contrast_mode: Some("acrylic_glass".into()),
+            accel_mode: Some("auto".into()),
+            reduce_motion: true,
+            text_only: false,
+            banner: true,
+            aspect: Some("16:9".into()),
+            aspect_mode: Some("dynamic".into()),
+            keybindings: None,
         };
 
         for format in [ConfigFormat::Json, ConfigFormat::Yaml, ConfigFormat::Toml] {
@@ -535,6 +627,63 @@ mod tests {
         let toml_str = "contrast_mode = \"high_contrast\"\n";
         let s_toml = SceneConfig::parse_with_format(toml_str, ConfigFormat::Toml).unwrap();
         assert_eq!(s_toml.contrast_mode.as_deref(), Some("high_contrast"));
+    }
+
+    #[test]
+    fn accel_mode_deserialization_and_aliases() {
+        let json = r#"{"accel_mode":"dedicated"}"#;
+        let s: SceneConfig = serde_json::from_str(json).unwrap();
+        assert_eq!(s.accel_mode.as_deref(), Some("dedicated"));
+
+        // Alias: acceleration_mode
+        let json_alias1 = r#"{"acceleration_mode":"integrated"}"#;
+        let s_alias1: SceneConfig = serde_json::from_str(json_alias1).unwrap();
+        assert_eq!(s_alias1.accel_mode.as_deref(), Some("integrated"));
+
+        // Alias: gpu_mode
+        let json_alias2 = r#"{"gpu_mode":"auto"}"#;
+        let s_alias2: SceneConfig = serde_json::from_str(json_alias2).unwrap();
+        assert_eq!(s_alias2.accel_mode.as_deref(), Some("auto"));
+
+        // Alias: accel
+        let json_alias3 = r#"{"accel":"cpu"}"#;
+        let s_alias3: SceneConfig = serde_json::from_str(json_alias3).unwrap();
+        assert_eq!(s_alias3.accel_mode.as_deref(), Some("cpu"));
+
+        let toml_str = "accel_mode = \"dedicated\"\n";
+        let s_toml = SceneConfig::parse_with_format(toml_str, ConfigFormat::Toml).unwrap();
+        assert_eq!(s_toml.accel_mode.as_deref(), Some("dedicated"));
+    }
+
+    #[test]
+    fn test_reduce_motion_text_only_banner_deserialization_and_aliases() {
+        let json = r#"{
+            "reduce_motion": true,
+            "text_only": true,
+            "banner": true
+        }"#;
+        let s: SceneConfig = serde_json::from_str(json).unwrap();
+        assert!(s.reduce_motion);
+        assert!(s.text_only);
+        assert!(s.banner);
+
+        // Kebab-case and alias verification
+        let json_aliases = r#"{
+            "reduce-motion": true,
+            "text-only": true,
+            "banner-mode": true
+        }"#;
+        let s_alias: SceneConfig = serde_json::from_str(json_aliases).unwrap();
+        assert!(s_alias.reduce_motion);
+        assert!(s_alias.text_only);
+        assert!(s_alias.banner);
+
+        // TOML round-trip
+        let toml_str = "reduce_motion = true\ntext_only = false\nbanner = true\n";
+        let s_toml = SceneConfig::parse_with_format(toml_str, ConfigFormat::Toml).unwrap();
+        assert!(s_toml.reduce_motion);
+        assert!(!s_toml.text_only);
+        assert!(s_toml.banner);
     }
 
     #[test]
@@ -602,5 +751,24 @@ mod tests {
             Some(RandomSetting::String("all".into()))
         );
         assert!(parsed_yaml.random.unwrap().randomizes_mascot());
+    }
+
+    #[test]
+    fn keybindings_config_roundtrip() {
+        let toml_str = r#"
+[keybindings]
+quit = "q"
+save_and_quit = "ZZ"
+search = "/"
+help = "?"
+"#;
+        let parsed: SceneConfig =
+            SceneConfig::parse_with_format(toml_str, ConfigFormat::Toml).unwrap();
+        assert!(parsed.keybindings.is_some());
+        let kb = parsed.keybindings.unwrap();
+        assert_eq!(kb.quit.as_deref(), Some("q"));
+        assert_eq!(kb.save_and_quit.as_deref(), Some("ZZ"));
+        assert_eq!(kb.search.as_deref(), Some("/"));
+        assert_eq!(kb.help.as_deref(), Some("?"));
     }
 }

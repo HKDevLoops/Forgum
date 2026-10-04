@@ -337,3 +337,49 @@ fn completions_contain_split_scroll_and_reservation_flags() {
         "xonsh must contain --split-ratio"
     );
 }
+
+#[test]
+fn completions_contain_hardware_acceleration_and_attach_modes() {
+    let mut cmd = Cli::command();
+
+    // Bash
+    let bash = generate_completion_script(Shell::Bash, &mut cmd);
+    assert!(bash.contains("_forgum_accel=\"auto dedicated integrated npu cpu\""));
+    assert!(bash.contains("_forgum_attach_modes=\"startup prompt clear split pane\""));
+    assert!(bash.contains("--accel)"));
+    assert!(bash.contains("--shell-attach-mode|--attach-mode)"));
+
+    // Zsh
+    let zsh = generate_completion_script(Shell::Zsh, &mut cmd);
+    assert!(zsh.contains("_forgum_accel=("));
+    assert!(zsh.contains("dedicated:Prefer dedicated GPU"));
+    assert!(zsh.contains("_forgum_attach_modes=("));
+    assert!(zsh.contains("startup:Static Fastfetch-style banner"));
+
+    // Fish
+    let fish = generate_completion_script(Shell::Fish, &mut cmd);
+    assert!(fish.contains("complete -c forgum -l accel"));
+    assert!(fish.contains("complete -c forgum -l shell-attach-mode"));
+
+    // Pwsh
+    let pwsh = generate_completion_script(Shell::Pwsh, &mut cmd);
+    assert!(pwsh.contains("$accelModes = @{"));
+    assert!(pwsh.contains("$attachModes = @{"));
+    assert!(pwsh.contains("'--accel' { $targetMap = $accelModes }"));
+    assert!(pwsh.contains("{ $_ -in '--shell-attach-mode', '--attach-mode' }"));
+
+    // Carapace
+    let carapace = generate_completion_script(Shell::Carapace, &mut cmd);
+    assert!(carapace.contains("--accel=:"));
+    assert!(carapace.contains("--shell-attach-mode=:"));
+
+    // Xonsh
+    let xonsh = generate_completion_script(Shell::Xonsh, &mut cmd);
+    assert!(xonsh.contains("\"--accel\""));
+    assert!(xonsh.contains("\"--shell-attach-mode\""));
+
+    // Ion
+    let ion = generate_completion_script(Shell::Ion, &mut cmd);
+    assert!(ion.contains("complete -c forgum -l accel"));
+    assert!(ion.contains("complete -c forgum -l shell-attach-mode"));
+}

@@ -287,6 +287,12 @@ jobs:
         run: cargo test -p forgum-engine --test completions
       - name: Nature mathematics unit tests
         run: cargo test -p forgum-engine --lib scenery::tests
+      - name: Terminal aspect ratio & multi-format classification
+        run: cargo test -p forgum-platform test_aspect_ratio_classification_and_metrics
+      - name: Dynamic aspect-ratio nature mathematics tests
+        run: cargo test -p forgum-engine test_mountain_mathematics_with_aspect_ratio_formats
+      - name: Arbitrary viewport width and ultra-wide canvas tests
+        run: cargo test -p forgum-engine test_arbitrary_width_rendering_exceeding_1024_columns
       - name: Unified keyword mandate (user docs & shell hooks)
         run: |
           echo "=== Validating Unified Keyword Mandate ('forgum') ==="

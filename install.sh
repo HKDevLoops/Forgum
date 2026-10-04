@@ -550,7 +550,7 @@ resolve_version() {
   fi
 
   # Default fallback constant (never blocks on network)
-  echo "0.0.3-beta"
+  echo "0.0.4-beta"
 }
 
 VERSION="$(resolve_version)"

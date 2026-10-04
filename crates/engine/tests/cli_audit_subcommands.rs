@@ -333,8 +333,8 @@ fn scenario_checkhealth_json_telemetry_schema_validation() {
     let sections = parsed["sections"].as_array().expect("Sections array");
     assert_eq!(
         sections.len(),
-        7,
-        "All 7 diagnostic sections must be reported"
+        8,
+        "All 8 diagnostic sections must be reported"
     );
 
     for sec in sections {

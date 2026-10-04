@@ -34,8 +34,10 @@
 #![doc(html_root_url = "https://docs.rs/forgum-platform/0.0.3-beta")]
 
 pub mod biome;
+pub mod compute;
 pub mod daemon_socket;
 pub mod error;
+pub mod gpu;
 pub mod guards;
 pub mod mux;
 pub mod output;
@@ -50,6 +52,7 @@ pub mod telemetry;
 pub mod terminal;
 pub mod terminal_theme;
 pub mod uninstaller;
+pub mod vulkan_metal;
 
 // Built-in 8×8 bitmap font for real glyph rasterization and video capture.
 pub mod font;
@@ -64,8 +67,10 @@ pub mod platform_unix;
 pub mod platform_windows;
 
 // Re-exports for ergonomic callers.
+pub use compute::{get_compute_engine, init_compute_engine, ComputeEngine};
 pub use daemon_socket::{DaemonSocket, SocketConnection};
 pub use error::PlatformError;
+pub use gpu::{detect_gpu_devices, resolve_acceleration, AccelerationMode, GpuDeviceType, GpuInfo};
 pub use guards::{AltScreenGuard, CursorShowGuard, RawModeGuard, TimerResolutionGuard};
 pub use mux::{detect_mux, Mux};
 pub use output::{open_output, OutputHandle, OutputTarget};
@@ -85,7 +90,7 @@ pub use paths::{
 pub use platform_unix::parent_pid;
 #[cfg(windows)]
 pub use platform_windows::parent_pid;
-pub use protocol::{ConfigFormat, RandomSetting, SceneConfig};
+pub use protocol::{ConfigFormat, KeybindingsConfig, RandomSetting, SceneConfig};
 pub use shell::{
     remove_all_forgum_blocks, remove_delimited_block, uninstall_all_shell_integrations,
     uninstall_shell_integration, update_delimited_block, write_file_if_changed, Shell,
@@ -108,6 +113,10 @@ pub use telemetry::{
     set_telemetry_consent, Metric,
 };
 pub use uninstaller::{perform_uninstallation, UninstallMode, UninstallReport};
+pub use vulkan_metal::{
+    probe_metal_runtime, probe_vulkan_runtime, resolve_compute_pipeline, ComputeBackend,
+    ComputeKernelId, ComputePipelineCapabilities,
+};
 
 /// Returns the current process's open handle/fd count, or `None` if the OS
 /// doesn't expose a reliable signal. Used by the daemon soak test to assert
@@ -141,8 +150,8 @@ pub fn stdin_has_data() -> bool {
 }
 pub use terminal::{
     detect_capabilities, detect_terminal_emulator, is_stdout_tty, is_wsl, plan_native_split,
-    terminal_size, terminal_supports_sync, ColorLevel, GraphicsCaps, NativeSplitPlan, SplitMode,
-    TerminalCapabilities, TerminalEmulator,
+    terminal_size, terminal_supports_sync, AspectRatioFormat, ColorLevel, GraphicsCaps,
+    NativeSplitPlan, SplitMode, TerminalCapabilities, TerminalEmulator,
 };
 pub use terminal_theme::{
     boost_saturation, calculate_luminance, detect_terminal_theme, elevate_luminance,
