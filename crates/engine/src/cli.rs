@@ -239,6 +239,16 @@ pub struct Cli {
     )]
     pub think: bool,
 
+    /// Force speech bubble instead of thought bubble (cowsay mode).
+    #[arg(
+        long,
+        short = 'S',
+        global = true,
+        help = "Force speech bubble instead of thought bubble (cowsay mode)",
+        long_help = "Force speech bubble with delimiter lines ('\\\\') instead of thought bubbles ('o'). Overrides configured think preference."
+    )]
+    pub speech: bool,
+
     /// Effect name.
     #[arg(
         long,
@@ -1023,6 +1033,7 @@ pub struct Args {
     pub reduce_motion: bool,
     pub text_only: bool,
     pub think: bool,
+    pub speech: bool,
     pub list: Option<String>,
     pub random: Option<String>,
     pub accel: Option<String>,
@@ -1215,6 +1226,7 @@ pub fn parse_args(argv: Vec<String>) -> Result<(Args, Option<Commands>), CliErro
         reduce_motion: cli.reduce_motion,
         text_only: cli.text_only,
         think,
+        speech: cli.speech,
         list: cli.list,
         random: cli.random,
         accel: cli.accel,
@@ -1429,6 +1441,9 @@ pub fn build_scene_config(args: &Args) -> Result<SceneConfig, String> {
     }
     if args.think {
         cfg.think = true;
+    }
+    if args.speech {
+        cfg.think = false;
     }
     if args.banner {
         cfg.banner = true;

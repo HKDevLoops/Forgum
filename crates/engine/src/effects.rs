@@ -23,6 +23,16 @@ pub trait Effect: Send + Sync {
         false
     }
 
+    /// Dynamic emitter displacement offset (dx, dy) for moving creatures.
+    fn emitter_offset(&self) -> (f32, f32) {
+        (0.0, 0.0)
+    }
+
+    /// Dynamic emitter velocity vector (vx, vy) for momentum inheritance.
+    fn emitter_velocity(&self) -> (f32, f32) {
+        (0.0, 0.0)
+    }
+
     /// Notify of terminal resize.
     fn on_resize(&mut self, _cols: usize, _rows: usize) {}
 }
@@ -749,6 +759,7 @@ pub struct FloatEffect {
     instinct: AnimalInstinct,
     is_aquatic: bool,
     pub body: crate::kinematics::KinematicBody,
+    pub rig: crate::kinematics::CartoonRig,
     elapsed: f32,
     eye_landmarks: Vec<(usize, usize)>,
 }
@@ -784,6 +795,15 @@ impl FloatEffect {
         if amp.float <= 0.05 {
             amp.float = 0.3;
         }
+        let segments = crate::kinematics::AnatomicalSegments::detect(
+            &cow_text,
+            cow_start_line,
+            eye_landmarks.first().copied(),
+            None,
+            None,
+            h.saturating_sub(1),
+        );
+        let rig = crate::kinematics::CartoonRig::new(segments);
         Self {
             cow_text,
             line_offsets,
@@ -797,6 +817,7 @@ impl FloatEffect {
             instinct,
             is_aquatic,
             body,
+            rig,
             elapsed: 0.0,
             eye_landmarks,
         }
@@ -826,6 +847,15 @@ impl Effect for FloatEffect {
             phase_y: self.phase,
         };
         self.body.update(dt, self.elapsed, cols, rows);
+        self.rig.update(dt, self.body.vx);
+    }
+
+    fn emitter_offset(&self) -> (f32, f32) {
+        (self.body.x, self.body.y)
+    }
+
+    fn emitter_velocity(&self) -> (f32, f32) {
+        (self.body.vx, self.body.vy)
     }
 
     fn render(&self, fb: &mut FrameBuffer, time: f32) {
@@ -887,7 +917,19 @@ impl Effect for FloatEffect {
             }
 
             // Creature lines: apply vertical bob offset and aquatic submersion.
-            let draw_yi = y as i32 + bob_offset + submersion_offset;
+            let has_amp = self.amp.float > 0.0 || self.amp.sway > 0.0;
+            let is_multisegment = self.rig.segments.height > 3;
+            let def_row = if has_amp && is_multisegment {
+                self.rig.deform_cell(0, y, time, 0.0, false, true, self.is_aquatic)
+            } else {
+                crate::kinematics::CellDeformation {
+                    dx: 0,
+                    dy: 0,
+                    alt_glyph: None,
+                    luminance_mult: 1.0,
+                }
+            };
+            let draw_yi = y as i32 + bob_offset + submersion_offset + def_row.dy;
             if draw_yi < 0 || draw_yi as usize >= fb.height {
                 y += 1;
                 return;
@@ -898,7 +940,17 @@ impl Effect for FloatEffect {
             let mut chars_iter = line.chars().peekable();
             let mut x = 0usize;
             while let Some(mut ch) = chars_iter.next() {
-                let xi = x as i32;
+                let def = if has_amp && is_multisegment {
+                    self.rig.deform_cell(x, y, time, 0.0, false, true, self.is_aquatic)
+                } else {
+                    crate::kinematics::CellDeformation {
+                        dx: 0,
+                        dy: 0,
+                        alt_glyph: None,
+                        luminance_mult: 1.0,
+                    }
+                };
+                let xi = x as i32 + def.dx;
                 if xi >= 0 && (xi as usize) < fb.width {
                     let uxi = xi as usize;
 
@@ -1087,6 +1139,7 @@ pub struct WalkEffect {
     palette: Vec<(u8, u8, u8)>,
     instinct: AnimalInstinct,
     pub body: crate::kinematics::KinematicBody,
+    pub rig: crate::kinematics::CartoonRig,
     elapsed: f32,
     eye_landmarks: Vec<(usize, usize)>,
     cow_start_line: usize,
@@ -1222,6 +1275,16 @@ impl WalkEffect {
         let palette = crate::color::parse_palette(&dna.palette);
         let instinct = detect_animal_instinct(&cow_text, dna);
 
+        let segments = crate::kinematics::AnatomicalSegments::detect(
+            &cow_text,
+            cow_start,
+            eye_pos,
+            mouth_pos,
+            tail_pos,
+            leg_line_idx,
+        );
+        let rig = crate::kinematics::CartoonRig::new(segments);
+
         Self {
             cow_text,
             line_offsets,
@@ -1237,6 +1300,7 @@ impl WalkEffect {
             palette,
             instinct,
             body,
+            rig,
             elapsed: 0.0,
             eye_landmarks,
             cow_start_line: cow_start,
@@ -1249,6 +1313,15 @@ impl Effect for WalkEffect {
     fn update(&mut self, dt: f32, cols: usize, rows: usize) {
         self.elapsed += dt;
         self.body.update(dt, self.elapsed, cols, rows);
+        self.rig.update(dt, self.body.vx);
+    }
+
+    fn emitter_offset(&self) -> (f32, f32) {
+        (self.body.x, self.body.y)
+    }
+
+    fn emitter_velocity(&self) -> (f32, f32) {
+        (self.body.vx, self.body.vy)
     }
 
     fn render(&self, fb: &mut FrameBuffer, time: f32) {
@@ -1320,6 +1393,7 @@ impl Effect for WalkEffect {
 
             let animal_rel_y = y.saturating_sub(self.cow_start_line);
             let mut skip_until = 0usize;
+            let is_multisegment = self.rig.segments.height > 3;
 
             for (x, mut display_ch) in line.chars().enumerate() {
                 if x < skip_until {
@@ -1356,9 +1430,19 @@ impl Effect for WalkEffect {
                             3 => [')', '|', '\\', '/'],
                             _ => [')', '\\', '/', '\\'],
                         };
+                        let def = if is_multisegment {
+                            self.rig.deform_cell(x, y, time, stride, true, false, false)
+                        } else {
+                            crate::kinematics::CellDeformation {
+                                dx: 0,
+                                dy: 0,
+                                alt_glyph: None,
+                                luminance_mult: 1.0,
+                            }
+                        };
                         for (k, &sc) in swish.iter().enumerate() {
-                            let xi = (x + k) as i32 + x_off;
-                            let yi = y as i32 + y_off;
+                            let xi = (x + k) as i32 + x_off + def.dx;
+                            let yi = y as i32 + y_off + def.dy;
                             if yi >= 0 && xi >= 0 {
                                 let uxi = xi as usize;
                                 let uyi = yi as usize;
@@ -1381,8 +1465,18 @@ impl Effect for WalkEffect {
                     }
                 }
 
-                let xi = x as i32 + x_off;
-                let yi = y as i32 + y_off;
+                let def = if is_multisegment {
+                    self.rig.deform_cell(x, y, time, stride, true, false, false)
+                } else {
+                    crate::kinematics::CellDeformation {
+                        dx: 0,
+                        dy: 0,
+                        alt_glyph: None,
+                        luminance_mult: 1.0,
+                    }
+                };
+                let xi = x as i32 + x_off + def.dx;
+                let yi = y as i32 + y_off + def.dy;
                 if yi >= 0 && xi >= 0 {
                     let uxi = xi as usize;
                     let uyi = yi as usize;
@@ -3094,9 +3188,10 @@ impl Effect for CompoundSignatureEffect {
             while self.spawn_timer >= interval {
                 self.spawn_timer -= interval;
                 let palette = color::parse_palette(&self.dna.particles.palette);
-                // Compute emitter position: origin around creature mouth/head
-                let spawn_x = (self.mouth_pos.1 as f32).min(cols.saturating_sub(1) as f32);
-                let spawn_y = (self.mouth_pos.0 as f32).min(rows.saturating_sub(1) as f32);
+                // Compute emitter position: origin around creature mouth/head tracked with mascot kinematics
+                let (off_x, off_y) = self.base_effect.emitter_offset();
+                let spawn_x = ((self.mouth_pos.1 as f32 + off_x).max(0.0)).min(cols.saturating_sub(1) as f32);
+                let spawn_y = ((self.mouth_pos.0 as f32 + off_y).max(0.0)).min(rows.saturating_sub(1) as f32);
                 spawn_for_type(
                     &mut self.pool,
                     self.dna.particles.r#type,
@@ -3110,6 +3205,14 @@ impl Effect for CompoundSignatureEffect {
             }
             self.pool.update_accelerated(dt, cols, rows);
         }
+    }
+
+    fn emitter_offset(&self) -> (f32, f32) {
+        self.base_effect.emitter_offset()
+    }
+
+    fn emitter_velocity(&self) -> (f32, f32) {
+        self.base_effect.emitter_velocity()
     }
 
     fn render(&self, fb: &mut FrameBuffer, time: f32) {

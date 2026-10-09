@@ -650,11 +650,12 @@ pub fn compose_scene_with_mode(cow_text: &str, bubble_text: &str, is_thought: bo
     result.push('\n');
 
     if is_thought {
-        // The thought bubble must strictly have exactly THREE circles below it
+        // The thought bubble must strictly have exactly THREE circles below it.
+        // bubble_anchor is clamped to the bottom border of the bubble:
         let bubble_anchor = head_x.clamp(2, bubble_w.saturating_sub(3).max(2));
-        let p1 = ((bubble_anchor as f32 * 0.70 + head_x as f32 * 0.30).round() as usize).max(1);
-        let p2 = ((bubble_anchor as f32 * 0.40 + head_x as f32 * 0.60).round() as usize).max(2);
-        let p3 = ((bubble_anchor as f32 * 0.15 + head_x as f32 * 0.85).round() as usize).max(3);
+        let p1 = bubble_anchor;
+        let p2 = ((bubble_anchor as f32 * 0.60 + head_x as f32 * 0.40).round() as usize).max(1);
+        let p3 = ((bubble_anchor as f32 * 0.20 + head_x as f32 * 0.80).round() as usize).max(1);
 
         for indent in [p1, p2, p3] {
             for _ in 0..indent {
@@ -686,10 +687,9 @@ pub fn compose_scene_with_mode(cow_text: &str, bubble_text: &str, is_thought: bo
 
         if !has_pointer && !cow_lines.is_empty() {
             let bubble_anchor = head_x.clamp(1, bubble_w.saturating_sub(2).max(1));
-            let p1_indent =
-                ((bubble_anchor as f32 * 0.65 + head_x as f32 * 0.35).round() as usize).max(1);
+            let p1_indent = bubble_anchor;
             let p2_indent =
-                ((bubble_anchor as f32 * 0.25 + head_x as f32 * 0.75).round() as usize).max(2);
+                ((bubble_anchor as f32 * 0.40 + head_x as f32 * 0.60).round() as usize).max(1);
 
             for _ in 0..p1_indent {
                 result.push(' ');
@@ -965,12 +965,7 @@ pub fn wrap_thought_bubble(text: &str, cow_width: usize) -> String {
         .max()
         .unwrap_or(0);
 
-    let text_width = if cow_width > 0 {
-        raw_text_w.min(cow_width.saturating_sub(4).max(1)).min(term_max)
-    } else {
-        raw_text_w.min(term_max)
-    };
-
+    let text_width = raw_text_w;
     let inner_width = text_width + 2; // +2 for padding spaces around text
 
     let mut result = String::with_capacity((inner_width + 4) * (lines.len() + 2));

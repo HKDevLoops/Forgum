@@ -2764,6 +2764,8 @@ fn print_colored_scene(
     let cow_start_line = forgum_engine::effects::find_cow_start_line(composed);
     let mut out = std::io::stdout().lock();
     use std::io::Write;
+    let (term_w, _) = forgum_platform::terminal_size();
+    let max_col = if term_w > 0 { term_w as usize } else { usize::MAX };
 
     for (y, line) in composed.lines().enumerate() {
         let is_bubble_line = y < cow_start_line;
@@ -2772,6 +2774,9 @@ fn print_colored_scene(
         let mut current_fg: Option<crate::framebuffer::Color> = None;
 
         for (x, ch) in line.chars().enumerate() {
+            if x >= max_col {
+                break;
+            }
             let cell_fg = if is_bubble_line {
                 crate::effects::resolve_bubble_line_char_fg(line, x, ch)
             } else {
@@ -3369,9 +3374,13 @@ fn render_subcommand_with_scene(
         }
     };
 
-    let is_thought = scene.think
-        || args.command == cli::Command::Think
-        || (args.text.is_none() && scene.text.trim().is_empty());
+    let is_thought = if args.speech {
+        false
+    } else {
+        scene.think
+            || args.command == cli::Command::Think
+            || (args.text.is_none() && scene.text.trim().is_empty())
+    };
 
     resolve_scene_randomness(&mut scene, &data, &args);
 
@@ -3614,9 +3623,13 @@ fn run_daemon_child(args: cli::Args) -> ExitCode {
         }
     };
 
-    let is_thought = scene.think
-        || args.command == cli::Command::Think
-        || (args.text.is_none() && scene.text.trim().is_empty());
+    let is_thought = if args.speech {
+        false
+    } else {
+        scene.think
+            || args.command == cli::Command::Think
+            || (args.text.is_none() && scene.text.trim().is_empty())
+    };
 
     resolve_scene_randomness(&mut scene, &data, &args);
 

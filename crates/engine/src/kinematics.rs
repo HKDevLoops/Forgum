@@ -219,6 +219,247 @@ pub fn ascii_dimensions(text: &str) -> (usize, usize) {
     (max_width, height.max(1))
 }
 
+/// Anatomical segmentation landmarks for an ASCII character mesh.
+/// Divides the creature into functional kinetic zones:
+/// - Dialogue/Bubble Zone: lines before the animal art
+/// - Cranial Zone: head, ears, horns, snout (bobs, rotates, nods)
+/// - Thoracic/Spinal Zone: chest, spine, belly, flanks (breathes, undulates with spine wave)
+/// - Caudal Zone: tail, wings, fins (follows through with phase-delayed pendulum inertia)
+/// - Pedal Zone: legs, paws, hooves (coupled directly to ground displacement)
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct AnatomicalSegments {
+    pub bubble_lines: usize,
+    pub cow_start: usize,
+    pub head_row: usize,
+    pub head_col: usize,
+    pub chest_row: usize,
+    pub leg_row: usize,
+    pub tail_col: usize,
+    pub width: usize,
+    pub height: usize,
+    pub faces_right: bool,
+}
+
+impl AnatomicalSegments {
+    /// Detects anatomical segments from the composed ASCII scene and landmarks.
+    #[must_use]
+    pub fn detect(
+        text: &str,
+        cow_start: usize,
+        eye_pos: Option<(usize, usize)>,
+        mouth_pos: Option<(usize, usize)>,
+        tail_pos: Option<(usize, usize)>,
+        leg_row: usize,
+    ) -> Self {
+        let (w, h) = ascii_dimensions(text);
+        let head_row = eye_pos.map(|(r, _)| r).unwrap_or(cow_start.saturating_add(1));
+        let head_col = eye_pos.map(|(_, c)| c).unwrap_or(w / 4);
+        let chest_row = mouth_pos
+            .map(|(r, _)| r.saturating_add(1))
+            .unwrap_or_else(|| (head_row + leg_row) / 2);
+        let tail_col = tail_pos.map(|(_, c)| c).unwrap_or(w.saturating_sub(4));
+        let faces_right = head_col > tail_col;
+
+        Self {
+            bubble_lines: cow_start,
+            cow_start,
+            head_row,
+            head_col,
+            chest_row,
+            leg_row,
+            tail_col,
+            width: w,
+            height: h,
+            faces_right,
+        }
+    }
+}
+
+/// Deformation offset for a single character cell at (x, y).
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
+pub struct CellDeformation {
+    /// Horizontal displacement in columns (-2 to +2).
+    pub dx: i32,
+    /// Vertical displacement in rows (-1 to +1).
+    pub dy: i32,
+    /// Character transformation (e.g. stretching / swelling glyph).
+    pub alt_glyph: Option<char>,
+    /// Subtle luminance / glow boost factor (1.0 = normal, 1.25 = peak, etc.).
+    pub luminance_mult: f32,
+}
+
+/// Dynamic 2D cartoon rigging engine providing continuous multi-segment degrees of freedom.
+/// Implements Disney 2D cartoon animation principles:
+/// 1. Squash & Stretch: volumetric compression on ground contact and extension in air.
+/// 2. Follow-Through: appendages (tail, ears) lag behind body motion with wave inertia.
+/// 3. Secondary Action: spine harmonic wave and chest expansion.
+/// 4. Decoupled Dialogue Physics: speech/thought bubbles float with elastic spring-damping.
+#[derive(Debug, Clone)]
+pub struct CartoonRig {
+    pub segments: AnatomicalSegments,
+    /// Spring-damper displacement for buoyant dialogue bubble
+    pub bubble_offset_x: f32,
+    pub bubble_vel_x: f32,
+    pub bubble_offset_y: f32,
+    pub bubble_vel_y: f32,
+    /// Continuous phase variables
+    pub elapsed: f32,
+    pub squash_amplitude: f32,
+    pub spine_amplitude: f32,
+    pub tail_amplitude: f32,
+    pub head_bob_amplitude: f32,
+}
+
+impl CartoonRig {
+    #[must_use]
+    pub fn new(segments: AnatomicalSegments) -> Self {
+        Self {
+            segments,
+            bubble_offset_x: 0.0,
+            bubble_vel_x: 0.0,
+            bubble_offset_y: 0.0,
+            bubble_vel_y: 0.0,
+            elapsed: 0.0,
+            squash_amplitude: 0.35,
+            spine_amplitude: 0.60,
+            tail_amplitude: 0.85,
+            head_bob_amplitude: 0.45,
+        }
+    }
+
+    /// Advance spring-damper bubble physics and harmonic phases by `dt` seconds.
+    pub fn update(&mut self, dt: f32, mascot_vx: f32) {
+        self.elapsed += dt;
+
+        // 1. Elastic spring-damper for dialogue bubble:
+        // When mascot moves with velocity mascot_vx, the bubble experiences inertial drag
+        let target_x = -(mascot_vx * 0.08).clamp(-2.0, 2.0);
+        let spring_k = 12.0; // Spring stiffness
+        let damping_c = 4.5; // Damping ratio
+        let force_x = spring_k * (target_x - self.bubble_offset_x) - damping_c * self.bubble_vel_x;
+        self.bubble_vel_x += force_x * dt;
+        self.bubble_offset_x += self.bubble_vel_x * dt;
+        self.bubble_offset_x = self.bubble_offset_x.clamp(-3.0, 3.0);
+
+        // Buoyant aerodynamic vertical floating on bubble:
+        let float_freq = 2.4;
+        let target_y = (self.elapsed * float_freq).sin() * 0.4;
+        let force_y = spring_k * (target_y - self.bubble_offset_y) - damping_c * self.bubble_vel_y;
+        self.bubble_vel_y += force_y * dt;
+        self.bubble_offset_y += self.bubble_vel_y * dt;
+        self.bubble_offset_y = self.bubble_offset_y.clamp(-1.0, 1.0);
+    }
+
+    /// Computes cartoon deformation for cell at (x, y) given animation state.
+    #[must_use]
+    pub fn deform_cell(
+        &self,
+        x: usize,
+        y: usize,
+        time: f32,
+        stride: f32,
+        is_walking: bool,
+        is_floating: bool,
+        is_aquatic: bool,
+    ) -> CellDeformation {
+        if time <= 0.0 && self.elapsed <= 0.0 {
+            return CellDeformation {
+                dx: 0,
+                dy: 0,
+                alt_glyph: None,
+                luminance_mult: 1.0,
+            };
+        }
+
+        // Zone 0: Dialogue Bubble (lines before cow_start)
+        if y < self.segments.cow_start {
+            return CellDeformation {
+                dx: self.bubble_offset_x.round() as i32,
+                dy: self.bubble_offset_y.round() as i32,
+                alt_glyph: None,
+                luminance_mult: 1.0,
+            };
+        }
+
+        let animal_y = y.saturating_sub(self.segments.cow_start);
+        let total_animal_h = self.segments.height.saturating_sub(self.segments.cow_start).max(1);
+        let rel_v = (animal_y as f32 / total_animal_h as f32).clamp(0.0, 1.0);
+
+        let mut dx_accum = 0.0f32;
+        let mut dy_accum = 0.0f32;
+        let alt_glyph = None;
+        let mut lum = 1.0f32;
+
+        if is_walking {
+            // Principle 1: Squash and Stretch
+            let cycle = stride * std::f32::consts::TAU * 2.0;
+            let bounce_wave = cycle.sin();
+
+            // Height squash/stretch: grounded at feet (rel_v=1.0 has dy=0, rel_v=0.0 has max dy)
+            let vert_scale = (1.0 - rel_v) * self.squash_amplitude;
+            dy_accum += bounce_wave * vert_scale;
+
+            // Width stretch: flanks expand when squashing down
+            let x_from_center = (x as f32 - self.segments.width as f32 * 0.5)
+                / (self.segments.width as f32 * 0.5).max(1.0);
+            let horiz_stretch = -bounce_wave * 0.45 * x_from_center * (1.0 - rel_v * 0.5);
+            dx_accum += horiz_stretch;
+
+            // Principle 2: Spine Secondary Action Wave
+            let spine_phase = self.elapsed * 4.0 - animal_y as f32 * 0.35;
+            let spine_wave = spine_phase.sin() * self.spine_amplitude * (1.0 - rel_v * 0.4);
+            dx_accum += spine_wave;
+
+            // Principle 3: Cranial Zone (Head Bobbing)
+            if y <= self.segments.head_row.saturating_add(1) {
+                let head_bob = (cycle + std::f32::consts::FRAC_PI_2).cos() * self.head_bob_amplitude;
+                dy_accum += head_bob;
+                let head_nod = (cycle + std::f32::consts::FRAC_PI_4).sin() * 0.3;
+                dx_accum += head_nod;
+            }
+
+            // Principle 4: Caudal Zone (Tail Follow-Through)
+            let is_near_tail = if self.segments.faces_right {
+                x < self.segments.tail_col.saturating_add(3)
+            } else {
+                x > self.segments.tail_col.saturating_sub(3)
+            };
+            if is_near_tail && y >= self.segments.head_row {
+                let tail_dist = (x as f32 - self.segments.tail_col as f32).abs();
+                let tail_lag_phase = self.elapsed * 5.0 - tail_dist * 0.45;
+                let tail_sway = tail_lag_phase.sin() * self.tail_amplitude;
+                dx_accum += tail_sway;
+            }
+        } else if is_floating || is_aquatic {
+            // Fluid/Buoyant Locomotion:
+            let wave_freq = if is_aquatic { 3.2 } else { 2.0 };
+            let undulation = (time * wave_freq + animal_y as f32 * 0.4).sin() * 0.65;
+            dx_accum += undulation;
+
+            let float_bob = (time * (wave_freq * 0.8) + (x as f32 * 0.15)).cos() * 0.4;
+            dy_accum += float_bob;
+
+            lum = 1.0 + (undulation.abs() * 0.25);
+        } else {
+            // Breathing / Idle Keep-Alive:
+            let breath_phase = time * 2.2;
+            let is_chest = y >= self.segments.head_row && y <= self.segments.leg_row;
+            if is_chest {
+                let chest_swell = breath_phase.sin() * 0.4;
+                dx_accum += chest_swell * (1.0 - rel_v * 0.5);
+                lum = 1.0 + (breath_phase.sin() * 0.15);
+            }
+        }
+
+        CellDeformation {
+            dx: dx_accum.round() as i32,
+            dy: dy_accum.round() as i32,
+            alt_glyph,
+            luminance_mult: lum,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -319,5 +560,29 @@ mod tests {
         body.update(0.1, 0.1, 8, 4);
         assert_eq!(body.x, 0.0);
         assert_eq!(body.y, 0.0);
+    }
+
+    #[test]
+    fn test_cartoon_rig_segment_detection_and_deformation() {
+        let text = " ______\n< hello >\n ------\n   \\   ^__^\n       (oo)\\_______\n        (__)\\       )\\/\\\n            ||----w |\n            ||     ||";
+        let segs = AnatomicalSegments::detect(text, 3, Some((4, 8)), Some((5, 9)), Some((5, 20)), 7);
+        assert_eq!(segs.cow_start, 3);
+        assert_eq!(segs.head_row, 4);
+        assert_eq!(segs.head_col, 8);
+        assert_eq!(segs.leg_row, 7);
+
+        let mut rig = CartoonRig::new(segs);
+        rig.update(0.1, 10.0);
+        // Bubble experiences inertial offset opposite to mascot movement direction
+        assert!(rig.bubble_offset_x <= 0.0);
+
+        // Dialogue bubble cell (y = 1) has spring displacement
+        let b_def = rig.deform_cell(2, 1, 0.1, 0.25, true, false, false);
+        assert_eq!(b_def.dx, rig.bubble_offset_x.round() as i32);
+
+        // Animal cell (y = 4, head) deforms with head bob and secondary action
+        let h_def = rig.deform_cell(8, 4, 0.1, 0.25, true, false, false);
+        assert!(h_def.dx.abs() <= 2);
+        assert!(h_def.dy.abs() <= 1);
     }
 }
