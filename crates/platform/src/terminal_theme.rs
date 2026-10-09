@@ -292,6 +292,21 @@ pub fn parse_hex_color(s: &str) -> Option<(u8, u8, u8)> {
 }
 
 static CACHED_THEME: std::sync::OnceLock<TerminalTheme> = std::sync::OnceLock::new();
+static ACTIVE_CONTRAST_MODE: std::sync::RwLock<Option<ContrastMode>> =
+    std::sync::RwLock::new(None);
+
+/// Set the globally active background contrast mode override.
+pub fn set_active_contrast_mode(mode: ContrastMode) {
+    if let Ok(mut lock) = ACTIVE_CONTRAST_MODE.write() {
+        *lock = Some(mode);
+    }
+}
+
+/// Retrieve the globally active background contrast mode override, if set.
+#[must_use]
+pub fn get_active_contrast_mode() -> Option<ContrastMode> {
+    ACTIVE_CONTRAST_MODE.read().ok().and_then(|lock| *lock)
+}
 
 /// Detect the active terminal's theme by cascading across environment overrides,
 /// terminal config files, `COLORFGBG`, and OS appearance preferences.
@@ -299,9 +314,15 @@ static CACHED_THEME: std::sync::OnceLock<TerminalTheme> = std::sync::OnceLock::n
 /// Cached on first access via `OnceLock` so hot rendering loops remain zero-allocation.
 #[must_use]
 pub fn detect_terminal_theme() -> TerminalTheme {
-    CACHED_THEME
+    let mut theme = CACHED_THEME
         .get_or_init(detect_terminal_theme_fresh)
-        .clone()
+        .clone();
+    if let Some(cm) = get_active_contrast_mode() {
+        theme.contrast_mode = cm;
+    } else if let Ok(val) = std::env::var("FORGUM_CONTRAST_MODE") {
+        theme.contrast_mode = ContrastMode::from_str_loose(&val);
+    }
+    theme
 }
 
 /// Force a fresh probe of terminal theme without consulting the cache.

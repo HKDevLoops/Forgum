@@ -167,35 +167,6 @@ impl Breakpoint {
     }
 }
 
-/// Active Vim editing mode in the TUI dashboard.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum VimMode {
-    #[default]
-    Normal,
-    Insert,
-    Search,
-}
-
-impl VimMode {
-    #[must_use]
-    pub const fn badge(self) -> &'static str {
-        match self {
-            Self::Normal => " NORMAL ",
-            Self::Insert => " INSERT ",
-            Self::Search => " SEARCH ",
-        }
-    }
-
-    #[must_use]
-    pub fn badge_colors(self) -> (Color, Color) {
-        match self {
-            Self::Normal => (tailwind::SLATE_800, tailwind::EMERALD_400),
-            Self::Insert => (tailwind::SLATE_800, tailwind::AMBER_400),
-            Self::Search => (tailwind::SLATE_800, tailwind::PURPLE_400),
-        }
-    }
-}
-
 /// A dropdown or cyclic selection backed by a fixed list of string options.
 #[derive(Debug, Clone)]
 pub struct Dropdown {
@@ -1017,12 +988,8 @@ pub struct ConfigApp {
     pub last_terminal_size: (u16, u16),
     /// Horizontal scroll offset (in columns) across wide lists, tables, and config panels.
     pub h_scroll: usize,
-    /// Active Vim editing mode (Normal, Insert, Search).
-    pub vim_mode: VimMode,
     /// Pending multi-key Vim sequence prefix (e.g. 'g' for gg/gt/gT, 'Z' for ZZ/ZQ).
     pub pending_vim_prefix: Option<char>,
-    /// Search query string when in Vim search mode ('/').
-    pub mascot_search_query: String,
     /// Whether the interactive Vim control cheatsheet overlay is visible ('?').
     pub show_vim_help: bool,
     /// Active feature discovery suggestion index.
@@ -1252,9 +1219,7 @@ impl ConfigApp {
             original_edit_value: String::new(),
             last_terminal_size: (0, 0),
             h_scroll: 0,
-            vim_mode: VimMode::Normal,
             pending_vim_prefix: None,
-            mascot_search_query: String::new(),
             show_vim_help: false,
             suggestion_idx: init_sug_idx,
         };
@@ -1627,40 +1592,6 @@ impl ConfigApp {
                     }
                 }
 
-                // If interactive Vim search mode is active ('/')
-                if self.vim_mode == VimMode::Search {
-                    match key.code {
-                        KeyCode::Esc => {
-                            self.vim_mode = VimMode::Normal;
-                            self.mascot_search_query.clear();
-                            self.status_message = "Search cancelled.".to_string();
-                            return Ok(None);
-                        }
-                        KeyCode::Char('[') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                            self.vim_mode = VimMode::Normal;
-                            self.mascot_search_query.clear();
-                            self.status_message = "Search cancelled.".to_string();
-                            return Ok(None);
-                        }
-                        KeyCode::Enter => {
-                            self.vim_mode = VimMode::Normal;
-                            self.status_message = format!("Selected: {}", self.config.cow);
-                            return Ok(None);
-                        }
-                        KeyCode::Backspace => {
-                            self.mascot_search_query.pop();
-                            self.execute_mascot_search();
-                            return Ok(None);
-                        }
-                        KeyCode::Char(c) => {
-                            self.mascot_search_query.push(c);
-                            self.execute_mascot_search();
-                            return Ok(None);
-                        }
-                        _ => return Ok(None),
-                    }
-                }
-
                 // If Vim cheatsheet modal is active ('?')
                 if self.show_vim_help {
                     match key.code {
@@ -1692,15 +1623,6 @@ impl ConfigApp {
                     if let Some(ref k) = kb.help {
                         if Self::matches_binding(&key, k) {
                             self.show_vim_help = !self.show_vim_help;
-                            return Ok(None);
-                        }
-                    }
-                    if let Some(ref k) = kb.search {
-                        if Self::matches_binding(&key, k) && self.current_tab == Tab::Mascots {
-                            self.vim_mode = VimMode::Search;
-                            self.mascot_search_query.clear();
-                            self.status_message =
-                                "/ (type mascot name, Enter: confirm, Esc: cancel)".into();
                             return Ok(None);
                         }
                     }
@@ -1828,13 +1750,6 @@ impl ConfigApp {
                 }
                 if key.code == KeyCode::Char('T') || key.code == KeyCode::F(1) {
                     self.show_random_suggestion();
-                    return Ok(None);
-                }
-                if key.code == KeyCode::Char('/') && self.current_tab == Tab::Mascots {
-                    self.vim_mode = VimMode::Search;
-                    self.mascot_search_query.clear();
-                    self.status_message =
-                        "/ (type mascot name, Enter: confirm, Esc: cancel)".into();
                     return Ok(None);
                 }
 
@@ -2703,49 +2618,6 @@ impl ConfigApp {
         };
     }
 
-    /// Vim '/': Instant search & filter mascots across categories.
-    pub fn execute_mascot_search(&mut self) {
-        let q = self.mascot_search_query.trim().to_ascii_lowercase();
-        if q.is_empty() {
-            self.status_message = "/ (type mascot name, Enter: confirm, Esc: cancel)".into();
-            return;
-        }
-
-        // 1. Search current category first
-        let current_cows = CATEGORIES[self.mascot_category_idx].1;
-        if let Some(pos) = current_cows
-            .iter()
-            .position(|c| c.to_ascii_lowercase().contains(&q))
-        {
-            self.mascot_item_idx = pos;
-            self.apply_selected_mascot();
-            self.status_message = format!(
-                "/{} [Found: {} in current category]",
-                self.mascot_search_query, current_cows[pos]
-            );
-            return;
-        }
-
-        // 2. Search all categories
-        for (cat_idx, (_, cows)) in CATEGORIES.iter().enumerate() {
-            if let Some(pos) = cows
-                .iter()
-                .position(|c| c.to_ascii_lowercase().contains(&q))
-            {
-                self.mascot_category_idx = cat_idx;
-                self.mascot_item_idx = pos;
-                self.apply_selected_mascot();
-                self.status_message = format!(
-                    "/{} [Found: {} in {}]",
-                    self.mascot_search_query, cows[pos], CATEGORIES[cat_idx].0
-                );
-                return;
-            }
-        }
-
-        self.status_message = format!("/{} [No matching mascot found]", self.mascot_search_query);
-    }
-
     fn handle_scenery_key(&mut self, key: KeyEvent) -> anyhow::Result<Option<Action>> {
         match key.code {
             KeyCode::Tab
@@ -3208,7 +3080,6 @@ export extern "forgum" [
             | KeyCode::Char('I')
             | KeyCode::Char('a')
             | KeyCode::Char('A') => {
-                self.vim_mode = VimMode::Insert;
                 self.enter_config_edit();
             }
             KeyCode::Char(c @ '0'..='9') => {
@@ -3222,7 +3093,6 @@ export extern "forgum" [
                 {
                     self.config_edit_buffer = c.to_string();
                     self.editing_config = true;
-                    self.vim_mode = VimMode::Insert;
                     self.edit_initial = false;
                     self.status_message = format!(
                         "Editing {}: typing '{}' (Enter to confirm, Esc to cancel)",
@@ -3428,9 +3298,6 @@ export extern "forgum" [
                 self.edit_initial = false;
                 self.cycle_config_field(true);
             }
-        }
-        if self.editing_config {
-            self.vim_mode = VimMode::Insert;
         }
     }
 
@@ -4151,7 +4018,6 @@ export extern "forgum" [
             KeyCode::Enter => {
                 self.commit_config_edit();
                 self.editing_config = false;
-                self.vim_mode = VimMode::Normal;
             }
             KeyCode::Esc | KeyCode::Char('[')
                 if key.modifiers.contains(KeyModifiers::CONTROL) || key.code == KeyCode::Esc =>
@@ -4393,9 +4259,6 @@ export extern "forgum" [
                 }
             }
             _ => {}
-        }
-        if !self.editing_config {
-            self.vim_mode = VimMode::Normal;
         }
         Ok(None)
     }
@@ -4977,37 +4840,25 @@ export extern "forgum" [
             ]),
             Line::from(vec![
                 Span::styled(
-                    "  /              ",
+                    "  Enter / e      ",
                     Style::default()
-                        .fg(tailwind::PURPLE_400)
+                        .fg(tailwind::EMERALD_400)
                         .add_modifier(Modifier::BOLD),
                 ),
                 Span::styled(
-                    "Instant quick-search mascot by name across categories",
+                    "Edit selected field or toggle setting directly",
                     Style::default().fg(tailwind::SLATE_200),
                 ),
             ]),
             Line::from(vec![
                 Span::styled(
-                    "  i / a / Enter  ",
-                    Style::default()
-                        .fg(tailwind::AMBER_400)
-                        .add_modifier(Modifier::BOLD),
-                ),
-                Span::styled(
-                    "Enter INSERT mode on editable fields",
-                    Style::default().fg(tailwind::SLATE_200),
-                ),
-            ]),
-            Line::from(vec![
-                Span::styled(
-                    "  Esc / Ctrl+[   ",
+                    "  Esc            ",
                     Style::default()
                         .fg(tailwind::ROSE_400)
                         .add_modifier(Modifier::BOLD),
                 ),
                 Span::styled(
-                    "Exit INSERT / SEARCH mode back to NORMAL mode",
+                    "Cancel field edit / close help overlay",
                     Style::default().fg(tailwind::SLATE_200),
                 ),
             ]),
@@ -7898,60 +7749,12 @@ export extern "forgum" [
     fn render_zellij_footer(&self, f: &mut Frame, area: Rect) {
         let bp = Breakpoint::from_size(area.width, area.height);
 
-        // ── Compact Mode: show only the status message (1 line) with Vim badge ──────
+        // ── Compact Mode: show only the status message (1 line) ──────
         if bp == Breakpoint::Compact {
-            let (mode_bg, mode_fg) = self.vim_mode.badge_colors();
-            let p = Paragraph::new(Line::from(vec![
-                Span::styled(
-                    self.vim_mode.badge(),
-                    Style::default()
-                        .bg(mode_bg)
-                        .fg(mode_fg)
-                        .add_modifier(Modifier::BOLD),
-                ),
-                Span::raw(" "),
-                Span::styled(
-                    format!(" {}", self.status_message),
-                    Style::default().fg(tailwind::SKY_400),
-                ),
-            ]));
-            f.render_widget(p, area);
-            return;
-        }
-
-        // ── Interactive Mascot Search Mode ────────────────────────────────────
-        if self.vim_mode == VimMode::Search {
-            let (mode_bg, mode_fg) = self.vim_mode.badge_colors();
-            let p = Paragraph::new(Line::from(vec![
-                Span::styled(
-                    self.vim_mode.badge(),
-                    Style::default()
-                        .bg(mode_bg)
-                        .fg(mode_fg)
-                        .add_modifier(Modifier::BOLD),
-                ),
-                Span::raw(" "),
-                Span::styled(
-                    " <Enter> ",
-                    Style::default()
-                        .bg(tailwind::SLATE_800)
-                        .fg(tailwind::EMERALD_400),
-                ),
-                Span::styled(" Confirm  ", Style::default().fg(tailwind::SLATE_300)),
-                Span::styled(
-                    " <Esc> ",
-                    Style::default()
-                        .bg(tailwind::SLATE_800)
-                        .fg(tailwind::ROSE_400),
-                ),
-                Span::styled(" Cancel  ", Style::default().fg(tailwind::SLATE_300)),
-                Span::styled(
-                    format!(" │ Mascot Search: {}█", self.mascot_search_query),
-                    Style::default()
-                        .fg(tailwind::PURPLE_400)
-                        .add_modifier(Modifier::BOLD),
-                ),
-            ]));
+            let p = Paragraph::new(Line::from(vec![Span::styled(
+                format!(" {}", self.status_message),
+                Style::default().fg(tailwind::SKY_400),
+            )]));
             f.render_widget(p, area);
             return;
         }
@@ -8086,7 +7889,7 @@ export extern "forgum" [
                 ),
                 Span::styled(" Cycle  ", Style::default().fg(tailwind::SLATE_300)),
                 Span::styled(
-                    " <i/Enter> ",
+                    " <Enter> ",
                     Style::default()
                         .bg(tailwind::SLATE_800)
                         .fg(tailwind::EMERALD_400),
@@ -8142,13 +7945,6 @@ export extern "forgum" [
                 ),
                 Span::styled(" Select  ", Style::default().fg(tailwind::SLATE_400)),
                 Span::styled(
-                    " </> ",
-                    Style::default()
-                        .bg(tailwind::SLATE_800)
-                        .fg(tailwind::PURPLE_400),
-                ),
-                Span::styled(" Search  ", Style::default().fg(tailwind::SLATE_300)),
-                Span::styled(
                     " <Space> ",
                     Style::default()
                         .bg(tailwind::SLATE_800)
@@ -8197,20 +7993,7 @@ export extern "forgum" [
             ]
         };
 
-        let (mode_bg, mode_fg) = self.vim_mode.badge_colors();
-        let mut final_spans = vec![
-            Span::styled(
-                self.vim_mode.badge(),
-                Style::default()
-                    .bg(mode_bg)
-                    .fg(mode_fg)
-                    .add_modifier(Modifier::BOLD),
-            ),
-            Span::raw(" "),
-        ];
-        final_spans.extend(help_spans);
-
-        let p = Paragraph::new(Line::from(final_spans));
+        let p = Paragraph::new(Line::from(help_spans));
         f.render_widget(p, area);
     }
 }
@@ -9488,25 +9271,6 @@ mod tests {
     }
 
     #[test]
-    fn test_vim_modes_and_badge_colors() {
-        assert_eq!(VimMode::Normal.badge(), " NORMAL ");
-        assert_eq!(VimMode::Insert.badge(), " INSERT ");
-        assert_eq!(VimMode::Search.badge(), " SEARCH ");
-
-        let (bg, fg) = VimMode::Normal.badge_colors();
-        assert_eq!(bg, tailwind::SLATE_800);
-        assert_eq!(fg, tailwind::EMERALD_400);
-
-        let (bg, fg) = VimMode::Insert.badge_colors();
-        assert_eq!(bg, tailwind::SLATE_800);
-        assert_eq!(fg, tailwind::AMBER_400);
-
-        let (bg, fg) = VimMode::Search.badge_colors();
-        assert_eq!(bg, tailwind::SLATE_800);
-        assert_eq!(fg, tailwind::PURPLE_400);
-    }
-
-    #[test]
     fn test_vim_gg_and_capital_g_navigation() {
         let mut app = ConfigApp::new(None, None, Some(Tab::Mascots));
         assert_eq!(app.mascot_item_idx, 0);
@@ -9599,69 +9363,31 @@ mod tests {
     }
 
     #[test]
-    fn test_vim_search_mode_and_query_filtering() {
-        let mut app = ConfigApp::new(None, None, Some(Tab::Mascots));
-        assert_eq!(app.vim_mode, VimMode::Normal);
-
-        // Enter search mode with '/'
-        let slash = Event::Key(KeyEvent::new(KeyCode::Char('/'), KeyModifiers::NONE));
-        app.handle_event(slash).expect("enter search mode");
-        assert_eq!(app.vim_mode, VimMode::Search);
-
-        // Type query 'd', 'u', 'c', 'k'
-        for c in ['d', 'u', 'c', 'k'] {
-            let key = Event::Key(KeyEvent::new(KeyCode::Char(c), KeyModifiers::NONE));
-            app.handle_event(key).expect("type search character");
-        }
-        assert_eq!(app.mascot_search_query, "duck");
-        assert_eq!(app.config.cow, "duck");
-
-        // Confirm search with Enter
-        let enter = Event::Key(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE));
-        app.handle_event(enter).expect("confirm search");
-        assert_eq!(app.vim_mode, VimMode::Normal);
-        assert_eq!(app.config.cow, "duck");
-
-        // Cancel search with Esc
-        let slash = Event::Key(KeyEvent::new(KeyCode::Char('/'), KeyModifiers::NONE));
-        app.handle_event(slash).expect("enter search mode again");
-        assert_eq!(app.vim_mode, VimMode::Search);
-
-        let esc = Event::Key(KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE));
-        app.handle_event(esc).expect("cancel search");
-        assert_eq!(app.vim_mode, VimMode::Normal);
-    }
-
-    #[test]
-    fn test_vim_insert_mode_config_editing() {
+    fn test_modeless_config_editing() {
         let mut app = ConfigApp::new(None, None, Some(Tab::Config));
-        assert_eq!(app.vim_mode, VimMode::Normal);
         assert!(!app.editing_config);
 
-        // Enter insert mode with 'i'
-        let key_i = Event::Key(KeyEvent::new(KeyCode::Char('i'), KeyModifiers::NONE));
-        app.handle_event(key_i).expect("enter insert mode with i");
-        assert_eq!(app.vim_mode, VimMode::Insert);
+        // Enter config editing via 'e'
+        let key_e = Event::Key(KeyEvent::new(KeyCode::Char('e'), KeyModifiers::NONE));
+        app.handle_event(key_e).expect("enter edit with e");
         assert!(app.editing_config);
 
-        // Exit insert mode with Esc
+        // Cancel edit with Esc
         let key_esc = Event::Key(KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE));
-        app.handle_event(key_esc)
-            .expect("exit insert mode with Esc");
-        assert_eq!(app.vim_mode, VimMode::Normal);
+        app.handle_event(key_esc).expect("cancel edit with Esc");
         assert!(!app.editing_config);
 
-        // Enter insert mode with 'a'
-        let key_a = Event::Key(KeyEvent::new(KeyCode::Char('a'), KeyModifiers::NONE));
-        app.handle_event(key_a).expect("enter insert mode with a");
-        assert_eq!(app.vim_mode, VimMode::Insert);
+        // Direct numeric digit triggers inline edit
+        let key_digit = Event::Key(KeyEvent::new(KeyCode::Char('5'), KeyModifiers::NONE));
+        app.handle_event(key_digit)
+            .expect("type digit into config field");
         assert!(app.editing_config);
+        assert_eq!(app.config_edit_buffer, "5");
 
-        // Exit insert mode with Ctrl+[
-        let key_ctrl_bracket = Event::Key(KeyEvent::new(KeyCode::Char('['), KeyModifiers::CONTROL));
-        app.handle_event(key_ctrl_bracket)
-            .expect("exit insert mode with Ctrl+[");
-        assert_eq!(app.vim_mode, VimMode::Normal);
+        // Confirm edit with Enter
+        let key_enter = Event::Key(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE));
+        app.handle_event(key_enter)
+            .expect("confirm edit with Enter");
         assert!(!app.editing_config);
     }
 

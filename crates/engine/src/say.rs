@@ -3,6 +3,20 @@ use std::path::PathBuf;
 use crate::cow;
 
 pub fn execute_say_cmd(cmd: &[String]) -> String {
+    if cmd.is_empty() {
+        return "No output.".to_string();
+    }
+
+    // Guard against self-recursion: if someone passes a sentence starting with 'forgum'
+    // (e.g. `forgum say "Forgum brings terminal mascots to life..."`), treat it directly as text
+    // rather than executing `forgum` recursively via the shell.
+    if cmd.len() == 1 {
+        let first = cmd[0].trim();
+        if first.starts_with("forgum ") || first.starts_with("Forgum ") {
+            return first.to_string();
+        }
+    }
+
     let output = forgum_platform::execute_command_with_shell_fallback(cmd)
         .map(|o| {
             let mut out = String::from_utf8_lossy(&o.stdout).to_string();

@@ -618,10 +618,31 @@ pub fn compose_scene_with_mode(cow_text: &str, bubble_text: &str, is_thought: bo
         .unwrap_or(0)
         .max(2);
 
+    let (term_w, _) = forgum_platform::terminal_size();
+    let term_max = (term_w as usize).saturating_sub(6).max(8);
+
     let bubble = if is_thought {
-        wrap_thought_bubble(bubble_text, cow_width)
+        wrap_thought_bubble(bubble_text, cow_width.min(term_max))
     } else {
-        wrap_bubble(bubble_text, cow_width)
+        wrap_bubble(bubble_text, cow_width.min(term_max))
+    };
+
+    let bubble_w = bubble
+        .lines()
+        .next()
+        .map(str_display_width)
+        .unwrap_or(0);
+
+    // Detect creature head / eyes landmark column for intelligent anchor alignment
+    let eyes = detect_cow_eyes(cow_text, 0);
+    let head_x = if let Some(&(_, eye_col)) = eyes.first() {
+        eye_col
+    } else {
+        cow_lines
+            .iter()
+            .find(|l| !l.trim().is_empty() && l.trim() != "o" && l.trim() != "o " && l.trim() != "\\")
+            .and_then(|l| l.find(|c: char| !c.is_whitespace()))
+            .unwrap_or(4)
     };
 
     let mut result = String::with_capacity(bubble.len() + cow_text.len() + 64);
@@ -630,14 +651,10 @@ pub fn compose_scene_with_mode(cow_text: &str, bubble_text: &str, is_thought: bo
 
     if is_thought {
         // The thought bubble must strictly have exactly THREE circles below it
-        let head_indent = cow_lines
-            .iter()
-            .find(|l| !l.trim().is_empty() && l.trim() != "o" && l.trim() != "o ")
-            .map(|l| l.chars().take_while(|c| c.is_whitespace()).count())
-            .unwrap_or(6);
-        let p1 = head_indent.saturating_sub(4).max(2);
-        let p2 = head_indent.saturating_sub(2).max(3);
-        let p3 = head_indent.saturating_sub(1).max(4);
+        let bubble_anchor = head_x.clamp(2, bubble_w.saturating_sub(3).max(2));
+        let p1 = ((bubble_anchor as f32 * 0.70 + head_x as f32 * 0.30).round() as usize).max(1);
+        let p2 = ((bubble_anchor as f32 * 0.40 + head_x as f32 * 0.60).round() as usize).max(2);
+        let p3 = ((bubble_anchor as f32 * 0.15 + head_x as f32 * 0.85).round() as usize).max(3);
 
         for indent in [p1, p2, p3] {
             for _ in 0..indent {
@@ -668,13 +685,11 @@ pub fn compose_scene_with_mode(cow_text: &str, bubble_text: &str, is_thought: bo
         });
 
         if !has_pointer && !cow_lines.is_empty() {
-            let head_indent = cow_lines
-                .iter()
-                .find(|l| !l.trim().is_empty())
-                .map(|l| l.chars().take_while(|c| c.is_whitespace()).count())
-                .unwrap_or(4);
-            let p1_indent = head_indent.saturating_sub(2).max(1);
-            let p2_indent = head_indent.saturating_sub(1).max(2);
+            let bubble_anchor = head_x.clamp(1, bubble_w.saturating_sub(2).max(1));
+            let p1_indent =
+                ((bubble_anchor as f32 * 0.65 + head_x as f32 * 0.35).round() as usize).max(1);
+            let p2_indent =
+                ((bubble_anchor as f32 * 0.25 + head_x as f32 * 0.75).round() as usize).max(2);
 
             for _ in 0..p1_indent {
                 result.push(' ');
@@ -868,7 +883,9 @@ pub fn wrap_bubble(text: &str, min_width: usize) -> String {
         return String::new();
     }
     let (term_w, _) = forgum_platform::terminal_size();
-    let max_inner = (term_w as usize).saturating_sub(6).max(8);
+    let term_max = (term_w as usize).saturating_sub(6).max(8);
+    let eff_min_w = min_width.min(term_max);
+    let max_inner = term_max;
     let lines = wrap_words(text, max_inner);
     if lines.is_empty() {
         return String::new();
@@ -880,7 +897,8 @@ pub fn wrap_bubble(text: &str, min_width: usize) -> String {
         .map(|l| str_display_width(l))
         .max()
         .unwrap_or(0)
-        .max(min_width.saturating_sub(2));
+        .max(eff_min_w.saturating_sub(2))
+        .min(max_inner);
     let inner_width = text_width + 2; // +2 for padding spaces around text
 
     let mut result = String::with_capacity((inner_width + 4) * (lines.len() + 2));
@@ -948,9 +966,9 @@ pub fn wrap_thought_bubble(text: &str, cow_width: usize) -> String {
         .unwrap_or(0);
 
     let text_width = if cow_width > 0 {
-        raw_text_w.min(cow_width.saturating_sub(4).max(1))
+        raw_text_w.min(cow_width.saturating_sub(4).max(1)).min(term_max)
     } else {
-        raw_text_w
+        raw_text_w.min(term_max)
     };
 
     let inner_width = text_width + 2; // +2 for padding spaces around text

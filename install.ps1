@@ -245,6 +245,13 @@ if (Test-Path -LiteralPath $localRelease) {
     } else {
         Write-Host ">> Local release build ($localVer) does not match target ($Version). Fetching release asset..." -ForegroundColor Yellow
     }
+} elseif (Test-Path -LiteralPath $localDebug) {
+    $localVer = & $localDebug --version 2>$null
+    if ($localVer -match [regex]::Escape($Version)) {
+        Copy-Item -LiteralPath $localDebug -Destination $binPath -Force
+        Write-Host ">> Installed from local debug build ($Version): $binPath" -ForegroundColor Green
+        $localInstalled = $true
+    }
 }
 
 if (-not $localInstalled) {

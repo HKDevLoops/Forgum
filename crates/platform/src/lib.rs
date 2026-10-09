@@ -149,13 +149,14 @@ pub fn stdin_has_data() -> bool {
     }
 }
 pub use terminal::{
-    detect_capabilities, detect_terminal_emulator, is_stdout_tty, is_wsl, plan_native_split,
-    terminal_size, terminal_supports_sync, AspectRatioFormat, ColorLevel, GraphicsCaps,
-    NativeSplitPlan, SplitMode, TerminalCapabilities, TerminalEmulator,
+    detect_capabilities, detect_terminal_emulator, is_stdin_tty, is_stdout_tty, is_wsl,
+    plan_native_split, terminal_size, terminal_supports_sync, AspectRatioFormat, ColorLevel,
+    GraphicsCaps, NativeSplitPlan, SplitMode, TerminalCapabilities, TerminalEmulator,
 };
 pub use terminal_theme::{
     boost_saturation, calculate_luminance, detect_terminal_theme, elevate_luminance,
-    BackgroundPreset, ContrastMode, ContrastProfile, TerminalTheme,
+    get_active_contrast_mode, set_active_contrast_mode, BackgroundPreset, ContrastMode,
+    ContrastProfile, TerminalTheme,
 };
 /// Expand to the contained code only when compiling on a Unix-like target.
 ///

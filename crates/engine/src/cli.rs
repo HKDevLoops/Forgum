@@ -326,15 +326,15 @@ pub struct Cli {
     )]
     pub fps: Option<u16>,
 
-    /// Hardware acceleration mode (auto, dedicated, integrated, cpu).
+    /// Hardware acceleration mode (auto, dedicated, integrated, npu, cpu).
     #[arg(
         long,
         visible_alias = "gpu",
         visible_alias = "acceleration",
         global = true,
         value_name = "MODE",
-        help = "Hardware acceleration mode (auto, dedicated, integrated, cpu)",
-        long_help = "Hardware compute acceleration mode: 'auto' (automatically prefers dedicated GPU, then integrated graphics, then CPU fallback), 'dedicated' (prefer dedicated discrete GPU cores and VRAM), 'integrated' (prefer integrated/internal graphics), 'cpu' (force CPU compute)."
+        help = "Hardware acceleration mode (auto, dedicated, integrated, npu, cpu)",
+        long_help = "Hardware compute acceleration mode: 'auto' (automatically prefers dedicated GPU, then integrated graphics, then NPU, then CPU fallback), 'dedicated' (prefer dedicated discrete GPU cores and VRAM), 'integrated' (prefer integrated/internal graphics), 'npu' (prefer neural processing unit), 'cpu' (force CPU compute)."
     )]
     pub accel: Option<String>,
 
@@ -371,6 +371,21 @@ pub struct Cli {
         long_help = "Open structured responsive tables showing available options for animals, effects, scenery, colors, and shells. Run 'forgum list [category]' for specific categories."
     )]
     pub list: Option<String>,
+
+    /// Background contrast profile: standard, acrylic_glass, high_contrast, vibrant.
+    #[arg(
+        long = "contrast-mode",
+        visible_alias = "contrast",
+        global = true,
+        value_name = "MODE",
+        help = "Background contrast profile (standard, acrylic_glass, high_contrast, vibrant)",
+        long_help = "Background contrast mode for transparent / acrylic / glass terminals: 'standard', 'acrylic_glass' (boost luminance & saturation for transparency), 'high_contrast', 'vibrant'."
+    )]
+    pub contrast_mode: Option<String>,
+
+    /// Positional speech message text (cowsay compatibility).
+    #[arg(value_name = "MESSAGE", num_args = 0..)]
+    pub message: Vec<String>,
 
     /// (Phase 1) Spawn as daemon.
     #[arg(long, global = true, hide = true)]
@@ -1013,6 +1028,7 @@ pub struct Args {
     pub accel: Option<String>,
     pub aspect: Option<String>,
     pub aspect_mode: Option<String>,
+    pub contrast_mode: Option<String>,
 }
 
 /// Error type returned by `parse_args`, carrying the intended process exit code.
@@ -1092,10 +1108,26 @@ pub fn parse_args(argv: Vec<String>) -> Result<(Args, Option<Commands>), CliErro
             }
         }
         None => {
-            if cli.list.is_some() {
-                (Command::List, None, false)
+            if cli.message.len() == 1 {
+                if let Some(suggestion) = is_command_typo(&cli.message[0]) {
+                    return Err(CliError {
+                        exit_code: 64,
+                        message: format!(
+                            "Unrecognized command or option '{}'.\n\n{}",
+                            cli.message[0], suggestion
+                        ),
+                    });
+                }
+            }
+            let extra = if cli.message.is_empty() {
+                None
             } else {
-                (Command::Render, None, false)
+                Some(cli.message.join(" "))
+            };
+            if cli.list.is_some() {
+                (Command::List, extra, false)
+            } else {
+                (Command::Render, extra, false)
             }
         }
         Some(Commands::Think { thought, cow }) => {
@@ -1188,6 +1220,7 @@ pub fn parse_args(argv: Vec<String>) -> Result<(Args, Option<Commands>), CliErro
         accel: cli.accel,
         aspect: cli.aspect,
         aspect_mode: cli.aspect_mode,
+        contrast_mode: cli.contrast_mode,
     };
 
     Ok((args, cli.command))
@@ -1428,6 +1461,9 @@ pub fn build_scene_config(args: &Args) -> Result<SceneConfig, String> {
     if let Some(aspect_mode) = &args.aspect_mode {
         cfg.aspect_mode = Some(aspect_mode.clone());
     }
+    if let Some(contrast_mode) = &args.contrast_mode {
+        cfg.contrast_mode = Some(contrast_mode.clone());
+    }
 
     // Validate mascot taxonomy locomotion consistency
     let animal_name = args.cow.as_deref().unwrap_or(&cfg.cow);
@@ -1494,6 +1530,68 @@ pub fn find_closest_match<'a>(query: &str, candidates: &[&'a str]) -> Option<&'a
         }
     }
     best_match
+}
+
+/// Check if a single argument is an obvious command typo (like 'cows', 'effect') rather than intentional speech text.
+pub fn is_direct_misspelling(word: &str) -> bool {
+    let q = word.trim().trim_start_matches('-').to_lowercase();
+    matches!(
+        q.as_str(),
+        "cow"
+            | "cows"
+            | "animal"
+            | "animals"
+            | "mascot"
+            | "mascots"
+            | "effect"
+            | "effects"
+            | "anim"
+            | "animation"
+            | "animations"
+            | "motion"
+            | "scenery"
+            | "env"
+            | "environment"
+            | "mountain"
+            | "mountains"
+            | "road"
+            | "roads"
+            | "color"
+            | "colors"
+            | "palette"
+            | "palettes"
+            | "lolcat"
+            | "shell"
+            | "shells"
+            | "completion"
+            | "completions"
+    )
+}
+
+const SUBCOMMAND_CANDIDATES: &[&str] = &[
+    "render", "think", "fortune", "tui", "init", "completions", "list",
+    "status", "doctor", "checkhealth", "config", "logs", "diagnose", "tmux",
+    "status-line", "herd", "theme", "demo", "showcase", "remote", "say",
+    "timer", "battle", "rps-battle", "sweep", "stop", "install", "uninstall",
+    "update", "channel",
+];
+
+/// Check if a single argument is an obvious command typo (like 'renderr', 'cows', 'effect')
+/// rather than intentional speech text.
+pub fn is_command_typo(word: &str) -> Option<String> {
+    let q = word.trim().trim_start_matches('-').to_lowercase();
+    if is_direct_misspelling(&q) {
+        return generate_command_suggestion(&q);
+    }
+    for &sub in SUBCOMMAND_CANDIDATES {
+        let max_dist = if sub.len() <= 4 { 1 } else { 2 };
+        if levenshtein_distance(&q, sub) <= max_dist {
+            return Some(format!(
+                "💡 Did you mean '{sub}'? Run 'forgum list' to browse available options."
+            ));
+        }
+    }
+    None
 }
 
 /// Generate helpful, interactive CLI suggestions based on user input.

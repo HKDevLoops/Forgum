@@ -3093,6 +3093,12 @@ fn render_subcommand_with_scene(
     args: cli::Args,
     mut scene: forgum_engine::protocol::SceneConfig,
 ) -> ExitCode {
+    if let Some(ref cm_str) = scene.contrast_mode {
+        forgum_platform::set_active_contrast_mode(
+            forgum_platform::ContrastMode::from_str_loose(cm_str),
+        );
+    }
+
     if args.internal_daemon_runner {
         // ── DAEMON MODE — CHILD PATH (respawned by the parent) ──────
         // Checked FIRST because the spawned child still carries the

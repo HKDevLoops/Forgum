@@ -69,7 +69,11 @@ pub fn render_loop_foreground(
     let cow_display = composed_text.unwrap_or(&config.text);
 
     // Tiny-terminal or non-tty pipe guard: print static text and complete requested duration.
-    if cols < MIN_COLS || rows < MIN_ROWS || !crossterm::tty::IsTty::is_tty(&std::io::stdout()) {
+    if cols < MIN_COLS
+        || rows < MIN_ROWS
+        || !forgum_platform::is_stdout_tty()
+        || !forgum_platform::is_stdin_tty()
+    {
         let cow_text = if composed_text.is_some() {
             cow_display.to_string()
         } else if cow_display.is_empty() {

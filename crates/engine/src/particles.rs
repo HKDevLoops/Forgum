@@ -52,6 +52,35 @@ pub struct ParticlePool {
     particles: slotmap::SlotMap<ParticleKey, Particle>,
     /// Reusable buffer for dead particle keys — avoids per-frame Vec allocation.
     dead_keys: Vec<ParticleKey>,
+    scratch_keys: Vec<ParticleKey>,
+    scratch_px: Vec<f32>,
+    scratch_py: Vec<f32>,
+    scratch_vx: Vec<f32>,
+    scratch_vy: Vec<f32>,
+    scratch_life: Vec<f32>,
+}
+
+/// Donut-style 12-tier luminance gradient for ultra-smooth phosphor decay and luminance ramp.
+const DONUT_LUMINANCE_RAMP: [char; 12] = ['.', ',', '-', '~', ':', ';', '=', '!', '*', '#', '$', '@'];
+
+/// Maps a particle glyph based on its base character and normalized life ratio (0.0 to 1.0).
+/// Preserves base character during active life, with Donut/CMatrix-style phosphor decay in late life.
+#[must_use]
+pub fn smooth_particle_glyph(base_ch: char, life_ratio: f32) -> char {
+    let r = life_ratio.clamp(0.0, 1.0);
+    // While particle is active and healthy (life_ratio > 0.25), preserve its identity glyph
+    if r > 0.25 {
+        return base_ch;
+    }
+    // During late-life phosphor decay (life_ratio <= 0.25), smoothly decay luminance to sub-cell dot:
+    match base_ch {
+        '.' | ',' | '-' | '~' | ':' | ';' | '=' | '!' | '*' | '#' | '$' | '@' => {
+            let decay_idx = ((r / 0.25) * 2.0).round() as usize;
+            DONUT_LUMINANCE_RAMP[decay_idx.min(2)]
+        }
+        'o' | 'O' | '0' => '°',
+        _ => '·',
+    }
 }
 
 impl ParticlePool {
@@ -60,6 +89,12 @@ impl ParticlePool {
         Self {
             particles: slotmap::SlotMap::with_capacity_and_key(MAX_PARTICLES),
             dead_keys: Vec::with_capacity(MAX_PARTICLES),
+            scratch_keys: Vec::with_capacity(MAX_PARTICLES),
+            scratch_px: Vec::with_capacity(MAX_PARTICLES),
+            scratch_py: Vec::with_capacity(MAX_PARTICLES),
+            scratch_vx: Vec::with_capacity(MAX_PARTICLES),
+            scratch_vy: Vec::with_capacity(MAX_PARTICLES),
+            scratch_life: Vec::with_capacity(MAX_PARTICLES),
         }
     }
 
@@ -80,15 +115,77 @@ impl ParticlePool {
     /// Update all active particles by `dt` seconds. Dead particles are
     /// removed from the slotmap automatically.
     pub fn update(&mut self, dt: f32) {
+        self.update_accelerated(dt, 80, 24);
+    }
+
+    /// Update all active particles using GPU/CPU compute acceleration pipeline.
+    /// Operates with zero dynamic allocations in the animation loop.
+    pub fn update_accelerated(&mut self, dt: f32, cols: usize, rows: usize) {
+        let count = self.particles.len();
+        if count == 0 {
+            return;
+        }
+
+        if count <= 8 {
+            self.dead_keys.clear();
+            for (key, p) in self.particles.iter_mut() {
+                p.x += p.vx * dt;
+                p.y += p.vy * dt;
+                p.life -= dt;
+                if p.life <= 0.0 {
+                    self.dead_keys.push(key);
+                }
+            }
+            for key in &self.dead_keys {
+                self.particles.remove(*key);
+            }
+            return;
+        }
+
+        self.scratch_keys.clear();
+        self.scratch_px.clear();
+        self.scratch_py.clear();
+        self.scratch_vx.clear();
+        self.scratch_vy.clear();
+        self.scratch_life.clear();
+
+        for (k, p) in self.particles.iter() {
+            self.scratch_keys.push(k);
+            self.scratch_px.push(p.x);
+            self.scratch_py.push(p.y);
+            self.scratch_vx.push(p.vx);
+            self.scratch_vy.push(p.vy);
+            self.scratch_life.push(p.life);
+        }
+
+        crate::gpu_compute::get_compute_engine(None).compute_particle_physics_step(
+            &mut self.scratch_px,
+            &mut self.scratch_py,
+            &mut self.scratch_vx,
+            &mut self.scratch_vy,
+            &mut self.scratch_life,
+            dt,
+            0.0,
+            0.02,
+            cols,
+            rows,
+        );
+
         self.dead_keys.clear();
-        for (key, p) in self.particles.iter_mut() {
-            p.x += p.vx * dt;
-            p.y += p.vy * dt;
-            p.life -= dt;
-            if p.life <= 0.0 {
+        for i in 0..self.scratch_keys.len() {
+            let key = self.scratch_keys[i];
+            let life = self.scratch_life[i];
+            if life <= 0.0 {
                 self.dead_keys.push(key);
+            } else if let Some(p) = self.particles.get_mut(key) {
+                p.x = self.scratch_px[i];
+                p.y = self.scratch_py[i];
+                p.vx = self.scratch_vx[i];
+                p.vy = self.scratch_vy[i];
+                p.life = life;
             }
         }
+
         for key in &self.dead_keys {
             self.particles.remove(*key);
         }
@@ -100,7 +197,7 @@ impl ParticlePool {
     }
 
     /// Render active particles into the framebuffer with a vertical exclusion cutoff.
-    /// Particles located at `yi < min_y` are occluded and not drawn (strictly protects speech bubbles).
+    /// Incorporates Donut-style continuous luminance glyph ramps and CMatrix-style phosphor motion blur.
     pub fn render_with_cutoff(
         &self,
         fb: &mut FrameBuffer,
@@ -121,18 +218,51 @@ impl ParticlePool {
             }
             let life_ratio = (p.life / p.max_life).clamp(0.0, 1.0);
             let alpha = (alpha_fn(1.0 - life_ratio) * 255.0) as u8;
+            let display_ch = smooth_particle_glyph(p.ch, life_ratio);
             let mut c = p.color;
             c.a = alpha;
+
+            // 1. Primary particle cell
             let _ = fb.set(
                 xi,
                 yi,
                 FbCell {
-                    ch: p.ch,
+                    ch: display_ch,
                     fg: c,
                     bg: Color::TRANSPARENT,
                     alpha,
                 },
             );
+
+            // 2. CMatrix-style phosphor decay motion blur trail
+            let speed_sq = p.vx * p.vx + p.vy * p.vy;
+            if speed_sq > 0.25 && alpha > 40 {
+                let trail_x = (p.x - p.vx * 0.08).round() as i32;
+                let trail_y = (p.y - p.vy * 0.08).round() as i32;
+                if trail_x >= 0 && trail_y >= 0 {
+                    let txi = trail_x as usize;
+                    let tyi = trail_y as usize;
+                    if (txi != xi || tyi != yi) && txi < fb.width && tyi < fb.height && tyi >= min_y
+                    {
+                        let existing = fb.get(txi, tyi);
+                        if existing.ch == ' ' || existing.ch == '·' || existing.ch == '.' {
+                            let trail_alpha = (alpha / 2).max(1);
+                            let mut trail_c = p.color;
+                            trail_c.a = trail_alpha;
+                            let _ = fb.set(
+                                txi,
+                                tyi,
+                                FbCell {
+                                    ch: '·',
+                                    fg: trail_c,
+                                    bg: Color::TRANSPARENT,
+                                    alpha: trail_alpha,
+                                },
+                            );
+                        }
+                    }
+                }
+            }
         }
     }
 

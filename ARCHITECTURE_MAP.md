@@ -300,7 +300,7 @@ stateDiagram-v2
 
 | Path & Link | Primary Functions & Structs | Purpose / Architecture | Key Search Terms |
 | :--- | :--- | :--- | :--- |
-| [`crates/tui/src/app.rs`](file:///Z:/Projects/Forgum/crates/tui/src/app.rs) | `ConfigApp`, `VimMode`, `handle_event`, `render`, `render_mascot_list`, `render_hardware_accel_panel`, `vim_jump_to_top`, `vim_jump_to_bottom`, `vim_half_page_scroll`, `execute_mascot_search`, `render_vim_help_modal` | Interactive Ratatui interface with LazyGit + Zellij design, full Vim keybindings (`NORMAL`, `INSERT`, `SEARCH` modes, `gg`, `G`, `gt`, `gT`, `ZZ`, `ZQ`, `Ctrl+d`, `Ctrl+u`, `/`, `?`), horizontal scrolling, contrast profiles, and hardware acceleration selector. | `tui`, `ratatui`, `app`, `vim`, `vim_mode`, `preview`, `settings`, `hardware_accel`, `contrast_mode` |
+| [`crates/tui/src/app.rs`](file:///Z:/Projects/Forgum/crates/tui/src/app.rs) | `ConfigApp`, `handle_event`, `render`, `render_mascot_list`, `render_hardware_accel_panel`, `vim_jump_to_top`, `vim_jump_to_bottom`, `vim_half_page_scroll`, `render_vim_help_modal` | Interactive Ratatui interface with LazyGit + Zellij modeless direct navigation (`gg`, `G`, `gt`, `gT`, `ZZ`, `ZQ`, `Ctrl+d`, `Ctrl+u`, `?`), inline configuration editing, horizontal scrolling, contrast profiles, and hardware acceleration selector. | `tui`, `ratatui`, `app`, `modeless`, `preview`, `settings`, `hardware_accel`, `contrast_mode` |
 | [`crates/tui/src/lib.rs`](file:///Z:/Projects/Forgum/crates/tui/src/lib.rs) | `run_tui()` | TUI entry interface called by `forgum config --tui`. | `run_tui`, `tui_entry` |
 
 ---

@@ -521,14 +521,21 @@ pub fn execute_command_with_shell_fallback(cmd: &[String]) -> io::Result<std::pr
         return Err(io::Error::new(io::ErrorKind::InvalidInput, "empty command"));
     }
 
-    let direct = Command::new(&cmd[0]).args(&cmd[1..]).output();
+    let direct = Command::new(&cmd[0])
+        .args(&cmd[1..])
+        .stdin(std::process::Stdio::null())
+        .output();
     if direct.is_ok() {
         return direct;
     }
 
     #[cfg(windows)]
     {
-        Command::new("cmd").arg("/C").args(cmd).output()
+        Command::new("cmd")
+            .arg("/C")
+            .args(cmd)
+            .stdin(std::process::Stdio::null())
+            .output()
     }
 
     #[cfg(not(windows))]
@@ -539,6 +546,7 @@ pub fn execute_command_with_shell_fallback(cmd: &[String]) -> io::Result<std::pr
             .arg(r#"exec "$@""#)
             .arg("--")
             .args(cmd)
+            .stdin(std::process::Stdio::null())
             .output()
     }
 }

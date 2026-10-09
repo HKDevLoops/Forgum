@@ -3108,7 +3108,7 @@ impl Effect for CompoundSignatureEffect {
                     rows,
                 );
             }
-            self.pool.update(dt);
+            self.pool.update_accelerated(dt, cols, rows);
         }
     }
 

@@ -930,6 +930,11 @@ pub fn is_stdout_tty() -> bool {
     crossterm::tty::IsTty::is_tty(&std::io::stdout())
 }
 
+#[must_use]
+pub fn is_stdin_tty() -> bool {
+    crossterm::tty::IsTty::is_tty(&std::io::stdin())
+}
+
 /// Detect the color level supported by the current terminal.
 ///
 /// Detection order:
