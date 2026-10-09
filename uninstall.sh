@@ -144,6 +144,6 @@ if [ "$METHOD" = "purge" ]; then
   echo "✓ Purge complete. Zero trace of Forgum remains on this machine."
 else
   echo
-  echo "★ Soft uninstall complete."
+  echo "✓ Soft uninstall complete."
   echo "✓ Preserved user configuration in ~/.config/forgum/ so your custom settings are saved if you reinstall."
 fi

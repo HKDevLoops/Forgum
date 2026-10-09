@@ -5717,7 +5717,7 @@ export extern "forgum" [
                 ];
                 if is_native {
                     spans.push(Span::styled(
-                        " ★ Native",
+                        " ◆ Native",
                         Style::default()
                             .fg(Color::Cyan)
                             .add_modifier(Modifier::BOLD),
@@ -5776,7 +5776,7 @@ export extern "forgum" [
                 ];
                 if is_native {
                     spans.push(Span::styled(
-                        " ★ Native",
+                        " ◆ Native",
                         Style::default()
                             .fg(Color::Cyan)
                             .add_modifier(Modifier::BOLD),
@@ -5970,7 +5970,7 @@ export extern "forgum" [
                 };
                 let badge = match *name {
                     "acrylic_glass" => " 🪟 GLASS",
-                    "high_contrast" => " ☀️ HIGH",
+                    "high_contrast" => " 🔆 HIGH",
                     "vibrant" => " 🌈 VIVID",
                     _ => " ⚪ STD",
                 };
@@ -7344,7 +7344,7 @@ export extern "forgum" [
                     Span::styled(sc_name, Style::default().fg(Color::Yellow)),
                     if is_native_env {
                         Span::styled(
-                            " ★ Native",
+                            " ◆ Native",
                             Style::default()
                                 .fg(Color::Cyan)
                                 .add_modifier(Modifier::BOLD),
@@ -7367,7 +7367,7 @@ export extern "forgum" [
                     Span::styled(rd_name, Style::default().fg(Color::Yellow)),
                     if is_native_road {
                         Span::styled(
-                            " ★ Native",
+                            " ◆ Native",
                             Style::default()
                                 .fg(Color::Cyan)
                                 .add_modifier(Modifier::BOLD),

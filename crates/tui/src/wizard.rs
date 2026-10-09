@@ -1528,7 +1528,7 @@ impl UninstallerWizard {
             Line::from("  ✓ Removes ~/.config/forgum/completions/"),
             Line::from(""),
             Line::from(Span::styled(
-                "  ★ PRESERVES ~/.config/forgum/ (Settings & Custom Cows)",
+                "  ✓ PRESERVES ~/.config/forgum/ (Settings & Custom Cows)",
                 Style::default()
                     .fg(theme::AURORA_GREEN)
                     .add_modifier(Modifier::BOLD),

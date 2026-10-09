@@ -1734,7 +1734,7 @@ pub fn render_environment(
             let sun_x = width.saturating_sub(10);
             let sky_y = (ground_y / 5).clamp(1, fb.height.saturating_sub(1));
             if sun_x < width && sky_y < fb.height {
-                let _ = fb.set(sun_x, sky_y, Cell::new('☼', sun_fg));
+                let _ = fb.set(sun_x, sky_y, Cell::new('*', sun_fg));
             }
 
             // Gentle drifting white clouds (fluffy shapes that never split or look like duplicate orbs)

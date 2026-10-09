@@ -155,6 +155,6 @@ if ($Method -eq 'Purge') {
     }
     Write-Host "`n✓ Purge complete. Zero trace of Forgum remains." -ForegroundColor Green
 } else {
-    Write-Host "`n★ Soft uninstall complete." -ForegroundColor Green
+    Write-Host "`n✓ Soft uninstall complete." -ForegroundColor Green
     Write-Host "✓ Preserved user configuration in ~/.config/forgum/ so your custom settings are saved if you reinstall." -ForegroundColor Cyan
 }

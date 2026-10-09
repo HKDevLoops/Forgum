@@ -5,28 +5,28 @@
 
 /// Cosmic Cow Constellation — A celestial bovine navigating the starfields.
 pub const CELESTIAL_COW_CONSTELLATION: &[&str] = &[
-    r"             .  *   ✦      .     .  *     .  ★   .        *        .",
+    r"             .  *   ✦      .     .  *     .  ✦   .        *        .",
     r"      *   .        .    *         .      .    *      ✦       .      *",
-    r"            .   ★       .    .      *   .      .       .   *    .",
+    r"            .   ✦       .    .      *   .      .       .   *    .",
     r"         .        ✦   .-'''''-.  *     .    *      .         .    ✦",
     r"               *    .'  ✦   *  '.     .    .     *     .  *     .",
-    r"      ★     .      /   (o   o)   \  *        ✦      .        ★",
+    r"      ✦     .      /   (o   o)   \  *        ✦      .        ✦",
     r"          .       :     ( . )     :    .  *        *    .       .",
     r"     .         *  :   *       *   :       .    .      .    *    .",
     r"           ✦       \   \_____/   /   ✦      .      *        .    ✦",
     r"      .     .  *    '._  ✦ *  _.'     *   .    .     .   *    .",
     r"         *             /`---`\    .       ✦       *         .  *",
-    r"   ✦          .  *    /       \        .       .       .   ★    .",
-    r"        .   ★        / |     | \   *       .       *         .",
+    r"   ✦          .  *    /       \        .       .       .   ✦    .",
+    r"        .   ✦        / |     | \   *       .       *         .",
     r"    .              *   |     |    ✦    .       ✦       .   *",
     r"        ✦    .       * |_____| *    .      .       *       .   ✦",
     r"     *          .       (o)(o)        .        *       .         *",
-    r"   .     *  .      ✦      *      .    ★    .       *      ✦    .",
+    r"   .     *  .      ✦      *      .    ✦    .       *      ✦    .",
 ];
 
 /// Detailed Celestial Bovine Portal — Grand Centerpiece for Welcoming.
 pub const CELESTIAL_PORTAL_ART: &[&str] = &[
-    r"                       .   *   ✦   .   *   ★   .   *",
+    r"                       .   *   ✦   .   *   ✦   .   *",
     r"              *   .    ╭───────────────────────────────╮    .   *",
     r"                 ✦   . │    ✦  F O R G U M   O S  ✦    │ .   ✦",
     r"            .   *      ╰───────────────────────────────╯      *   .",
@@ -36,11 +36,11 @@ pub const CELESTIAL_PORTAL_ART: &[&str] = &[
     r"             .  *  /      (___)\       )\/\                \  *  .",
     r"                   |          ||----w |                    |",
     r"              *    |          ||     ||                    |    *",
-    r"             .  ★  \                                       /  ★  .",
+    r"             .  ✦  \                                       /  ✦  .",
     r"            ✦       \    ✦  A S T R A L   G A T E  ✦      /       ✦",
     r"                 .   \                                   /   .",
     r"              *   .   ╰─────────────────────────────────╯   .   *",
-    r"                       .   *   ✦   .   *   ★   .   *",
+    r"                       .   *   ✦   .   *   ✦   .   *",
 ];
 
 /// De-Orbit Supernova — Astral shockwave representation for Uninstallation.
@@ -48,7 +48,7 @@ pub const DEORBIT_SUPERNOVA_ART: &[&str] = &[
     r"                      .   *   ✦   .    *    ✦   .   *",
     r"               *            .    :    :    .            *",
     r"                    .   *      \  |  /      *   .",
-    r"                ✦        .  - - (★ X ★) - -  .        ✦",
+    r"                ✦        .  - - (✦ X ✦) - -  .        ✦",
     r"                    .   *      /  |  \      *   .",
     r"               *            .    :    :    .            *",
     r"                      .   *   ✦   .    *    ✦   .   *",
@@ -71,7 +71,7 @@ pub const OMARCHY_BANNER: &[&str] = &[
 /// Star badge pills and cosmic symbols.
 pub const SYMBOL_STAR_LARGE: &str = "✦";
 pub const SYMBOL_STAR_SMALL: &str = "✧";
-pub const SYMBOL_SPARKLE: &str = "★";
+pub const SYMBOL_SPARKLE: &str = "✦";
 pub const SYMBOL_CHECK: &str = "✓";
 pub const SYMBOL_CROSS: &str = "✗";
 pub const SYMBOL_ARROW: &str = "▶";
