@@ -348,6 +348,41 @@ fn think_subcommand_without_args_sets_think() {
 }
 
 #[test]
+fn speech_flag_sets_speech_field_and_forces_speech_bubble() {
+    let (a, _) = parse_args(argv(&["forgum-engine", "render", "--speech"])).unwrap();
+    assert!(a.speech);
+    let cfg = build_scene_config(&a).unwrap();
+    assert!(!cfg.think);
+}
+
+#[test]
+fn speech_short_flag_sets_speech_field() {
+    let (a, _) = parse_args(argv(&["forgum-engine", "-S", "Hello speech"])).unwrap();
+    assert!(a.speech);
+    let cfg = build_scene_config(&a).unwrap();
+    assert!(!cfg.think);
+    assert_eq!(cfg.text, "Hello speech");
+}
+
+#[test]
+fn speech_flag_overrides_think_flag() {
+    let (a, _) = parse_args(argv(&["forgum-engine", "render", "--think", "--speech"])).unwrap();
+    assert!(a.speech);
+    let cfg = build_scene_config(&a).unwrap();
+    // --speech explicitly overrides think to false
+    assert!(!cfg.think);
+}
+
+#[test]
+fn speech_flag_overrides_think_subcommand() {
+    let (a, _) = parse_args(argv(&["forgum-engine", "think", "--speech", "Spoken thought"])).unwrap();
+    assert!(a.speech);
+    let cfg = build_scene_config(&a).unwrap();
+    assert!(!cfg.think);
+    assert_eq!(cfg.text, "Spoken thought");
+}
+
+#[test]
 fn animal_list_arg_parses_list_value() {
     let (a, _) = parse_args(argv(&["forgum-engine", "--animal", "list"])).unwrap();
     assert_eq!(a.cow.as_deref(), Some("list"));

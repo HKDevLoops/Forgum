@@ -272,3 +272,51 @@ fn api_control_cmd_wire_roundtrip_invariance() {
         }
     }
 }
+
+// ── Invariant 8: Zero CP437 Mojibake Glyphs Invariance ───────────────
+
+#[test]
+fn zero_cp437_mojibake_symbols_invariance() {
+    let dd = data_dir();
+    let cows_dir = dd.join("Cows");
+
+    let entries = std::fs::read_dir(&cows_dir).expect("data/Cows exists");
+    for entry in entries.filter_map(Result::ok) {
+        let path = entry.path();
+        if path.extension().is_some_and(|ext| ext == "cow") {
+            let content = std::fs::read_to_string(&path)
+                .unwrap_or_else(|e| panic!("Failed to read {}: {e}", path.display()));
+            assert!(
+                !content.contains("Γÿ"),
+                "Mascot file {} contains literal CP437 mojibake string Γÿ",
+                path.display()
+            );
+            for ch in content.chars() {
+                let code = ch as u32;
+                assert!(
+                    !(0x2600..=0x263F).contains(&code),
+                    "Mascot file {} contains CP437-collision glyph U+{:04X} ('{}')",
+                    path.display(),
+                    code,
+                    ch
+                );
+            }
+        }
+    }
+
+    let anim_path = cows_dir.join("animations.json");
+    if anim_path.exists() {
+        let anim_content = std::fs::read_to_string(&anim_path)
+            .expect("read animations.json");
+        assert!(!anim_content.contains("Γÿ"));
+        for ch in anim_content.chars() {
+            let code = ch as u32;
+            assert!(
+                !(0x2600..=0x263F).contains(&code),
+                "animations.json contains CP437-collision glyph U+{:04X} ('{}')",
+                code,
+                ch
+            );
+        }
+    }
+}
