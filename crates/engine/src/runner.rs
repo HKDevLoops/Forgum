@@ -2550,6 +2550,28 @@ fn handle_update_command(check: bool, channel_flag: Option<&str>) -> ExitCode {
         println!();
     }
 
+    if !check && source == forgum_platform::PackageManager::DirectBinary {
+        if let Ok(cur_exe) = std::env::current_exe() {
+            if let Some(parent) = cur_exe.parent() {
+                let test_probe = parent.join(format!(".forgum_write_probe_{}", std::process::id()));
+                let is_writable = std::fs::write(&test_probe, b"")
+                    .map(|_| {
+                        let _ = std::fs::remove_file(&test_probe);
+                        true
+                    })
+                    .unwrap_or(false);
+
+                if !is_writable {
+                    println!(
+                        "\x1b[1;33m⚠️  Notice: Active binary directory ({}) is not writable by current user.\x1b[0m\n\
+                         \x1b[90m(If update fails with permission denied, rerun with: sudo forgum update)\x1b[0m\n",
+                        parent.display()
+                    );
+                }
+            }
+        }
+    }
+
     match source {
         forgum_platform::PackageManager::DirectBinary => {
             let version = env!("CARGO_PKG_VERSION");

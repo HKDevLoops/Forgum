@@ -111,3 +111,10 @@ node_modules/
 # --- Test Scratch & Render Dumps ---
 Tests/last_*.txt
 test-renders/
+
+# --- Internal Maintainer Captures & Private Test Assets ---
+.maintainer/
+*.cast
+*.tape
+*.mp4
+*.webm

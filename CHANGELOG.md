@@ -31,13 +31,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Autonomous Release Standard Operating Procedure**:
   - Added [`RELEASE_SOP.md`](file:///Z:/Projects/Forgum/RELEASE_SOP.md) defining the canonical 7-stage flight checklist for cutting releases.
   - Added [`WORKFLOW_PLAYBOOK.md`](file:///Z:/Projects/Forgum/WORKFLOW_PLAYBOOK.md) documenting step-by-step repeatable standard workflows for repeating engineering tasks.
-  - Added [`FIX_LOGS.md`](file:///Z:/Projects/Forgum/FIX_LOGS.md) detailing defect resolutions from BUG-001 through BUG-014.
+  - Added [`FIX_LOGS.md`](file:///Z:/Projects/Forgum/FIX_LOGS.md) detailing defect resolutions from BUG-001 through BUG-015.
 
 ### Changed
 - **Codebase Formatting**:
   - Standardized formatting across all workspace crates and tests using `cargo fmt`.
 
 ### Fixed
+- **Package Manager & Self-Updater Reliability**:
+  - Resolved hanging interactive prompts and sudo password failures by switching to shell invocation (`sh -c` / `cmd /c`) with inherited stdio.
+  - Hardened git status detection to avoid hijacking non-Forgum repositories.
+  - Corrected openSUSE/SUSE package manager prioritization (Zypper before Dnf) and passed active binary directory during standalone updates.
 - **Small Pane Multiplexer Clipping**:
   - Resolved mascot overflow and speech bubble breakage in small terminal panes down to 15x15 character cells.
 - **CP437 Encoding Glyph Glitches**:

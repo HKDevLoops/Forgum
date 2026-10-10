@@ -674,18 +674,18 @@ if [ "$DOWNLOAD_OK" -eq 0 ]; then
     ensure_build_dependencies
 
     if [ -f "Cargo.toml" ]; then
-      echo -e "\033[36m>> Building local workspace (--bin forgum)...\033[0m"
-      cargo build --release --bin forgum
+      echo -e "\033[36m>> Building local workspace (--package forgum-engine --bin forgum)...\033[0m"
+      cargo build --release --package forgum-engine --bin forgum
       install -m 0755 "target/release/forgum" "$BIN_PATH"
     else
       echo -e "\033[36m>> Fetching latest source from https://github.com/${REPO}.git...\033[0m"
       BUILD_DIR="$TMP/src"
       if git clone --depth 1 "https://github.com/${REPO}.git" "$BUILD_DIR" 2>/dev/null; then
-        cargo build --release --manifest-path "$BUILD_DIR/Cargo.toml" --bin forgum
+        cargo build --release --manifest-path "$BUILD_DIR/Cargo.toml" --package forgum-engine --bin forgum
         install -m 0755 "$BUILD_DIR/target/release/forgum" "$BIN_PATH"
       else
         echo -e "\033[36m>> Compiling via cargo install --git...\033[0m"
-        cargo install --git "https://github.com/${REPO}.git" --bin forgum --root "$TMP/cargo-bin" --force
+        cargo install --git "https://github.com/${REPO}.git" --package forgum-engine --bin forgum --root "$TMP/cargo-bin" --force
         install -m 0755 "$TMP/cargo-bin/bin/forgum" "$BIN_PATH"
       fi
     fi

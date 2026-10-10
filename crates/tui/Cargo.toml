@@ -9,6 +9,7 @@ repository.workspace = true
 readme = "../../README.md"
 keywords = ["tui", "ratatui", "terminal-ui", "config", "crossterm"]
 categories = ["command-line-interface", "config"]
+exclude.workspace = true
 
 [dependencies]
 forgum-platform = { path = "../platform" }

@@ -9,6 +9,7 @@ repository.workspace = true
 readme = "../../README.md"
 keywords = ["terminal", "crossterm", "pty", "console", "shell"]
 categories = ["api-bindings", "command-line-interface", "os"]
+exclude.workspace = true
 
 [lints]
 workspace = true

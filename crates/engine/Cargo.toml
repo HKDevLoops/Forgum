@@ -11,6 +11,7 @@ keywords = ["cowsay", "lolcat", "ascii-art", "terminal-animation", "fortune"]
 categories = ["command-line-interface", "games", "graphics"]
 
 default-run = "forgum"
+exclude.workspace = true
 
 [lib]
 name = "forgum_engine"

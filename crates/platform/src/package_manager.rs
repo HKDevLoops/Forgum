@@ -190,6 +190,13 @@ fn is_cmd_available(cmd: &str) -> bool {
 /// Detect how the currently executing binary was installed.
 #[must_use]
 pub fn detect_installation_source() -> PackageManager {
+    // 1. Authoritative check: read persisted installation receipt if available
+    if let Ok(Some(receipt)) = read_receipt() {
+        if receipt.installer_source != PackageManager::DirectBinary || receipt.bin_path.exists() {
+            return receipt.installer_source;
+        }
+    }
+
     if let Ok(exe_path) = std::env::current_exe() {
         detect_source_from_path(&exe_path)
     } else {
@@ -268,6 +275,23 @@ pub fn detect_source_from_path(path: &Path) -> PackageManager {
                 }
             }
         }
+
+        // On openSUSE/SUSE, prioritize Zypper over DNF for rpm-based installations
+        let is_suse = std::fs::read_to_string("/etc/os-release")
+            .map(|s| {
+                let lower = s.to_ascii_lowercase();
+                lower.contains("opensuse") || lower.contains("suse")
+            })
+            .unwrap_or(false);
+
+        if is_suse && PackageManager::Zypper.is_available_on_host() {
+            if let Ok(out) = Command::new("rpm").args(["-q", "forgum"]).output() {
+                if out.status.success() {
+                    return PackageManager::Zypper;
+                }
+            }
+        }
+
         if PackageManager::Dnf.is_available_on_host() {
             if let Ok(out) = Command::new("rpm").args(["-q", "forgum"]).output() {
                 if out.status.success() {
@@ -275,7 +299,7 @@ pub fn detect_source_from_path(path: &Path) -> PackageManager {
                 }
             }
         }
-        if PackageManager::Zypper.is_available_on_host() {
+        if !is_suse && PackageManager::Zypper.is_available_on_host() {
             if let Ok(out) = Command::new("rpm").args(["-q", "forgum"]).output() {
                 if out.status.success() {
                     return PackageManager::Zypper;
@@ -392,13 +416,27 @@ pub fn detect_available_package_managers() -> Vec<(PackageManager, bool)> {
 pub fn execute_standalone_update(channel: ReleaseChannel) -> Result<String, String> {
     let channel_name = channel.as_str();
     let ref_name = channel.git_ref();
+
+    let cur_exe_dir = std::env::current_exe()
+        .ok()
+        .and_then(|p| p.parent().map(|d| d.to_string_lossy().to_string()))
+        .unwrap_or_default();
+
     #[cfg(windows)]
     {
+        let install_dir_arg = if cur_exe_dir.is_empty() {
+            String::new()
+        } else {
+            format!(" -InstallDir '{cur_exe_dir}'")
+        };
         let cmd = format!(
-            "try {{ $c = irm 'https://raw.githubusercontent.com/HKDevLoops/Forgum/{ref_name}/install.ps1' -ErrorAction Stop; & ([scriptblock]::Create($c)) -Channel '{channel_name}' }} catch {{ $c = irm 'https://raw.githubusercontent.com/HKDevLoops/Forgum/dev/install.ps1'; & ([scriptblock]::Create($c)) -Channel '{channel_name}' }}"
+            "try {{ $c = irm 'https://raw.githubusercontent.com/HKDevLoops/Forgum/{ref_name}/install.ps1' -ErrorAction Stop; & ([scriptblock]::Create($c)) -Channel '{channel_name}'{install_dir_arg} }} catch {{ $c = irm 'https://raw.githubusercontent.com/HKDevLoops/Forgum/dev/install.ps1'; & ([scriptblock]::Create($c)) -Channel '{channel_name}'{install_dir_arg} }}"
         );
         let status = Command::new("powershell")
             .args(["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", &cmd])
+            .stdin(std::process::Stdio::inherit())
+            .stdout(std::process::Stdio::inherit())
+            .stderr(std::process::Stdio::inherit())
             .status()
             .map_err(|e| format!("Failed to invoke PowerShell upgrade: {e}"))?;
 
@@ -412,12 +450,20 @@ pub fn execute_standalone_update(channel: ReleaseChannel) -> Result<String, Stri
     }
     #[cfg(not(windows))]
     {
+        let dir_export = if cur_exe_dir.is_empty() {
+            String::new()
+        } else {
+            format!("export FORGUM_INSTALL_DIR='{cur_exe_dir}'; ")
+        };
         let cmd = format!(
-            "curl -4 -fsSL --connect-timeout 5 'https://raw.githubusercontent.com/HKDevLoops/Forgum/{ref_name}/install.sh' 2>/dev/null | bash -s -- --channel {channel_name} --headless -y || curl -4 -fsSL --connect-timeout 5 'https://raw.githubusercontent.com/HKDevLoops/Forgum/dev/install.sh' | bash -s -- --channel {channel_name} --headless -y"
+            "{dir_export}curl -4 -fsSL --connect-timeout 5 'https://raw.githubusercontent.com/HKDevLoops/Forgum/{ref_name}/install.sh' 2>/dev/null | bash -s -- --channel {channel_name} --headless -y || curl -4 -fsSL --connect-timeout 5 'https://raw.githubusercontent.com/HKDevLoops/Forgum/dev/install.sh' | bash -s -- --channel {channel_name} --headless -y"
         );
         let status = Command::new("bash")
             .arg("-c")
             .arg(cmd)
+            .stdin(std::process::Stdio::inherit())
+            .stdout(std::process::Stdio::inherit())
+            .stderr(std::process::Stdio::inherit())
             .status()
             .map_err(|e| format!("Failed to invoke bash upgrade: {e}"))?;
 
@@ -470,36 +516,79 @@ pub fn execute_package_manager_action(
                 pm.update_command()
             };
 
-            let parts: Vec<&str> = cmd_str.split_whitespace().collect();
-            if parts.is_empty() {
-                return Err("No command specified".to_string());
-            }
+            if check_only {
+                // Read-only check: run in subshell and capture output for reporting
+                #[cfg(windows)]
+                let mut cmd = {
+                    let mut c = Command::new("cmd");
+                    c.args(["/c", cmd_str]);
+                    c
+                };
+                #[cfg(not(windows))]
+                let mut cmd = {
+                    let mut c = Command::new("sh");
+                    c.args(["-c", cmd_str]);
+                    c
+                };
 
-            let program = parts[0];
-            let args = &parts[1..];
-
-            match Command::new(program).args(args).output() {
-                Ok(output) => {
-                    let stdout = String::from_utf8_lossy(&output.stdout).to_string();
-                    let stderr = String::from_utf8_lossy(&output.stderr).to_string();
-                    if output.status.success() {
-                        let combined = if stderr.is_empty() {
-                            stdout
+                match cmd.output() {
+                    Ok(output) => {
+                        let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+                        let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+                        if output.status.success() {
+                            let combined = if stderr.is_empty() {
+                                stdout
+                            } else {
+                                format!("{stdout}\n{stderr}")
+                            };
+                            Ok(combined.trim().to_string())
                         } else {
-                            format!("{stdout}\n{stderr}")
-                        };
-                        Ok(combined.trim().to_string())
-                    } else {
-                        Err(format!(
-                            "Command '{}' exited with status {}:\n{}\n{}",
-                            cmd_str,
-                            output.status,
-                            stdout.trim(),
-                            stderr.trim()
-                        ))
+                            Err(format!(
+                                "Update check command '{cmd_str}' exited with status {}:\n{}\n{}",
+                                output.status,
+                                stdout.trim(),
+                                stderr.trim()
+                            ))
+                        }
                     }
+                    Err(e) => Err(format!("Failed to execute update check '{cmd_str}': {e}")),
                 }
-                Err(e) => Err(format!("Failed to execute '{}': {}", cmd_str, e)),
+            } else {
+                // Interactive installation/upgrade: MUST inherit stdio for sudo passwords and [y/N] prompts!
+                println!("\x1b[36m>> Running package manager upgrade: {cmd_str}\x1b[0m\n");
+                #[cfg(windows)]
+                let mut cmd = {
+                    let mut c = Command::new("cmd");
+                    c.args(["/c", cmd_str]);
+                    c
+                };
+                #[cfg(not(windows))]
+                let mut cmd = {
+                    let mut c = Command::new("sh");
+                    c.args(["-c", cmd_str]);
+                    c
+                };
+
+                cmd.stdin(std::process::Stdio::inherit())
+                    .stdout(std::process::Stdio::inherit())
+                    .stderr(std::process::Stdio::inherit());
+
+                match cmd.status() {
+                    Ok(status) => {
+                        if status.success() {
+                            Ok(format!(
+                                "Package manager upgrade (`{cmd_str}`) completed successfully."
+                            ))
+                        } else {
+                            Err(format!(
+                                "Package manager upgrade (`{cmd_str}`) exited with status {status}."
+                            ))
+                        }
+                    }
+                    Err(e) => Err(format!(
+                        "Failed to spawn package manager upgrade command '{cmd_str}': {e}"
+                    )),
+                }
             }
         }
     }
@@ -1023,6 +1112,46 @@ pub fn detect_git_status(target_channel: ReleaseChannel) -> Option<GitRepoStatus
         return None;
     };
     if !out.status.success() || String::from_utf8_lossy(&out.stdout).trim() != "true" {
+        return None;
+    }
+
+    // Verify that the detected git repository is actually the Forgum project
+    // (prevents accidentally hijacking arbitrary user git repos when running `forgum update` elsewhere)
+    let toplevel = Command::new("git")
+        .args(["rev-parse", "--show-toplevel"])
+        .output()
+        .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
+        .unwrap_or_default();
+
+    if toplevel.is_empty() {
+        return None;
+    }
+
+    let toplevel_path = Path::new(&toplevel);
+    let is_forgum_repo = {
+        let root_cargo = toplevel_path.join("Cargo.toml");
+        let engine_dir = toplevel_path.join("crates").join("engine");
+        let cows_dir = toplevel_path.join("data").join("Cows");
+
+        let has_structure = (engine_dir.is_dir() && cows_dir.is_dir())
+            || (root_cargo.exists()
+                && std::fs::read_to_string(&root_cargo)
+                    .map(|c| c.contains("forgum"))
+                    .unwrap_or(false));
+
+        if has_structure {
+            true
+        } else {
+            let remote_url = Command::new("git")
+                .args(["config", "--get", "remote.origin.url"])
+                .output()
+                .map(|o| String::from_utf8_lossy(&o.stdout).to_lowercase())
+                .unwrap_or_default();
+            remote_url.contains("forgum")
+        }
+    };
+
+    if !is_forgum_repo {
         return None;
     }
 

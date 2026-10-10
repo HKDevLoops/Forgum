@@ -186,6 +186,29 @@ This document records the complete, immutable register of all bugs, defects, reg
 
 ---
 
+### BUG-015: Package Manager and Self-Updater Compound Command and Interactive Stdio Failure
+- **Severity:** High / Blocker
+- **Component:** `crates/platform/src/package_manager.rs`, `crates/engine/src/runner.rs`, `install.sh`
+- **Symptom:**
+  1. Running `forgum update` on openSUSE or systems with package managers hung indefinitely or errored out with `sudo: a terminal is required to read the password` and failed to display interactive confirmation prompts (`[y/N]`).
+  2. Compound update commands with shell operators (such as `sudo apt update && sudo apt install ...`) failed with `Unable to locate package &&` due to raw whitespace splitting bypassing shell invocation.
+  3. Running `forgum update` inside arbitrary user repositories mistakenly detected any git workspace as the Forgum codebase, attempting to fetch origin and build via cargo in unrelated projects.
+  4. On openSUSE/SUSE, `rpm -q forgum` was tested under Dnf first, misclassifying openSUSE installations as Dnf instead of Zypper when Dnf was present.
+  5. Standalone binary update did not pass the directory of the running binary to installer scripts, causing updates to land in alternate directories and leaving stale binaries in PATH.
+- **Root Cause:**
+  `execute_package_manager_action` captured stdio without TTY inheritance, did not execute via platform shell, and `detect_git_status` did not verify whether the repository was actually Forgum.
+- **Permanent Resolution:**
+  1. Implemented shell execution (`sh -c` / `cmd /c`) and `Stdio::inherit()` for interactive package manager upgrades and standalone updates, enabling interactive sudo prompts and live progress output.
+  2. Hardened `detect_git_status` to verify repository root structure (`Cargo.toml` with `forgum`, `crates/engine`, `data/Cows`) and remote URL.
+  3. Added SUSE/openSUSE distribution detection prioritizing Zypper over Dnf.
+  4. Updated `execute_standalone_update` to export `FORGUM_INSTALL_DIR` / `-InstallDir` pointing to the exact active binary's parent directory.
+  5. Added permission pre-flight advisory informing users when the active binary's directory requires root privileges (`sudo forgum update`).
+  6. Updated `install.sh` to explicitly specify `--package forgum-engine --bin forgum` across all cargo build invocations.
+- **Verification:** Verified via workspace check, test suites, and manual CLI validation.
+- **Invariant Enforced:** Mandate F (Multi-Channel Packaging & Zero-Vendor Lock-in) and Mandate L (Universal Shell Integration).
+
+---
+
 ## 3. Verification & Quality Gate Record
 
 Every fix in this ledger has been validated against the following automated gates:
