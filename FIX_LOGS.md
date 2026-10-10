@@ -153,16 +153,36 @@ This document records the complete, immutable register of all bugs, defects, reg
 
 ---
 
-### BUG-012: TUI Modal Lock-in & Keybinding Rigidity
-- **Severity:** Medium
-- **Component:** `crates/tui/src/app.rs`, `crates/tui/src/keybindings.rs`
-- **Symptom:** TUI required switching between modal states (`NORMAL`, `INSERT`, `SEARCH`), confusing users accustomed to modeless tools like LazyGit and Zellij. Keybindings were hardcoded and could not be remapped in `config.toml`.
-- **Root Cause:** Legacy state machine used modal flags rather than modeless spatial navigation and direct action triggers.
+### BUG-013: Small Pane (30x30 down to 15x15) Viewport Clipping & Distortion
+- **Severity:** Medium / Visual Aesthetics
+- **Component:** `crates/platform/src/terminal.rs`, `crates/engine/src/cow.rs`, `crates/engine/src/render.rs`, `crates/engine/src/split_scroll.rs`
+- **Symptom:** In small terminal multiplexer panes (e.g. 30x30 or down to 15x15 character cells in tmux, Zellij, i3, Sway), mascots and speech bubbles clipped, overflowed, or were pushed offscreen due to high minimum boundaries (`cols < 55`, `MIN_COLS = 20`, `MIN_ROWS = 6`), wide bubble borders, and large mascot indentation.
+- **Root Cause:** Aspect ratio classification clamped panes below 55 columns into fixed degenerate modes without fine-grained scaling factors. Mascots retained extensive leading indent and blank lines, pushing content past the right margin.
 - **Permanent Resolution:**
-  1. Converted TUI to 100% modeless operation (spatial `h`/`j`/`k`/`l`, `gg`, `G`, `Ctrl+d`, `Ctrl+u`, `gt`, `gT`, `ZZ`, `ZQ`, `?`).
-  2. Added `[keybindings]` table in `config.toml` via `KeybindingsConfig`, allowing user-definable custom shortcut remapping.
-- **Verification:** 10 comprehensive unit tests in `crates/tui/src/app.rs`.
-- **Invariant Enforced:** Mandate Q (TUI Modeless Direct Navigation Standard).
+  1. Added `viewport_scaling_ratio(cols, rows)` and `viewport_scaling_percentage(cols, rows)` computing exact aspect ratio percentages down to 15x15.
+  2. Introduced `is_micro_pane` ($\le 35\times 35$) and `is_nano_pane` ($\le 20\times 20$) queries on `AspectRatioFormat` and `TerminalCapabilities`.
+  3. Implemented `strip_common_leading_indent` to shift mascot artwork flush-left in small viewports.
+  4. Implemented `compact_mascot_for_viewport` to compress repeating empty lines in nano-panes.
+  5. Compacted speech bubble rendering to a single pointer line in micro-panes.
+  6. Lowered render bounds to `MIN_COLS = 15` and `MIN_ROWS = 4`.
+  7. Preserved prompt headroom and bounded column invariants in `split_scroll.rs` while adapting gracefully to micro dimensions.
+- **Verification:** Unit tests in `crates/platform/src/terminal.rs`, `crates/engine/src/split_scroll.rs`, and empirical tests across target viewports.
+- **Invariant Enforced:** Mandate I (Nature Math & <100MB RAM), Mandate L (Universal Shell Integration).
+
+---
+
+### BUG-014: Elimination of Archaic Placeholders (`foo`/`bar`) in Favor of Modern Meme Lexicon & Subcommands
+- **Severity:** Low / Code Quality & Culture
+- **Component:** `crates/engine/tests/no_input_reads.rs`, `crates/engine/src/cli.rs`, `crates/engine/src/runner.rs`, `crates/engine/src/completions.rs`, `MEME_LEXICON.md`
+- **Symptom:** Legacy test stubs contained dated 1970s placeholder keywords (`foo`, `bar`) inconsistent with Forgum's modern developer culture and bovine energy.
+- **Root Cause:** Legacy test functions in `no_input_reads.rs` utilized `foo` and `bar` as placeholder function names.
+- **Permanent Resolution:**
+  1. Researched 2024–2026 internet and developer culture meme lexicons; authored `MEME_LEXICON.md` containing 100 curated keywords across Dev Culture, Kinematics, Scenery, Small Panes, and Terminal Aesthetics.
+  2. Excised `foo()` and `bar()` from `no_input_reads.rs`, replacing them with `gigachad_moo()` and `sigma_grind()`.
+  3. Added first-class meme subcommands: `forgum moo`, `forgum vibe`, `forgum touch-grass`, `forgum chad`, `forgum zoomies`, `forgum yeet`, and `forgum moonwalk`.
+  4. Wired shell completions for all meme subcommands across Fish, PowerShell, Yash, Ion, Xonsh, Tcsh.
+- **Verification:** `cargo test -p forgum-engine --test no_input_reads`, `cargo test -p forgum-engine --test cli_completeness`, and manual CLI invocations.
+- **Invariant Enforced:** Mandate H (Unified Keyword strictly `forgum`), Codebase Quality & Meme Culture Alignment.
 
 ---
 

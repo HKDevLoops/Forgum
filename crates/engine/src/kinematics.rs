@@ -251,15 +251,19 @@ impl AnatomicalSegments {
         tail_pos: Option<(usize, usize)>,
         leg_row: usize,
     ) -> Self {
-        let (w, h) = ascii_dimensions(text);
+        let (mascot_canvas_width, mascot_canvas_height) = ascii_dimensions(text);
         let head_row = eye_pos
-            .map(|(r, _)| r)
+            .map(|(landmark_row, _)| landmark_row)
             .unwrap_or(cow_start.saturating_add(1));
-        let head_col = eye_pos.map(|(_, c)| c).unwrap_or(w / 4);
+        let head_col = eye_pos
+            .map(|(_, landmark_col)| landmark_col)
+            .unwrap_or(mascot_canvas_width / 4);
         let chest_row = mouth_pos
-            .map(|(r, _)| r.saturating_add(1))
+            .map(|(landmark_row, _)| landmark_row.saturating_add(1))
             .unwrap_or_else(|| (head_row + leg_row) / 2);
-        let tail_col = tail_pos.map(|(_, c)| c).unwrap_or(w.saturating_sub(4));
+        let tail_col = tail_pos
+            .map(|(_, landmark_col)| landmark_col)
+            .unwrap_or(mascot_canvas_width.saturating_sub(4));
         let faces_right = head_col > tail_col;
 
         Self {
@@ -270,8 +274,8 @@ impl AnatomicalSegments {
             chest_row,
             leg_row,
             tail_col,
-            width: w,
-            height: h,
+            width: mascot_canvas_width,
+            height: mascot_canvas_height,
             faces_right,
         }
     }
@@ -389,31 +393,33 @@ impl CartoonRig {
             .height
             .saturating_sub(self.segments.cow_start)
             .max(1);
-        let rel_v = (animal_y as f32 / total_animal_h as f32).clamp(0.0, 1.0);
+        let vertical_height_ratio = (animal_y as f32 / total_animal_h as f32).clamp(0.0, 1.0);
 
         let mut dx_accum = 0.0f32;
         let mut dy_accum = 0.0f32;
         let alt_glyph = None;
-        let mut lum = 1.0f32;
+        let mut luminance_boost = 1.0f32;
 
         if is_walking {
             // Principle 1: Squash and Stretch
             let cycle = stride * std::f32::consts::TAU * 2.0;
             let bounce_wave = cycle.sin();
 
-            // Height squash/stretch: grounded at feet (rel_v=1.0 has dy=0, rel_v=0.0 has max dy)
-            let vert_scale = (1.0 - rel_v) * self.squash_amplitude;
+            // Height squash/stretch: grounded at feet (vertical_height_ratio=1.0 has dy=0, vertical_height_ratio=0.0 has max dy)
+            let vert_scale = (1.0 - vertical_height_ratio) * self.squash_amplitude;
             dy_accum += bounce_wave * vert_scale;
 
             // Width stretch: flanks expand when squashing down
             let x_from_center = (x as f32 - self.segments.width as f32 * 0.5)
                 / (self.segments.width as f32 * 0.5).max(1.0);
-            let horiz_stretch = -bounce_wave * 0.45 * x_from_center * (1.0 - rel_v * 0.5);
+            let horiz_stretch =
+                -bounce_wave * 0.45 * x_from_center * (1.0 - vertical_height_ratio * 0.5);
             dx_accum += horiz_stretch;
 
             // Principle 2: Spine Secondary Action Wave
             let spine_phase = self.elapsed * 4.0 - animal_y as f32 * 0.35;
-            let spine_wave = spine_phase.sin() * self.spine_amplitude * (1.0 - rel_v * 0.4);
+            let spine_wave =
+                spine_phase.sin() * self.spine_amplitude * (1.0 - vertical_height_ratio * 0.4);
             dx_accum += spine_wave;
 
             // Principle 3: Cranial Zone (Head Bobbing)
@@ -446,15 +452,15 @@ impl CartoonRig {
             let float_bob = (time * (wave_freq * 0.8) + (x as f32 * 0.15)).cos() * 0.4;
             dy_accum += float_bob;
 
-            lum = 1.0 + (undulation.abs() * 0.25);
+            luminance_boost = 1.0 + (undulation.abs() * 0.25);
         } else {
             // Breathing / Idle Keep-Alive:
             let breath_phase = time * 2.2;
             let is_chest = y >= self.segments.head_row && y <= self.segments.leg_row;
             if is_chest {
                 let chest_swell = breath_phase.sin() * 0.4;
-                dx_accum += chest_swell * (1.0 - rel_v * 0.5);
-                lum = 1.0 + (breath_phase.sin() * 0.15);
+                dx_accum += chest_swell * (1.0 - vertical_height_ratio * 0.5);
+                luminance_boost = 1.0 + (breath_phase.sin() * 0.15);
             }
         }
 
@@ -462,7 +468,7 @@ impl CartoonRig {
             dx: dx_accum.round() as i32,
             dy: dy_accum.round() as i32,
             alt_glyph,
-            luminance_mult: lum,
+            luminance_mult: luminance_boost,
         }
     }
 }

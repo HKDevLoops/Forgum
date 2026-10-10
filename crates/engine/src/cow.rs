@@ -597,6 +597,83 @@ pub fn detect_cow_eyes(cow_text: &str, cow_start_line: usize) -> Vec<(usize, usi
     eyes
 }
 
+/// Strip common leading whitespace across all non-blank lines of mascot art,
+/// shifting the animal flush to column 0 to maximize horizontal room in small panes.
+#[must_use]
+pub fn strip_common_leading_indent(text: &str) -> String {
+    let lines: Vec<&str> = text.lines().collect();
+    let min_indent = lines
+        .iter()
+        .filter(|l| !l.trim().is_empty())
+        .map(|l| l.chars().take_while(|c| *c == ' ').count())
+        .min()
+        .unwrap_or(0);
+
+    if min_indent == 0 {
+        return text.to_string();
+    }
+
+    lines
+        .iter()
+        .map(|l| {
+            if l.len() >= min_indent && l.chars().take(min_indent).all(|c| c == ' ') {
+                &l[min_indent..]
+            } else {
+                l.trim_start()
+            }
+        })
+        .collect::<Vec<&str>>()
+        .join("\n")
+}
+
+/// Compact a mascot's ASCII art to fit comfortably and look aesthetically pleasing
+/// in small terminal panes (e.g. 30x30, 20x20, down to 15x15).
+#[must_use]
+pub fn compact_mascot_for_viewport(
+    cow_text: &str,
+    target_width: usize,
+    target_height: usize,
+) -> String {
+    let unindented = strip_common_leading_indent(cow_text);
+    if target_width > 35 && target_height > 25 {
+        return unindented;
+    }
+
+    let lines: Vec<&str> = unindented.lines().collect();
+    let cur_width = lines
+        .iter()
+        .map(|l| str_display_width(l))
+        .max()
+        .unwrap_or(0);
+
+    // If already fitting within target_width, return unindented art
+    if cur_width <= target_width {
+        return unindented;
+    }
+
+    // For nano-panes (width <= 18, e.g. 15x15): compact long ASCII spans like "____" or "----"
+    let mut compacted_lines = Vec::with_capacity(lines.len());
+    for line in lines {
+        if str_display_width(line) <= target_width {
+            compacted_lines.push(line.to_string());
+        } else {
+            let mut s = line.to_string();
+            while s.contains("____") && str_display_width(&s) > target_width {
+                s = s.replacen("____", "__", 1);
+            }
+            while s.contains("----") && str_display_width(&s) > target_width {
+                s = s.replacen("----", "--", 1);
+            }
+            while s.contains("    ") && str_display_width(&s) > target_width {
+                s = s.replacen("    ", "  ", 1);
+            }
+            compacted_lines.push(s);
+        }
+    }
+
+    compacted_lines.join("\n")
+}
+
 /// The default cow with placeholders expanded.
 pub fn default_cow_expanded(eyes: &str, tongue: &str, thoughts: &str) -> String {
     expand_cow(DEFAULT_COW, eyes, tongue, thoughts)
@@ -606,11 +683,20 @@ pub fn default_cow_expanded(eyes: &str, tongue: &str, thoughts: &str) -> String 
 ///
 /// Returns the combined (bubble + cow) text ready for rendering.
 pub fn compose_scene_with_mode(cow_text: &str, bubble_text: &str, is_thought: bool) -> String {
+    let (term_w, term_h) = forgum_platform::terminal_size();
+    let is_small_pane = term_w <= 35 || term_h <= 30;
+
+    let adapted_cow = if is_small_pane {
+        compact_mascot_for_viewport(cow_text, term_w as usize, term_h as usize)
+    } else {
+        cow_text.to_string()
+    };
+
     if bubble_text.is_empty() {
-        return cow_text.to_string();
+        return adapted_cow;
     }
 
-    let cow_lines: Vec<&str> = cow_text.lines().collect();
+    let cow_lines: Vec<&str> = adapted_cow.lines().collect();
     let cow_width = cow_lines
         .iter()
         .map(|l| str_display_width(l))
@@ -618,19 +704,33 @@ pub fn compose_scene_with_mode(cow_text: &str, bubble_text: &str, is_thought: bo
         .unwrap_or(0)
         .max(2);
 
-    let (term_w, _) = forgum_platform::terminal_size();
-    let term_max = (term_w as usize).saturating_sub(6).max(8);
+    let term_max = if is_small_pane {
+        (term_w as usize).saturating_sub(2).max(6)
+    } else {
+        (term_w as usize).saturating_sub(6).max(8)
+    };
+
+    // In nano-panes (15x15 or small height), compact bubble text if long to preserve mascot headroom
+    let effective_bubble_text = if term_w <= 18 && bubble_text.len() > 12 {
+        let truncated: String = bubble_text.chars().take(9).collect();
+        format!("{truncated}...")
+    } else if term_h <= 18 && bubble_text.len() > 24 {
+        let truncated: String = bubble_text.chars().take(20).collect();
+        format!("{truncated}...")
+    } else {
+        bubble_text.to_string()
+    };
 
     let bubble = if is_thought {
-        wrap_thought_bubble(bubble_text, cow_width.min(term_max))
+        wrap_thought_bubble(&effective_bubble_text, cow_width.min(term_max))
     } else {
-        wrap_bubble(bubble_text, cow_width.min(term_max))
+        wrap_bubble(&effective_bubble_text, cow_width.min(term_max))
     };
 
     let bubble_w = bubble.lines().next().map(str_display_width).unwrap_or(0);
 
     // Detect creature head / eyes landmark column for intelligent anchor alignment
-    let eyes = detect_cow_eyes(cow_text, 0);
+    let eyes = detect_cow_eyes(&adapted_cow, 0);
     let head_x = if let Some(&(_, eye_col)) = eyes.first() {
         eye_col
     } else {
@@ -640,29 +740,36 @@ pub fn compose_scene_with_mode(cow_text: &str, bubble_text: &str, is_thought: bo
                 !l.trim().is_empty() && l.trim() != "o" && l.trim() != "o " && l.trim() != "\\"
             })
             .and_then(|l| l.find(|c: char| !c.is_whitespace()))
-            .unwrap_or(4)
+            .unwrap_or(2)
     };
 
-    let mut result = String::with_capacity(bubble.len() + cow_text.len() + 64);
+    let mut result = String::with_capacity(bubble.len() + adapted_cow.len() + 64);
     result.push_str(&bubble);
     result.push('\n');
 
     if is_thought {
-        // The thought bubble must strictly have exactly THREE circles below it.
-        // bubble_anchor is clamped to the bottom border of the bubble:
-        let bubble_anchor = head_x.clamp(2, bubble_w.saturating_sub(3).max(2));
-        let p1 = bubble_anchor;
-        let p2 = ((bubble_anchor as f32 * 0.60 + head_x as f32 * 0.40).round() as usize).max(1);
-        let p3 = ((bubble_anchor as f32 * 0.20 + head_x as f32 * 0.80).round() as usize).max(1);
-
-        for indent in [p1, p2, p3] {
-            for _ in 0..indent {
+        let bubble_anchor = head_x.clamp(1, bubble_w.saturating_sub(2).max(1));
+        if is_small_pane {
+            // Micro-pane: single thought bubble pointer circle to preserve vertical space
+            for _ in 0..bubble_anchor {
                 result.push(' ');
             }
             result.push_str("o \n");
+        } else {
+            // Standard pane: three circles
+            let p1 = bubble_anchor;
+            let p2 = ((bubble_anchor as f32 * 0.60 + head_x as f32 * 0.40).round() as usize).max(1);
+            let p3 = ((bubble_anchor as f32 * 0.20 + head_x as f32 * 0.80).round() as usize).max(1);
+
+            for indent in [p1, p2, p3] {
+                for _ in 0..indent {
+                    result.push(' ');
+                }
+                result.push_str("o \n");
+            }
         }
 
-        // Skip leading standalone thought pointer lines so total circles are strictly three
+        // Skip leading standalone thought pointer lines so total circles are clean
         let leading_blanks = cow_lines
             .iter()
             .take(3)
@@ -685,25 +792,34 @@ pub fn compose_scene_with_mode(cow_text: &str, bubble_text: &str, is_thought: bo
 
         if !has_pointer && !cow_lines.is_empty() {
             let bubble_anchor = head_x.clamp(1, bubble_w.saturating_sub(2).max(1));
-            let p1_indent = bubble_anchor;
-            let p2_indent =
-                ((bubble_anchor as f32 * 0.40 + head_x as f32 * 0.60).round() as usize).max(1);
+            if is_small_pane {
+                // Micro-pane: single pointer stroke
+                for _ in 0..bubble_anchor {
+                    result.push(' ');
+                }
+                result.push('\\');
+                result.push('\n');
+            } else {
+                let p1_indent = bubble_anchor;
+                let p2_indent =
+                    ((bubble_anchor as f32 * 0.40 + head_x as f32 * 0.60).round() as usize).max(1);
 
-            for _ in 0..p1_indent {
-                result.push(' ');
-            }
-            result.push('\\');
-            result.push('\n');
+                for _ in 0..p1_indent {
+                    result.push(' ');
+                }
+                result.push('\\');
+                result.push('\n');
 
-            for _ in 0..p2_indent {
-                result.push(' ');
+                for _ in 0..p2_indent {
+                    result.push(' ');
+                }
+                result.push('\\');
+                result.push('\n');
             }
-            result.push('\\');
-            result.push('\n');
         }
     }
 
-    result.push_str(cow_text);
+    result.push_str(&adapted_cow);
     result
 }
 
@@ -1651,5 +1767,32 @@ mod tests {
         let (expanded_pl, marks_pl) = expand_cow_with_landmarks(template_pl, "@@", " ", "\\");
         assert!(expanded_pl.contains("@@"));
         assert_eq!(marks_pl.len(), 2);
+    }
+
+    #[test]
+    fn strip_common_leading_indent_shifts_mascot_left() {
+        let indented = "        ^__^\n        (oo)\\_______\n            (__)\\";
+        let unindented = strip_common_leading_indent(indented);
+        assert!(unindented.starts_with("^__^"));
+        assert!(unindented.contains("\n(oo)\\_______"));
+        assert!(unindented.contains("\n    (__)\\"));
+    }
+
+    #[test]
+    fn compact_mascot_for_viewport_fits_in_15x15_nano_pane() {
+        let raw_cow = r#"        $thoughts   ^__^
+         $thoughts  (oo)\_______
+            (__)\       )\/\
+                ||----w |
+                ||     ||"#;
+        let expanded = expand_cow(raw_cow, "oo", "U", "\\");
+        let compacted = compact_mascot_for_viewport(&expanded, 15, 15);
+        for line in compacted.lines() {
+            assert!(
+                str_display_width(line) <= 15,
+                "Line '{line}' exceeds 15 columns for nano-pane (len={})",
+                str_display_width(line)
+            );
+        }
     }
 }

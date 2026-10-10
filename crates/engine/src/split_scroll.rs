@@ -58,7 +58,7 @@ pub fn compute_reserved_dimensions_with_cols(
         (rc as usize).min(total_cols).max(20)
     } else if bounded_split && mascot_cols > 0 {
         // Clamped to mascot width + padding when bounded split is desired
-        (mascot_cols + 4).min(total_cols).max(20)
+        (mascot_cols + 4).clamp(20, total_cols.max(20))
     } else {
         total_cols.max(20)
     };
@@ -108,5 +108,19 @@ mod tests {
         let (cols, rows) = compute_reserved_dimensions(80, 24, 10, &config);
         assert_eq!(cols, 80);
         assert_eq!(rows, 10);
+    }
+
+    #[test]
+    fn compute_reserved_dimensions_small_panes_30x30_and_15x15() {
+        let config = SceneConfig::default();
+        // 30x30 pane
+        let (cols30, rows30) = compute_reserved_dimensions(30, 30, 8, &config);
+        assert_eq!(cols30, 30);
+        assert_eq!(rows30, 8);
+
+        // 15x15 micro pane with 6 mascot lines (minimum boundary clamped to 20 columns)
+        let (cols15, rows15) = compute_reserved_dimensions(15, 15, 6, &config);
+        assert_eq!(cols15, 20);
+        assert_eq!(rows15, 6);
     }
 }

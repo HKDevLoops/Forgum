@@ -65,10 +65,10 @@ fn render_module_does_not_use_stdin_directly() {
 
 #[test]
 fn strip_comments_actually_strips() {
-    let s = "fn foo() { /* comment */ let x = 1; } // trailing\nfn bar() {}";
+    let s = "fn gigachad_moo() { /* comment */ let x = 1; } // trailing\nfn sigma_grind() {}";
     let stripped = strip_comments(s);
     assert!(!stripped.contains("comment"));
     assert!(!stripped.contains("trailing"));
-    assert!(stripped.contains("fn foo()"));
-    assert!(stripped.contains("fn bar()"));
+    assert!(stripped.contains("fn gigachad_moo()"));
+    assert!(stripped.contains("fn sigma_grind()"));
 }

@@ -18,18 +18,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`--speech` (`-S`) Dialogue Override**:
   - Added `--speech` CLI flag that explicitly overrides `--think` and subcommands, guaranteeing speech bubbles (`< >`) without requiring config edits.
   - Added unit and CLI builder tests in `crates/engine/tests/cli_args.rs`.
+- **Small Pane (30x30 down to 15x15) Scaling & Compaction (`crates/platform/src/terminal.rs`, `crates/engine/src/cow.rs`)**:
+  - Implemented fine-grained viewport scaling ratios and percentages adapting seamlessly from standard terminals down to 15x15 micro-panes.
+  - Added `strip_common_leading_indent` and `compact_mascot_for_viewport` to prevent mascot clipping in small multiplexer splits.
+  - Compacted speech bubbles to single pointer lines in micro-panes and lowered render floor to `MIN_COLS = 15`, `MIN_ROWS = 4`.
+- **Modern Meme Lexicon & Subcommands (`crates/engine/src/cli.rs`, `MEME_LEXICON.md`)**:
+  - Authored [`MEME_LEXICON.md`](file:///Z:/Projects/Forgum/MEME_LEXICON.md) curating 100 modern internet and developer culture meme keywords.
+  - Replaced archaic placeholders (`foo`, `bar`) across tests with expressive bovine keywords (`gigachad_moo`, `sigma_grind`).
+  - Added first-class meme subcommands: `forgum moo`, `forgum vibe`, `forgum touch-grass`, `forgum chad`, `forgum zoomies`, `forgum yeet`, and `forgum moonwalk` with shell autocompletions.
 - **Zero CP437 Mojibake Invariant 8**:
   - Added `zero_cp437_mojibake_symbols_invariance` in `crates/engine/tests/adversarial_invariants.rs` asserting zero occurrences of `Γÿ` or characters in the CP437 collision range `U+2600..=U+263F` across all 132 mascot files and `animations.json`.
 - **Autonomous Release Standard Operating Procedure**:
   - Added [`RELEASE_SOP.md`](file:///Z:/Projects/Forgum/RELEASE_SOP.md) defining the canonical 7-stage flight checklist for cutting releases.
   - Added [`WORKFLOW_PLAYBOOK.md`](file:///Z:/Projects/Forgum/WORKFLOW_PLAYBOOK.md) documenting step-by-step repeatable standard workflows for repeating engineering tasks.
-  - Added [`FIX_LOGS.md`](file:///Z:/Projects/Forgum/FIX_LOGS.md) detailing defect resolutions from BUG-001 through BUG-012.
+  - Added [`FIX_LOGS.md`](file:///Z:/Projects/Forgum/FIX_LOGS.md) detailing defect resolutions from BUG-001 through BUG-014.
 
 ### Changed
 - **Codebase Formatting**:
   - Standardized formatting across all workspace crates and tests using `cargo fmt`.
 
 ### Fixed
+- **Small Pane Multiplexer Clipping**:
+  - Resolved mascot overflow and speech bubble breakage in small terminal panes down to 15x15 character cells.
 - **CP437 Encoding Glyph Glitches**:
   - Replaced legacy collision symbols (☀, ☂, ☎, ☺) with safe universal ASCII / high-range Unicode glyphs across installation scripts, cow files, and TUI widgets.
 - **Large Mascot Viewport Bounds & Occlusion**:

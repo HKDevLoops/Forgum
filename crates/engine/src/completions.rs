@@ -496,6 +496,13 @@ complete -c forgum -n '__fish_forgum_no_subcommand' -a 'theme' -d 'Manage mascot
 complete -c forgum -n '__fish_forgum_no_subcommand' -a 'demo' -d 'Run showcase demo'
 complete -c forgum -n '__fish_forgum_no_subcommand' -a 'showcase' -d 'Run 60-second demo reel'
 complete -c forgum -n '__fish_forgum_no_subcommand' -a 'say' -d 'Run command and display output in speech bubble'
+complete -c forgum -n '__fish_forgum_no_subcommand' -a 'moo' -d 'Quick joyful bovine vocalization'
+complete -c forgum -n '__fish_forgum_no_subcommand' -a 'vibe' -d 'Mascot chilling and vibing peacefully in terminal'
+complete -c forgum -n '__fish_forgum_no_subcommand' -a 'touch-grass' -d 'Encourage yourself to touch grass with a pasture walk'
+complete -c forgum -n '__fish_forgum_no_subcommand' -a 'chad' -d 'Unleash Gigachad terminal energy'
+complete -c forgum -n '__fish_forgum_no_subcommand' -a 'zoomies' -d 'Mascot running wildly with unstoppable zoomies'
+complete -c forgum -n '__fish_forgum_no_subcommand' -a 'yeet' -d 'Yeet the mascot into orbit with high velocity'
+complete -c forgum -n '__fish_forgum_no_subcommand' -a 'moonwalk' -d 'Perform legendary reverse-glide moonwalk'
 
 # Rich option value completions with descriptions
 complete -c forgum -l effect -s e -d 'Animation effect' -x -a 'moonwalk	"Legendary reverse-glide moonwalk with sliding hooves" walk	"Natural bovine walking animation" breathe	"Gentle idle breathing animation" float	"Drifting levitation animation" fly	"Flying creature animation" talk	"Conversational jaw animation" sway	"Swaying pendulum animation" pulse	"Pulsing scale animation" glitch	"Digital cyberpunk glitch animation" particles	"Ambient particle emitter animation" dissolve	"Dissolve and materialize animation" animal_natural	"Unique per-creature natural kinetic animation"'
@@ -809,7 +816,8 @@ Register-ArgumentCompleter -Native -CommandName 'forgum' -ScriptBlock {
     $subcommands = @(
         'render', 'think', 'fortune', 'options', 'completions', 'init', 'tui',
         'status', 'doctor', 'checkhealth', 'config', 'logs', 'herd', 'theme',
-        'demo', 'showcase', 'say'
+        'demo', 'showcase', 'say', 'moo', 'vibe', 'touch-grass', 'chad',
+        'zoomies', 'yeet', 'moonwalk'
     )
 
     if ($wordToComplete -like '-*') {
@@ -1222,7 +1230,8 @@ def _forgum_completer(command):
         "--accel", "--shell-attach-mode", "--aspect", "--aspect-mode",
         "render", "think", "fortune", "options", "list", "completions",
         "init", "tui", "status", "doctor", "checkhealth", "config", "logs",
-        "herd", "theme", "demo", "showcase", "say", "help"
+        "herd", "theme", "demo", "showcase", "say", "help",
+        "moo", "vibe", "touch-grass", "chad", "zoomies", "yeet", "moonwalk"
     }
     return opts
 "#
@@ -1247,7 +1256,7 @@ complete forgum \
   'c/--aspect-mode/(preset dynamic auto)/' \
   'n/completions/(bash zsh fish pwsh powershell elvish nushell carapace xonsh tcsh ksh ion oil yash list)/' \
   'n/init/(bash zsh fish pwsh powershell elvish nushell carapace xonsh tcsh ksh ion oil yash cmd list)/' \
-  'p/1/(render think fortune options list completions init tui status doctor checkhealth config logs herd theme demo showcase say install uninstall update help)/'
+  'p/1/(render think fortune options list completions init tui status doctor checkhealth config logs herd theme demo showcase say install uninstall update help moo vibe touch-grass chad zoomies yeet moonwalk)/' \
 "#.to_string()
 }
 
@@ -1257,7 +1266,7 @@ fn generate_ksh_completions(cmd: &mut clap::Command) -> String {
 
 fn generate_ion_completions() -> String {
     r#"# Ion completion for Forgum
-complete -c forgum -a "render think fortune list completions init tui status doctor checkhealth config logs herd theme demo showcase say install uninstall update help"
+complete -c forgum -a "render think fortune list completions init tui status doctor checkhealth config logs herd theme demo showcase say install uninstall update help moo vibe touch-grass chad zoomies yeet moonwalk"
 complete -c forgum -l animal -a "apt armadillo atat bearface beavis.zen bees bill-the-cat bud-frogs bunny cat cat2 catfence charizardvice charlie claw-arm corgi cower cowfee cthulhu-mini daemon default docker-whale doge dolphin dragon dragon-and-cow duck ebi_furai elephant elephant-in-snake elephant2 eyes fat-banana fat-cow fence flaming-sheep fox ghost ghostbusters glados goat goat2 golden-eagle hamster happy-whale hedgehog hellokitty hippie hiya hypno jellyfish jesus king kiss kitten kitty knight koala kosh lamb lamb2 lobster lollerskates luke-koala mech-and-cow meow minotaur mona-lisa moofasa mooghidjirah moojira moose mule mutilated nyan octopus owl panther pawn periodic-table personality-sphere pig pterodactyl pufferfish queen radioactive-kitty ram ren rhino rook rooster satanic sauron seahorse seahorse-big sheep shikato shrug skeleton sloth small smiling-octopus snoopy snoopyhouse snoopysleep spidercow squid squirrel stegosaurus stimpy supermilker surgery telebears three-eyes tiger tortoise turkey turtle tux tux-big tweety-bird unipony vader viper vulpix walrus weeping-angel whale wizard wolf world yoda random"
 complete -c forgum -l cow -a "apt armadillo atat bearface beavis.zen bees bill-the-cat bud-frogs bunny cat cat2 catfence charizardvice charlie claw-arm corgi cower cowfee cthulhu-mini daemon default docker-whale doge dolphin dragon dragon-and-cow duck ebi_furai elephant elephant-in-snake elephant2 eyes fat-banana fat-cow fence flaming-sheep fox ghost ghostbusters glados goat goat2 golden-eagle hamster happy-whale hedgehog hellokitty hippie hiya hypno jellyfish jesus king kiss kitten kitty knight koala kosh lamb lamb2 lobster lollerskates luke-koala mech-and-cow meow minotaur mona-lisa moofasa mooghidjirah moojira moose mule mutilated nyan octopus owl panther pawn periodic-table personality-sphere pig pterodactyl pufferfish queen radioactive-kitty ram ren rhino rook rooster satanic sauron seahorse seahorse-big sheep shikato shrug skeleton sloth small smiling-octopus snoopy snoopyhouse snoopysleep spidercow squid squirrel stegosaurus stimpy supermilker surgery telebears three-eyes tiger tortoise turkey turtle tux tux-big tweety-bird unipony vader viper vulpix walrus weeping-angel whale wizard wolf world yoda random"
 complete -c forgum -l effect -a "moonwalk walk breathe float fly talk sway pulse glitch particles dissolve animal_natural"
@@ -1282,7 +1291,7 @@ fn generate_yash_completions() -> String {
     r#"# Yash completion for Forgum
 function completion/forgum {
     typeset -a commands
-    commands=(render think fortune list completions init tui status doctor checkhealth config logs herd theme demo showcase say install uninstall update help)
+    commands=(render think fortune list completions init tui status doctor checkhealth config logs herd theme demo showcase say install uninstall update help moo vibe touch-grass chad zoomies yeet moonwalk)
     complete -c commands
 }
 "#

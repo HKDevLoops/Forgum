@@ -298,23 +298,23 @@ pub fn run() -> ExitCode {
             if let Some(pal) = &args.palette {
                 combined_render_args.push(format!("--palette {pal}"));
             }
-            if let Some(ti) = args.thought_interval {
-                combined_render_args.push(format!("--thought-interval {ti}"));
+            if let Some(interval_seconds) = args.thought_interval {
+                combined_render_args.push(format!("--thought-interval {interval_seconds}"));
             }
             if args.split_scroll {
                 combined_render_args.push("--split-scroll".to_string());
             }
-            if let Some(rr) = args.reserve_rows {
-                combined_render_args.push(format!("--reserve-rows {rr}"));
+            if let Some(reserved_rows_count) = args.reserve_rows {
+                combined_render_args.push(format!("--reserve-rows {reserved_rows_count}"));
             }
-            if let Some(rc) = args.reserve_cols {
-                combined_render_args.push(format!("--reserve-cols {rc}"));
+            if let Some(reserved_cols_count) = args.reserve_cols {
+                combined_render_args.push(format!("--reserve-cols {reserved_cols_count}"));
             }
-            if let Some(sr) = args.split_ratio {
-                combined_render_args.push(format!("--split-ratio {sr}"));
+            if let Some(split_ratio_val) = args.split_ratio {
+                combined_render_args.push(format!("--split-ratio {split_ratio_val}"));
             }
-            if let Some(eff) = &args.effect {
-                combined_render_args.push(format!("--effect {eff}"));
+            if let Some(effect_name) = &args.effect {
+                combined_render_args.push(format!("--effect {effect_name}"));
             }
             if let Some(eyes) = &args.eyes {
                 combined_render_args.push(format!("--eyes {eyes}"));
@@ -325,14 +325,14 @@ pub fn run() -> ExitCode {
             if let Some(aspect) = &args.aspect {
                 combined_render_args.push(format!("--aspect {aspect}"));
             }
-            if let Some(am) = &args.aspect_mode {
-                combined_render_args.push(format!("--aspect-mode {am}"));
+            if let Some(aspect_mode_val) = &args.aspect_mode {
+                combined_render_args.push(format!("--aspect-mode {aspect_mode_val}"));
             }
             if let Some(accel) = &args.accel {
                 combined_render_args.push(format!("--accel {accel}"));
             }
-            if let Some(sm) = &args.split_mode {
-                combined_render_args.push(format!("--split-mode {sm}"));
+            if let Some(split_mode_val) = &args.split_mode {
+                combined_render_args.push(format!("--split-mode {split_mode_val}"));
             }
             if args.reduce_motion {
                 combined_render_args.push("--reduce-motion".to_string());
@@ -343,11 +343,11 @@ pub fn run() -> ExitCode {
             if args.banner {
                 combined_render_args.push("--banner".to_string());
             }
-            if let Some(d) = args.duration {
-                combined_render_args.push(format!("--duration {d}"));
+            if let Some(duration_seconds) = args.duration {
+                combined_render_args.push(format!("--duration {duration_seconds}"));
             }
-            if let Some(fps) = args.fps {
-                combined_render_args.push(format!("--fps {fps}"));
+            if let Some(target_fps) = args.fps {
+                combined_render_args.push(format!("--fps {target_fps}"));
             }
             combined_render_args.extend(render_args);
 
@@ -1898,6 +1898,140 @@ pub fn run() -> ExitCode {
                     }
                 }
             }
+        }
+
+        // ── moo ──────────────────────────────────────────────────────
+        Some(cli::Commands::Moo { message }) => {
+            let mut custom_args = args.clone();
+            if custom_args.cow.is_none() {
+                custom_args.cow = Some("default".to_string());
+            }
+            if custom_args.text.is_none() {
+                custom_args.text = Some(if message.is_empty() {
+                    "Moo! 🐮".to_string()
+                } else {
+                    message.join(" ")
+                });
+            }
+            render_subcommand(custom_args)
+        }
+
+        // ── vibe ─────────────────────────────────────────────────────
+        Some(cli::Commands::Vibe { message }) => {
+            let mut custom_args = args.clone();
+            if custom_args.effect.is_none() {
+                custom_args.effect = Some("pulse".to_string());
+            }
+            if custom_args.environment.is_none() {
+                custom_args.environment = Some("pasture".to_string());
+            }
+            if custom_args.text.is_none() {
+                custom_args.text = Some(if message.is_empty() {
+                    "Vibing in the terminal ✨".to_string()
+                } else {
+                    message.join(" ")
+                });
+            }
+            render_subcommand(custom_args)
+        }
+
+        // ── touch-grass ──────────────────────────────────────────────
+        Some(cli::Commands::TouchGrass { message }) => {
+            let mut custom_args = args.clone();
+            if custom_args.environment.is_none() {
+                custom_args.environment = Some("pasture".to_string());
+            }
+            if custom_args.animation.is_none() {
+                custom_args.animation = Some("walk".to_string());
+            }
+            if custom_args.road.is_none() {
+                custom_args.road = Some("dirt".to_string());
+            }
+            if custom_args.text.is_none() {
+                custom_args.text = Some(if message.is_empty() {
+                    "Go outside and touch some grass! 🌱".to_string()
+                } else {
+                    message.join(" ")
+                });
+            }
+            render_subcommand(custom_args)
+        }
+
+        // ── chad ─────────────────────────────────────────────────────
+        Some(cli::Commands::Chad { message }) => {
+            let mut custom_args = args.clone();
+            if custom_args.eyes.is_none() {
+                custom_args.eyes = Some("==".to_string());
+            }
+            if custom_args.tongue.is_none() {
+                custom_args.tongue = Some("U".to_string());
+            }
+            if custom_args.effect.is_none() {
+                custom_args.effect = Some("pulse".to_string());
+            }
+            if custom_args.text.is_none() {
+                custom_args.text = Some(if message.is_empty() {
+                    "Average Terminal Enjoyer 🗿".to_string()
+                } else {
+                    message.join(" ")
+                });
+            }
+            render_subcommand(custom_args)
+        }
+
+        // ── zoomies ──────────────────────────────────────────────────
+        Some(cli::Commands::Zoomies { message }) => {
+            let mut custom_args = args.clone();
+            if custom_args.animation.is_none() {
+                custom_args.animation = Some("walk".to_string());
+            }
+            if custom_args.fps.is_none() {
+                custom_args.fps = Some(30);
+            }
+            if custom_args.duration.is_none() {
+                custom_args.duration = Some(5);
+            }
+            if custom_args.text.is_none() {
+                custom_args.text = Some(if message.is_empty() {
+                    "ZOOMIES! 💨⚡".to_string()
+                } else {
+                    message.join(" ")
+                });
+            }
+            render_subcommand(custom_args)
+        }
+
+        // ── yeet ─────────────────────────────────────────────────────
+        Some(cli::Commands::Yeet { message }) => {
+            let mut custom_args = args.clone();
+            if custom_args.effect.is_none() {
+                custom_args.effect = Some("float".to_string());
+            }
+            if custom_args.fps.is_none() {
+                custom_args.fps = Some(24);
+            }
+            if custom_args.text.is_none() {
+                custom_args.text = Some(if message.is_empty() {
+                    "YEET! 🚀🌌".to_string()
+                } else {
+                    message.join(" ")
+                });
+            }
+            render_subcommand(custom_args)
+        }
+
+        // ── moonwalk ─────────────────────────────────────────────────
+        Some(cli::Commands::Moonwalk { message }) => {
+            let mut custom_args = args.clone();
+            custom_args.effect = Some("moonwalk".to_string());
+            if custom_args.text.is_none() {
+                custom_args.text = Some(if message.is_empty() {
+                    "Hee-Hee! 🕺🎩".to_string()
+                } else {
+                    message.join(" ")
+                });
+            }
+            render_subcommand(custom_args)
         }
 
         // ── render (default) ────────────────────────────────────────

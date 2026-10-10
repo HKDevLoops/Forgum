@@ -614,7 +614,7 @@ impl AspectRatioFormat {
     /// `visual_ar = cols / (2.0 * rows)`.
     #[must_use]
     pub fn from_dimensions(cols: u16, rows: u16) -> Self {
-        if cols < 55 || rows == 0 {
+        if cols < 15 || rows < 4 {
             return Self::NarrowVertical;
         }
 
@@ -633,6 +633,38 @@ impl AspectRatioFormat {
         } else {
             Self::NarrowVertical
         }
+    }
+
+    /// Calculate the viewport scaling ratio relative to a standard 80x24 terminal (1.0 = 100%).
+    /// Supports small desktop panes (e.g. 30x30, 20x20, down to 15x15) and panoramic viewports.
+    /// Clamped between 0.15 (15%) and 2.50 (250%).
+    #[must_use]
+    pub fn viewport_scaling_ratio(cols: u16, rows: u16) -> f32 {
+        if cols == 0 || rows == 0 {
+            return 0.15;
+        }
+        let area_ratio = ((cols as f32) * (rows as f32)) / (80.0 * 24.0);
+        let linear_ratio =
+            ((cols as f32 / 80.0).min(rows as f32 / 24.0) * 0.5) + (area_ratio.sqrt() * 0.5);
+        linear_ratio.clamp(0.15, 2.50)
+    }
+
+    /// Calculate the viewport scaling percentage relative to standard terminal (15% .. 250%).
+    #[must_use]
+    pub fn viewport_scaling_percentage(cols: u16, rows: u16) -> u32 {
+        (Self::viewport_scaling_ratio(cols, rows) * 100.0).round() as u32
+    }
+
+    /// True if the terminal is a micro-pane (<= 35 cols or <= 30 rows).
+    #[must_use]
+    pub fn is_micro_pane(cols: u16, rows: u16) -> bool {
+        cols <= 35 || rows <= 30
+    }
+
+    /// True if the terminal is a nano-pane (<= 20 cols or <= 16 rows, down to 15x15).
+    #[must_use]
+    pub fn is_nano_pane(cols: u16, rows: u16) -> bool {
+        cols <= 20 || rows <= 16
     }
 
     /// Human-readable display label.
@@ -745,6 +777,30 @@ impl TerminalCapabilities {
     #[must_use]
     pub fn aspect_ratio(&self) -> AspectRatioFormat {
         AspectRatioFormat::from_dimensions(self.width, self.height)
+    }
+
+    /// Scaling ratio of this terminal viewport relative to standard 80x24 (1.0 = 100%).
+    #[must_use]
+    pub fn scaling_ratio(&self) -> f32 {
+        AspectRatioFormat::viewport_scaling_ratio(self.width, self.height)
+    }
+
+    /// Scaling percentage of this terminal viewport (e.g. 100% for 80x24, 40% for 30x30, 20% for 15x15).
+    #[must_use]
+    pub fn scaling_percentage(&self) -> u32 {
+        AspectRatioFormat::viewport_scaling_percentage(self.width, self.height)
+    }
+
+    /// True if the terminal is a micro-pane (<= 35 cols or <= 30 rows).
+    #[must_use]
+    pub fn is_micro_pane(&self) -> bool {
+        AspectRatioFormat::is_micro_pane(self.width, self.height)
+    }
+
+    /// True if the terminal is a nano-pane (<= 20 cols or <= 16 rows, down to 15x15).
+    #[must_use]
+    pub fn is_nano_pane(&self) -> bool {
+        AspectRatioFormat::is_nano_pane(self.width, self.height)
     }
 
     /// Force a fresh probe (overrides the cached result for this call only).
@@ -1465,5 +1521,29 @@ mod tests {
         assert_eq!(narrow_ratio, AspectRatioFormat::NarrowVertical);
         assert_eq!(narrow_w.as_str(), "narrow");
         assert_eq!(narrow_w.display_name(), "Narrow / Vertical");
+
+        // Micro-pane and Nano-pane scaling verification (30x30 down to 15x15)
+        assert!(AspectRatioFormat::is_micro_pane(30, 30));
+        assert!(AspectRatioFormat::is_micro_pane(20, 20));
+        assert!(AspectRatioFormat::is_nano_pane(15, 15));
+        assert!(AspectRatioFormat::is_nano_pane(20, 16));
+
+        // Scaling percentages
+        let scale_80x24 = AspectRatioFormat::viewport_scaling_percentage(80, 24);
+        assert_eq!(scale_80x24, 100);
+
+        let scale_30x30 = AspectRatioFormat::viewport_scaling_percentage(30, 30);
+        assert!((40..=80).contains(&scale_30x30));
+
+        let scale_15x15 = AspectRatioFormat::viewport_scaling_percentage(15, 15);
+        assert!((15..=40).contains(&scale_15x15));
+
+        // 30x15 small split pane: visual AR = 30 / (2 * 15) = 1.0 (Square)
+        let square_30x15 = AspectRatioFormat::from_dimensions(30, 15);
+        assert_eq!(square_30x15, AspectRatioFormat::Square1x1);
+
+        // 15x15 micro pane: visual AR = 15 / (2 * 15) = 0.5 (NarrowVertical)
+        let micro_15x15 = AspectRatioFormat::from_dimensions(15, 15);
+        assert_eq!(micro_15x15, AspectRatioFormat::NarrowVertical);
     }
 }

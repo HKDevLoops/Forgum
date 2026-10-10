@@ -77,8 +77,16 @@ impl Cell {
 
     #[must_use]
     pub const fn new(ch: char, fg: Color) -> Self {
+        let code = ch as u32;
+        // Security: Neutralize control characters (C0: 0x00..0x1F, DEL: 0x7F, C1: 0x80..0x9F)
+        // to prevent terminal escape sequence injection and malicious cursor/clipboard manipulation.
+        let sanitized_glyph = if code < 0x20 || code == 0x7F || (code >= 0x80 && code <= 0x9F) {
+            ' '
+        } else {
+            ch
+        };
         Self {
-            ch,
+            ch: sanitized_glyph,
             fg,
             bg: Color::TRANSPARENT,
             alpha: 255,

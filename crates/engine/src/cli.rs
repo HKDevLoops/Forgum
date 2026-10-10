@@ -748,6 +748,60 @@ pub enum Commands {
         #[arg(short = 'i', long)]
         invert: bool,
     },
+    /// Moo with the mascot! Quick joyful bovine vocalization.
+    #[command(alias = "bovine", alias = "cowsay")]
+    Moo {
+        /// Optional speech text to moo (defaults to 'Moo! 🐮').
+        #[arg(num_args = 0..)]
+        message: Vec<String>,
+    },
+    /// Mascot chilling and vibing peacefully in the terminal.
+    #[command(alias = "chill", alias = "zen")]
+    Vibe {
+        /// Optional speech text while vibing (defaults to 'Vibing in the terminal ✨').
+        #[arg(num_args = 0..)]
+        message: Vec<String>,
+    },
+    /// Encourage yourself to touch grass with a walk across lush pastures.
+    #[command(
+        name = "touch-grass",
+        alias = "touch_grass",
+        alias = "grass",
+        alias = "outside"
+    )]
+    TouchGrass {
+        /// Optional speech text (defaults to 'Go outside and touch some grass! 🌱').
+        #[arg(num_args = 0..)]
+        message: Vec<String>,
+    },
+    /// Unleash Gigachad terminal energy.
+    #[command(alias = "gigachad", alias = "based")]
+    Chad {
+        /// Optional speech text (defaults to 'Average Terminal Enjoyer 🗿').
+        #[arg(num_args = 0..)]
+        message: Vec<String>,
+    },
+    /// Mascot running wildly with unstoppable zoomies!
+    #[command(alias = "speed", alias = "fast", alias = "hyper")]
+    Zoomies {
+        /// Optional speech text (defaults to 'ZOOMIES! 💨⚡').
+        #[arg(num_args = 0..)]
+        message: Vec<String>,
+    },
+    /// Yeet the mascot into orbit with high velocity!
+    #[command(alias = "launch", alias = "ascend")]
+    Yeet {
+        /// Optional speech text (defaults to 'YEET! 🚀🌌').
+        #[arg(num_args = 0..)]
+        message: Vec<String>,
+    },
+    /// Perform the legendary reverse-glide moonwalk with sliding hooves.
+    #[command(alias = "hee-hee", alias = "smooth-criminal")]
+    Moonwalk {
+        /// Optional speech text (defaults to 'Hee-Hee! 🕺🎩').
+        #[arg(num_args = 0..)]
+        message: Vec<String>,
+    },
 }
 
 #[derive(Debug, Subcommand)]
@@ -991,6 +1045,13 @@ pub enum Command {
     Sweep,
     Stop,
     Image,
+    Moo,
+    Vibe,
+    TouchGrass,
+    Chad,
+    Zoomies,
+    Yeet,
+    Moonwalk,
     Unknown(String),
 }
 
@@ -1181,6 +1242,62 @@ pub fn parse_args(argv: Vec<String>) -> Result<(Args, Option<Commands>), CliErro
         Some(Commands::Image { .. }) => (Command::Image, None, false),
         Some(Commands::Config { .. }) => (Command::Config, None, false),
         Some(Commands::Tmux { .. }) => (Command::Tmux, None, false),
+        Some(Commands::Moo { message }) => {
+            let txt = if message.is_empty() {
+                Some("Moo! 🐮".to_string())
+            } else {
+                Some(message.join(" "))
+            };
+            (Command::Moo, txt, false)
+        }
+        Some(Commands::Vibe { message }) => {
+            let txt = if message.is_empty() {
+                Some("Vibing in the terminal ✨".to_string())
+            } else {
+                Some(message.join(" "))
+            };
+            (Command::Vibe, txt, false)
+        }
+        Some(Commands::TouchGrass { message }) => {
+            let txt = if message.is_empty() {
+                Some("Go outside and touch some grass! 🌱".to_string())
+            } else {
+                Some(message.join(" "))
+            };
+            (Command::TouchGrass, txt, false)
+        }
+        Some(Commands::Chad { message }) => {
+            let txt = if message.is_empty() {
+                Some("Average Terminal Enjoyer 🗿".to_string())
+            } else {
+                Some(message.join(" "))
+            };
+            (Command::Chad, txt, false)
+        }
+        Some(Commands::Zoomies { message }) => {
+            let txt = if message.is_empty() {
+                Some("ZOOMIES! 💨⚡".to_string())
+            } else {
+                Some(message.join(" "))
+            };
+            (Command::Zoomies, txt, false)
+        }
+        Some(Commands::Yeet { message }) => {
+            let txt = if message.is_empty() {
+                Some("YEET! 🚀🌌".to_string())
+            } else {
+                Some(message.join(" "))
+            };
+            (Command::Yeet, txt, false)
+        }
+        Some(Commands::Moonwalk { message }) => {
+            let txt = if message.is_empty() {
+                Some("Hee-Hee! 🕺🎩".to_string())
+            } else {
+                Some(message.join(" "))
+            };
+            (Command::Moonwalk, txt, false)
+        }
     };
 
     let max_len = match &cli.command {

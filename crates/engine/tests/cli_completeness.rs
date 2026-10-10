@@ -29,6 +29,13 @@ fn cli_commands_include_documented_set() {
         "rps-battle",
         "sweep",
         "image",
+        "moo",
+        "vibe",
+        "touch-grass",
+        "chad",
+        "zoomies",
+        "yeet",
+        "moonwalk",
     ];
 
     // Developer-only subcommands that exist in the enum but are not part of
@@ -76,5 +83,12 @@ fn all_command_variants() -> Vec<&'static str> {
         "rps-battle",
         "sweep",
         "image",
+        "moo",
+        "vibe",
+        "touch-grass",
+        "chad",
+        "zoomies",
+        "yeet",
+        "moonwalk",
     ]
 }

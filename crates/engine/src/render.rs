@@ -33,9 +33,10 @@ use crate::protocol::SceneConfig;
 #[allow(dead_code)]
 const MAX_SLEEP: Duration = Duration::from_millis(50);
 
-/// Minimum terminal dimensions for animation. Below this, we print static text.
-const MIN_COLS: u16 = 20;
-const MIN_ROWS: u16 = 5;
+/// Minimum terminal dimensions for animation. Below this (or in pipes), we print static text.
+/// Supports micro-panes (30x30, 20x20) and nano-panes down to at least 15x15.
+const MIN_COLS: u16 = 15;
+const MIN_ROWS: u16 = 4;
 
 /// Number of rows reserved for the prompt (never render here). Used for
 /// computing overlay bounds in background mode.
