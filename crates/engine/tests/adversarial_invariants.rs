@@ -306,8 +306,7 @@ fn zero_cp437_mojibake_symbols_invariance() {
 
     let anim_path = cows_dir.join("animations.json");
     if anim_path.exists() {
-        let anim_content = std::fs::read_to_string(&anim_path)
-            .expect("read animations.json");
+        let anim_content = std::fs::read_to_string(&anim_path).expect("read animations.json");
         assert!(!anim_content.contains("Γÿ"));
         for ch in anim_content.chars() {
             let code = ch as u32;

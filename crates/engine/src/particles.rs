@@ -61,7 +61,8 @@ pub struct ParticlePool {
 }
 
 /// Donut-style 12-tier luminance gradient for ultra-smooth phosphor decay and luminance ramp.
-const DONUT_LUMINANCE_RAMP: [char; 12] = ['.', ',', '-', '~', ':', ';', '=', '!', '*', '#', '$', '@'];
+const DONUT_LUMINANCE_RAMP: [char; 12] =
+    ['.', ',', '-', '~', ':', ';', '=', '!', '*', '#', '$', '@'];
 
 /// Maps a particle glyph based on its base character and normalized life ratio (0.0 to 1.0).
 /// Preserves base character during active life, with Donut/CMatrix-style phosphor decay in late life.

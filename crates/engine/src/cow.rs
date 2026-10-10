@@ -627,11 +627,7 @@ pub fn compose_scene_with_mode(cow_text: &str, bubble_text: &str, is_thought: bo
         wrap_bubble(bubble_text, cow_width.min(term_max))
     };
 
-    let bubble_w = bubble
-        .lines()
-        .next()
-        .map(str_display_width)
-        .unwrap_or(0);
+    let bubble_w = bubble.lines().next().map(str_display_width).unwrap_or(0);
 
     // Detect creature head / eyes landmark column for intelligent anchor alignment
     let eyes = detect_cow_eyes(cow_text, 0);
@@ -640,7 +636,9 @@ pub fn compose_scene_with_mode(cow_text: &str, bubble_text: &str, is_thought: bo
     } else {
         cow_lines
             .iter()
-            .find(|l| !l.trim().is_empty() && l.trim() != "o" && l.trim() != "o " && l.trim() != "\\")
+            .find(|l| {
+                !l.trim().is_empty() && l.trim() != "o" && l.trim() != "o " && l.trim() != "\\"
+            })
             .and_then(|l| l.find(|c: char| !c.is_whitespace()))
             .unwrap_or(4)
     };

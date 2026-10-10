@@ -292,8 +292,7 @@ pub fn parse_hex_color(s: &str) -> Option<(u8, u8, u8)> {
 }
 
 static CACHED_THEME: std::sync::OnceLock<TerminalTheme> = std::sync::OnceLock::new();
-static ACTIVE_CONTRAST_MODE: std::sync::RwLock<Option<ContrastMode>> =
-    std::sync::RwLock::new(None);
+static ACTIVE_CONTRAST_MODE: std::sync::RwLock<Option<ContrastMode>> = std::sync::RwLock::new(None);
 
 /// Set the globally active background contrast mode override.
 pub fn set_active_contrast_mode(mode: ContrastMode) {

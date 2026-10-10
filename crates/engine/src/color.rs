@@ -253,8 +253,9 @@ pub fn natural_creature_color(
     ch: char,
 ) -> (u8, u8, u8) {
     let theme = forgum_platform::detect_terminal_theme();
-    let (r, g, b) =
-        forgum_platform::biome::natural_creature_color_adaptive(palette, rel_x, rel_y, ch, theme.bg);
+    let (r, g, b) = forgum_platform::biome::natural_creature_color_adaptive(
+        palette, rel_x, rel_y, ch, theme.bg,
+    );
     theme
         .contrast_mode
         .adjust_rgb_adaptive(r, g, b, theme.is_light)

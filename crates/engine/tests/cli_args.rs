@@ -375,7 +375,13 @@ fn speech_flag_overrides_think_flag() {
 
 #[test]
 fn speech_flag_overrides_think_subcommand() {
-    let (a, _) = parse_args(argv(&["forgum-engine", "think", "--speech", "Spoken thought"])).unwrap();
+    let (a, _) = parse_args(argv(&[
+        "forgum-engine",
+        "think",
+        "--speech",
+        "Spoken thought",
+    ]))
+    .unwrap();
     assert!(a.speech);
     let cfg = build_scene_config(&a).unwrap();
     assert!(!cfg.think);

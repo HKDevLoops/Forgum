@@ -2765,7 +2765,11 @@ fn print_colored_scene(
     let mut out = std::io::stdout().lock();
     use std::io::Write;
     let (term_w, _) = forgum_platform::terminal_size();
-    let max_col = if term_w > 0 { term_w as usize } else { usize::MAX };
+    let max_col = if term_w > 0 {
+        term_w as usize
+    } else {
+        usize::MAX
+    };
 
     for (y, line) in composed.lines().enumerate() {
         let is_bubble_line = y < cow_start_line;
@@ -3099,9 +3103,9 @@ fn render_subcommand_with_scene(
     mut scene: forgum_engine::protocol::SceneConfig,
 ) -> ExitCode {
     if let Some(ref cm_str) = scene.contrast_mode {
-        forgum_platform::set_active_contrast_mode(
-            forgum_platform::ContrastMode::from_str_loose(cm_str),
-        );
+        forgum_platform::set_active_contrast_mode(forgum_platform::ContrastMode::from_str_loose(
+            cm_str,
+        ));
     }
 
     if args.internal_daemon_runner {

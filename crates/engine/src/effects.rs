@@ -920,7 +920,8 @@ impl Effect for FloatEffect {
             let has_amp = self.amp.float > 0.0 || self.amp.sway > 0.0;
             let is_multisegment = self.rig.segments.height > 3;
             let def_row = if has_amp && is_multisegment {
-                self.rig.deform_cell(0, y, time, 0.0, false, true, self.is_aquatic)
+                self.rig
+                    .deform_cell(0, y, time, 0.0, false, true, self.is_aquatic)
             } else {
                 crate::kinematics::CellDeformation {
                     dx: 0,
@@ -941,7 +942,8 @@ impl Effect for FloatEffect {
             let mut x = 0usize;
             while let Some(mut ch) = chars_iter.next() {
                 let def = if has_amp && is_multisegment {
-                    self.rig.deform_cell(x, y, time, 0.0, false, true, self.is_aquatic)
+                    self.rig
+                        .deform_cell(x, y, time, 0.0, false, true, self.is_aquatic)
                 } else {
                     crate::kinematics::CellDeformation {
                         dx: 0,
@@ -3190,8 +3192,10 @@ impl Effect for CompoundSignatureEffect {
                 let palette = color::parse_palette(&self.dna.particles.palette);
                 // Compute emitter position: origin around creature mouth/head tracked with mascot kinematics
                 let (off_x, off_y) = self.base_effect.emitter_offset();
-                let spawn_x = ((self.mouth_pos.1 as f32 + off_x).max(0.0)).min(cols.saturating_sub(1) as f32);
-                let spawn_y = ((self.mouth_pos.0 as f32 + off_y).max(0.0)).min(rows.saturating_sub(1) as f32);
+                let spawn_x =
+                    ((self.mouth_pos.1 as f32 + off_x).max(0.0)).min(cols.saturating_sub(1) as f32);
+                let spawn_y =
+                    ((self.mouth_pos.0 as f32 + off_y).max(0.0)).min(rows.saturating_sub(1) as f32);
                 spawn_for_type(
                     &mut self.pool,
                     self.dna.particles.r#type,

@@ -252,7 +252,9 @@ impl AnatomicalSegments {
         leg_row: usize,
     ) -> Self {
         let (w, h) = ascii_dimensions(text);
-        let head_row = eye_pos.map(|(r, _)| r).unwrap_or(cow_start.saturating_add(1));
+        let head_row = eye_pos
+            .map(|(r, _)| r)
+            .unwrap_or(cow_start.saturating_add(1));
         let head_col = eye_pos.map(|(_, c)| c).unwrap_or(w / 4);
         let chest_row = mouth_pos
             .map(|(r, _)| r.saturating_add(1))
@@ -382,7 +384,11 @@ impl CartoonRig {
         }
 
         let animal_y = y.saturating_sub(self.segments.cow_start);
-        let total_animal_h = self.segments.height.saturating_sub(self.segments.cow_start).max(1);
+        let total_animal_h = self
+            .segments
+            .height
+            .saturating_sub(self.segments.cow_start)
+            .max(1);
         let rel_v = (animal_y as f32 / total_animal_h as f32).clamp(0.0, 1.0);
 
         let mut dx_accum = 0.0f32;
@@ -412,7 +418,8 @@ impl CartoonRig {
 
             // Principle 3: Cranial Zone (Head Bobbing)
             if y <= self.segments.head_row.saturating_add(1) {
-                let head_bob = (cycle + std::f32::consts::FRAC_PI_2).cos() * self.head_bob_amplitude;
+                let head_bob =
+                    (cycle + std::f32::consts::FRAC_PI_2).cos() * self.head_bob_amplitude;
                 dy_accum += head_bob;
                 let head_nod = (cycle + std::f32::consts::FRAC_PI_4).sin() * 0.3;
                 dx_accum += head_nod;
@@ -565,7 +572,8 @@ mod tests {
     #[test]
     fn test_cartoon_rig_segment_detection_and_deformation() {
         let text = " ______\n< hello >\n ------\n   \\   ^__^\n       (oo)\\_______\n        (__)\\       )\\/\\\n            ||----w |\n            ||     ||";
-        let segs = AnatomicalSegments::detect(text, 3, Some((4, 8)), Some((5, 9)), Some((5, 20)), 7);
+        let segs =
+            AnatomicalSegments::detect(text, 3, Some((4, 8)), Some((5, 9)), Some((5, 20)), 7);
         assert_eq!(segs.cow_start, 3);
         assert_eq!(segs.head_row, 4);
         assert_eq!(segs.head_col, 8);

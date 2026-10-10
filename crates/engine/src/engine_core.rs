@@ -268,7 +268,11 @@ impl SimState {
             // The seabed is situated below the creature's swimming depth,
             // providing natural underwater depth.
             let min_seabed = self.cow_foot_y + 2;
-            self.fb.height.saturating_sub(2).max(min_seabed).min(max_road)
+            self.fb
+                .height
+                .saturating_sub(2)
+                .max(min_seabed)
+                .min(max_road)
         } else if self.cow_dna.habitat == crate::dna::Habitat::Aerial
             || matches!(
                 self.cow_dna.base,
@@ -278,7 +282,11 @@ impl SimState {
             )
         {
             // Flying/floating creatures soar in the upper atmosphere above tree canopies
-            self.fb.height.saturating_sub(3).max(self.cow_foot_y + 2).min(max_road)
+            self.fb
+                .height
+                .saturating_sub(3)
+                .max(self.cow_foot_y + 2)
+                .min(max_road)
         } else {
             // Ground creatures and stationary objects rest directly on the road surface
             (self.cow_foot_y + 1).min(max_road)
