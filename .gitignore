@@ -68,6 +68,7 @@ agent.md
 *.agent.md
 testsprite_tests/
 graphify-out/
+.planning/
 session*.md
 worklog*.md
 NOTES*.md
