@@ -802,6 +802,8 @@ pub enum Commands {
         #[arg(num_args = 0..)]
         message: Vec<String>,
     },
+    /// Print version and build information.
+    Version,
 }
 
 #[derive(Debug, Subcommand)]
@@ -1052,6 +1054,7 @@ pub enum Command {
     Zoomies,
     Yeet,
     Moonwalk,
+    Version,
     Unknown(String),
 }
 
@@ -1298,6 +1301,7 @@ pub fn parse_args(argv: Vec<String>) -> Result<(Args, Option<Commands>), CliErro
             };
             (Command::Moonwalk, txt, false)
         }
+        Some(Commands::Version) => (Command::Version, None, false),
     };
 
     let max_len = match &cli.command {
@@ -1359,7 +1363,13 @@ pub fn parse_args(argv: Vec<String>) -> Result<(Args, Option<Commands>), CliErro
 /// Precedence: CLI > --file > --config > defaults.
 pub fn build_scene_config(args: &Args) -> Result<SceneConfig, String> {
     let mut cfg = if let Some(path) = &args.config {
-        crate::config::read_config_file(path).map_err(|e| format!("--config: {e}"))?
+        match crate::config::read_config_file(path) {
+            Ok(c) => c,
+            Err(e) => {
+                eprintln!("[forgum] Warning: could not parse config file ({}): {e}. Falling back to default configuration.", path.display());
+                SceneConfig::default()
+            }
+        }
     } else {
         // Try auto-discovering config from platform default path.
         match forgum_platform::config_path() {
@@ -1369,7 +1379,16 @@ pub fn build_scene_config(args: &Args) -> Result<SceneConfig, String> {
     };
 
     if let Some(path) = &args.file {
-        let overlay = crate::config::read_config_file(path).map_err(|e| format!("--file: {e}"))?;
+        let overlay = match crate::config::read_config_file(path) {
+            Ok(o) => o,
+            Err(e) => {
+                eprintln!(
+                    "[forgum] Warning: could not parse scene overlay file ({}): {e}. Ignoring.",
+                    path.display()
+                );
+                SceneConfig::default()
+            }
+        };
         cfg = crate::config::merge(cfg, overlay);
     }
 

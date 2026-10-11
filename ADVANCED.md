@@ -10,8 +10,8 @@ reference below points at the **real** workspace code. Nothing here describes th
 
 - Binary name: `forgum` (accessed strictly and exclusively via `forgum`)
 - Real crates: `engine`, `platform`, `tui`
-- Config schema is **strict** (`#[serde(deny_unknown_fields)]`) — unknown
-  fields are rejected at parse time, so a new option must be added end-to-end.
+- Config schema is **resilient** (Mandate D) — unknown fields are gracefully
+  ignored for forward/backward compatibility, while recognized options are wired end-to-end.
 
 ---
 
@@ -56,8 +56,7 @@ Effects live in `crates/engine/src/effects.rs`:
 3. Add a golden frame test: render one frame and `assert!` the output bytes
    match an expected snapshot. Put it in the effects test module (~line 699).
 
-Because `deny_unknown_fields` is on `SceneConfig`, the `effect` field already
-accepts any string; you only need the factory registration to make a new value
+The `effect` field accepts any string; you only need the factory registration to make a new value
 actually do something.
 
 ---
@@ -90,18 +89,15 @@ Do **not** confuse engine `Shell` (`init.rs`) with platform `ShellKind`
 
 ## ⚙️ Adding a Config Key (The No-Orphan-Config Dance)
 
-Because `SceneConfig` uses `#[serde(deny_unknown_fields)]`, a new field must be
-wired through **every** layer or it is silently dropped/orphaned. The real flow
-(not the fictional `brain/19` flow) is:
+To add a new first-class configuration field, wire it cleanly through every layer:
 
 ### Step-by-step
 
-1. **Schema** — `crates/engine/src/protocol.rs`:
-   - Add the field to `SceneConfig` (struct ~line 15, after `color_mode`).
-   - Add a `default_<name>()` helper (see `default_color_mode` at line 91).
-   - Add the field to the `Default` impl (`protocol.rs:95`, the struct literal
-     at line 97).
-   - Keep `#[serde(deny_unknown_fields)]` at `protocol.rs:14`.
+1. **Schema** — `crates/platform/src/protocol.rs`:
+   - Add the field to `SceneConfig`.
+   - Add a `default_<name>()` helper if applicable.
+   - Add the field to the `Default` impl.
+   - Maintain resilient deserialization (Mandate D) so unknown fields parse gracefully.
 
 2. **Merge sentinel** — `crates/engine/src/config.rs`:
    - Add a sentinel in `merge()` (`config.rs:42` / function at line 45) so the

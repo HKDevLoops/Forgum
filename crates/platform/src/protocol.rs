@@ -4,14 +4,13 @@
 //! Fields are merged with this precedence: argv > `--file` JSON > `--config`
 //! JSON > built-in defaults.
 //!
-//! Unknown fields are rejected (`deny_unknown_fields`) — extend the struct to add options.
+//! Unknown fields are gracefully ignored for backward/forward compatibility and resilient deserialization (Mandate D).
 
 use serde::{Deserialize, Serialize};
 
 /// The full scene description. Mirrors `default-config.json` plus per-call
 /// overrides from the CLI.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
 pub struct SceneConfig {
     /// Cow file basename (without `.cow`). Phase 0: only `"default"` works.
     #[serde(default = "default_cow")]
@@ -554,10 +553,17 @@ mod tests {
     }
 
     #[test]
-    fn unknown_fields_rejected() {
-        let json = r#"{"cow":"x","sneaky":"field"}"#;
+    fn unknown_fields_gracefully_ignored() {
+        let json =
+            r#"{"cow":"x","sneaky":"field","custom_user_extension":123,"contrast_mode":"vibrant"}"#;
         let result: Result<SceneConfig, _> = serde_json::from_str(json);
-        assert!(result.is_err());
+        assert!(
+            result.is_ok(),
+            "Expected unknown fields to be ignored gracefully"
+        );
+        let s = result.unwrap();
+        assert_eq!(s.cow, "x");
+        assert_eq!(s.contrast_mode.as_deref(), Some("vibrant"));
     }
 
     #[test]

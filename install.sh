@@ -597,7 +597,7 @@ if [ "$DOWNLOAD_OK" -eq 0 ]; then
   TMP="$(mktemp -d 2>/dev/null || mktemp -d -t 'forgum')"
   trap 'rm -rf "$TMP"' EXIT
 
-  if [ "$BUILD_FROM_SOURCE" -eq 0 ]; then
+  if [ "$BUILD_FROM_SOURCE" -eq 0 ] && [ "$CHANNEL" != "dev" ]; then
     if [ "$CHANNEL" = "alpha" ]; then
       CANDIDATE_URLS=(
         "https://github.com/${REPO}/releases/download/alpha/forgum-alpha-${TARGET_ARCH}-${TARGET_OS}.tar.gz"
@@ -605,23 +605,24 @@ if [ "$DOWNLOAD_OK" -eq 0 ]; then
         "https://github.com/${REPO}/releases/download/${TAG}/forgum-${TAG}-${TARGET_ARCH}-${TARGET_OS}.tar.gz"
         "https://github.com/${REPO}/releases/download/${TAG}/forgum-${TARGET_ARCH}-${TARGET_OS}.tar.gz"
         "https://github.com/${REPO}/releases/download/nightly/forgum-nightly-${TARGET_ARCH}-${TARGET_OS}.tar.gz"
-        "https://github.com/${REPO}/releases/latest/download/forgum-${TARGET_ARCH}-${TARGET_OS}.tar.gz"
       )
     elif [ "$CHANNEL" = "nightly" ]; then
       CANDIDATE_URLS=(
         "https://github.com/${REPO}/releases/download/nightly/forgum-nightly-${TARGET_ARCH}-${TARGET_OS}.tar.gz"
         "https://github.com/${REPO}/releases/download/${TAG}/forgum-${VERSION}-${TARGET_ARCH}-${TARGET_OS}.tar.gz"
         "https://github.com/${REPO}/releases/download/${TAG}/forgum-${TARGET_ARCH}-${TARGET_OS}.tar.gz"
-        "https://github.com/${REPO}/releases/latest/download/forgum-${TARGET_ARCH}-${TARGET_OS}.tar.gz"
       )
     else
       CANDIDATE_URLS=(
         "https://github.com/${REPO}/releases/download/${TAG}/forgum-${VERSION}-${TARGET_ARCH}-${TARGET_OS}.tar.gz"
         "https://github.com/${REPO}/releases/download/${TAG}/forgum-${TAG}-${TARGET_ARCH}-${TARGET_OS}.tar.gz"
         "https://github.com/${REPO}/releases/download/${TAG}/forgum-${TARGET_ARCH}-${TARGET_OS}.tar.gz"
-        "https://github.com/${REPO}/releases/download/nightly/forgum-nightly-${TARGET_ARCH}-${TARGET_OS}.tar.gz"
-        "https://github.com/${REPO}/releases/latest/download/forgum-${TARGET_ARCH}-${TARGET_OS}.tar.gz"
       )
+      if [ "$VERSION" = "latest" ]; then
+        CANDIDATE_URLS+=(
+          "https://github.com/${REPO}/releases/latest/download/forgum-${TARGET_ARCH}-${TARGET_OS}.tar.gz"
+        )
+      fi
     fi
 
     ARCHIVE=""
@@ -653,12 +654,18 @@ if [ "$DOWNLOAD_OK" -eq 0 ]; then
       if [ -n "$EXTRACTED" ]; then
         chmod +x "$EXTRACTED" 2>/dev/null || true
         if "$EXTRACTED" --version >/dev/null 2>&1; then
-          if [ -w "$INSTALL_DIR" ]; then
-            install -m 0755 "$EXTRACTED" "$BIN_PATH"
+          EXTRACTED_VER="$("$EXTRACTED" --version 2>/dev/null | awk '{print $2}' || true)"
+          if [ -n "$EXTRACTED_VER" ] && [ "$VERSION" != "latest" ] && [ "$EXTRACTED_VER" != "$VERSION" ]; then
+            echo -e "\033[33m>> Downloaded binary version ($EXTRACTED_VER) does not match requested target version ($VERSION). Falling back to source build...\033[0m"
+            DOWNLOAD_OK=0
           else
-            run_elevated install -m 0755 "$EXTRACTED" "$BIN_PATH"
+            if [ -w "$INSTALL_DIR" ]; then
+              install -m 0755 "$EXTRACTED" "$BIN_PATH"
+            else
+              run_elevated install -m 0755 "$EXTRACTED" "$BIN_PATH"
+            fi
+            echo -e "\033[32m>> Successfully installed prebuilt binary ($EXTRACTED_VER): $BIN_PATH\033[0m"
           fi
-          echo -e "\033[32m>> Successfully installed prebuilt binary: $BIN_PATH\033[0m"
         else
           echo -e "\033[33m>> Prebuilt binary incompatible with host C library (GLIBC/musl mismatch). Falling back to source build...\033[0m"
           DOWNLOAD_OK=0
@@ -680,12 +687,18 @@ if [ "$DOWNLOAD_OK" -eq 0 ]; then
     else
       echo -e "\033[36m>> Fetching latest source from https://github.com/${REPO}.git...\033[0m"
       BUILD_DIR="$TMP/src"
-      if git clone --depth 1 "https://github.com/${REPO}.git" "$BUILD_DIR" 2>/dev/null; then
+      CLONE_BRANCH=""
+      CARGO_BRANCH_ARG=""
+      if [ "$CHANNEL" = "dev" ]; then
+        CLONE_BRANCH="--branch dev"
+        CARGO_BRANCH_ARG="--branch dev"
+      fi
+      if git clone --depth 1 ${CLONE_BRANCH} "https://github.com/${REPO}.git" "$BUILD_DIR" 2>/dev/null; then
         cargo build --release --manifest-path "$BUILD_DIR/Cargo.toml" --package forgum-engine --bin forgum
         install -m 0755 "$BUILD_DIR/target/release/forgum" "$BIN_PATH"
       else
         echo -e "\033[36m>> Compiling via cargo install --git...\033[0m"
-        cargo install --git "https://github.com/${REPO}.git" --package forgum-engine --bin forgum --root "$TMP/cargo-bin" --force
+        cargo install --git "https://github.com/${REPO}.git" ${CARGO_BRANCH_ARG} --package forgum-engine --bin forgum --root "$TMP/cargo-bin" --force
         install -m 0755 "$TMP/cargo-bin/bin/forgum" "$BIN_PATH"
       fi
     fi

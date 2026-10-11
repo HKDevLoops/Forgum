@@ -2034,6 +2034,12 @@ pub fn run() -> ExitCode {
             render_subcommand(custom_args)
         }
 
+        // ── version ──────────────────────────────────────────────────
+        Some(cli::Commands::Version) => {
+            println!("forgum {}", env!("CARGO_PKG_VERSION"));
+            ExitCode::SUCCESS
+        }
+
         // ── render (default) ────────────────────────────────────────
         _ => render_subcommand(args),
     }

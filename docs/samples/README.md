@@ -4,13 +4,9 @@
 # ║   Ready-made scenes to get you started — copy, paste, and enjoy.       ║
 # ╚══════════════════════════════════════════════════════════════════════════╝
 
-These sample `SceneConfig` files validate against the **v0.0.3-beta** schema.
-The schema uses `#[serde(deny_unknown_fields)]`, so every key must be exactly
-one of the 12 known fields:
-
-`cow`, `text`, `effect`, `background`, `duration`, `fps`, `eyes`, `tongue`,
-`default_shell`, `auto_render_on_prompt`, `color_mode`, `shell_attach_mode`
-(valid `color_mode`: `rainbow` | `solid` | `none`; valid `shell_attach_mode`: `banner` | `split` | `reactive` | `manual`).
+These sample `SceneConfig` files validate against the **v0.0.4-beta** schema.
+The schema adheres to Mandate D (resilient deserialization), ensuring backward
+and forward compatibility across all versions.
 
 ---
 

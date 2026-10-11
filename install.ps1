@@ -273,17 +273,20 @@ if (-not $localInstalled) {
     } elseif ($Channel -eq 'nightly') {
         @(
             "https://github.com/$Repo/releases/download/nightly/forgum-nightly-$targetArch-pc-windows-msvc.zip",
-            "https://github.com/$Repo/releases/download/$Tag/$asset",
-            "https://github.com/$Repo/releases/latest/download/forgum-$targetArch-pc-windows-msvc.zip"
+            "https://github.com/$Repo/releases/download/$Tag/$asset"
         )
+    } elseif ($Channel -eq 'dev') {
+        @()
     } else {
-        @(
+        $urls = @(
             "https://github.com/$Repo/releases/download/$Tag/$asset",
             "https://github.com/$Repo/releases/download/$Tag/forgum-$Version-$targetArch-pc-windows-msvc.zip",
-            "https://github.com/$Repo/releases/download/$Tag/forgum-$Tag-$targetArch-pc-windows-msvc.zip",
-            "https://github.com/$Repo/releases/download/nightly/forgum-nightly-$targetArch-pc-windows-msvc.zip",
-            "https://github.com/$Repo/releases/latest/download/forgum-$targetArch-pc-windows-msvc.zip"
+            "https://github.com/$Repo/releases/download/$Tag/forgum-$Tag-$targetArch-pc-windows-msvc.zip"
         )
+        if ($Version -eq 'latest') {
+            $urls += "https://github.com/$Repo/releases/latest/download/forgum-$targetArch-pc-windows-msvc.zip"
+        }
+        $urls
     }
 
     $tmp = Join-Path ([System.IO.Path]::GetTempPath()) ("forgum-" + [guid]::NewGuid().ToString('N'))
@@ -292,6 +295,9 @@ if (-not $localInstalled) {
 
     $downloadOk = $false
     try {
+        if ($candidateUrls.Count -eq 0) {
+            throw "Dev channel or no prebuilt candidates specified."
+        }
         foreach ($candidate in $candidateUrls) {
             $candidateName = [System.IO.Path]::GetFileName($candidate)
             Write-Host ">> Checking prebuilt release archive: $candidateName..." -ForegroundColor Cyan
@@ -324,8 +330,13 @@ if (-not $localInstalled) {
             throw "forgum binary not found inside archive"
         }
 
+        $extractedVer = (& $extracted --version 2>$null) -replace '^forgum\s+', ''
+        if ($extractedVer -and ($Version -ne 'latest') -and ($extractedVer -ne $Version)) {
+            throw "Downloaded binary version ($extractedVer) does not match target version ($Version)."
+        }
+
         Copy-Item -LiteralPath $extracted -Destination $binPath -Force
-        Write-Host ">> Successfully installed prebuilt binary: $binPath" -ForegroundColor Green
+        Write-Host ">> Successfully installed prebuilt binary ($extractedVer): $binPath" -ForegroundColor Green
     } catch {
         if (Get-Command cargo -ErrorAction SilentlyContinue) {
             Write-Host ">> Release archive download unavailable. Compiling via Cargo..." -ForegroundColor Yellow
@@ -333,7 +344,8 @@ if (-not $localInstalled) {
                 cargo build --release -p forgum-engine --bin forgum
                 Copy-Item -LiteralPath 'target\release\forgum.exe' -Destination $binPath -Force
             } else {
-                cargo install --git "https://github.com/$Repo.git" --bin forgum --root (Join-Path $HOME '.local') --force
+                $branchArgs = if ($Channel -eq 'dev') { @('--branch', 'dev') } else { @() }
+                cargo install --git "https://github.com/$Repo.git" @branchArgs --bin forgum --root (Join-Path $HOME '.local') --force
                 $cargoBin = Join-Path $HOME '.local\bin\forgum.exe'
                 if (Test-Path -LiteralPath $cargoBin) {
                     Copy-Item -LiteralPath $cargoBin -Destination $binPath -Force

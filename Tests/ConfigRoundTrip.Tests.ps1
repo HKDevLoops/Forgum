@@ -1,8 +1,8 @@
 # G-ConfigRoundTrip — no-orphan-config invariant + engine config schema.
 #
 # Verifies that a config written via the module can be read back with
-# consistent values, and that the engine's SceneConfig (deny_unknown_fields)
-# accepts only the allowed keys and rejects stray keys.
+# consistent values, and that the engine's SceneConfig resiliently deserializes
+# unknown fields with defaults without failing (Mandate D).
 
 Describe 'Config round-trip (G-ConfigRoundTrip)' {
     BeforeAll {
@@ -33,13 +33,14 @@ Describe 'Config round-trip (G-ConfigRoundTrip)' {
         $cfg.fps    | Should -Be 24
     }
 
-    It 'engine rejects a config with an unknown key (exit 65)' {
+    It 'engine resiliently accepts a config with an unknown key without failing (exit 0)' {
         $stray = Join-Path $script:tmpDir 'stray.json'
         '{"cow":"default","bogus_field":42}' | Set-Content -LiteralPath $stray -Encoding utf8
         $code = Invoke-ForgumEngine -EnginePath (Get-ForgumEnginePath) `
                                      -JsonFile $stray `
+                                     -Command status `
                                      -TimeoutSeconds 5
-        $code | Should -Be 65
+        $code | Should -Be 0
     }
 
     It 'engine accepts a config with only allowed keys (exit 0)' {

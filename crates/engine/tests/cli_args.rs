@@ -15,6 +15,12 @@ fn version_flag_panics_or_exits() {
 }
 
 #[test]
+fn version_subcommand_parses_cleanly() {
+    let r = parse_args(argv(&["forgum-engine", "version"])).unwrap();
+    assert!(matches!(r.1, Some(Commands::Version)));
+}
+
+#[test]
 fn help_flag_exit_code_zero() {
     let r = parse_args(argv(&["forgum-engine", "--help"]));
     assert!(r.is_err());
