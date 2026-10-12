@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.0.6-beta] - 2026-10-12
+
+### Added
+- **Certified Pantone Nature Matching System (FHI / PMS) Color Palettes (`crates/platform/src/biome.rs`, `crates/engine/src/color.rs`, FEATURE-032)**:
+  - Calibrated all 132 mascot definitions in `ALL_MASCOTS` and 60 subspecies coat morph variations across 21 species variation tables to authentic, certified Pantone Nature Matching System colors matching real-world biological phenotypes.
+  - Fully synchronized authoritative mascot DNA profiles across `data/Cows/animations.json` and `data/animations.json`.
+- **Sub-Millisecond High-Refresh Rate (120Hz / 144Hz / 240Hz) Fluid Motion Engine (`crates/engine/src/engine_core.rs`, `crates/engine/src/scenery.rs`, `crates/engine/src/effects.rs`)**:
+  - Implemented Windows multimedia timer precision via `TimerResolutionGuard` (`timeBeginPeriod(1)`), dropping OS scheduling quantum from 15.6ms down to 1.0ms.
+  - Calibrated hybrid spin-sleep frame pacing (sleep bulk >2.5ms, spin-loop sub-millisecond remainder) guaranteeing jitter-free frame delivery on 60Hz, 120Hz, 144Hz, and 240Hz displays.
+  - Continuous floating-point parallax scrolling (`scroll_speed = 7.5_f32`, continuous `time * scroll_speed`) and wave dynamics in road textures, curb gutters, and subsurfaces, completely eliminating 350ms frame-by-frame integer stutter and freeze stalls.
+  - Continuous sinusoidal wave dynamics across `BreatheEffect`, `FloatEffect`, `WalkEffect`, `PulseEffect`, and `FlyEffect`.
+- **Procedural Dynamic Flora Ecosystem & Tectonic Mountain Macro-Range Envelopes (`crates/engine/src/scenery.rs`, FEATURE-031)**:
+  - Geological plate tectonics modeling macro-wavelength belts ($\Lambda_{\text{macro}} \in [110.0, 140.0]$ cols) with smoothstep foothills and open valley horizon gaps.
+  - Multi-tier flora maturity distribution across 22 botanical species with Fibonacci spacing and Da Vinci vertical sfumato depth gradients.
+- **Mascot Art Detailing, Sanitization & Spacing Hygiene (`crates/engine/src/cow.rs`, `data/Cows/`)**:
+  - Sanitized heredoc watermarks and trailing artist signature lines outside heredoc blocks across `atat.cow`, `smiling-octopus.cow`, `jellyfish.cow`, and `fence.cow`.
+  - Calibrated thought bubble connector circles to provide exactly 3 cleanly spaced circles aligned to mascot eye landmarks with automatic deduplication.
+
+### Fixed
+- **OpenSUSE WSL Integer Expression Bug in Shell Hooks (`crates/platform/src/shell.rs`)**:
+  - Resolved bash integer expression evaluation edge case in WSL terminal startup.
+- **Mascot Disgrace Radar & Up-to-date Quote Engine**:
+  - Added up-to-date quote engine and mascot telemetry validation.
+
+---
+
 ## [0.0.5-beta] - 2026-10-12
 
 ### Added

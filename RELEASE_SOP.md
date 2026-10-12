@@ -10,7 +10,7 @@
 
 ```mermaid
 flowchart TD
-    A["Human Release Command\n(e.g. Cut Release 0.0.5-beta)"] --> B["Stage 1: Pre-Flight Quality Gates\n(fmt, clippy, unit & integration tests)"]
+    A["Human Release Command\n(e.g. Cut Release 0.0.6-beta)"] --> B["Stage 1: Pre-Flight Quality Gates\n(fmt, clippy, unit & integration tests)"]
     B --> C["Stage 2: Adversarial & Invariant Audit\n(132 mascots, zero CP437, <100MB RAM)"]
     C --> D["Stage 3: Multi-Manifest Version Sync\n(Cargo.toml + 9 package managers)"]
     D --> E["Stage 4: Documentation & Fix Logs Sync\n(CHANGELOG.md, FIX_LOGS.md, README.md)"]
@@ -64,28 +64,28 @@ cargo test -p forgum-engine --test memory_budget
 ---
 
 ### Stage 3: Multi-Manifest Version Synchronization
-When the human user explicitly commands a version increment to `vX.Y.Z-beta` (e.g. `0.0.5-beta`), synchronize the version across all workspace crates and packaging manifests:
+When the human user explicitly commands a version increment to `vX.Y.Z-beta` (e.g. `0.0.6-beta`), synchronize the version across all workspace crates and packaging manifests:
 
 1. **Root `Cargo.toml`**:
    ```toml
    [workspace.package]
-   version = "0.0.5-beta"
+   version = "0.0.6-beta"
    ```
 2. **Scoop Manifest (`packaging/scoop/forgum.json`)**:
-   - Update `"version": "0.0.5-beta"`.
-   - Update download URLs to point to `v0.0.5-beta` release binaries.
+   - Update `"version": "0.0.6-beta"`.
+   - Update download URLs to point to `v0.0.6-beta` release binaries.
 3. **Winget Manifests (`packaging/winget/`)**:
-   - Update `PackageVersion: 0.0.5-beta` across version, installer, and locale manifests.
+   - Update `PackageVersion: 0.0.6-beta` across version, installer, and locale manifests.
 4. **Chocolatey Manifest (`packaging/choco/forgum.nuspec`)**:
-   - Update `<version>0.0.5-beta</version>`.
+   - Update `<version>0.0.6-beta</version>`.
 5. **Arch Linux PKGBUILD (`packaging/pacman/PKGBUILD`)**:
-   - Update `pkgver=0.0.5.beta` (normalized for Arch version rules).
+   - Update `pkgver=0.0.6.beta` (normalized for Arch version rules).
 6. **RPM Spec (`packaging/rpm/forgum.spec`)**:
-   - Update `Version: 0.0.5` and `Release: 1.beta`.
+   - Update `Version: 0.0.6` and `Release: 1.beta`.
 7. **Debian Control (`packaging/deb/DEBIAN/control`) & Changelog**:
-   - Update version string to `0.0.5-beta`.
+   - Update version string to `0.0.6-beta`.
 8. **Nix Derivation (`packaging/nix/package.nix`)**:
-   - Update `version = "0.0.5-beta"`.
+   - Update `version = "0.0.6-beta"`.
 
 ---
 
@@ -93,7 +93,7 @@ When the human user explicitly commands a version increment to `vX.Y.Z-beta` (e.
 1. **Update [`FIX_LOGS.md`](file:///Z:/Projects/Forgum/FIX_LOGS.md)**:
    - Ensure all defects remediated during this milestone are logged with root cause, fix, and verification command.
 2. **Update [`CHANGELOG.md`](file:///Z:/Projects/Forgum/CHANGELOG.md)**:
-   - Add new version heading `## [0.0.5-beta] - YYYY-MM-DD` following Keep-a-Changelog standard.
+   - Add new version heading `## [0.0.6-beta] - YYYY-MM-DD` following Keep-a-Changelog standard.
    - Categorize items under `### Added`, `### Changed`, `### Fixed`, `### Removed`.
 3. **Update [`README.md`](file:///Z:/Projects/Forgum/README.md)**:
    - Verify all version badges, quick-install one-liners, and feature descriptions reflect the release.
@@ -116,8 +116,8 @@ git push origin main
 git checkout dev
 
 # 5.4 Tag the release on main (ONLY upon explicit human command)
-git tag -a v0.0.5-beta -m "Release v0.0.5-beta: Gait limb stroke sanitization, high-entropy PRNG & incommensurate particle physics, and universal unicode engine"
-git push origin v0.0.5-beta
+git tag -a v0.0.6-beta -m "Release v0.0.6-beta: Gait limb stroke sanitization, high-entropy PRNG & incommensurate particle physics, and universal unicode engine"
+git push origin v0.0.6-beta
 ```
 
 ---
@@ -149,7 +149,7 @@ Verify that all 8 cross-platform binary archives are uploaded to the GitHub Rele
 ### Stage 7: Post-Release Package Manager Channel Verification
 1. **GitHub Release Check**:
    ```powershell
-   gh release view v0.0.5-beta
+   gh release view v0.0.6-beta
    ```
 2. **In-Tree Auto-Updater Verification**:
    ```powershell
@@ -166,4 +166,4 @@ Verify that all 8 cross-platform binary archives are uploaded to the GitHub Rele
 If a release archive contains a critical defect or broken binary:
 1. **Never mutate a pushed release tag**: Git tags are immutable.
 2. **Yank / Draft Release**: Mark the GitHub Release as Draft or Pre-release.
-3. **Cut Patch Release**: Apply the fix on `dev`, merge to `main`, and increment the patch version (e.g. `v0.0.5-beta`), following this SOP from Stage 1.
+3. **Cut Patch Release**: Apply the fix on `dev`, merge to `main`, and increment the patch version (e.g. `v0.0.6-beta`), following this SOP from Stage 1.

@@ -85,7 +85,7 @@ graph TD
 
 ---
 
-## 1.2 Universal Unicode Compatibility, NPU Compute Priority & Dynamic Particle Physics (0.0.5-beta)
+## 1.2 Universal Unicode Compatibility, NPU Compute Priority & Dynamic Particle Physics (0.0.6-beta)
 
 - **Universal Unicode & Encoding Compatibility**: `crates/platform/src/encoding.rs` transparently decodes UTF-8, UTF-8 with BOM (`\u{feff}`), UTF-16 LE/BE, and UTF-32 LE/BE into canonical UTF-8 strings. Sanitizes Trojan Source BiDi override sequences (CVE-2021-42574) and normalizes CRLF line endings. Wired into `.cow` mascot loaders, fortunes, configs, and piped stdin.
 - **NPU Priority in Auto Mode**: `resolve_acceleration` in `crates/platform/src/gpu.rs` prioritizes detected NPUs (`Intel AI Boost`, `AMD XDNA`, `Apple Neural Engine`, `Qualcomm Hexagon`) under `AccelerationMode::Auto`, offloading rendering compute completely from CPU while sparing discrete GPU compute queues.

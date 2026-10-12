@@ -1,6 +1,6 @@
 # Forgum Master Fix Logs & Defect Remediation History
 
-> **Target Release:** `v0.0.5-beta`  
+> **Target Release:** `v0.0.6-beta`  
 > **Repository:** `HKDevLoops/Forgum`  
 > **Unified Keyword:** Strictly `forgum`  
 > **Memory Ceiling:** Strict `< 100 MB RAM`  

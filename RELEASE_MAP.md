@@ -17,7 +17,7 @@ flowchart TD
     subgraph S2["Stage 2: Multi-Manifest & Installer Synchronization"]
         B1["Cargo Workspace\nCargo.toml: [workspace.package] version\ncrates/platform/src/lib.rs: html_root_url"]
         B2["Windows Package Managers\nScoop: packaging/scoop/forgum.json\nWinget: packaging/winget/HKDevLoops.Forgum.yaml\nChocolatey: packaging/choco/forgum.nuspec\nChoco Helper: packaging/choco/tools/chocolateyinstall.ps1\nWiX MSI: packaging/windows/forgum.wxs"]
-        B3["Linux & BSD Package Managers\nDebian: packaging/deb/DEBIAN/control\nRPM: packaging/rpm/forgum.spec\nPacman: packaging/pacman/PKGBUILD\nNix: packaging/nix/flake.nix & package.nix\nGentoo: packaging/gentoo/forgum-0.0.5.ebuild\nGuix: packaging/guix/forgum.scm\nHomebrew: packaging/homebrew/forgum.rb"]
+        B3["Linux & BSD Package Managers\nDebian: packaging/deb/DEBIAN/control\nRPM: packaging/rpm/forgum.spec\nPacman: packaging/pacman/PKGBUILD\nNix: packaging/nix/flake.nix & package.nix\nGentoo: packaging/gentoo/forgum-0.0.6.ebuild\nGuix: packaging/guix/forgum.scm\nHomebrew: packaging/homebrew/forgum.rb"]
         B4["Universal Installers & PowerShell Module\nPowerShell Module: Forgum.psd1 (ModuleVersion)\nWindows Installer: install.ps1 ($Version fallback)\nUnix/macOS Installer: install.sh (resolve_version fallback)"]
     end
 
@@ -29,19 +29,19 @@ flowchart TD
     end
 
     subgraph S4["Stage 4: Git Branch Promotion & Tagging"]
-        D1["Atomic Commit on dev\nchore(release): bump version to 0.0.5-beta"] --> D2["Push dev to origin\ngit push origin dev"]
+        D1["Atomic Commit on dev\nchore(release): bump version to 0.0.6-beta"] --> D2["Push dev to origin\ngit push origin dev"]
         D2 --> D3["Fast-Forward main\ngit checkout main && git merge --ff-only dev"]
         D3 --> D4["Push main to origin\ngit push origin main"]
         D4 --> D5["Checkout dev\ngit checkout dev"]
-        D5 --> D6["Create Annotated Release Tag\ngit tag -a v0.0.5-beta -m 'Release v0.0.5-beta'"]
-        D6 --> D7["Push Release Tag\ngit push origin v0.0.5-beta"]
+        D5 --> D6["Create Annotated Release Tag\ngit tag -a v0.0.6-beta -m 'Release v0.0.6-beta'"]
+        D6 --> D7["Push Release Tag\ngit push origin v0.0.6-beta"]
     end
 
     subgraph S5["Stage 5: CI/CD Pipeline Monitoring"]
         E1["GitHub Actions Trigger\n.github/workflows/release.yml"] --> E2["Build 8 Target Triples\n(Linux gnu/musl, macOS darwin, Windows msvc)"]
         E2 --> E3["Package Distributions\n(.rpm, .deb, .msi, .nupkg, .zip, .tar.gz)"]
         E3 --> E4["Cryptographic Checksums\nsha256sums.txt generation"]
-        E4 --> E5["Publish GitHub Release Assets\ngh release view v0.0.5-beta"]
+        E4 --> E5["Publish GitHub Release Assets\ngh release view v0.0.6-beta"]
     end
 
     S1 --> S2
@@ -54,42 +54,42 @@ flowchart TD
 
 ## 2. Release Manifest & File Change Matrix
 
-| Component / Channel | File Path | Field / Variable | Old Value (`0.0.4-beta`) | New Value (`0.0.5-beta`) |
+| Component / Channel | File Path | Field / Variable | Old Value (`0.0.4-beta`) | New Value (`0.0.6-beta`) |
 | :--- | :--- | :--- | :--- | :--- |
-| **Cargo Workspace** | `Cargo.toml` | `[workspace.package].version` | `"0.0.4-beta"` | `"0.0.5-beta"` |
-| **Platform Docs** | `crates/platform/src/lib.rs` | `#![doc(html_root_url = ...)]` | `.../0.0.3-beta` | `.../0.0.5-beta` |
-| **Primary README** | `README.md` | Line 31 (Version badge) & Line 811 (TUI header) | `0.0.4-beta` | `0.0.5-beta` |
-| **Changelog** | `CHANGELOG.md` | Release header & release date | `## [0.0.4-beta]` | `## [0.0.5-beta] - 2026-10-12` |
-| **Defect Ledger** | `FIX_LOGS.md` | Line 3 (`Target Release`) & defect entries | `v0.0.4-beta` | `v0.0.5-beta` (BUG-027 through BUG-030, FEATURE-029, FEATURE-030) |
-| **Architecture Map** | `ARCHITECTURE_MAP.md` | Section 1.2 header & overview | `(0.0.4-beta)` | `(0.0.5-beta)` |
-| **Release SOP** | `RELEASE_SOP.md` | Lines 13, 67, 72–88, 96, 119, 152 | `0.0.4-beta` | `0.0.5-beta` |
-| **PowerShell Module** | `Forgum.psd1` | Line 3 (`ModuleVersion`) | `'0.0.3'` | `'0.0.5'` |
-| **Windows Installer** | `install.ps1` | Line 213 (`$Version = ...` fallback) | `"0.0.4-beta"` | `"0.0.5-beta"` |
-| **Unix / macOS Installer** | `install.sh` | Line 17 (env comment) & Line 553 (`echo ...` fallback) | `0.0.4-beta` | `0.0.5-beta` |
-| **Scoop Manifest** | `packaging/scoop/forgum.json` | `"version"` & download URLs | `"0.0.4-beta"` | `"0.0.5-beta"` |
-| **Winget Manifest** | `packaging/winget/HKDevLoops.Forgum.yaml` | `PackageVersion` & URLs | `0.0.4-beta` | `0.0.5-beta` |
-| **Chocolatey Nuspec** | `packaging/choco/forgum.nuspec` | `<version>` | `0.0.4-beta` | `0.0.5-beta` |
-| **Chocolatey Helper** | `packaging/choco/tools/chocolateyinstall.ps1` | Line 6 (`$version = ...`) | `'0.0.4-beta'` | `'0.0.5-beta'` |
-| **Homebrew Formula** | `packaging/homebrew/forgum.rb` | `version` & release URL | `"0.0.4-beta"` | `"0.0.5-beta"` |
-| **Debian (APT)** | `packaging/deb/DEBIAN/control` | `Version:` | `0.0.4-beta` | `0.0.5-beta` |
-| **Red Hat (RPM)** | `packaging/rpm/forgum.spec` | `Version:` & changelog block | `0.0.4` | `0.0.5` |
-| **Arch Linux** | `packaging/pacman/PKGBUILD` | `pkgver` (normalized pacman format) | `0.0.4.beta` | `0.0.5.beta` |
-| **Nix Flake** | `packaging/nix/flake.nix` | `version = ...` | `"0.0.4-beta"` | `"0.0.5-beta"` |
-| **Nix Package** | `packaging/nix/package.nix` | `version = ...` | `"0.0.4-beta"` | `"0.0.5-beta"` |
-| **GNU Guix** | `packaging/guix/forgum.scm` | `(version "...")` | `"0.0.4-beta"` | `"0.0.5-beta"` |
-| **Windows MSI (WiX)** | `packaging/windows/forgum.wxs` | `Version="..."` | `0.0.4` | `0.0.5` |
-| **Gentoo Ebuild** | `packaging/gentoo/forgum-0.0.5.ebuild` | Ebuild filename | `forgum-0.0.4.ebuild` | `forgum-0.0.5.ebuild` |
-| **Gentoo Packaging Guide** | `packaging/gentoo/README.md` | Lines 13, 27, 32 (ebuild testing commands) | `forgum-0.0.3.ebuild` | `forgum-0.0.5.ebuild` |
-| **Windows Packaging Guide** | `packaging/windows/README.md` | Line 37 (portable zip asset reference) | `forgum-0.0.3-beta` | `forgum-0.0.5-beta` |
-| **Uninstall Guide** | `packaging/UNINSTALL.md` | Line 146 (Gentoo overlay unmerge command) | `forgum-0.0.3.ebuild` | `forgum-0.0.5.ebuild` |
-| **Sample Configs Guide** | `docs/samples/README.md` | Line 7 (SceneConfig schema version validator) | `v0.0.4-beta` | `v0.0.5-beta` |
-| **Release Channels Guide** | `docs/CHANNELS.md` | Lines 51 & 73 (Stable channel tag & CLI output) | `0.0.3-beta` | `0.0.5-beta` |
-| **Diagnostics & User Guide** | `docs/GUIDE.md` | Line 263 (`checkhealth` sample output header) | `v0.0.3-beta` | `v0.0.5-beta` |
-| **Distribution Map** | `RELEASE_MAP.md` | Flowchart, sync matrix & capability registers | Full 0.0.4 matrix | Complete 29-target 0.0.5 matrix |
+| **Cargo Workspace** | `Cargo.toml` | `[workspace.package].version` | `"0.0.4-beta"` | `"0.0.6-beta"` |
+| **Platform Docs** | `crates/platform/src/lib.rs` | `#![doc(html_root_url = ...)]` | `.../0.0.3-beta` | `.../0.0.6-beta` |
+| **Primary README** | `README.md` | Line 31 (Version badge) & Line 811 (TUI header) | `0.0.4-beta` | `0.0.6-beta` |
+| **Changelog** | `CHANGELOG.md` | Release header & release date | `## [0.0.4-beta]` | `## [0.0.6-beta] - 2026-10-12` |
+| **Defect Ledger** | `FIX_LOGS.md` | Line 3 (`Target Release`) & defect entries | `v0.0.4-beta` | `v0.0.6-beta` (BUG-027 through BUG-030, FEATURE-029, FEATURE-030) |
+| **Architecture Map** | `ARCHITECTURE_MAP.md` | Section 1.2 header & overview | `(0.0.4-beta)` | `(0.0.6-beta)` |
+| **Release SOP** | `RELEASE_SOP.md` | Lines 13, 67, 72–88, 96, 119, 152 | `0.0.4-beta` | `0.0.6-beta` |
+| **PowerShell Module** | `Forgum.psd1` | Line 3 (`ModuleVersion`) | `'0.0.3'` | `'0.0.6'` |
+| **Windows Installer** | `install.ps1` | Line 213 (`$Version = ...` fallback) | `"0.0.4-beta"` | `"0.0.6-beta"` |
+| **Unix / macOS Installer** | `install.sh` | Line 17 (env comment) & Line 553 (`echo ...` fallback) | `0.0.4-beta` | `0.0.6-beta` |
+| **Scoop Manifest** | `packaging/scoop/forgum.json` | `"version"` & download URLs | `"0.0.4-beta"` | `"0.0.6-beta"` |
+| **Winget Manifest** | `packaging/winget/HKDevLoops.Forgum.yaml` | `PackageVersion` & URLs | `0.0.4-beta` | `0.0.6-beta` |
+| **Chocolatey Nuspec** | `packaging/choco/forgum.nuspec` | `<version>` | `0.0.4-beta` | `0.0.6-beta` |
+| **Chocolatey Helper** | `packaging/choco/tools/chocolateyinstall.ps1` | Line 6 (`$version = ...`) | `'0.0.4-beta'` | `'0.0.6-beta'` |
+| **Homebrew Formula** | `packaging/homebrew/forgum.rb` | `version` & release URL | `"0.0.4-beta"` | `"0.0.6-beta"` |
+| **Debian (APT)** | `packaging/deb/DEBIAN/control` | `Version:` | `0.0.4-beta` | `0.0.6-beta` |
+| **Red Hat (RPM)** | `packaging/rpm/forgum.spec` | `Version:` & changelog block | `0.0.4` | `0.0.6` |
+| **Arch Linux** | `packaging/pacman/PKGBUILD` | `pkgver` (normalized pacman format) | `0.0.4.beta` | `0.0.6.beta` |
+| **Nix Flake** | `packaging/nix/flake.nix` | `version = ...` | `"0.0.4-beta"` | `"0.0.6-beta"` |
+| **Nix Package** | `packaging/nix/package.nix` | `version = ...` | `"0.0.4-beta"` | `"0.0.6-beta"` |
+| **GNU Guix** | `packaging/guix/forgum.scm` | `(version "...")` | `"0.0.4-beta"` | `"0.0.6-beta"` |
+| **Windows MSI (WiX)** | `packaging/windows/forgum.wxs` | `Version="..."` | `0.0.4` | `0.0.6` |
+| **Gentoo Ebuild** | `packaging/gentoo/forgum-0.0.6.ebuild` | Ebuild filename | `forgum-0.0.4.ebuild` | `forgum-0.0.6.ebuild` |
+| **Gentoo Packaging Guide** | `packaging/gentoo/README.md` | Lines 13, 27, 32 (ebuild testing commands) | `forgum-0.0.3.ebuild` | `forgum-0.0.6.ebuild` |
+| **Windows Packaging Guide** | `packaging/windows/README.md` | Line 37 (portable zip asset reference) | `forgum-0.0.3-beta` | `forgum-0.0.6-beta` |
+| **Uninstall Guide** | `packaging/UNINSTALL.md` | Line 146 (Gentoo overlay unmerge command) | `forgum-0.0.3.ebuild` | `forgum-0.0.6.ebuild` |
+| **Sample Configs Guide** | `docs/samples/README.md` | Line 7 (SceneConfig schema version validator) | `v0.0.4-beta` | `v0.0.6-beta` |
+| **Release Channels Guide** | `docs/CHANNELS.md` | Lines 51 & 73 (Stable channel tag & CLI output) | `0.0.3-beta` | `0.0.6-beta` |
+| **Diagnostics & User Guide** | `docs/GUIDE.md` | Line 263 (`checkhealth` sample output header) | `v0.0.3-beta` | `v0.0.6-beta` |
+| **Distribution Map** | `RELEASE_MAP.md` | Flowchart, sync matrix & capability registers | Full 0.0.4 matrix | Complete 29-target 0.0.6 matrix |
 
 ---
 
-## 3. What New Capabilities Are Bundled in `0.0.5-beta`
+## 3. What New Capabilities Are Bundled in `0.0.6-beta`
 
 1. **CP437 Mojibake Elimination (BUG-021 & BUG-023)**:
    - Dynamic particle pools, instinct signature emitters, talk vocals, and glitch effects sanitized to 100% pure ASCII.
@@ -145,14 +145,14 @@ cargo test -p forgum-tui
 
 # 2. Git Promotion & Tagging
 git add -A
-git commit -m "chore(release): bump version to 0.0.5-beta with Unicode compatibility, NPU priority, and dynamic kinematics offload"
+git commit -m "chore(release): bump version to 0.0.6-beta with Unicode compatibility, NPU priority, and dynamic kinematics offload"
 git push origin dev
 git checkout main
 git merge --ff-only dev
 git push origin main
 git checkout dev
-git tag -a v0.0.5-beta -m "Release v0.0.5-beta: CP437 ASCII sanitization, universal Unicode compatibility engine, NPU auto priority, dynamic kinematics GPU compute offload, and full color themes"
-git push origin v0.0.5-beta
+git tag -a v0.0.6-beta -m "Release v0.0.6-beta: CP437 ASCII sanitization, universal Unicode compatibility engine, NPU auto priority, dynamic kinematics GPU compute offload, and full color themes"
+git push origin v0.0.6-beta
 
 # 3. CI/CD Monitoring
 gh run list --workflow=release.yml --limit 3

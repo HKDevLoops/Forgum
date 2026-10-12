@@ -1,5 +1,5 @@
 Name:           forgum
-Version:        0.0.5
+Version:        0.0.6
 Release:        1%{?dist}
 Summary:        Cross-platform ANSI animation mascot and shell integration engine
 
@@ -21,6 +21,8 @@ install -m 755 forgum %{buildroot}%{_bindir}/forgum
 %{_bindir}/forgum
 
 %changelog
+* Mon Oct 12 2026 harish2222 <harish2222@users.noreply.github.com> - 0.0.6-1
+- Release 0.0.6 beta: Certified Pantone Nature palettes, mascot art detailing, and 120/144/240Hz fluid motion engine
 * Mon Oct 12 2026 harish2222 <harish2222@users.noreply.github.com> - 0.0.5-1
 - Release 0.0.5 beta: Universal Unicode engine, NPU compute priority, and dynamic kinematics offload
 * Sun Oct 04 2026 harish2222 <harish2222@users.noreply.github.com> - 0.0.4-1
