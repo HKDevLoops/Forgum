@@ -65,6 +65,8 @@ flowchart TD
 | **Red Hat (RPM)** | `packaging/rpm/forgum.spec` | `Version:` | `0.0.4` | `0.0.5` |
 | **Arch Linux** | `packaging/pacman/PKGBUILD` | `pkgver` | `0.0.4.beta` | `0.0.5.beta` |
 | **Nix Flake** | `packaging/nix/flake.nix` | `version = ...` | `"0.0.4-beta"` | `"0.0.5-beta"` |
+| **Nix Package** | `packaging/nix/package.nix` | `version = ...` | `"0.0.4-beta"` | `"0.0.5-beta"` |
+| **Windows MSI (WiX)** | `packaging/windows/forgum.wxs` | `Version="..."` | `0.0.4` | `0.0.5` |
 | **Gentoo** | `packaging/gentoo/forgum-0.0.5.ebuild` | Ebuild filename | `forgum-0.0.4.ebuild` | `forgum-0.0.5.ebuild` |
 | **Changelog** | `CHANGELOG.md` | Release header & release date | `## [0.0.4-beta]` | `## [0.0.5-beta] - 2026-10-12` |
 | **Defect Ledger** | `FIX_LOGS.md` | Remediation entries | Up to BUG-023 | BUG-021 through FEATURE-026 |
