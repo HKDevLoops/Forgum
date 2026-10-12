@@ -85,6 +85,17 @@ graph TD
 
 ---
 
+## 1.2 Universal Unicode Compatibility, NPU Compute Priority & Dynamic Particle Physics (0.0.5-beta)
+
+- **Universal Unicode & Encoding Compatibility**: `crates/platform/src/encoding.rs` transparently decodes UTF-8, UTF-8 with BOM (`\u{feff}`), UTF-16 LE/BE, and UTF-32 LE/BE into canonical UTF-8 strings. Sanitizes Trojan Source BiDi override sequences (CVE-2021-42574) and normalizes CRLF line endings. Wired into `.cow` mascot loaders, fortunes, configs, and piped stdin.
+- **NPU Priority in Auto Mode**: `resolve_acceleration` in `crates/platform/src/gpu.rs` prioritizes detected NPUs (`Intel AI Boost`, `AMD XDNA`, `Apple Neural Engine`, `Qualcomm Hexagon`) under `AccelerationMode::Auto`, offloading rendering compute completely from CPU while sparing discrete GPU compute queues.
+- **Dynamic Animation & Kinematics Compute Offload**: Continuous spring-damper dialogue inertia, Lissajous mascot trajectory math, and underwater bubble physics are offloaded through `ComputeEngine` and `GpuComputeEngine` with zero dynamic allocations per frame, strictly adhering to the <100MB resident RAM ceiling.
+- **High-Entropy SplitMix64 PRNG & Box-Muller Gaussian Sampling**: `crates/engine/src/particles.rs` implements 64-bit SplitMix64 with Golden Ratio Weyl sequence ($\Phi = \text{0x9E3779B97F4A7C15}$), eliminating 0 fixed-point collapses, and Box-Muller sampling `rand_normal(mean, std_dev)` for natural atmospheric dispersion.
+- **Incommensurate Particle Showering Dynamics**: Dual incommensurate harmonic turbulence ($\omega_2 = \omega_1 \cdot 1.6180339887$) and independent per-particle glyph selection eliminate artificial cyclic repetitions in fire, bubble, star, and zzz emitters. Lateral aerodynamic micro-turbulence is applied directly in `eval_particle_chunk`.
+- **Richard Williams Gait Articulation**: Eliminated alphabetic characters (`'J'`, `'L'`, `'d'`, `'b'`) in `articulated_leg_glyph` in favor of authentic limb strokes (`'/'`, `'\\'`, `'|'`, `')'`, `'('`), verified by tests across all 16 walk stages and partitions.
+
+---
+
 
 ## 2. Universal Hardware Acceleration Architecture (2006 to 2026)
 

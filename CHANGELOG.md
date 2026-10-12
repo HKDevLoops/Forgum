@@ -10,6 +10,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.0.5-beta] - 2026-10-12
 
 ### Added
+- **High-Entropy SplitMix64 PRNG & Dynamic Incommensurate Particle Showering (`crates/engine/src/particles.rs`, `crates/platform/src/compute.rs`)**:
+  - Replaced degenerate 32-bit `xorshift32` with 64-bit SplitMix64 pseudo-random generator coupled to Golden Ratio Weyl constant ($\Phi = 0x9E3779B97F4A7C15$), eliminating 0 fixed-point collapses and expanding PRNG period to $2^{64}$.
+  - Implemented Box-Muller Gaussian normal distribution sampling (`rand_normal`) for realistic atmospheric diffusion and thermal plume dispersion.
+  - Upgraded particle spawners (`spawn_fire`, `spawn_bubbles`, `spawn_stars`, `spawn_zzz`) to evaluate dual incommensurate frequencies governed by the Golden Ratio ($\omega_2 = \omega_1 \cdot 1.6180339887$), preventing periodic repetition.
+  - Eliminated synchronized rigid glyph cycles (`(time * 10.0) as usize % len`) in favor of independent per-particle dynamic glyph selection.
+  - Added continuous lateral aerodynamic micro-turbulence to `eval_particle_chunk` in `ComputeEngine`.
 - **Universal UTF & Unicode Compatibility Engine (`crates/platform/src/encoding.rs`)**:
   - Transparent decoding of UTF-8, UTF-8 with BOM (`0xEF 0xBB 0xBF`), UTF-16 LE/BE, and UTF-32 LE/BE into canonical UTF-8 strings.
   - Security sanitization stripping Trojan Source BiDi override attacks (CVE-2021-42574) and normalizing line endings (`\r\n` and `\r` to `\n`).
@@ -28,8 +34,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Authored definitive release workflow flowchart, manifest synchronization matrix, and automated promotion protocol.
 
 ### Fixed
+- **Elimination of Alphabetic Leg Glyphs in Gait Cycles (`crates/engine/src/kinematics.rs`, BUG-028)**:
+  - Replaced alphabetic character substitutions (`'J'`, `'L'`, `'d'`, `'b'`) in Richard Williams articulated gait cycle with authentic ASCII limb strokes (`'/'`, `'\\'`, `'|'`, `')'`, `'('`).
+  - Added test assertions enforcing `!ch.is_alphabetic()` across all 16 walk phases, directions, and leg partitions.
 - **CP437 Mojibake Elimination (BUG-021 & BUG-023)**:
   - Procedural emitters, talk vocals, and glitch effects sanitized to 100% pure ASCII to prevent Greek Gamma and box-drawing collisions on legacy terminal decoders.
+- **Small-Pane Calibration & Bubble Margin Integrity**:
+  - Calibrated small-pane height threshold to 16 rows to preserve standard 80x24 terminal margins and indentation.
+- **Multi-Pane & Split-Mode Alignment Calibration (BUG-027)**:
+  - Logged into defect ledger for deferred comprehensive multiplexer geometry calibration.
 
 ---
 

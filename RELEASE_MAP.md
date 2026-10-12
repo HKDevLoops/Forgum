@@ -96,6 +96,17 @@ flowchart TD
    - Added OKLCH palette gradients for curated color modes: `cyberpunk`, `autumn`, `pastel`, `matrix`, `monochrome`, `sunset`, `ocean`, and `fire`.
    - Enforced Mandate K biological coat morph palette lock when `Color Mode != "natural"`.
 
+6. **High-Entropy SplitMix64 PRNG & Dynamic Incommensurate Particle Showering (FEATURE-029)**:
+   - 64-bit SplitMix64 PRNG with Golden Ratio Weyl constant ($\Phi = 0x9E3779B97F4A7C15$), eliminating degenerate 0 fixed-point collapses.
+   - Box-Muller Gaussian normal sampling (`rand_normal`) and incommensurate dual harmonic turbulence ($\omega_2 = \omega_1 \cdot 1.6180339887$).
+   - Per-particle lateral aerodynamic micro-turbulence in `eval_particle_chunk`.
+
+7. **Elimination of Alphabetic Leg Glyphs in Richard Williams Gait (BUG-028)**:
+   - Replaced alphabetic ASCII characters (`'J'`, `'L'`, `'d'`, `'b'`) in `articulated_leg_glyph` with authentic limb strokes (`'/'`, `'\\'`, `'|'`, `')'`, `'('`).
+
+8. **Multi-Pane & Split-Mode Alignment Calibration (BUG-027)**:
+   - Formally documented alignment calibration for multi-pane multiplexer environments in defect ledger for scheduled deep focus.
+
 ---
 
 ## 4. Execution Commands Quick Reference
