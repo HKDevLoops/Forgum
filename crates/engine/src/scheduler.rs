@@ -42,7 +42,7 @@ pub struct Scheduler {
 impl Scheduler {
     #[must_use]
     pub fn new(target_fps: u16) -> Self {
-        let fps = if target_fps == 0 { 30 } else { target_fps };
+        let fps = if target_fps == 0 { 60 } else { target_fps };
         Self {
             base_fps: fps,
             target_fps: fps,
@@ -76,7 +76,7 @@ impl Scheduler {
             return;
         }
         let base = if self.base_fps == 0 {
-            30
+            60
         } else {
             self.base_fps
         };

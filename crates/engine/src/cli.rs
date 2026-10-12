@@ -331,8 +331,8 @@ pub struct Cli {
         long,
         global = true,
         value_name = "RATE",
-        help = "Target rendering frame rate (1-120, default: 30)",
-        long_help = "Target frames per second. Forgum uses delta-time interpolation and sub-millisecond timer pacing."
+        help = "Target rendering frame rate (1-240, default: 30)",
+        long_help = "Target frames per second (1-240). Calibrated with sub-millisecond OS multimedia timer resolution, hybrid spin-sleep pacing, and continuous float wave interpolation for 60Hz, 120Hz, 144Hz, and 240Hz high-refresh displays."
     )]
     pub fps: Option<u16>,
 

@@ -1026,7 +1026,7 @@ pub fn compose_scene_with_mode(cow_text: &str, bubble_text: &str, is_thought: bo
     } else {
         let has_pointer = cow_lines.iter().take(4).any(|line| {
             let trimmed = line.trim_start();
-            trimmed.starts_with('\\')
+            trimmed.starts_with('\\') || trimmed.starts_with('/')
         });
 
         if !has_pointer && !cow_lines.is_empty() {

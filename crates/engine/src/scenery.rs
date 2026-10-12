@@ -1751,23 +1751,24 @@ pub fn render_trees_with_animal(
     });
     let animal_seed = animal_name.map_or(0, |n| n.len() as u32);
 
-    // Midground parallax speed
-    let scroll_x = (time * 2.4) as usize;
+    // Continuous midground parallax motion: smooth floating-point progression for high refresh rates (120/144/240Hz)
+    let scroll_speed = 7.5_f32;
+    let scroll_xf = time * scroll_speed;
     let min_dist = 16.0_f32;
     let var_dist = 12.0_f32;
 
     // Natural Fibonacci phyllotaxis tree range across the visible span
     let avg_stride = min_dist + var_dist * 0.5;
-    let start_tree =
-        (((scroll_x as isize - 35).max(0) as f32) / (avg_stride + var_dist)).floor() as usize;
+    let start_tree = (((scroll_xf - 35.0).max(0.0)) / (avg_stride + var_dist)).floor() as usize;
     // Start 6 trees earlier so wide canopies exiting on the left screen boundary do not clip prematurely
     let start_tree = start_tree.saturating_sub(6);
-    let end_tree = (((scroll_x + width + 40) as f32 / min_dist).ceil() as usize) + 4;
+    let end_tree = (((scroll_xf + (width as f32) + 40.0) / min_dist).ceil() as usize) + 4;
     let fb_cell = std::cell::RefCell::new(fb);
 
     for t_idx in start_tree..=end_tree {
         let world_x = calculate_tree_position(t_idx, min_dist, var_dist);
-        let screen_x = (world_x as isize) - (scroll_x as isize);
+        let screen_xf = (world_x as f32) - scroll_xf;
+        let screen_x = screen_xf.round() as isize;
         if screen_x < -35 || screen_x >= (width as isize) + 20 {
             continue;
         }
@@ -2688,7 +2689,7 @@ pub fn calculate_road_texture(x: usize, style: RoadStyle, time: f32) -> (char, C
         RoadStyle::Cobblestone => {
             let fg = Color::rgb(158, 158, 158);
             // Paving stone geometry: periodic mortar joint with weathered surface variation
-            let stone_idx = (x + ((time * 2.8) as usize)) % 5;
+            let stone_idx = (((x as f32 + time * 7.5) % 5.0 + 5.0) % 5.0).floor() as usize;
             let ch = if stone_idx == 0 {
                 '|' // mortar joint between pavers
             } else if roughness > 0.6 {
@@ -2715,7 +2716,8 @@ pub fn calculate_road_texture(x: usize, style: RoadStyle, time: f32) -> (char, C
         }
         RoadStyle::Ice => {
             let fg = Color::rgb(224, 247, 250);
-            let ch = if (x + ((time * 1.5) as usize)).is_multiple_of(9) {
+            let fissure = (((x as f32 + time * 4.5) % 9.0 + 9.0) % 9.0).floor() as usize;
+            let ch = if fissure == 0 {
                 '/' // glacial fissure / crevasse
             } else if roughness > 0.5 {
                 '=' // glazed ice sheet
@@ -2737,7 +2739,7 @@ pub fn calculate_road_texture(x: usize, style: RoadStyle, time: f32) -> (char, C
         }
         RoadStyle::Sidewalk => {
             let fg = Color::rgb(189, 189, 189);
-            let slab = (x + ((time * 2.5) as usize)) % 10;
+            let slab = (((x as f32 + time * 6.5) % 10.0 + 10.0) % 10.0).floor() as usize;
             let ch = if slab == 0 {
                 '|' // expansion joint
             } else if slab == 5 {
@@ -2749,13 +2751,13 @@ pub fn calculate_road_texture(x: usize, style: RoadStyle, time: f32) -> (char, C
         }
         RoadStyle::Roof => {
             let fg = Color::rgb(120, 144, 156);
-            let tile = (x + ((time * 2.0) as usize)) % 4;
+            let tile = (((x as f32 + time * 6.0) % 4.0 + 4.0) % 4.0).floor() as usize;
             let ch = if tile == 0 { '#' } else { '=' };
             (ch, fg)
         }
         RoadStyle::Grid => {
             let fg = Color::rgb(0, 229, 255);
-            let node = (x + ((time * 3.0) as usize)) % 6;
+            let node = (((x as f32 + time * 7.5) % 6.0 + 6.0) % 6.0).floor() as usize;
             let ch = if node == 0 { '+' } else { '-' };
             (ch, fg)
         }
@@ -2794,13 +2796,13 @@ pub fn calculate_road_texture(x: usize, style: RoadStyle, time: f32) -> (char, C
         }
         RoadStyle::Tracks => {
             let fg = Color::rgb(144, 164, 174);
-            let tie = (x + ((time * 3.5) as usize)) % 5;
+            let tie = (((x as f32 + time * 8.0) % 5.0 + 5.0) % 5.0).floor() as usize;
             let ch = if tie == 0 { '|' } else { '=' };
             (ch, fg)
         }
         RoadStyle::Checkerboard => {
             let fg = Color::rgb(238, 238, 238);
-            let tile = (x + ((time * 2.0) as usize)) % 4;
+            let tile = (((x as f32 + time * 6.0) % 4.0 + 4.0) % 4.0).floor() as usize;
             let ch = if tile < 2 { '#' } else { ' ' };
             (ch, fg)
         }
@@ -2829,7 +2831,7 @@ pub fn calculate_road_subsurface(x: usize, style: RoadStyle, time: f32) -> (char
         }
         RoadStyle::Cobblestone => {
             let fg = Color::rgb(97, 97, 97);
-            let stone_idx = (x + ((time * 2.8) as usize)) % 5;
+            let stone_idx = (((x as f32 + time * 7.5) % 5.0 + 5.0) % 5.0).floor() as usize;
             let ch = if stone_idx == 0 {
                 '|' // mortar bed joint
             } else if stone_idx == 1 {
@@ -2858,7 +2860,8 @@ pub fn calculate_road_subsurface(x: usize, style: RoadStyle, time: f32) -> (char
         }
         RoadStyle::Ice => {
             let fg = Color::rgb(128, 222, 234);
-            let ch = if (x + ((time * 1.5) as usize)).is_multiple_of(7) {
+            let fissure = (((x as f32 + time * 4.5) % 7.0 + 7.0) % 7.0).floor() as usize;
+            let ch = if fissure == 0 {
                 '|' // deep ice fracture
             } else if roughness > 0.45 {
                 '-' // compressed glacial shelf
@@ -2868,7 +2871,7 @@ pub fn calculate_road_subsurface(x: usize, style: RoadStyle, time: f32) -> (char
             (ch, fg)
         }
         RoadStyle::Tracks => {
-            let tie = (x + ((time * 3.5) as usize)) % 5;
+            let tie = (((x as f32 + time * 8.0) % 5.0 + 5.0) % 5.0).floor() as usize;
             if tie == 0 || tie == 1 {
                 ('|', Color::rgb(93, 64, 55)) // heavy timber cross-tie
             } else {
@@ -2880,7 +2883,7 @@ pub fn calculate_road_subsurface(x: usize, style: RoadStyle, time: f32) -> (char
         }
         RoadStyle::Sidewalk => {
             let fg = Color::rgb(158, 158, 158);
-            let slab = (x + ((time * 2.5) as usize)) % 10;
+            let slab = (((x as f32 + time * 6.5) % 10.0 + 10.0) % 10.0).floor() as usize;
             let ch = if slab == 0 {
                 '|' // curb expansion seam
             } else {
@@ -2901,13 +2904,13 @@ pub fn calculate_road_subsurface(x: usize, style: RoadStyle, time: f32) -> (char
         }
         RoadStyle::Roof => {
             let fg = Color::rgb(121, 85, 72);
-            let tile = (x + ((time * 2.0) as usize)) % 4;
+            let tile = (((x as f32 + time * 6.0) % 4.0 + 4.0) % 4.0).floor() as usize;
             let ch = if tile == 0 { '|' } else { '/' };
             (ch, fg)
         }
         RoadStyle::Grid => {
             let fg = Color::rgb(0, 230, 118);
-            let node = (x + ((time * 3.0) as usize)) % 6;
+            let node = (((x as f32 + time * 7.5) % 6.0 + 6.0) % 6.0).floor() as usize;
             let ch = if node == 0 { '+' } else { '|' };
             (ch, fg)
         }
@@ -2946,7 +2949,7 @@ pub fn calculate_road_subsurface(x: usize, style: RoadStyle, time: f32) -> (char
         }
         RoadStyle::Checkerboard => {
             let fg = Color::rgb(189, 189, 189);
-            let tile = (x + ((time * 2.0) as usize)) % 4;
+            let tile = (((x as f32 + time * 6.0) % 4.0 + 4.0) % 4.0).floor() as usize;
             let ch = if tile < 2 { ' ' } else { '#' };
             (ch, fg)
         }
@@ -2975,7 +2978,7 @@ pub fn calculate_road_curb_gutter(x: usize, style: RoadStyle, time: f32) -> (cha
         }
         RoadStyle::Cobblestone => {
             let fg = Color::rgb(75, 75, 75);
-            let slab = (x + ((time * 2.8) as usize)) % 5;
+            let slab = (((x as f32 + time * 7.5) % 5.0 + 5.0) % 5.0).floor() as usize;
             let ch = if slab == 0 { '|' } else { '_' };
             (ch, fg)
         }
@@ -2996,19 +2999,19 @@ pub fn calculate_road_curb_gutter(x: usize, style: RoadStyle, time: f32) -> (cha
         }
         RoadStyle::Sidewalk => {
             let fg = Color::rgb(110, 110, 110);
-            let joint = (x + ((time * 2.5) as usize)) % 10;
+            let joint = (((x as f32 + time * 6.5) % 10.0 + 10.0) % 10.0).floor() as usize;
             let ch = if joint == 0 { '|' } else { ' ' };
             (ch, fg)
         }
         RoadStyle::Roof => {
             let fg = Color::rgb(90, 60, 50);
-            let tile = (x + ((time * 2.0) as usize)) % 4;
+            let tile = (((x as f32 + time * 6.0) % 4.0 + 4.0) % 4.0).floor() as usize;
             let ch = if tile == 0 { '|' } else { '_' };
             (ch, fg)
         }
         RoadStyle::Grid => {
             let fg = Color::rgb(0, 160, 90);
-            let node = (x + ((time * 3.0) as usize)) % 6;
+            let node = (((x as f32 + time * 7.5) % 6.0 + 6.0) % 6.0).floor() as usize;
             let ch = if node == 0 { '+' } else { '-' };
             (ch, fg)
         }
@@ -3034,7 +3037,7 @@ pub fn calculate_road_curb_gutter(x: usize, style: RoadStyle, time: f32) -> (cha
         }
         RoadStyle::Checkerboard => {
             let fg = Color::rgb(120, 120, 120);
-            let tile = (x + ((time * 2.0) as usize)) % 4;
+            let tile = (((x as f32 + time * 6.0) % 4.0 + 4.0) % 4.0).floor() as usize;
             let ch = if tile < 2 { '#' } else { ' ' };
             (ch, fg)
         }
@@ -3134,7 +3137,7 @@ pub fn render_environment(
             let cloud_fg = Color::rgb(240, 245, 255);
             let cloud_pattern = ".--.";
             let c_span = width + 8;
-            let c_pos = ((time * 1.2) as usize) % c_span.max(1);
+            let c_pos = ((time * 4.0).round() as usize) % c_span.max(1);
             if c_pos >= 4 {
                 let start_x = c_pos - 4;
                 let c_y = (ground_y / 4).clamp(1, fb.height.saturating_sub(1));
@@ -3158,8 +3161,8 @@ pub fn render_environment(
             let ember_fg = Color::rgb(255, 171, 0);
             for i in 0..6 {
                 let seed = i * 17;
-                let x = (seed + ((time * 5.0) as usize)) % width;
-                let rise = (((time * 3.0) as usize) + i * 2) % (ground_y.max(1) + 1);
+                let x = ((seed as f32 + time * 12.0).round() as usize) % width;
+                let rise = ((time * 7.5 + (i * 2) as f32).round() as usize) % (ground_y.max(1) + 1);
                 let y = ground_y.saturating_sub(rise);
                 let ch = if i % 2 == 0 { '*' } else { '^' };
                 let _ = fb.set(x, y, Cell::new(ch, ember_fg));
@@ -3170,12 +3173,9 @@ pub fn render_environment(
             let surface_y = if ground_y >= 6 { 1 } else { 0 };
             let wave_fg = Color::rgb(72, 202, 228); // Luminous sea surface cyan
             for x in 0..width {
-                let wave_harmonic = (x as f32 * 0.28 + time * 2.8).sin() * 0.45;
-                let wave_ch = if ((x + (time * 3.0) as usize) % 4) < 2 {
-                    '~'
-                } else {
-                    '-'
-                };
+                let wave_harmonic = (x as f32 * 0.28 + time * 3.5).sin() * 0.45;
+                let wave_pos = ((x as f32 + time * 6.0) % 4.0 + 4.0) % 4.0;
+                let wave_ch = if wave_pos < 2.0 { '~' } else { '-' };
                 let y_wave = ((surface_y as f32 + wave_harmonic).round() as usize)
                     .min(ground_y.saturating_sub(1));
                 let _ = fb.set(x, y_wave, Cell::new(wave_ch, wave_fg));
@@ -3185,8 +3185,8 @@ pub fn render_environment(
             let bubble_fg = Color::rgb(128, 222, 234);
             for i in 0..8 {
                 let seed = i * 19;
-                let x = (seed + i * 11 + ((time * 1.5) as usize)) % width;
-                let rise = (((time * 2.5) as usize) + i * 2)
+                let x = ((seed + i * 11) as f32 + time * 5.0).round() as usize % width;
+                let rise = ((time * 6.0 + (i * 2) as f32).round() as usize)
                     % (ground_y.saturating_sub(surface_y).max(1) + 1);
                 let y = ground_y.saturating_sub(rise);
                 if y > surface_y && y < ground_y {
@@ -3200,8 +3200,8 @@ pub fn render_environment(
             let snow_fg = Color::rgb(255, 255, 255);
             for i in 0..8 {
                 let seed = i * 19;
-                let x = (seed + ((time * 1.5) as usize) + i) % width;
-                let y = (((time * 2.0) as usize) + seed) % (ground_y.max(1) + 1);
+                let x = ((seed + i) as f32 + time * 4.5).round() as usize % width;
+                let y = ((time * 5.5 + seed as f32).round() as usize) % (ground_y.max(1) + 1);
                 let ch = if i % 3 == 0 { '*' } else { '.' };
                 let _ = fb.set(x, y, Cell::new(ch, snow_fg));
             }
@@ -3243,7 +3243,7 @@ pub fn render_environment(
         EnvironmentStyle::Graveyard => {
             // Mist wisps floating along the crypt road
             let mist_fg = Color::rgb(128, 203, 196);
-            let offset = ((time * 1.5) as usize) % 8;
+            let offset = ((time * 4.5).round() as usize) % 8;
             for x in (offset..width).step_by(12) {
                 let _ = fb.set(x, ground_y, Cell::new('~', mist_fg));
             }
@@ -3252,8 +3252,8 @@ pub fn render_environment(
             // Leaves drifting down from canopy toward the woodland path
             let leaf_fg = Color::rgb(255, 179, 0);
             for i in 0..5 {
-                let x = (i * 31 + ((time * 2.0) as usize)) % width;
-                let y = (((time * 1.5) as usize) + i * 3) % (ground_y.max(1) + 1);
+                let x = ((i * 31) as f32 + time * 6.0).round() as usize % width;
+                let y = ((time * 4.5 + (i * 3) as f32).round() as usize) % (ground_y.max(1) + 1);
                 let _ = fb.set(x, y, Cell::new('~', leaf_fg));
             }
         }
@@ -3268,7 +3268,7 @@ pub fn render_environment(
         EnvironmentStyle::Swamp => {
             // Fireflies flickering over the muddy ground
             let fly_fg = Color::rgb(205, 220, 57);
-            if ((time * 3.0) as usize).is_multiple_of(2) {
+            if ((time * 6.0).round() as usize).is_multiple_of(2) {
                 for i in 0..4 {
                     let x = (i * 23 + 7) % width;
                     let y = ground_y.saturating_sub(1 + (i % 3));
@@ -3281,7 +3281,7 @@ pub fn render_environment(
             let matrix_fg = Color::rgb(0, 230, 118);
             for i in 0..6 {
                 let x = (i * 19 + 5) % width;
-                let y = (((time * 4.0) as usize) + i * 2) % (ground_y.max(1) + 1);
+                let y = ((time * 9.0 + (i * 2) as f32).round() as usize) % (ground_y.max(1) + 1);
                 let ch = if i.is_multiple_of(2) { '0' } else { '1' };
                 let _ = fb.set(x, y, Cell::new(ch, matrix_fg));
             }
@@ -3297,7 +3297,7 @@ pub fn render_environment(
             // Pollen motes hovering around the floral ground
             let pollen_fg = Color::rgb(255, 235, 59);
             for i in 0..5 {
-                let x = (i * 27 + ((time * 3.0) as usize)) % width;
+                let x = ((i * 27) as f32 + time * 7.5).round() as usize % width;
                 let y = (i * 3) % (ground_y.max(1) + 1);
                 let _ = fb.set(x, y, Cell::new('.', pollen_fg));
             }
@@ -3305,7 +3305,7 @@ pub fn render_environment(
         EnvironmentStyle::Throne => {
             // Torch spark flicker beside the royal carpet
             let torch_fg = Color::rgb(255, 112, 67);
-            if ((time * 4.0) as usize).is_multiple_of(2) && width > 4 {
+            if ((time * 8.0).round() as usize).is_multiple_of(2) && width > 4 {
                 let ty = ground_y.saturating_sub(1);
                 let _ = fb.set(2, ty, Cell::new('*', torch_fg));
                 let _ = fb.set(width - 3, ty, Cell::new('*', torch_fg));

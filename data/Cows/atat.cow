@@ -1,5 +1,6 @@
 # ATAT
 # from http://www.asciiworld.com/-Robots,24-.html (accessed 4/30/2014)
+# Modified ATAT from Row (the Ascii-Wizard of Oz)
 $the_cow = <<EOC;
   $thoughts                         ________
    $thoughts                    _.-Y  |  |  Y-.,_
@@ -21,6 +22,4 @@ $the_cow = <<EOC;
                       /|..|\       /|..|\         
                      '={--}=`     '={--}=`        
                     .-^-r--^-.   .-^-r--^-.       
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Modified ATAT from Row  (the Ascii-Wizard of Oz)
 EOC

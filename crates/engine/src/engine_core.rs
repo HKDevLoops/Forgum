@@ -181,7 +181,11 @@ impl SimState {
         );
 
         let mut scheduler = Scheduler::new(config.fps);
-        scheduler.is_dynamic = config.effect != "static" && config.effect != "none";
+        let has_scenery_motion = scenery.0 != crate::scenery::MountainStyle::None
+            || scenery.1 != crate::scenery::RoadStyle::None
+            || scenery.2 != crate::scenery::EnvironmentStyle::None;
+        scheduler.is_dynamic =
+            (config.effect != "static" && config.effect != "none") || has_scenery_motion;
 
         Self {
             fb: FrameBuffer::new(cols, rows),
@@ -618,6 +622,7 @@ fn sim_thread(
     shutdown: ShutdownFlag,
     max_frames: u64,
 ) {
+    let _timer_guard = forgum_platform::TimerResolutionGuard::acquire();
     let sim_start = Instant::now();
     let wall_clock_limit = if sim.config.duration > 0 {
         Some(Duration::from_secs(sim.config.duration as u64))
@@ -755,12 +760,18 @@ fn sim_thread(
             }
         }
 
-        // Calibrated sleep: subtract elapsed frame work from target period to eliminate drift
+        // Calibrated hybrid sleep: sub-millisecond precision frame pacing for 60/120/144/240 FPS
         let period = sim.scheduler.frame_period();
         if !period.is_zero() {
             let work_time = now.elapsed();
             if period > work_time {
-                std::thread::sleep(period - work_time);
+                let remaining = period - work_time;
+                if remaining > Duration::from_micros(2500) {
+                    std::thread::sleep(remaining - Duration::from_micros(1200));
+                }
+                while now.elapsed() < period {
+                    std::hint::spin_loop();
+                }
             }
         }
     }

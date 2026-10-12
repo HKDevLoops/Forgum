@@ -541,7 +541,7 @@ impl Effect for BreatheEffect {
                     }
                     AnimalInstinct::Feline => {
                         // Cat whisker subtle twitch
-                        if ch == '=' && ((time * 3.0) as usize).is_multiple_of(2) {
+                        if ch == '=' && ((time * 3.0) % 2.0 < 1.0) {
                             ch = '-';
                         }
                     }
@@ -580,8 +580,10 @@ impl Effect for BreatheEffect {
                                 mx + k
                             };
                             if fx < fb.width {
-                                let g_idx = (k + (time * 12.0) as usize) % fire_glyphs.len();
-                                let c_idx = (k + (time * 8.0) as usize) % fire_colors.len();
+                                let g_idx =
+                                    ((k as f32 + time * 12.0).floor() as usize) % fire_glyphs.len();
+                                let c_idx =
+                                    ((k as f32 + time * 8.0).floor() as usize) % fire_colors.len();
                                 let _ = fb.set(
                                     fx,
                                     my,
@@ -627,8 +629,8 @@ impl Effect for BreatheEffect {
                         for k in 1..=spout_reach {
                             let sy = my.saturating_sub(k);
                             if sy < fb.height {
-                                let ch =
-                                    spout_glyphs[(k + (time * 6.0) as usize) % spout_glyphs.len()];
+                                let ch = spout_glyphs[((k as f32 + time * 6.0).floor() as usize)
+                                    % spout_glyphs.len()];
                                 let _ = fb.set(mx, sy, Cell::new(ch, Color::rgb(0, 229, 255)));
                                 // Spray droplets spreading at crest
                                 if k == spout_reach {
@@ -651,15 +653,11 @@ impl Effect for BreatheEffect {
                         }
                     } else {
                         // Inhale: gentle bubbles rising
-                        let bubble_y = my.saturating_sub(((time * 3.0) as usize) % 3 + 1);
-                        let bubble_x =
-                            (mx + ((time * 2.0) as usize) % 2).min(fb.width.saturating_sub(1));
+                        let bubble_y = my.saturating_sub(((time * 3.0).floor() as usize) % 3 + 1);
+                        let bubble_x = (mx + ((time * 2.0).floor() as usize) % 2)
+                            .min(fb.width.saturating_sub(1));
                         if bubble_y < fb.height {
-                            let b_ch = if ((time * 3.0) as usize).is_multiple_of(2) {
-                                'o'
-                            } else {
-                                '.'
-                            };
+                            let b_ch = if (time * 3.0) % 2.0 < 1.0 { 'o' } else { '.' };
                             let _ = fb.set(
                                 bubble_x,
                                 bubble_y,
@@ -672,8 +670,8 @@ impl Effect for BreatheEffect {
             AnimalInstinct::Cephalopod => {
                 // Bioluminescent spore sparkles floating around the mantle
                 if let Some((my, mx)) = self.mouth_pos {
-                    let spore_y = my.saturating_sub(((time * 2.5) as usize) % 3);
-                    let spore_x = (mx + ((time * 4.0) as usize) % 4)
+                    let spore_y = my.saturating_sub(((time * 2.5).floor() as usize) % 3);
+                    let spore_x = (mx + ((time * 4.0).floor() as usize) % 4)
                         .saturating_sub(2)
                         .min(fb.width.saturating_sub(1));
                     if spore_y < fb.height {
@@ -687,7 +685,7 @@ impl Effect for BreatheEffect {
                     let is_sleeping =
                         self.cow_text.contains("snoopysleep") || self.cow_text.contains("--");
                     if is_sleeping && my > 1 {
-                        let z_step = ((time * 2.0) as usize) % 3;
+                        let z_step = ((time * 2.0).floor() as usize) % 3;
                         let zy = my.saturating_sub(z_step + 1);
                         let zx = (mx + z_step).min(fb.width.saturating_sub(1));
                         if zy < fb.height {
@@ -705,7 +703,8 @@ impl Effect for BreatheEffect {
             AnimalInstinct::Avian => {
                 // Feather motes drifting softly
                 if let Some((my, mx)) = self.mouth_pos {
-                    let fy = (my + ((time * 1.5) as usize) % 3).min(fb.height.saturating_sub(1));
+                    let fy =
+                        (my + ((time * 1.5).floor() as usize) % 3).min(fb.height.saturating_sub(1));
                     let fx = if mx > 2 { mx - 2 } else { mx + 2 };
                     if fx < fb.width {
                         let _ = fb.set(fx, fy, Cell::new(',', Color::rgb(255, 213, 79)));
@@ -883,7 +882,7 @@ impl Effect for FloatEffect {
             let wave_fg = Color::rgb(72, 202, 228);
             for wx in 0..fb.width {
                 if fb.get(wx, surface_y).ch == ' ' {
-                    let wave_ch = if ((wx + ((time * 3.0) as usize)) % 4) < 2 {
+                    let wave_ch = if (((wx as f32 + time * 3.0) % 4.0 + 4.0) % 4.0) < 2.0 {
                         '~'
                     } else {
                         '-'
@@ -1012,11 +1011,15 @@ impl Effect for FloatEffect {
             AnimalInstinct::Marine => {
                 // Buoyant bubbles rising through water
                 for i in 0..4 {
-                    let seed = i * 19;
-                    let bx = (seed + ((time * 3.0) as usize)) % fb.width.max(1);
-                    let by = ((fb.height.saturating_sub(1)) as f32
+                    let seed = (i * 19) as f32;
+                    let bx = (((seed + time * 3.0) % fb.width.max(1) as f32
+                        + fb.width.max(1) as f32)
+                        % fb.width.max(1) as f32)
+                        .round() as usize;
+                    let by = (((fb.height.saturating_sub(1)) as f32
                         - ((time * 4.0 + i as f32 * 2.5) % fb.height.max(1) as f32))
-                        .max(0.0) as usize;
+                        .max(0.0))
+                    .round() as usize;
                     if bx < fb.width && by < fb.height {
                         let b_ch = if i % 2 == 0 { 'o' } else { '.' };
                         let _ = fb.set(bx, by, Cell::new(b_ch, Color::rgb(0, 229, 255)));
@@ -1026,11 +1029,15 @@ impl Effect for FloatEffect {
             AnimalInstinct::Cephalopod => {
                 // Bioluminescent spore sparkles
                 for i in 0..4 {
-                    let seed = i * 23;
-                    let sx = (seed + ((time * 2.0) as usize)) % fb.width.max(1);
-                    let sy = ((fb.height.saturating_sub(1)) as f32
+                    let seed = (i * 23) as f32;
+                    let sx = (((seed + time * 2.0) % fb.width.max(1) as f32
+                        + fb.width.max(1) as f32)
+                        % fb.width.max(1) as f32)
+                        .round() as usize;
+                    let sy = (((fb.height.saturating_sub(1)) as f32
                         - ((time * 3.0 + i as f32 * 3.0) % fb.height.max(1) as f32))
-                        .max(0.0) as usize;
+                        .max(0.0))
+                    .round() as usize;
                     if sx < fb.width && sy < fb.height {
                         let col = if i % 2 == 0 {
                             Color::rgb(0, 255, 204)
@@ -1044,11 +1051,15 @@ impl Effect for FloatEffect {
             AnimalInstinct::Dragon => {
                 // Floating on hot magma updrafts: rising sparks
                 for i in 0..4 {
-                    let seed = i * 17;
-                    let fx = (seed + ((time * 4.0) as usize)) % fb.width.max(1);
-                    let fy = ((fb.height.saturating_sub(1)) as f32
+                    let seed = (i * 17) as f32;
+                    let fx = (((seed + time * 4.0) % fb.width.max(1) as f32
+                        + fb.width.max(1) as f32)
+                        % fb.width.max(1) as f32)
+                        .round() as usize;
+                    let fy = (((fb.height.saturating_sub(1)) as f32
                         - ((time * 5.0 + i as f32 * 2.0) % fb.height.max(1) as f32))
-                        .max(0.0) as usize;
+                        .max(0.0))
+                    .round() as usize;
                     if fx < fb.width && fy < fb.height {
                         let _ = fb.set(fx, fy, Cell::new('*', Color::rgb(255, 68, 0)));
                     }
@@ -1069,11 +1080,15 @@ impl Effect for FloatEffect {
             AnimalInstinct::Canine => {
                 // Soft floating dream sleep clouds
                 for i in 0..3 {
-                    let seed = i * 21;
-                    let cx = (seed + ((time * 2.0) as usize)) % fb.width.max(1);
-                    let cy = ((fb.height.saturating_sub(1)) as f32
+                    let seed = (i * 21) as f32;
+                    let cx = (((seed + time * 2.0) % fb.width.max(1) as f32
+                        + fb.width.max(1) as f32)
+                        % fb.width.max(1) as f32)
+                        .round() as usize;
+                    let cy = (((fb.height.saturating_sub(1)) as f32
                         - ((time * 2.0 + i as f32 * 2.0) % fb.height.max(1) as f32))
-                        .max(0.0) as usize;
+                        .max(0.0))
+                    .round() as usize;
                     if cx < fb.width && cy < fb.height {
                         let _ = fb.set(cx, cy, Cell::new('~', Color::rgb(209, 196, 233)));
                     }
@@ -1082,11 +1097,15 @@ impl Effect for FloatEffect {
             AnimalInstinct::Avian => {
                 // Rising thermal updrafts
                 for i in 0..3 {
-                    let seed = i * 27;
-                    let ax = (seed + ((time * 3.0) as usize)) % fb.width.max(1);
-                    let ay = ((fb.height.saturating_sub(1)) as f32
+                    let seed = (i * 27) as f32;
+                    let ax = (((seed + time * 3.0) % fb.width.max(1) as f32
+                        + fb.width.max(1) as f32)
+                        % fb.width.max(1) as f32)
+                        .round() as usize;
+                    let ay = (((fb.height.saturating_sub(1)) as f32
                         - ((time * 4.0 + i as f32 * 3.0) % fb.height.max(1) as f32))
-                        .max(0.0) as usize;
+                        .max(0.0))
+                    .round() as usize;
                     if ax < fb.width && ay < fb.height {
                         let _ = fb.set(ax, ay, Cell::new('^', Color::rgb(255, 238, 88)));
                     }
@@ -1095,11 +1114,15 @@ impl Effect for FloatEffect {
             AnimalInstinct::Bovine => {
                 // Meadow dandelion spores drifting
                 for i in 0..3 {
-                    let seed = i * 31;
-                    let bx = (seed + ((time * 1.5) as usize)) % fb.width.max(1);
-                    let by = ((fb.height.saturating_sub(1)) as f32
+                    let seed = (i * 31) as f32;
+                    let bx = (((seed + time * 1.5) % fb.width.max(1) as f32
+                        + fb.width.max(1) as f32)
+                        % fb.width.max(1) as f32)
+                        .round() as usize;
+                    let by = (((fb.height.saturating_sub(1)) as f32
                         - ((time * 2.5 + i as f32 * 2.0) % fb.height.max(1) as f32))
-                        .max(0.0) as usize;
+                        .max(0.0))
+                    .round() as usize;
                     if bx < fb.width && by < fb.height {
                         let _ = fb.set(bx, by, Cell::new('*', Color::rgb(200, 230, 201)));
                     }
@@ -1504,11 +1527,7 @@ impl Effect for WalkEffect {
                     for &col in &self.leg_cols {
                         let foot_x = (col as i32 + x_off) as usize;
                         if foot_x < fb.width && foot_y < fb.height {
-                            let ember_ch = if ((time * 10.0) as usize).is_multiple_of(2) {
-                                '*'
-                            } else {
-                                '.'
-                            };
+                            let ember_ch = if (time * 10.0) % 2.0 < 1.0 { '*' } else { '.' };
                             let _ =
                                 fb.set(foot_x, foot_y, Cell::new(ember_ch, Color::rgb(255, 68, 0)));
                         }
@@ -1538,11 +1557,7 @@ impl Effect for WalkEffect {
                     for &col in &self.leg_cols {
                         let foot_x = ((col as i32 + x_off).saturating_sub(1)) as usize;
                         if foot_x < fb.width && foot_y < fb.height {
-                            let dust_ch = if ((time * 8.0) as usize).is_multiple_of(2) {
-                                '.'
-                            } else {
-                                'o'
-                            };
+                            let dust_ch = if (time * 8.0) % 2.0 < 1.0 { '.' } else { 'o' };
                             let _ = fb.set(
                                 foot_x,
                                 foot_y,
@@ -1778,19 +1793,31 @@ impl Effect for PulseEffect {
         match self.instinct {
             AnimalInstinct::Dragon => {
                 if intensity > 0.6 {
-                    let rx = ((time * 11.0) as usize) % fb.width.max(1);
-                    let ry = ((time * 7.0) as usize) % fb.height.max(1);
+                    let rx = (((time * 11.0) % fb.width.max(1) as f32 + fb.width.max(1) as f32)
+                        % fb.width.max(1) as f32)
+                        .round() as usize;
+                    let ry = (((time * 7.0) % fb.height.max(1) as f32 + fb.height.max(1) as f32)
+                        % fb.height.max(1) as f32)
+                        .round() as usize;
                     let _ = fb.set(rx, ry, Cell::new('*', Color::rgb(255, 68, 0)));
                 }
             }
             AnimalInstinct::Spectral if intensity > 0.6 => {
-                let rx = ((time * 9.0) as usize) % fb.width.max(1);
-                let ry = ((time * 5.0) as usize) % fb.height.max(1);
+                let rx = (((time * 9.0) % fb.width.max(1) as f32 + fb.width.max(1) as f32)
+                    % fb.width.max(1) as f32)
+                    .round() as usize;
+                let ry = (((time * 5.0) % fb.height.max(1) as f32 + fb.height.max(1) as f32)
+                    % fb.height.max(1) as f32)
+                    .round() as usize;
                 let _ = fb.set(rx, ry, Cell::new('*', Color::rgb(189, 147, 249)));
             }
             AnimalInstinct::Marine if intensity > 0.6 => {
-                let rx = ((time * 8.0) as usize) % fb.width.max(1);
-                let ry = ((time * 6.0) as usize) % fb.height.max(1);
+                let rx = (((time * 8.0) % fb.width.max(1) as f32 + fb.width.max(1) as f32)
+                    % fb.width.max(1) as f32)
+                    .round() as usize;
+                let ry = (((time * 6.0) % fb.height.max(1) as f32 + fb.height.max(1) as f32)
+                    % fb.height.max(1) as f32)
+                    .round() as usize;
                 let _ = fb.set(rx, ry, Cell::new('o', Color::rgb(0, 229, 255)));
             }
             _ => {}
@@ -2007,7 +2034,7 @@ impl FlyEffect {
 
                 // Starfield twinkling:
                 if (ch == '+' || ch == 'o' || ch == '*' || ch == '.') && !is_trail_row {
-                    let star_seed = (x * 13 + y * 7 + (time * 6.0) as usize) % 4;
+                    let star_seed = (((x * 13 + y * 7) as f32 + time * 6.0).floor() as usize) % 4;
                     let star_glyph = match star_seed {
                         0 => '*',
                         1 => '+',
@@ -2096,7 +2123,7 @@ impl Effect for FlyEffect {
         }
 
         // 2-phase in-place wing flap cycle:
-        let flap_cycle = ((time * self.speed * 8.0) as usize) % 2;
+        let flap_cycle = ((time * self.speed * 8.0).floor() as usize) % 2;
         let is_upstroke = flap_cycle == 0;
 
         // Periodic eye-blink:
@@ -2191,54 +2218,96 @@ impl Effect for FlyEffect {
                     Color::rgb(255, 204, 0),
                 ];
                 for i in 0..4 {
-                    let seed = i * 17 + (time * 10.0) as usize;
-                    let ex = (seed * 7 + 13) % fb.width.max(1);
-                    let ey = (seed * 3 + self.cow_start_line) % fb.height.max(1);
+                    let seed = i as f32 * 17.0;
+                    let ex = (((seed * 7.0 + 13.0 + time * 10.0) % fb.width.max(1) as f32
+                        + fb.width.max(1) as f32)
+                        % fb.width.max(1) as f32)
+                        .round() as usize;
+                    let ey = ((seed * 3.0
+                        + self.cow_start_line as f32
+                        + (time * 3.0 + i as f32).sin() * 1.5)
+                        .clamp(0.0, fb.height.saturating_sub(1) as f32))
+                    .round() as usize;
                     let _ = fb.set(ex, ey, Cell::new('*', ember_colors[i % ember_colors.len()]));
                 }
             }
             AnimalInstinct::Marine => {
                 // Ocean spray
                 for i in 0..4 {
-                    let seed = i * 23 + (time * 8.0) as usize;
-                    let ex = (seed * 5 + 7) % fb.width.max(1);
-                    let ey = (seed * 3 + self.cow_start_line) % fb.height.max(1);
+                    let seed = i as f32 * 23.0;
+                    let ex = (((seed * 5.0 + 7.0 + time * 8.0) % fb.width.max(1) as f32
+                        + fb.width.max(1) as f32)
+                        % fb.width.max(1) as f32)
+                        .round() as usize;
+                    let ey = ((seed * 3.0
+                        + self.cow_start_line as f32
+                        + (time * 2.5 + i as f32).cos() * 1.5)
+                        .clamp(0.0, fb.height.saturating_sub(1) as f32))
+                    .round() as usize;
                     let _ = fb.set(ex, ey, Cell::new('~', Color::rgb(0, 229, 255)));
                 }
             }
             AnimalInstinct::Avian => {
                 // Aerodynamic feather motes
                 for i in 0..3 {
-                    let seed = i * 19 + (time * 6.0) as usize;
-                    let ex = (seed * 9 + 5) % fb.width.max(1);
-                    let ey = (seed * 4 + self.cow_start_line) % fb.height.max(1);
+                    let seed = i as f32 * 19.0;
+                    let ex = (((seed * 9.0 + 5.0 + time * 6.0) % fb.width.max(1) as f32
+                        + fb.width.max(1) as f32)
+                        % fb.width.max(1) as f32)
+                        .round() as usize;
+                    let ey = ((seed * 4.0
+                        + self.cow_start_line as f32
+                        + (time * 2.0 + i as f32).sin() * 1.5)
+                        .clamp(0.0, fb.height.saturating_sub(1) as f32))
+                    .round() as usize;
                     let _ = fb.set(ex, ey, Cell::new('\'', Color::rgb(255, 213, 79)));
                 }
             }
             AnimalInstinct::Spectral => {
                 // Trailing stardust
                 for i in 0..4 {
-                    let seed = i * 31 + (time * 7.0) as usize;
-                    let ex = (seed * 11 + 3) % fb.width.max(1);
-                    let ey = (seed * 5 + self.cow_start_line) % fb.height.max(1);
+                    let seed = i as f32 * 31.0;
+                    let ex = (((seed * 11.0 + 3.0 + time * 7.0) % fb.width.max(1) as f32
+                        + fb.width.max(1) as f32)
+                        % fb.width.max(1) as f32)
+                        .round() as usize;
+                    let ey = ((seed * 5.0
+                        + self.cow_start_line as f32
+                        + (time * 3.0 + i as f32).cos() * 1.5)
+                        .clamp(0.0, fb.height.saturating_sub(1) as f32))
+                    .round() as usize;
                     let _ = fb.set(ex, ey, Cell::new('*', Color::rgb(189, 147, 249)));
                 }
             }
             AnimalInstinct::Canine => {
                 // Flying Ace Snoopy trailing wind gusts
                 for i in 0..3 {
-                    let seed = i * 13 + (time * 7.0) as usize;
-                    let ex = (seed * 8 + 4) % fb.width.max(1);
-                    let ey = (seed * 2 + self.cow_start_line) % fb.height.max(1);
+                    let seed = i as f32 * 13.0;
+                    let ex = (((seed * 8.0 + 4.0 + time * 7.0) % fb.width.max(1) as f32
+                        + fb.width.max(1) as f32)
+                        % fb.width.max(1) as f32)
+                        .round() as usize;
+                    let ey = ((seed * 2.0
+                        + self.cow_start_line as f32
+                        + (time * 2.0 + i as f32).sin() * 1.5)
+                        .clamp(0.0, fb.height.saturating_sub(1) as f32))
+                    .round() as usize;
                     let _ = fb.set(ex, ey, Cell::new('~', Color::rgb(224, 224, 224)));
                 }
             }
             AnimalInstinct::Cephalopod => {
                 // Jet propulsion water bubbles
                 for i in 0..4 {
-                    let seed = i * 15 + (time * 8.0) as usize;
-                    let ex = (seed * 6 + 10) % fb.width.max(1);
-                    let ey = (seed * 3 + self.cow_start_line) % fb.height.max(1);
+                    let seed = i as f32 * 15.0;
+                    let ex = (((seed * 6.0 + 10.0 + time * 8.0) % fb.width.max(1) as f32
+                        + fb.width.max(1) as f32)
+                        % fb.width.max(1) as f32)
+                        .round() as usize;
+                    let ey = ((seed * 3.0
+                        + self.cow_start_line as f32
+                        + (time * 2.5 + i as f32).cos() * 1.5)
+                        .clamp(0.0, fb.height.saturating_sub(1) as f32))
+                    .round() as usize;
                     let _ = fb.set(ex, ey, Cell::new('o', Color::rgb(0, 255, 204)));
                 }
             }

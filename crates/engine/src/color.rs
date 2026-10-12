@@ -638,54 +638,56 @@ mod tests {
 
     #[test]
     fn test_god_given_natural_palettes() {
-        // Cow: white and black
+        // Cow: Pantone Blanc de Blanc white and Starless Night black
         let cow_p = get_natural_palette("cow");
-        assert!(cow_p.contains(&(255, 255, 255)));
-        assert!(cow_p.contains(&(26, 26, 26)));
+        assert!(cow_p.contains(&(244, 245, 245)));
+        assert!(cow_p.contains(&(33, 34, 36)));
 
-        // Cat & Kittens: white, ginger, brown, orange, black
+        // Cat & Kittens: Pantone Blanc de Blanc white, Desert Sun ginger, Chipmunk brown, Sea Pink nose, Starless Night black
         let cat_p = get_natural_palette("cat");
         let kittens_p = get_natural_palette("kittens");
         assert_eq!(cat_p, kittens_p);
-        assert!(cat_p.contains(&(255, 255, 255))); // white
-        assert!(cat_p.contains(&(211, 84, 0))); // ginger
-        assert!(cat_p.contains(&(121, 85, 72))); // brown
-        assert!(cat_p.contains(&(255, 182, 193))); // pink nose
-        assert!(cat_p.contains(&(33, 33, 33))); // black
+        assert!(cat_p.contains(&(244, 245, 245))); // white
+        assert!(cat_p.contains(&(195, 82, 20))); // ginger
+        assert!(cat_p.contains(&(115, 74, 46))); // brown
+        assert!(cat_p.contains(&(236, 163, 181))); // pink nose
+        assert!(cat_p.contains(&(33, 34, 36))); // black
 
         // Bunny: white in nature with soft pink inner ears/nose
         let bunny_p = get_natural_palette("bunny");
         for &(r, g, b) in bunny_p {
             assert!(
-                r >= 200 && g >= 180 && b >= 180,
+                r >= 200 && g >= 160 && b >= 180,
                 "bunny must be white with soft pink: ({r},{g},{b})"
             );
         }
 
-        // Doge: Shiba golden orange
+        // Doge: Shiba golden tan and ginger
         let doge_p = get_natural_palette("doge");
-        assert!(doge_p.contains(&(229, 152, 102)));
-        assert!(doge_p.contains(&(211, 84, 0)));
+        assert!(doge_p.contains(&(206, 137, 81)));
+        assert!(doge_p.contains(&(195, 82, 20)));
 
         // Hippie: colorful abstract
         let hippie_p = get_natural_palette("hippie");
         assert_eq!(hippie_p.len(), 5);
 
-        // Mule: brown
+        // Mule: Pantone Raw Umber & Chipmunk brown
         let mule_p = get_natural_palette("mule");
-        assert!(mule_p.contains(&(92, 64, 51))); // #5c4033 dark brown
+        assert!(mule_p.contains(&(88, 68, 54))); // Raw Umber
+        assert!(mule_p.contains(&(115, 74, 46))); // Chipmunk
 
-        // Pig: pink
+        // Pig: Pantone Sea Pink
         let pig_p = get_natural_palette("pig");
-        assert!(pig_p.contains(&(255, 182, 193))); // pink
+        assert!(pig_p.contains(&(236, 163, 181))); // Sea Pink
 
-        // Ram: white and grey
+        // Ram: Pantone Blanc de Blanc and Titanium Gray
         let ram_p = get_natural_palette("ram");
-        assert!(ram_p.contains(&(245, 245, 245)));
-        assert!(ram_p.contains(&(158, 158, 158)));
+        assert!(ram_p.contains(&(244, 245, 245)));
+        assert!(ram_p.contains(&(147, 149, 152)));
 
-        // Hamster: golden brown & cream
+        // Hamster: Pantone Warm Sand & Fawn
         let hamster_p = get_natural_palette("hamster");
-        assert!(hamster_p.contains(&(212, 163, 115)));
+        assert!(hamster_p.contains(&(191, 162, 126)));
+        assert!(hamster_p.contains(&(153, 120, 93)));
     }
 }
