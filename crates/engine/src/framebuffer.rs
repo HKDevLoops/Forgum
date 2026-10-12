@@ -249,23 +249,30 @@ impl FrameBuffer {
         &self.damage_list
     }
 
-    /// Return all changed `(x, y)` cells, including cells that were visible in `front`
-    /// but vacated (cleared to empty) in `back`. This ensures the terminal renderer
-    /// writes whitespace to erase vacated cells, eliminating any ghost trails or residue.
-    #[must_use]
-    pub fn compute_full_damage(&self) -> Vec<(usize, usize)> {
-        let mut damage = self.damage_list.clone();
+    /// Evaluates full damage into a pre-allocated vector `out`, clearing it first and avoiding re-allocations.
+    pub fn compute_full_damage_into(&self, out: &mut Vec<(usize, usize)>) {
+        out.clear();
+        out.extend_from_slice(&self.damage_list);
         for y in 0..self.height {
             let row_offset = y * self.width;
             for x in 0..self.width {
                 let i = row_offset + x;
                 if self.front[i].alpha > 0 && self.back[i].alpha == 0 && !self.dirty[i] {
-                    damage.push((x, y));
+                    out.push((x, y));
                 }
             }
         }
-        damage.sort_unstable_by_key(|&(x, y)| (y, x));
-        damage.dedup();
+        out.sort_unstable_by_key(|&(x, y)| (y, x));
+        out.dedup();
+    }
+
+    /// Return all changed `(x, y)` cells, including cells that were visible in `front`
+    /// but vacated (cleared to empty) in `back`. This ensures the terminal renderer
+    /// writes whitespace to erase vacated cells, eliminating any ghost trails or residue.
+    #[must_use]
+    pub fn compute_full_damage(&self) -> Vec<(usize, usize)> {
+        let mut damage = Vec::with_capacity(self.damage_list.len() + 16);
+        self.compute_full_damage_into(&mut damage);
         damage
     }
 
@@ -908,5 +915,21 @@ mod tests {
             full_dmg.contains(&(3, 1)),
             "compute_full_damage must include vacated cell (3, 1) so renderer clears it with space"
         );
+    }
+
+    #[test]
+    fn damage_compute_full_damage_into_reuses_buffer_without_realloc() {
+        let mut fb = FrameBuffer::new(10, 5);
+        fb.clear();
+        fb.set(2, 2, Cell::new('Z', Color::WHITE));
+        fb.swap();
+
+        fb.clear();
+        let mut reusable_damage = Vec::with_capacity(32);
+        let cap_before = reusable_damage.capacity();
+        fb.compute_full_damage_into(&mut reusable_damage);
+
+        assert!(reusable_damage.contains(&(2, 2)));
+        assert_eq!(reusable_damage.capacity(), cap_before);
     }
 }

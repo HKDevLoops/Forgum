@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.0.7-beta] - 2026-10-12
+
+### Added
+- **Interactive Package Manager Selector & Configurable Defaults (`crates/platform/src/package_manager.rs`, `crates/tui/src/app.rs`)**:
+  - Interactive selection prompt during `forgum update` allowing the user to choose their preferred package manager or standalone method on every update.
+  - Configurable `update_method` (`auto`, `standalone`, `zypper`, `apt`, `dnf`, `pacman`, `brew`, `scoop`, `winget`, `choco`, `cargo`) and `check_updates` preferences in configuration files and TUI Tab 5.
+  - Cached background update check with ANSI alert box notification on shell startup without recurring network latency.
+- **Zero-Allocation Render Pipeline & Damage Reusability (`crates/engine/src/framebuffer.rs`, `crates/engine/src/engine_core.rs`)**:
+  - Implemented `compute_full_damage_into(&self, out: &mut Vec<(usize, usize)>)` with scratch vector buffer reuse across simulation frames, eliminating per-frame heap allocations during damage tracking.
+  - Elevated single-thread threshold to `n <= 256` in `ComputeEngine` mountain harmonic superposition and road undulation chunking, eliminating up to 1,920 unnecessary OS thread spawns per second in standard terminal widths.
+  - Emitted ANSI text color reset (`\x1b[0m`) at frame conclusion to prevent foreground color leakage into host shells and prompts.
+
+### Security
+- **Hardened Standalone Upgrade Execution (`crates/platform/src/package_manager.rs`)**:
+  - Replaced shell string interpolation with direct environment variable passing (`FORGUM_INSTALL_DIR`) for both PowerShell and Bash invocation, completely eliminating command injection risks.
+  - Automated update cache invalidation upon successful upgrade completion.
+
+### Packaging
+- **Universal Multi-Distro & Container Validation (`.gitattributes`, packaging manifests)**:
+  - Enforced strict LF line endings across all shell scripts (`packaging/**`, `*.sh`) to ensure 100% container and Alpine/Ubuntu/Arch/openSUSE compatibility.
+  - Synchronized version parity across all 9 packaging channels (Homebrew, WinGet, RPM, DEB, Chocolatey, Scoop, Pacman, Gentoo, Nix).
+
+---
+
 ## [0.0.6-beta] - 2026-10-12
 
 ### Added

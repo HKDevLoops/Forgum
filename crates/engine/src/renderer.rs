@@ -215,6 +215,9 @@ impl Renderer for AnsiRenderer {
                 i += run_len;
             }
         }
+        if last_fg.is_some() {
+            buf.extend_from_slice(b"\x1b[0m");
+        }
         if self.mode == RenderMode::Overlay {
             // DECRC: restore cursor position/attributes and unhide atomically so shell prompt cursor remains crisp
             buf.extend_from_slice(b"\x1b8\x1b[?25h");

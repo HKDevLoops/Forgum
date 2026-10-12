@@ -1,3 +1,9 @@
-# Ensure packaging files use LF line endings on all platforms
-# This prevents grep/sed failures on Linux CI runners due to CRLF line endings
+# Ensure packaging and shell script files use LF line endings on all platforms
+# This prevents bash $'\r' and grep/sed failures on Linux CI runners
 packaging/** text eol=lf
+*.sh text eol=lf
+*.bash text eol=lf
+*.zsh text eol=lf
+*.fish text eol=lf
+install.sh text eol=lf
+uninstall.sh text eol=lf

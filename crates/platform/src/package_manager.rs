@@ -459,16 +459,15 @@ pub fn execute_standalone_update(channel: ReleaseChannel) -> Result<String, Stri
 
     #[cfg(windows)]
     {
-        let install_dir_arg = if cur_exe_dir.is_empty() {
-            String::new()
-        } else {
-            format!(" -InstallDir '{cur_exe_dir}'")
-        };
         let cmd = format!(
-            "try {{ $c = irm 'https://raw.githubusercontent.com/HKDevLoops/Forgum/{ref_name}/install.ps1' -ErrorAction Stop; & ([scriptblock]::Create($c)) -Channel '{channel_name}'{install_dir_arg} }} catch {{ $c = irm 'https://raw.githubusercontent.com/HKDevLoops/Forgum/dev/install.ps1'; & ([scriptblock]::Create($c)) -Channel '{channel_name}'{install_dir_arg} }}"
+            "try {{ $c = irm 'https://raw.githubusercontent.com/HKDevLoops/Forgum/{ref_name}/install.ps1' -ErrorAction Stop; & ([scriptblock]::Create($c)) -Channel '{channel_name}' }} catch {{ $c = irm 'https://raw.githubusercontent.com/HKDevLoops/Forgum/dev/install.ps1'; & ([scriptblock]::Create($c)) -Channel '{channel_name}' }}"
         );
-        let status = Command::new("powershell")
-            .args(["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", &cmd])
+        let mut command = Command::new("powershell");
+        command.args(["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", &cmd]);
+        if !cur_exe_dir.is_empty() {
+            command.env("FORGUM_INSTALL_DIR", &cur_exe_dir);
+        }
+        let status = command
             .stdin(std::process::Stdio::inherit())
             .stdout(std::process::Stdio::inherit())
             .stderr(std::process::Stdio::inherit())
@@ -476,6 +475,7 @@ pub fn execute_standalone_update(channel: ReleaseChannel) -> Result<String, Stri
             .map_err(|e| format!("Failed to invoke PowerShell upgrade: {e}"))?;
 
         if status.success() {
+            let _ = clear_update_cache();
             Ok("Standalone binary upgraded successfully via install.ps1.".to_string())
         } else {
             Err(format!(
@@ -485,17 +485,15 @@ pub fn execute_standalone_update(channel: ReleaseChannel) -> Result<String, Stri
     }
     #[cfg(not(windows))]
     {
-        let dir_export = if cur_exe_dir.is_empty() {
-            String::new()
-        } else {
-            format!("export FORGUM_INSTALL_DIR='{cur_exe_dir}'; ")
-        };
         let cmd = format!(
-            "{dir_export}curl -4 -fsSL --connect-timeout 5 'https://raw.githubusercontent.com/HKDevLoops/Forgum/{ref_name}/install.sh' 2>/dev/null | bash -s -- --channel {channel_name} --headless -y || curl -4 -fsSL --connect-timeout 5 'https://raw.githubusercontent.com/HKDevLoops/Forgum/dev/install.sh' | bash -s -- --channel {channel_name} --headless -y"
+            "curl -4 -fsSL --connect-timeout 5 'https://raw.githubusercontent.com/HKDevLoops/Forgum/{ref_name}/install.sh' 2>/dev/null | bash -s -- --channel {channel_name} --headless -y || curl -4 -fsSL --connect-timeout 5 'https://raw.githubusercontent.com/HKDevLoops/Forgum/dev/install.sh' | bash -s -- --channel {channel_name} --headless -y"
         );
-        let status = Command::new("bash")
-            .arg("-c")
-            .arg(cmd)
+        let mut command = Command::new("bash");
+        command.arg("-c").arg(cmd);
+        if !cur_exe_dir.is_empty() {
+            command.env("FORGUM_INSTALL_DIR", &cur_exe_dir);
+        }
+        let status = command
             .stdin(std::process::Stdio::inherit())
             .stdout(std::process::Stdio::inherit())
             .stderr(std::process::Stdio::inherit())
@@ -503,6 +501,7 @@ pub fn execute_standalone_update(channel: ReleaseChannel) -> Result<String, Stri
             .map_err(|e| format!("Failed to invoke bash upgrade: {e}"))?;
 
         if status.success() {
+            let _ = clear_update_cache();
             Ok("Standalone binary upgraded successfully via install.sh.".to_string())
         } else {
             Err(format!("Bash upgrade script exited with status {status}"))
@@ -611,6 +610,7 @@ pub fn execute_package_manager_action(
                 match cmd.status() {
                     Ok(status) => {
                         if status.success() {
+                            let _ = clear_update_cache();
                             Ok(format!(
                                 "Package manager upgrade (`{cmd_str}`) completed successfully."
                             ))
@@ -2289,17 +2289,44 @@ mod tests {
     #[test]
     fn test_format_update_notice_box_styling() {
         let notice = UpdateNotice {
-            current_version: "0.0.6-beta".to_string(),
-            latest_version: "0.0.7-beta".to_string(),
+            current_version: "0.0.7-beta".to_string(),
+            latest_version: "0.0.8-beta".to_string(),
             channel: ReleaseChannel::Stable,
             update_command: "forgum update".to_string(),
             pm_update_command: Some("sudo zypper update forgum".to_string()),
         };
 
         let box_str = format_update_notice_box(&notice);
-        assert!(box_str.contains("0.0.6-beta"));
         assert!(box_str.contains("0.0.7-beta"));
+        assert!(box_str.contains("0.0.8-beta"));
         assert!(box_str.contains("forgum update"));
         assert!(box_str.contains("sudo zypper update forgum"));
+    }
+
+    #[test]
+    fn test_clear_update_cache_removes_file() {
+        let cache = UpdateCheckCache {
+            last_checked: 1700000000,
+            latest_version: "0.0.8-beta".to_string(),
+            channel: ReleaseChannel::Dev,
+        };
+        let _ = write_update_cache(&cache);
+        let res = clear_update_cache();
+        assert!(res.is_ok());
+        let after = read_update_cache().unwrap_or(None);
+        assert_eq!(after, None);
+    }
+
+    #[test]
+    fn test_extended_semver_edge_cases() {
+        assert!(is_newer_version("0.0.6", "0.0.7-beta"));
+        assert!(is_newer_version("0.0.6-beta", "0.0.6"));
+        assert!(is_newer_version("0.0.6-beta.1", "0.0.6-beta.2"));
+        assert!(!is_newer_version("0.0.7", "0.0.7-beta"));
+        assert!(!is_newer_version("0.0.7-beta", "0.0.6-beta"));
+        assert_eq!(
+            compare_semver("v0.0.7-beta", "0.0.7-beta"),
+            std::cmp::Ordering::Equal
+        );
     }
 }

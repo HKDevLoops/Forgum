@@ -115,6 +115,7 @@ struct SimState {
     cow_foot_y: usize,
     need_full_redraw: bool,
     active_composed: Arc<std::sync::RwLock<String>>,
+    damage_scratch: Vec<(usize, usize)>,
 }
 
 impl SimState {
@@ -203,6 +204,7 @@ impl SimState {
             cow_foot_y,
             need_full_redraw: true,
             active_composed,
+            damage_scratch: Vec::with_capacity((cols * rows) / 4),
         }
     }
 
@@ -323,21 +325,26 @@ impl SimState {
         }
 
         // Compute damage against the previous front buffer (BEFORE swap clears it).
-        // compute_full_damage() includes both newly modified cells and cells vacated/cleared
+        // compute_full_damage_into() includes both newly modified cells and cells vacated/cleared
         // from the previous frame, ensuring AnsiRenderer writes spaces to erase them with zero ghost residue.
-        let (damage, full_redraw) = if self.need_full_redraw {
+        let full_redraw = self.need_full_redraw;
+        if full_redraw {
             self.need_full_redraw = false;
-            let mut all_cells = Vec::with_capacity(self.fb.width * self.fb.height);
+            self.damage_scratch.clear();
+            let total = self.fb.width * self.fb.height;
+            if self.damage_scratch.capacity() < total {
+                self.damage_scratch
+                    .reserve(total - self.damage_scratch.capacity());
+            }
             for y in 0..self.fb.height {
                 for x in 0..self.fb.width {
-                    all_cells.push((x, y));
+                    self.damage_scratch.push((x, y));
                 }
             }
-            (all_cells, true)
         } else {
-            (self.fb.compute_full_damage(), false)
-        };
-        self.scheduler.observe(damage.len());
+            self.fb.compute_full_damage_into(&mut self.damage_scratch);
+        }
+        self.scheduler.observe(self.damage_scratch.len());
 
         // Swap buffers: front ← back (just-rendered), back ← front (previous).
         // After swap, front has the rendered cells we need to ship.
@@ -351,7 +358,7 @@ impl SimState {
         // frame, preserving incremental damage tracking.
         Arc::new(Frame {
             cells: self.fb.front.clone(),
-            damage,
+            damage: self.damage_scratch.clone(),
             cols: self.fb.width,
             rows: self.fb.height,
             full_redraw,

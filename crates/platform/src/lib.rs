@@ -31,7 +31,7 @@
 //! cfg_windows! { /* windows-only code */ }
 //! ```
 
-#![doc(html_root_url = "https://docs.rs/forgum-platform/0.0.6-beta")]
+#![doc(html_root_url = "https://docs.rs/forgum-platform/0.0.7-beta")]
 
 pub mod biome;
 pub mod compute;

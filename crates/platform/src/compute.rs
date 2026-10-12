@@ -115,7 +115,7 @@ impl ComputeEngine {
             .map(|p| p.get().min(8))
             .unwrap_or(2);
 
-        if n <= 64 || threads <= 1 {
+        if n <= 256 || threads <= 1 {
             Self::eval_mountain_harmonic_chunk(
                 0, target, h_base, wl, gamma_val, time, amplitudes, phases, k_count,
             );
@@ -200,7 +200,7 @@ impl ComputeEngine {
             .map(|p| p.get().min(8))
             .unwrap_or(2);
 
-        if n <= 64 || threads <= 1 {
+        if n <= 256 || threads <= 1 {
             Self::eval_road_chunk(start_x, target, base_y, roughness, time);
         } else {
             let chunk_size = n.div_ceil(threads);
