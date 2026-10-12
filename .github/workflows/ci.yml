@@ -72,6 +72,10 @@ jobs:
           cargo run -p forgum-engine --bin forgum -- --env list
           cargo run -p forgum-engine --bin forgum -- completions list
           cargo run -p forgum-engine --bin forgum -- config list
+          cargo run -p forgum-engine --bin forgum -- update --help
+          cargo run -p forgum-engine --bin forgum -- update --check
+          cargo run -p forgum-engine --bin forgum -- config get update_method
+          cargo run -p forgum-engine --bin forgum -- config get check_updates
 
   coverage:
     name: Coverage

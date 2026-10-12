@@ -162,6 +162,33 @@ impl PackageManager {
             Self::DirectBinary => true,
         }
     }
+
+    /// Loose parser for package manager names from CLI or configuration.
+    #[must_use]
+    pub fn from_str_loose(s: &str) -> Option<Self> {
+        let clean = s.trim().to_ascii_lowercase();
+        match clean.as_str() {
+            "scoop" => Some(Self::Scoop),
+            "winget" | "win_get" | "windowsapps" => Some(Self::Winget),
+            "choco" | "chocolatey" => Some(Self::Chocolatey),
+            "brew" | "homebrew" => Some(Self::Homebrew),
+            "pacman" | "arch" | "aur" => Some(Self::Pacman),
+            "apt" | "dpkg" | "debian" | "ubuntu" => Some(Self::Apt),
+            "dnf" | "fedora" | "rhel" | "rpm" => Some(Self::Dnf),
+            "zypper" | "suse" | "opensuse" => Some(Self::Zypper),
+            "nix" | "nix-profile" | "nix-env" => Some(Self::Nix),
+            "apk" | "alpine" => Some(Self::Apk),
+            "xbps" | "void" => Some(Self::Xbps),
+            "gentoo" | "portage" | "emerge" => Some(Self::Gentoo),
+            "port" | "macports" => Some(Self::MacPorts),
+            "pkg" | "freebsd" | "freebsdpkg" => Some(Self::FreeBsdPkg),
+            "cargo" | "crates" | "crates.io" => Some(Self::Cargo),
+            "standalone" | "direct" | "direct_binary" | "script" | "binary" => {
+                Some(Self::DirectBinary)
+            }
+            _ => None,
+        }
+    }
 }
 
 /// Helper to test if a CLI tool exists in PATH.
@@ -254,76 +281,84 @@ pub fn detect_source_from_path(path: &Path) -> PackageManager {
 
     #[cfg(unix)]
     {
-        if PackageManager::Homebrew.is_available_on_host() {
-            if let Ok(out) = Command::new("brew").args(["list", "forgum"]).output() {
-                if out.status.success() {
-                    return PackageManager::Homebrew;
-                }
-            }
-        }
-        if PackageManager::Pacman.is_available_on_host() {
-            if let Ok(out) = Command::new("pacman").args(["-Q", "forgum"]).output() {
-                if out.status.success() {
-                    return PackageManager::Pacman;
-                }
-            }
-        }
-        if PackageManager::Apt.is_available_on_host() {
-            if let Ok(out) = Command::new("dpkg").args(["-s", "forgum"]).output() {
-                if out.status.success() {
-                    return PackageManager::Apt;
-                }
-            }
-        }
+        // Secondary heuristic: only if binary is located in a system bin directory (/usr/bin, /bin, /usr/sbin)
+        let is_system_bin = (path_str.starts_with("/usr/bin")
+            || path_str.starts_with("/bin")
+            || path_str.starts_with("/usr/sbin"))
+            && !path_str.starts_with("/usr/local/");
 
-        // On openSUSE/SUSE, prioritize Zypper over DNF for rpm-based installations
-        let is_suse = std::fs::read_to_string("/etc/os-release")
-            .map(|s| {
-                let lower = s.to_ascii_lowercase();
-                lower.contains("opensuse") || lower.contains("suse")
-            })
-            .unwrap_or(false);
+        if is_system_bin {
+            if PackageManager::Homebrew.is_available_on_host() {
+                if let Ok(out) = Command::new("brew").args(["list", "forgum"]).output() {
+                    if out.status.success() {
+                        return PackageManager::Homebrew;
+                    }
+                }
+            }
+            if PackageManager::Pacman.is_available_on_host() {
+                if let Ok(out) = Command::new("pacman").args(["-Q", "forgum"]).output() {
+                    if out.status.success() {
+                        return PackageManager::Pacman;
+                    }
+                }
+            }
+            if PackageManager::Apt.is_available_on_host() {
+                if let Ok(out) = Command::new("dpkg").args(["-s", "forgum"]).output() {
+                    if out.status.success() {
+                        return PackageManager::Apt;
+                    }
+                }
+            }
 
-        if is_suse && PackageManager::Zypper.is_available_on_host() {
-            if let Ok(out) = Command::new("rpm").args(["-q", "forgum"]).output() {
-                if out.status.success() {
-                    return PackageManager::Zypper;
-                }
-            }
-        }
+            // On openSUSE/SUSE, prioritize Zypper over DNF for rpm-based installations
+            let is_suse = std::fs::read_to_string("/etc/os-release")
+                .map(|s| {
+                    let lower = s.to_ascii_lowercase();
+                    lower.contains("opensuse") || lower.contains("suse")
+                })
+                .unwrap_or(false);
 
-        if PackageManager::Dnf.is_available_on_host() {
-            if let Ok(out) = Command::new("rpm").args(["-q", "forgum"]).output() {
-                if out.status.success() {
-                    return PackageManager::Dnf;
+            if is_suse && PackageManager::Zypper.is_available_on_host() {
+                if let Ok(out) = Command::new("rpm").args(["-q", "forgum"]).output() {
+                    if out.status.success() {
+                        return PackageManager::Zypper;
+                    }
                 }
             }
-        }
-        if !is_suse && PackageManager::Zypper.is_available_on_host() {
-            if let Ok(out) = Command::new("rpm").args(["-q", "forgum"]).output() {
-                if out.status.success() {
-                    return PackageManager::Zypper;
+
+            if PackageManager::Dnf.is_available_on_host() {
+                if let Ok(out) = Command::new("rpm").args(["-q", "forgum"]).output() {
+                    if out.status.success() {
+                        return PackageManager::Dnf;
+                    }
                 }
             }
-        }
-        if PackageManager::Apk.is_available_on_host() {
-            if let Ok(out) = Command::new("apk").args(["info", "-e", "forgum"]).output() {
-                if out.status.success() {
-                    return PackageManager::Apk;
+            if !is_suse && PackageManager::Zypper.is_available_on_host() {
+                if let Ok(out) = Command::new("rpm").args(["-q", "forgum"]).output() {
+                    if out.status.success() {
+                        return PackageManager::Zypper;
+                    }
                 }
             }
-        }
-        if PackageManager::Xbps.is_available_on_host() {
-            if let Ok(out) = Command::new("xbps-query").args(["forgum"]).output() {
-                if out.status.success() {
-                    return PackageManager::Xbps;
+            if PackageManager::Apk.is_available_on_host() {
+                if let Ok(out) = Command::new("apk").args(["info", "-e", "forgum"]).output() {
+                    if out.status.success() {
+                        return PackageManager::Apk;
+                    }
                 }
             }
-        }
-        if PackageManager::FreeBsdPkg.is_available_on_host() {
-            if let Ok(out) = Command::new("pkg").args(["info", "forgum"]).output() {
-                if out.status.success() {
-                    return PackageManager::FreeBsdPkg;
+            if PackageManager::Xbps.is_available_on_host() {
+                if let Ok(out) = Command::new("xbps-query").args(["forgum"]).output() {
+                    if out.status.success() {
+                        return PackageManager::Xbps;
+                    }
+                }
+            }
+            if PackageManager::FreeBsdPkg.is_available_on_host() {
+                if let Ok(out) = Command::new("pkg").args(["info", "forgum"]).output() {
+                    if out.status.success() {
+                        return PackageManager::FreeBsdPkg;
+                    }
                 }
             }
         }
@@ -885,6 +920,475 @@ pub fn record_receipt(
     source: Option<PackageManager>,
 ) -> Result<Receipt, PlatformError> {
     Receipt::record(channel, source)
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// INTERACTIVE PACKAGE MANAGER SELECTION
+// ═══════════════════════════════════════════════════════════════════════════
+
+/// Interactively prompts the user to select their desired update method / package manager.
+/// Shows all available methods on the host with the detected source marked as recommended.
+pub fn select_update_method_interactive(
+    default_pm: PackageManager,
+) -> Result<PackageManager, String> {
+    let mut available: Vec<PackageManager> = Vec::new();
+
+    // 1. First add the detected source so it is option #1
+    available.push(default_pm);
+
+    // 2. Add other available package managers on this host
+    for (pm, is_avail) in detect_available_package_managers() {
+        if is_avail && !available.contains(&pm) {
+            available.push(pm);
+        }
+    }
+
+    // 3. Standalone Binary is always an option if not already in list
+    if !available.contains(&PackageManager::DirectBinary) {
+        available.push(PackageManager::DirectBinary);
+    }
+
+    // 4. Cargo is always an option if available in PATH
+    if is_cmd_available("cargo") && !available.contains(&PackageManager::Cargo) {
+        available.push(PackageManager::Cargo);
+    }
+
+    println!("\x1b[1;36m━━━ Select Forgum Update Method ━━━\x1b[0m");
+    println!(
+        "Detected installation source: \x1b[1;32m{}\x1b[0m\n",
+        default_pm.name()
+    );
+
+    for (idx, pm) in available.iter().enumerate() {
+        let num = idx + 1;
+        let badge = if *pm == default_pm {
+            " \x1b[1;32m[Default / Detected]\x1b[0m"
+        } else {
+            ""
+        };
+        let cmd = match pm {
+            PackageManager::DirectBinary => "curl / irm installer script",
+            _ => pm.update_command(),
+        };
+        println!(
+            "  \x1b[1m{num}.\x1b[0m \x1b[1;33m{:<18}\x1b[0m (`{cmd}`){badge}",
+            pm.name()
+        );
+    }
+
+    println!(
+        "\n\x1b[90m(Tip: Set a default anytime with `forgum config set update_method <name>` or via TUI)\x1b[0m"
+    );
+    print!(
+        "Select update method [1-{}] (default: 1): ",
+        available.len()
+    );
+    let _ = std::io::Write::flush(&mut std::io::stdout());
+
+    let mut input = String::new();
+    if std::io::stdin().read_line(&mut input).is_err() {
+        return Ok(default_pm);
+    }
+
+    let trimmed = input.trim();
+    if trimmed.is_empty() {
+        println!("Selected: \x1b[1;32m{}\x1b[0m\n", default_pm.name());
+        return Ok(default_pm);
+    }
+
+    // Try parsing as number
+    if let Ok(choice) = trimmed.parse::<usize>() {
+        if choice >= 1 && choice <= available.len() {
+            let chosen = available[choice - 1];
+            println!("Selected: \x1b[1;32m{}\x1b[0m\n", chosen.name());
+            return Ok(chosen);
+        }
+    }
+
+    // Try parsing as package manager name string (e.g. "zypper", "scoop", "standalone")
+    if let Some(pm) = PackageManager::from_str_loose(trimmed) {
+        println!("Selected: \x1b[1;32m{}\x1b[0m\n", pm.name());
+        return Ok(pm);
+    }
+
+    println!(
+        "\x1b[90m(Unrecognized selection '{}', defaulting to {})\x1b[0m\n",
+        trimmed,
+        default_pm.name()
+    );
+    Ok(default_pm)
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SEMANTIC VERSIONING & UPDATE CHECK CACHING
+// ═══════════════════════════════════════════════════════════════════════════
+
+/// Parsed representation of a Semantic Version 2.0.0 string.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ParsedSemVer {
+    pub major: u64,
+    pub minor: u64,
+    pub patch: u64,
+    pub prerelease: Option<String>,
+}
+
+impl ParsedSemVer {
+    /// Parse a semantic version string (e.g. "0.0.6-beta", "v1.2.3", "0.0.6", "0.0.6-beta.2").
+    #[must_use]
+    pub fn parse(s: &str) -> Option<Self> {
+        let trimmed = s.trim().trim_start_matches(['v', 'V']);
+        if trimmed.is_empty() {
+            return None;
+        }
+
+        // Strip build metadata after '+' if present
+        let no_build = trimmed.split('+').next().unwrap_or(trimmed);
+
+        // Split into version core and optional prerelease after '-'
+        let mut hyphen_parts = no_build.splitn(2, '-');
+        let core = hyphen_parts.next().unwrap_or("");
+        let prerelease = hyphen_parts
+            .next()
+            .map(|p| p.trim().to_string())
+            .filter(|p| !p.is_empty());
+
+        let mut nums = core.split('.');
+        let major = nums.next()?.parse::<u64>().ok()?;
+        let minor = nums.next().and_then(|n| n.parse::<u64>().ok()).unwrap_or(0);
+        let patch = nums.next().and_then(|n| n.parse::<u64>().ok()).unwrap_or(0);
+
+        Some(Self {
+            major,
+            minor,
+            patch,
+            prerelease,
+        })
+    }
+}
+
+impl PartialOrd for ParsedSemVer {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for ParsedSemVer {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        match self.major.cmp(&other.major) {
+            std::cmp::Ordering::Equal => {}
+            ord => return ord,
+        }
+        match self.minor.cmp(&other.minor) {
+            std::cmp::Ordering::Equal => {}
+            ord => return ord,
+        }
+        match self.patch.cmp(&other.patch) {
+            std::cmp::Ordering::Equal => {}
+            ord => return ord,
+        }
+
+        // SemVer 2.0.0 rule: a normal version with no prerelease has higher
+        // precedence than a prerelease version with the same major.minor.patch.
+        match (&self.prerelease, &other.prerelease) {
+            (None, None) => std::cmp::Ordering::Equal,
+            (Some(_), None) => std::cmp::Ordering::Less,
+            (None, Some(_)) => std::cmp::Ordering::Greater,
+            (Some(a), Some(b)) => compare_prerelease_identifiers(a, b),
+        }
+    }
+}
+
+/// Compares two pre-release strings identifier by identifier according to SemVer 2.0.0.
+fn compare_prerelease_identifiers(a: &str, b: &str) -> std::cmp::Ordering {
+    let parts_a: Vec<&str> = a.split('.').collect();
+    let parts_b: Vec<&str> = b.split('.').collect();
+
+    for (pa, pb) in parts_a.iter().zip(parts_b.iter()) {
+        let num_a = pa.parse::<u64>();
+        let num_b = pb.parse::<u64>();
+
+        match (num_a, num_b) {
+            (Ok(na), Ok(nb)) => match na.cmp(&nb) {
+                std::cmp::Ordering::Equal => {}
+                ord => return ord,
+            },
+            // SemVer 2.0.0 §11.4: numeric identifiers always have lower precedence than non-numeric
+            (Ok(_), Err(_)) => return std::cmp::Ordering::Less,
+            (Err(_), Ok(_)) => return std::cmp::Ordering::Greater,
+            (Err(_), Err(_)) => match pa.cmp(pb) {
+                std::cmp::Ordering::Equal => {}
+                ord => return ord,
+            },
+        }
+    }
+
+    parts_a.len().cmp(&parts_b.len())
+}
+
+/// Compare two version strings according to Semantic Versioning 2.0.0.
+#[must_use]
+pub fn compare_semver(a: &str, b: &str) -> std::cmp::Ordering {
+    match (ParsedSemVer::parse(a), ParsedSemVer::parse(b)) {
+        (Some(pa), Some(pb)) => pa.cmp(&pb),
+        (Some(_), None) => std::cmp::Ordering::Greater,
+        (None, Some(_)) => std::cmp::Ordering::Less,
+        (None, None) => a.trim().cmp(b.trim()),
+    }
+}
+
+/// Returns true if `upstream` is strictly newer than `current`.
+#[must_use]
+pub fn is_newer_version(current: &str, upstream: &str) -> bool {
+    compare_semver(current, upstream) == std::cmp::Ordering::Less
+}
+
+/// 24 hours TTL for cached update check (86,400 seconds).
+pub const UPDATE_CHECK_TTL_SECS: u64 = 86_400;
+
+/// Minimum seconds between background update check spawn attempts.
+pub const BACKGROUND_CHECK_COOLDOWN_SECS: u64 = 300;
+
+/// Cache entry stored on disk recording the last update check result.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct UpdateCheckCache {
+    /// Timestamp when check was performed (Unix epoch seconds).
+    pub last_checked: u64,
+    /// Latest upstream version found on the channel.
+    pub latest_version: String,
+    /// Channel that was checked.
+    pub channel: ReleaseChannel,
+}
+
+impl UpdateCheckCache {
+    pub fn file_path() -> Result<PathBuf, PlatformError> {
+        let dir = crate::paths::config_dir()?;
+        Ok(dir.join("update_check.json"))
+    }
+
+    pub fn read() -> Result<Option<Self>, PlatformError> {
+        let path = Self::file_path()?;
+        if !path.exists() {
+            return Ok(None);
+        }
+        let content = std::fs::read_to_string(&path)?;
+        match serde_json::from_str::<Self>(&content) {
+            Ok(c) => Ok(Some(c)),
+            Err(_) => Ok(None),
+        }
+    }
+
+    pub fn write(&self) -> Result<(), PlatformError> {
+        let path = Self::file_path()?;
+        if let Some(parent) = path.parent() {
+            let _ = std::fs::create_dir_all(parent);
+        }
+        let content = serde_json::to_string_pretty(self)
+            .map_err(|e| PlatformError::InvalidArgument(e.to_string()))?;
+        std::fs::write(&path, content)?;
+        Ok(())
+    }
+}
+
+/// Read cached update check information.
+pub fn read_update_cache() -> Result<Option<UpdateCheckCache>, PlatformError> {
+    UpdateCheckCache::read()
+}
+
+/// Write update check information to cache.
+pub fn write_update_cache(cache: &UpdateCheckCache) -> Result<(), PlatformError> {
+    cache.write()
+}
+
+/// Clear the update check cache file.
+pub fn clear_update_cache() -> Result<(), PlatformError> {
+    let path = UpdateCheckCache::file_path()?;
+    if path.exists() {
+        let _ = std::fs::remove_file(&path);
+    }
+    Ok(())
+}
+
+/// Notice information returned when a new update is available.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct UpdateNotice {
+    pub current_version: String,
+    pub latest_version: String,
+    pub channel: ReleaseChannel,
+    pub update_command: String,
+    pub pm_update_command: Option<String>,
+}
+
+/// Query cached update status without performing network I/O unless `force_refresh` is true.
+/// Returns `Some(UpdateNotice)` if a newer version is available.
+#[must_use]
+pub fn check_for_updates_cached(
+    channel: ReleaseChannel,
+    force_refresh: bool,
+) -> Option<UpdateNotice> {
+    let current_version = env!("CARGO_PKG_VERSION")
+        .trim_start_matches('v')
+        .to_string();
+
+    if force_refresh {
+        if let Ok(remote) = fetch_remote_channel_version(channel) {
+            let clean_remote = remote.trim_start_matches('v').to_string();
+            let now = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_secs())
+                .unwrap_or(0);
+            let cache = UpdateCheckCache {
+                last_checked: now,
+                latest_version: clean_remote.clone(),
+                channel,
+            };
+            let _ = cache.write();
+
+            if is_newer_version(&current_version, &clean_remote) {
+                let source = detect_installation_source();
+                let pm_cmd = if source != PackageManager::DirectBinary {
+                    Some(source.update_command().to_string())
+                } else {
+                    None
+                };
+                return Some(UpdateNotice {
+                    current_version,
+                    latest_version: clean_remote,
+                    channel,
+                    update_command: "forgum update".to_string(),
+                    pm_update_command: pm_cmd,
+                });
+            }
+        }
+        return None;
+    }
+
+    let cache = UpdateCheckCache::read().ok().flatten()?;
+
+    // Only respect cache for the matching channel
+    if cache.channel != channel {
+        return None;
+    }
+
+    if is_newer_version(&current_version, &cache.latest_version) {
+        let source = detect_installation_source();
+        let pm_cmd = if source != PackageManager::DirectBinary {
+            Some(source.update_command().to_string())
+        } else {
+            None
+        };
+        return Some(UpdateNotice {
+            current_version,
+            latest_version: cache.latest_version,
+            channel,
+            update_command: "forgum update".to_string(),
+            pm_update_command: pm_cmd,
+        });
+    }
+
+    None
+}
+
+/// Checks whether an asynchronous background update check should be triggered.
+/// Returns true if cache is missing or older than 24 hours.
+#[must_use]
+pub fn should_spawn_background_check(channel: ReleaseChannel) -> bool {
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+
+    match UpdateCheckCache::read() {
+        Ok(Some(cache)) => {
+            if cache.channel != channel {
+                return true;
+            }
+            now.saturating_sub(cache.last_checked) > UPDATE_CHECK_TTL_SECS
+        }
+        _ => true,
+    }
+}
+
+/// Spawns a silent background process to refresh the update check cache.
+/// Zero latency to the caller (<1ms).
+pub fn spawn_background_update_check(channel: ReleaseChannel) {
+    if let Ok(cur_exe) = std::env::current_exe() {
+        let ch_str = channel.as_str();
+        // Record current timestamp in cache to prevent duplicate spawns
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_secs())
+            .unwrap_or(0);
+        let placeholder = UpdateCheckCache {
+            last_checked: now,
+            latest_version: env!("CARGO_PKG_VERSION")
+                .trim_start_matches('v')
+                .to_string(),
+            channel,
+        };
+        let _ = placeholder.write();
+
+        let _ = crate::spawn::spawn_silent(
+            &cur_exe,
+            &[
+                "update",
+                "--check",
+                "--channel",
+                ch_str,
+                "--background-worker",
+            ],
+        );
+    }
+}
+
+/// Format an ANSI-styled update notice box to alert the user of a new Forgum version.
+#[must_use]
+pub fn format_update_notice_box(notice: &UpdateNotice) -> String {
+    let cur = &notice.current_version;
+    let new = &notice.latest_version;
+    let primary_cmd = &notice.update_command;
+
+    let line2_plain = if let Some(ref pm) = notice.pm_update_command {
+        if pm != primary_cmd {
+            format!("  Run `{primary_cmd}` (or `{pm}`) to upgrade!")
+        } else {
+            format!("  Run `{primary_cmd}` to upgrade!")
+        }
+    } else {
+        format!("  Run `{primary_cmd}` to upgrade!")
+    };
+
+    // Calculate display width: 📦 counts as 2 terminal columns
+    let len1 = 2 + 19 + cur.len() + 3 + new.len();
+    let len2 = line2_plain.chars().count();
+    let inner_width = len1.max(len2).max(46);
+
+    let pad1 = " ".repeat(inner_width.saturating_sub(len1));
+    let pad2 = " ".repeat(inner_width.saturating_sub(len2));
+
+    let border_h = "─".repeat(inner_width + 4);
+
+    let cyan = "\x1b[1;36m";
+    let yellow = "\x1b[1;33m";
+    let green = "\x1b[1;32m";
+    let bold = "\x1b[1m";
+    let reset = "\x1b[0m";
+
+    let line2_formatted = if let Some(ref pm) = notice.pm_update_command {
+        if pm != primary_cmd {
+            format!("Run `{cyan}{primary_cmd}{reset}` (or `{cyan}{pm}{reset}`) to upgrade!")
+        } else {
+            format!("Run `{cyan}{primary_cmd}{reset}` to upgrade!")
+        }
+    } else {
+        format!("Run `{cyan}{primary_cmd}{reset}` to upgrade!")
+    };
+
+    format!(
+        "\n{cyan}╭{border_h}╮{reset}\n\
+         {cyan}│{reset}  {bold}📦 Update available:{reset} {yellow}v{cur}{reset} → {green}v{new}{reset}{pad1}  {cyan}│{reset}\n\
+         {cyan}│{reset}  {line2_formatted}{pad2}  {cyan}│{reset}\n\
+         {cyan}╰{border_h}╯{reset}\n"
+    )
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1681,5 +2185,121 @@ mod tests {
             let line = s.display_line();
             assert!(!line.is_empty());
         }
+    }
+
+    #[test]
+    fn test_semver_parsing_and_comparison() {
+        use std::cmp::Ordering;
+
+        assert_eq!(compare_semver("0.0.6", "0.0.6"), Ordering::Equal);
+        assert_eq!(compare_semver("v0.0.6", "0.0.6"), Ordering::Equal);
+        assert_eq!(compare_semver("0.0.6-beta", "0.0.6-beta"), Ordering::Equal);
+        assert_eq!(compare_semver("0.0.6-beta", "0.0.7-beta"), Ordering::Less);
+        assert_eq!(
+            compare_semver("0.0.7-beta", "0.0.6-beta"),
+            Ordering::Greater
+        );
+        assert_eq!(compare_semver("0.0.6-beta", "0.0.6"), Ordering::Less);
+        assert_eq!(compare_semver("0.0.6", "0.0.6-beta"), Ordering::Greater);
+        assert_eq!(compare_semver("0.0.6-alpha", "0.0.6-beta"), Ordering::Less);
+        assert_eq!(
+            compare_semver("0.0.6-beta.1", "0.0.6-beta.2"),
+            Ordering::Less
+        );
+        assert_eq!(compare_semver("0.0.5", "0.0.6-beta"), Ordering::Less);
+        assert_eq!(compare_semver("1.0.0", "0.9.9"), Ordering::Greater);
+    }
+
+    #[test]
+    fn test_is_newer_version_edge_cases() {
+        assert!(is_newer_version("0.0.6-beta", "0.0.7-beta"));
+        assert!(is_newer_version("0.0.6-beta", "0.0.6"));
+        assert!(is_newer_version("0.0.6-beta", "0.1.0"));
+        assert!(!is_newer_version("0.0.6-beta", "0.0.6-beta"));
+        assert!(!is_newer_version("0.0.6-beta", "0.0.5"));
+        assert!(!is_newer_version("0.0.6", "0.0.6-beta"));
+    }
+
+    #[test]
+    fn test_package_manager_from_str_loose_matching() {
+        assert_eq!(
+            PackageManager::from_str_loose("zypper"),
+            Some(PackageManager::Zypper)
+        );
+        assert_eq!(
+            PackageManager::from_str_loose("opensuse"),
+            Some(PackageManager::Zypper)
+        );
+        assert_eq!(
+            PackageManager::from_str_loose("suse"),
+            Some(PackageManager::Zypper)
+        );
+        assert_eq!(
+            PackageManager::from_str_loose("scoop"),
+            Some(PackageManager::Scoop)
+        );
+        assert_eq!(
+            PackageManager::from_str_loose("winget"),
+            Some(PackageManager::Winget)
+        );
+        assert_eq!(
+            PackageManager::from_str_loose("brew"),
+            Some(PackageManager::Homebrew)
+        );
+        assert_eq!(
+            PackageManager::from_str_loose("apt"),
+            Some(PackageManager::Apt)
+        );
+        assert_eq!(
+            PackageManager::from_str_loose("dnf"),
+            Some(PackageManager::Dnf)
+        );
+        assert_eq!(
+            PackageManager::from_str_loose("pacman"),
+            Some(PackageManager::Pacman)
+        );
+        assert_eq!(
+            PackageManager::from_str_loose("cargo"),
+            Some(PackageManager::Cargo)
+        );
+        assert_eq!(
+            PackageManager::from_str_loose("standalone"),
+            Some(PackageManager::DirectBinary)
+        );
+        assert_eq!(
+            PackageManager::from_str_loose("script"),
+            Some(PackageManager::DirectBinary)
+        );
+        assert_eq!(PackageManager::from_str_loose("unknown_pm"), None);
+    }
+
+    #[test]
+    fn test_update_cache_serialization_and_ttl() {
+        let cache = UpdateCheckCache {
+            last_checked: 1700000000,
+            latest_version: "0.0.7-beta".to_string(),
+            channel: ReleaseChannel::Stable,
+        };
+
+        let json = serde_json::to_string(&cache).unwrap();
+        let deserialized: UpdateCheckCache = serde_json::from_str(&json).unwrap();
+        assert_eq!(deserialized, cache);
+    }
+
+    #[test]
+    fn test_format_update_notice_box_styling() {
+        let notice = UpdateNotice {
+            current_version: "0.0.6-beta".to_string(),
+            latest_version: "0.0.7-beta".to_string(),
+            channel: ReleaseChannel::Stable,
+            update_command: "forgum update".to_string(),
+            pm_update_command: Some("sudo zypper update forgum".to_string()),
+        };
+
+        let box_str = format_update_notice_box(&notice);
+        assert!(box_str.contains("0.0.6-beta"));
+        assert!(box_str.contains("0.0.7-beta"));
+        assert!(box_str.contains("forgum update"));
+        assert!(box_str.contains("sudo zypper update forgum"));
     }
 }

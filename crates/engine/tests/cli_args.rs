@@ -587,7 +587,18 @@ fn typo_suggestions_produced_for_invalid_options() {
 
 #[test]
 fn animal_signature_defaults_apply_automatically() {
-    let (a, _) = parse_args(argv(&["forgum-engine", "--animal", "nyan"])).unwrap();
+    let tmp = tempfile::tempdir().unwrap();
+    let empty_cfg = tmp.path().join("config.json");
+    std::fs::write(&empty_cfg, "{}").unwrap();
+
+    let (a, _) = parse_args(argv(&[
+        "forgum-engine",
+        "--config",
+        empty_cfg.to_str().unwrap(),
+        "--animal",
+        "nyan",
+    ]))
+    .unwrap();
     let cfg = build_scene_config(&a).unwrap();
     assert_eq!(cfg.cow, "nyan");
     assert_eq!(cfg.environment.as_deref(), Some("space"));
@@ -599,10 +610,16 @@ fn animal_signature_defaults_apply_automatically() {
 
 #[test]
 fn dynamic_scenario_adaptation_adapts_road_mountain_and_motion() {
+    let tmp = tempfile::tempdir().unwrap();
+    let empty_cfg = tmp.path().join("config.json");
+    std::fs::write(&empty_cfg, "{}").unwrap();
+
     // When environment is overridden to ocean for walking animal (tux):
     // road adapts to seabed, mountain to seamount, motion adapts to float (swimming)
     let (a, _) = parse_args(argv(&[
         "forgum-engine",
+        "--config",
+        empty_cfg.to_str().unwrap(),
         "--animal",
         "tux",
         "--env",
@@ -678,7 +695,8 @@ fn update_subcommand_parses_cleanly() {
         cmd,
         Some(Commands::Update {
             check: false,
-            channel: None
+            channel: None,
+            ..
         })
     ));
 
@@ -688,7 +706,8 @@ fn update_subcommand_parses_cleanly() {
         cmd_check,
         Some(Commands::Update {
             check: true,
-            channel: None
+            channel: None,
+            ..
         })
     ));
 
@@ -696,8 +715,18 @@ fn update_subcommand_parses_cleanly() {
         parse_args(argv(&["forgum", "update", "--channel", "nightly"])).unwrap();
     assert_eq!(a_chan.command, Command::Update);
     assert!(
-        matches!(cmd_chan, Some(Commands::Update { check: false, channel: Some(ref ch) }) if ch == "nightly")
+        matches!(cmd_chan, Some(Commands::Update { check: false, channel: Some(ref ch), .. }) if ch == "nightly")
     );
+
+    let (a_method, cmd_method) =
+        parse_args(argv(&["forgum", "update", "--method", "zypper", "-y"])).unwrap();
+    assert_eq!(a_method.command, Command::Update);
+    assert!(
+        matches!(cmd_method, Some(Commands::Update { method: Some(ref m), non_interactive: true, .. }) if m == "zypper")
+    );
+
+    let (a_nocheck, _) = parse_args(argv(&["forgum", "--no-check-updates"])).unwrap();
+    assert!(a_nocheck.no_check_updates);
 
     let (a_upgrade, _) = parse_args(argv(&["forgum", "upgrade"])).unwrap();
     assert_eq!(a_upgrade.command, Command::Update);
@@ -899,4 +928,65 @@ fn resolve_scene_randomness_mascot_scenery_fx_thought() {
             || scene.text == "Fortune Beta"
             || scene.text == "Fortune Gamma"
     );
+}
+
+#[test]
+fn update_method_and_check_updates_config_and_cli_flags() {
+    // 1. --check-updates and --no-check-updates flags
+    let (a_check, _) = parse_args(argv(&["forgum", "--check-updates"])).unwrap();
+    assert!(a_check.check_updates);
+
+    let (a_nocheck, _) = parse_args(argv(&["forgum", "--no-check-updates"])).unwrap();
+    assert!(a_nocheck.no_check_updates);
+
+    // 2. config set / get for update_method
+    let (_, cmd_set_pm) = parse_args(argv(&[
+        "forgum",
+        "config",
+        "set",
+        "update_method",
+        "zypper",
+    ]))
+    .unwrap();
+    if let Some(Commands::Config {
+        key,
+        value,
+        extra_value,
+        ..
+    }) = cmd_set_pm
+    {
+        assert_eq!(key.as_deref(), Some("set"));
+        assert_eq!(value.as_deref(), Some("update_method"));
+        assert_eq!(extra_value.as_deref(), Some("zypper"));
+    } else {
+        panic!("expected Commands::Config with set update_method zypper");
+    }
+
+    // 3. config set / get for check_updates
+    let (_, cmd_set_chk) =
+        parse_args(argv(&["forgum", "config", "set", "check_updates", "false"])).unwrap();
+    if let Some(Commands::Config {
+        key,
+        value,
+        extra_value,
+        ..
+    }) = cmd_set_chk
+    {
+        assert_eq!(key.as_deref(), Some("set"));
+        assert_eq!(value.as_deref(), Some("check_updates"));
+        assert_eq!(extra_value.as_deref(), Some("false"));
+    } else {
+        panic!("expected Commands::Config with set check_updates false");
+    }
+
+    // 4. SceneConfig serialization roundtrip for update_method and check_updates
+    let cfg = SceneConfig {
+        update_method: Some("zypper".into()),
+        check_updates: false,
+        ..Default::default()
+    };
+    let json = serde_json::to_string(&cfg).unwrap();
+    let loaded: SceneConfig = serde_json::from_str(&json).unwrap();
+    assert_eq!(loaded.update_method.as_deref(), Some("zypper"));
+    assert!(!loaded.check_updates);
 }

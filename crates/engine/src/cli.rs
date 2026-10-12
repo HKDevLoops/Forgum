@@ -405,6 +405,25 @@ pub struct Cli {
     )]
     pub colorblind: Option<String>,
 
+    /// Enable automatic update check notifications (default: true).
+    #[arg(
+        long = "check-updates",
+        visible_alias = "update-check",
+        global = true,
+        help = "Enable automatic update checking notifications",
+        overrides_with = "no_check_updates"
+    )]
+    pub check_updates: bool,
+
+    /// Disable automatic update notifications on CLI exit.
+    #[arg(
+        long = "no-check-updates",
+        visible_alias = "no-update-check",
+        global = true,
+        help = "Disable automatic update notifications"
+    )]
+    pub no_check_updates: bool,
+
     /// Positional speech message text (cowsay compatibility).
     #[arg(value_name = "MESSAGE", num_args = 0..)]
     pub message: Vec<String>,
@@ -485,6 +504,15 @@ pub enum Commands {
         /// Target release channel to update or switch to (stable, alpha, nightly, dev).
         #[arg(long, value_name = "CHANNEL")]
         channel: Option<String>,
+        /// Explicit update method / package manager (prompt, auto, zypper, scoop, winget, brew, apt, dnf, pacman, cargo, standalone).
+        #[arg(short = 'm', long, value_name = "METHOD")]
+        method: Option<String>,
+        /// Automatically confirm prompts without interactive package manager menu.
+        #[arg(short = 'y', long, alias = "yes", alias = "non-interactive")]
+        non_interactive: bool,
+        /// Internal non-blocking background check worker.
+        #[arg(long, hide = true)]
+        background_worker: bool,
     },
     /// View, switch, or manage release channels (stable, alpha, nightly, dev).
     #[command(alias = "channels")]
@@ -1117,6 +1145,8 @@ pub struct Args {
     pub aspect_mode: Option<String>,
     pub contrast_mode: Option<String>,
     pub colorblind: Option<String>,
+    pub check_updates: bool,
+    pub no_check_updates: bool,
 }
 
 /// Error type returned by `parse_args`, carrying the intended process exit code.
@@ -1368,6 +1398,8 @@ pub fn parse_args(argv: Vec<String>) -> Result<(Args, Option<Commands>), CliErro
         aspect_mode: cli.aspect_mode,
         contrast_mode: cli.contrast_mode,
         colorblind: cli.colorblind,
+        check_updates: cli.check_updates,
+        no_check_updates: cli.no_check_updates,
     };
 
     Ok((args, cli.command))
@@ -1607,7 +1639,10 @@ pub fn build_scene_config(args: &Args) -> Result<SceneConfig, String> {
     if args.text_only {
         cfg.text_only = true;
     }
-    if cfg.reduce_motion
+    let reduce_motion_applies = args.reduce_motion
+        || (cfg.reduce_motion && args.effect.is_none() && args.animation_type.is_none());
+
+    if reduce_motion_applies
         && cfg.animation.as_deref() == Some("dynamic")
         && cfg.animation_type.as_deref() != Some("breathe")
     {
@@ -1631,6 +1666,11 @@ pub fn build_scene_config(args: &Args) -> Result<SceneConfig, String> {
     }
     if let Some(colorblind) = &args.colorblind {
         cfg.colorblind_mode = Some(colorblind.clone());
+    }
+    if args.no_check_updates {
+        cfg.check_updates = false;
+    } else if args.check_updates {
+        cfg.check_updates = true;
     }
 
     // Validate mascot taxonomy locomotion consistency

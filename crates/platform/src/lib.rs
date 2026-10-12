@@ -77,13 +77,17 @@ pub use guards::{AltScreenGuard, CursorShowGuard, RawModeGuard, TimerResolutionG
 pub use mux::{detect_mux, Mux};
 pub use output::{open_output, OutputHandle, OutputTarget};
 pub use package_manager::{
-    atomic_replace_binary, check_git_updates, detect_available_package_managers, detect_git_status,
+    atomic_replace_binary, check_for_updates_cached, check_git_updates, clear_update_cache,
+    compare_semver, detect_available_package_managers, detect_git_status,
     detect_installation_source, detect_shadow_installations, detect_source_from_path,
     execute_git_update, execute_package_manager_action, execute_standalone_update,
-    fetch_remote_channel_version, get_funky_latest_version_quote, local_release_binary_path,
-    parse_version_from_cargo_toml, parse_version_from_release_json, read_receipt, record_receipt,
-    rollback_binary, write_receipt, GitRepoStatus, PackageManager, Receipt, ReleaseChannel,
-    ShadowInstallation,
+    fetch_remote_channel_version, format_update_notice_box, get_funky_latest_version_quote,
+    is_newer_version, local_release_binary_path, parse_version_from_cargo_toml,
+    parse_version_from_release_json, read_receipt, read_update_cache, record_receipt,
+    rollback_binary, select_update_method_interactive, should_spawn_background_check,
+    spawn_background_update_check, write_receipt, write_update_cache, GitRepoStatus,
+    PackageManager, ParsedSemVer, Receipt, ReleaseChannel, ShadowInstallation, UpdateCheckCache,
+    UpdateNotice,
 };
 pub use paths::{
     config_dir, config_path, control_socket_path, daemon_state_path, data_dir, detect_config_file,

@@ -200,6 +200,32 @@ pub fn run_health_check(explicit_config: Option<&Path>) -> HealthReport {
         suggestion: None,
     });
 
+    let update_notice = forgum_platform::check_for_updates_cached(channel, false);
+    if let Some(notice) = update_notice {
+        sys_items.push(HealthItem {
+            status: HealthStatus::Warn,
+            title: format!("Upstream Update: v{} available", notice.latest_version),
+            details: vec![
+                format!("Installed: v{}", notice.current_version),
+                format!("Upstream:  v{}", notice.latest_version),
+                format!("Release Channel: {}", notice.channel),
+                "Action: Run `forgum update` to upgrade automatically.".to_string(),
+            ],
+            suggestion: Some("Run `forgum update` to upgrade to the latest version.".into()),
+        });
+    } else {
+        sys_items.push(HealthItem {
+            status: HealthStatus::Ok,
+            title: format!("Upstream Update: Current (v{})", crate::VERSION),
+            details: vec![
+                format!("Current Version: v{}", crate::VERSION),
+                format!("Stream Channel: {}", channel.as_str()),
+                "Status: Synchronized with HKDevLoops/Forgum releases.".to_string(),
+            ],
+            suggestion: None,
+        });
+    }
+
     let shadows = detect_shadow_installations();
     let inactive_shadows: Vec<_> = shadows.iter().filter(|s| !s.is_active).collect();
     if inactive_shadows.is_empty() {

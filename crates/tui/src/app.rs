@@ -830,6 +830,8 @@ pub enum ConfigField {
     Aspect = 32,
     AspectMode = 33,
     ColorblindMode = 34,
+    UpdateMethod = 35,
+    CheckUpdates = 36,
 }
 
 impl ConfigField {
@@ -837,7 +839,7 @@ impl ConfigField {
     #[allow(non_upper_case_globals)]
     pub const AccelMode: ConfigField = ConfigField::HardwareAccel;
 
-    pub const ALL: [ConfigField; 35] = [
+    pub const ALL: [ConfigField; 37] = [
         ConfigField::Duration,
         ConfigField::Fps,
         ConfigField::Text,
@@ -873,6 +875,8 @@ impl ConfigField {
         ConfigField::Aspect,
         ConfigField::AspectMode,
         ConfigField::ColorblindMode,
+        ConfigField::UpdateMethod,
+        ConfigField::CheckUpdates,
     ];
 
     pub fn label(self) -> &'static str {
@@ -912,6 +916,8 @@ impl ConfigField {
             ConfigField::Banner => "banner",
             ConfigField::Aspect => "aspect",
             ConfigField::AspectMode => "aspect_mode",
+            ConfigField::UpdateMethod => "update_method",
+            ConfigField::CheckUpdates => "check_updates",
         }
     }
 
@@ -947,9 +953,11 @@ impl ConfigField {
             | ConfigField::ReserveRows
             | ConfigField::ReserveCols
             | ConfigField::Banner => ("Shell", tailwind::TEAL_400),
-            ConfigField::Editor | ConfigField::ConfigFormat | ConfigField::HardwareAccel => {
-                ("System", tailwind::ROSE_400)
-            }
+            ConfigField::Editor
+            | ConfigField::ConfigFormat
+            | ConfigField::HardwareAccel
+            | ConfigField::UpdateMethod
+            | ConfigField::CheckUpdates => ("System", tailwind::ROSE_400),
             ConfigField::Aspect | ConfigField::AspectMode => ("Display", tailwind::INDIGO_400),
         }
     }
@@ -991,6 +999,8 @@ impl ConfigField {
             ConfigField::Banner => "Inline fastfetch-style banner output without switching alternate screen",
             ConfigField::Aspect => "Target aspect ratio preset: auto (detect from terminal), 21:9 (ultrawide), 16:9 (widescreen), 16:10 (tall), 4:3 (classic), 1:1 (square), narrow (split)",
             ConfigField::AspectMode => "Aspect ratio adaptation strategy: preset (lock to fixed aspect math), dynamic (recalculate on resize), auto (context-aware)",
+            ConfigField::UpdateMethod => "Package manager / update method used by 'forgum update': prompt (ask each time), auto, zypper, scoop, winget, homebrew, apt, dnf, pacman, cargo, standalone",
+            ConfigField::CheckUpdates => "Automatically check for upstream updates in background (24h cache TTL) and notify when newer version is available",
         }
     }
 
@@ -3458,6 +3468,11 @@ export extern "forgum" [
                 .unwrap_or_else(|| "auto".into()),
             ConfigField::Image => self.config.image.clone().unwrap_or_default(),
             ConfigField::Editor => self.config.editor.clone().unwrap_or_else(|| "auto".into()),
+            ConfigField::UpdateMethod => self
+                .config
+                .update_method
+                .clone()
+                .unwrap_or_else(|| "prompt".into()),
             _ => String::new(),
         };
         self.edit_initial = true;
@@ -3560,6 +3575,17 @@ export extern "forgum" [
                 self.editing_config = true;
                 self.status_message =
                     "Editing Preferred Editor: type editor command (e.g. 'nvim', 'emacs', 'nano', 'code') and press Enter (Esc to cancel)"
+                        .into();
+            }
+            ConfigField::UpdateMethod => {
+                self.config_edit_buffer = self
+                    .config
+                    .update_method
+                    .clone()
+                    .unwrap_or_else(|| "prompt".into());
+                self.editing_config = true;
+                self.status_message =
+                    "Editing Update Method: type method (e.g. 'prompt', 'auto', 'zypper', 'scoop', 'winget', 'apt', 'cargo') and press Enter (Esc to cancel)"
                         .into();
             }
             _ => {
@@ -4293,6 +4319,61 @@ export extern "forgum" [
                     self.active_colorblind_badge()
                 );
             }
+            ConfigField::UpdateMethod => {
+                const UPDATE_PRESETS: [&str; 11] = [
+                    "prompt",
+                    "auto",
+                    "zypper",
+                    "scoop",
+                    "winget",
+                    "homebrew",
+                    "apt",
+                    "dnf",
+                    "pacman",
+                    "cargo",
+                    "standalone",
+                ];
+                let cur = self.config.update_method.as_deref().unwrap_or("prompt");
+                let next = if forward {
+                    if let Some(pos) = UPDATE_PRESETS
+                        .iter()
+                        .position(|&p| p.eq_ignore_ascii_case(cur))
+                    {
+                        UPDATE_PRESETS[(pos + 1) % UPDATE_PRESETS.len()]
+                    } else {
+                        UPDATE_PRESETS[0]
+                    }
+                } else {
+                    if let Some(pos) = UPDATE_PRESETS
+                        .iter()
+                        .position(|&p| p.eq_ignore_ascii_case(cur))
+                    {
+                        UPDATE_PRESETS[(pos + UPDATE_PRESETS.len() - 1) % UPDATE_PRESETS.len()]
+                    } else {
+                        UPDATE_PRESETS[UPDATE_PRESETS.len() - 1]
+                    }
+                };
+                self.config.update_method = if next == "prompt" {
+                    Some("prompt".to_string())
+                } else {
+                    Some(next.to_string())
+                };
+                self.saved = false;
+                self.status_message =
+                    format!("Update method set to '{}' [←/→: Cycle | e: Type]", next);
+            }
+            ConfigField::CheckUpdates => {
+                self.config.check_updates = !self.config.check_updates;
+                self.saved = false;
+                self.status_message = format!(
+                    "Automatic update check {}",
+                    if self.config.check_updates {
+                        "ENABLED (24h cache, zero latency)"
+                    } else {
+                        "DISABLED"
+                    }
+                );
+            }
         }
     }
 
@@ -4359,6 +4440,13 @@ export extern "forgum" [
                     ConfigField::Image => {
                         self.config.image = if self.original_edit_value.is_empty() {
                             None
+                        } else {
+                            Some(self.original_edit_value.clone())
+                        };
+                    }
+                    ConfigField::UpdateMethod => {
+                        self.config.update_method = if self.original_edit_value.is_empty() {
+                            Some("prompt".to_string())
                         } else {
                             Some(self.original_edit_value.clone())
                         };
@@ -4713,6 +4801,22 @@ export extern "forgum" [
                     self.config.editor = Some(trimmed.clone());
                     self.saved = false;
                     self.status_message = format!("✓ Preferred editor set to '{}'", trimmed);
+                }
+            }
+            ConfigField::UpdateMethod => {
+                let trimmed = self.config_edit_buffer.trim().to_string();
+                if trimmed.is_empty()
+                    || trimmed.eq_ignore_ascii_case("prompt")
+                    || trimmed.eq_ignore_ascii_case("ask")
+                {
+                    self.config.update_method = Some("prompt".to_string());
+                    self.saved = false;
+                    self.status_message =
+                        "✓ Update method set to prompt (ask each time)".to_string();
+                } else {
+                    self.config.update_method = Some(trimmed.clone());
+                    self.saved = false;
+                    self.status_message = format!("✓ Update method set to '{}'", trimmed);
                 }
             }
             _ => {}
@@ -6717,6 +6821,35 @@ export extern "forgum" [
                 let badge = self.active_colorblind_badge();
                 let desc = self.active_colorblind_desc();
                 format!("{} [{}] - {} (←/→ cycle)", display, badge, desc)
+            }
+            ConfigField::UpdateMethod => {
+                let cur = self.config.update_method.as_deref().unwrap_or("prompt");
+                let desc = match cur {
+                    "prompt" | "ask" => " (Ask every time with interactive numbered menu)",
+                    "auto" => " (Auto-detect active package manager)",
+                    "zypper" => " (openSUSE Zypper package manager)",
+                    "scoop" => " (Windows Scoop package manager)",
+                    "winget" => " (Windows Package Manager WinGet)",
+                    "homebrew" | "brew" => " (macOS/Linux Homebrew formula)",
+                    "apt" => " (Debian/Ubuntu APT repository)",
+                    "dnf" => " (Fedora/RHEL DNF package manager)",
+                    "pacman" => " (Arch Linux Pacman / AUR)",
+                    "cargo" => " (Rust Cargo crates.io build)",
+                    "standalone" => " (Direct GitHub binary installer script)",
+                    _ => "",
+                };
+                if is_sel && self.editing_config {
+                    format!("✎ [ {}_ ]", self.config_edit_buffer)
+                } else {
+                    format!("{cur}{desc} (←/→ cycle | Enter/e: Edit)")
+                }
+            }
+            ConfigField::CheckUpdates => {
+                if self.config.check_updates {
+                    "✔ ON (notify when new update is available) [Space/Enter toggle]".into()
+                } else {
+                    "✖ OFF (update checking disabled) [Space/Enter toggle]".into()
+                }
             }
         }
     }
@@ -9995,5 +10128,89 @@ mod tests {
         let backend = ratatui::backend::TestBackend::new(80, 24);
         let mut terminal = ratatui::Terminal::new(backend).unwrap();
         terminal.draw(|f| app.render(f)).unwrap();
+    }
+
+    #[test]
+    fn test_update_method_and_check_updates_config_cycling_and_editing() {
+        let mut app = ConfigApp::new(None, None, Some(Tab::Config));
+
+        // 1. CheckUpdates field
+        app.config_field_idx = ConfigField::CheckUpdates as usize;
+        assert!(app.config.check_updates);
+        assert_eq!(ConfigField::CheckUpdates.label(), "check_updates");
+        assert_eq!(ConfigField::CheckUpdates.category_badge().0, "System");
+        assert!(ConfigField::CheckUpdates
+            .desc()
+            .contains("upstream updates"));
+        assert!(app
+            .field_value(ConfigField::CheckUpdates, false)
+            .contains("ON"));
+
+        // Toggle check_updates off
+        app.cycle_config_field(true);
+        assert!(!app.config.check_updates);
+        assert!(app
+            .field_value(ConfigField::CheckUpdates, false)
+            .contains("OFF"));
+
+        // Toggle check_updates back on
+        app.cycle_config_field(true);
+        assert!(app.config.check_updates);
+        assert!(app
+            .field_value(ConfigField::CheckUpdates, false)
+            .contains("ON"));
+
+        // 2. UpdateMethod field
+        app.config_field_idx = ConfigField::UpdateMethod as usize;
+        assert_eq!(ConfigField::UpdateMethod.label(), "update_method");
+        assert_eq!(ConfigField::UpdateMethod.category_badge().0, "System");
+        assert!(ConfigField::UpdateMethod.desc().contains("Package manager"));
+        assert!(app
+            .field_value(ConfigField::UpdateMethod, false)
+            .contains("prompt"));
+
+        // Cycle through update methods (forward)
+        let expected_sequence = [
+            "auto",
+            "zypper",
+            "scoop",
+            "winget",
+            "homebrew",
+            "apt",
+            "dnf",
+            "pacman",
+            "cargo",
+            "standalone",
+            "prompt",
+        ];
+        for expected in expected_sequence {
+            app.cycle_config_field(true);
+            assert_eq!(app.config.update_method.as_deref(), Some(expected));
+            assert!(app
+                .field_value(ConfigField::UpdateMethod, false)
+                .contains(expected));
+        }
+
+        // Test inline typing and editing
+        let key_e = Event::Key(KeyEvent::new(KeyCode::Char('e'), KeyModifiers::NONE));
+        app.handle_event(key_e).expect("enter edit mode");
+        assert!(app.editing_config);
+        assert_eq!(app.config_edit_buffer, "prompt");
+
+        // Clear and type "zypper"
+        app.config_edit_buffer = "zypper".to_string();
+        let key_enter = Event::Key(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE));
+        app.handle_event(key_enter).expect("commit edit");
+        assert!(!app.editing_config);
+        assert_eq!(app.config.update_method.as_deref(), Some("zypper"));
+
+        // Test cancel with Esc
+        let key_e = Event::Key(KeyEvent::new(KeyCode::Char('e'), KeyModifiers::NONE));
+        app.handle_event(key_e).expect("enter edit mode");
+        app.config_edit_buffer = "invalid_junk".to_string();
+        let key_esc = Event::Key(KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE));
+        app.handle_event(key_esc).expect("cancel edit");
+        assert!(!app.editing_config);
+        assert_eq!(app.config.update_method.as_deref(), Some("zypper"));
     }
 }

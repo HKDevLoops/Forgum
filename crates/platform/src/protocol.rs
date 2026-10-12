@@ -180,6 +180,24 @@ pub struct SceneConfig {
     #[serde(default, alias = "aspect-mode")]
     pub aspect_mode: Option<String>,
 
+    /// Preferred update method / package manager: "prompt" (ask each time), "auto" (detected source),
+    /// or specific package manager ("zypper", "scoop", "winget", "homebrew", "apt", "dnf", "pacman", "cargo", "standalone").
+    #[serde(
+        default,
+        alias = "update-method",
+        alias = "update_channel",
+        alias = "update_package_manager"
+    )]
+    pub update_method: Option<String>,
+
+    /// Enable automatic update check notifications (default: true).
+    #[serde(
+        default = "default_check_updates",
+        alias = "check-updates",
+        alias = "update_check"
+    )]
+    pub check_updates: bool,
+
     /// Custom TUI keybindings configuration mapping.
     #[serde(default)]
     pub keybindings: Option<KeybindingsConfig>,
@@ -449,6 +467,10 @@ fn default_shell_attach_mode() -> String {
     "banner".to_string()
 }
 
+fn default_check_updates() -> bool {
+    true
+}
+
 impl Default for SceneConfig {
     fn default() -> Self {
         Self {
@@ -488,6 +510,8 @@ impl Default for SceneConfig {
             aspect: None,
             aspect_mode: None,
             colorblind_mode: None,
+            update_method: None,
+            check_updates: true,
             keybindings: None,
         }
     }
@@ -623,6 +647,8 @@ mod tests {
             aspect: Some("16:9".into()),
             aspect_mode: Some("dynamic".into()),
             colorblind_mode: Some("deuteranopia".into()),
+            update_method: Some("prompt".into()),
+            check_updates: true,
             keybindings: None,
         };
 
@@ -788,5 +814,23 @@ help = "?"
         assert_eq!(kb.save_and_quit.as_deref(), Some("ZZ"));
         assert_eq!(kb.search.as_deref(), Some("/"));
         assert_eq!(kb.help.as_deref(), Some("?"));
+    }
+
+    #[test]
+    fn update_config_deserialization_and_aliases() {
+        let json = r#"{"update_method":"zypper","check_updates":false}"#;
+        let s: SceneConfig = serde_json::from_str(json).unwrap();
+        assert_eq!(s.update_method.as_deref(), Some("zypper"));
+        assert!(!s.check_updates);
+
+        let json_alias = r#"{"update-method":"scoop","update_check":true}"#;
+        let s_alias: SceneConfig = serde_json::from_str(json_alias).unwrap();
+        assert_eq!(s_alias.update_method.as_deref(), Some("scoop"));
+        assert!(s_alias.check_updates);
+
+        let toml_str = "update_method = \"prompt\"\ncheck_updates = true\n";
+        let s_toml = SceneConfig::parse_with_format(toml_str, ConfigFormat::Toml).unwrap();
+        assert_eq!(s_toml.update_method.as_deref(), Some("prompt"));
+        assert!(s_toml.check_updates);
     }
 }

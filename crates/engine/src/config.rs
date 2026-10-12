@@ -202,6 +202,8 @@ pub fn merge(base: SceneConfig, overlay: SceneConfig) -> SceneConfig {
         aspect: overlay.aspect.or(base.aspect),
         aspect_mode: overlay.aspect_mode.or(base.aspect_mode),
         keybindings: overlay.keybindings.or(base.keybindings),
+        update_method: overlay.update_method.or(base.update_method),
+        check_updates: overlay.check_updates,
     }
 }
 

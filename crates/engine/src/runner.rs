@@ -95,6 +95,18 @@ fn run_inner() -> ExitCode {
             return ExitCode::from(e.exit_code);
         }
     };
+    let suppress_update_notice = matches!(
+        command,
+        Some(cli::Commands::Update { .. })
+            | Some(cli::Commands::Channel { .. })
+            | Some(cli::Commands::Init { .. })
+            | Some(cli::Commands::Completions { .. })
+            | Some(cli::Commands::Version)
+            | Some(cli::Commands::Status)
+            | Some(cli::Commands::Checkhealth { .. })
+            | Some(cli::Commands::Uninstall { .. })
+    );
+    let notify_args = args.clone();
 
     let initial_accel = args
         .accel
@@ -510,9 +522,20 @@ fn run_inner() -> ExitCode {
         }
 
         // ── update ─────────────────────────────────────────────────
-        Some(cli::Commands::Update { check, channel }) => {
-            handle_update_command(check, channel.as_deref())
-        }
+        Some(cli::Commands::Update {
+            check,
+            channel,
+            method,
+            non_interactive,
+            background_worker,
+        }) => handle_update_command(
+            check,
+            channel.as_deref(),
+            method.as_deref(),
+            non_interactive,
+            background_worker,
+            &args,
+        ),
 
         // ── channel ────────────────────────────────────────────────
         Some(cli::Commands::Channel { action, name }) => {
@@ -673,6 +696,12 @@ fn run_inner() -> ExitCode {
                         "aspect_mode" | "aspect-mode" => {
                             println!("{}", cfg.aspect_mode.as_deref().unwrap_or("auto"))
                         }
+                        "update_method" | "update-method" => {
+                            println!("{}", cfg.update_method.as_deref().unwrap_or("prompt"))
+                        }
+                        "check_updates" | "check-updates" | "update_check" => {
+                            println!("{}", cfg.check_updates)
+                        }
                         other => {
                             eprintln!("unknown config key: {other}");
                             eprintln!(
@@ -681,7 +710,7 @@ fn run_inner() -> ExitCode {
                                  color_mode, shell_attach_mode, environment, road, mountain, \
                                  palette, thought_interval, split_scroll, split_mode, reserve_rows, reserve_cols, \
                                  split_ratio, animation, animation_type, image, editor, accel_mode, \
-                                 reduce_motion, text_only, banner, aspect, aspect_mode"
+                                 reduce_motion, text_only, banner, aspect, aspect_mode, update_method, check_updates"
                             );
                             return ExitCode::from(1);
                         }
@@ -918,6 +947,23 @@ fn run_inner() -> ExitCode {
                             };
                             None
                         }
+                        "update_method" | "update-method" => {
+                            cfg.update_method = if v.is_empty() || v == "prompt" || v == "ask" {
+                                Some("prompt".to_string())
+                            } else {
+                                Some(v)
+                            };
+                            None
+                        }
+                        "check_updates" | "check-updates" | "update_check" => {
+                            match v.parse::<bool>() {
+                                Ok(b) => {
+                                    cfg.check_updates = b;
+                                    None
+                                }
+                                Err(e) => Some(format!("{e}")),
+                            }
+                        }
                         other => {
                             eprintln!("unknown config key: {other}");
                             eprintln!(
@@ -926,7 +972,7 @@ fn run_inner() -> ExitCode {
                                  color_mode, shell_attach_mode, environment, road, mountain, \
                                  palette, thought_interval, split_scroll, split_mode, reserve_rows, reserve_cols, \
                                  split_ratio, animation, animation_type, image, editor, accel_mode, \
-                                 reduce_motion, text_only, banner, aspect, aspect_mode"
+                                 reduce_motion, text_only, banner, aspect, aspect_mode, update_method, check_updates"
                             );
                             return ExitCode::from(1);
                         }
@@ -2056,7 +2102,56 @@ fn run_inner() -> ExitCode {
 
         _ => render_subcommand(args),
     };
+    maybe_notify_update(&notify_args, suppress_update_notice);
     code
+}
+
+fn maybe_notify_update(args: &cli::Args, suppress_for_command: bool) {
+    if suppress_for_command {
+        return;
+    }
+    use std::io::IsTerminal;
+    if !std::io::stdout().is_terminal() {
+        return;
+    }
+
+    if args.no_check_updates {
+        return;
+    }
+
+    if std::env::var_os("FORGUM_NO_UPDATE_CHECK").is_some() {
+        return;
+    }
+
+    let cfg = build_scene_config(args).unwrap_or_default();
+    if !cfg.check_updates {
+        return;
+    }
+
+    if args.background && args.duration.unwrap_or(0) == 0 {
+        return;
+    }
+
+    if args.internal_daemon_runner {
+        return;
+    }
+
+    let receipt = forgum_platform::read_receipt().unwrap_or(None);
+    let channel = receipt
+        .as_ref()
+        .map(|r| r.channel)
+        .unwrap_or(forgum_platform::ReleaseChannel::Stable);
+
+    // If cache is missing or older than 24h, trigger silent background worker
+    if forgum_platform::should_spawn_background_check(channel) {
+        forgum_platform::spawn_background_update_check(channel);
+    }
+
+    // If cache contains a newer upstream version, alert user
+    if let Some(notice) = forgum_platform::check_for_updates_cached(channel, false) {
+        print!("{}", forgum_platform::format_update_notice_box(&notice));
+        let _ = std::io::Write::flush(&mut std::io::stdout());
+    }
 }
 
 struct PaneGuard {
@@ -2198,6 +2293,20 @@ fn handle_status_command(args: &cli::Args) -> ExitCode {
         forgum_platform::ReleaseChannel::Dev => "Local Development Build",
     };
     println!("  • Update Stream:    {channel_url}");
+    let update_notice = forgum_platform::check_for_updates_cached(channel, false);
+    if let Some(notice) = update_notice {
+        println!(
+            "  • Update Status:    {c_yellow}⚠️  v{} available{c_reset} (Run `forgum update` to upgrade)",
+            notice.latest_version
+        );
+    } else {
+        println!("  • Update Status:    {c_green}✓ Up to date (v{version}){c_reset}");
+    }
+    let method_pref = cfg
+        .update_method
+        .as_deref()
+        .unwrap_or("prompt (ask each time)");
+    println!("  • Update Method:    {c_bold}{method_pref}{c_reset}");
     println!(
         "  • Update Check:     `forgum update --check` (or `{}`)",
         source.check_command()
@@ -2419,7 +2528,27 @@ fn handle_channel_command(action: Option<&str>, name: Option<&str>) -> ExitCode 
     }
 }
 
-fn handle_update_command(check: bool, channel_flag: Option<&str>) -> ExitCode {
+fn handle_update_command(
+    check: bool,
+    channel_flag: Option<&str>,
+    method_flag: Option<&str>,
+    non_interactive: bool,
+    background_worker: bool,
+    args: &cli::Args,
+) -> ExitCode {
+    use std::io::IsTerminal;
+
+    // Background worker spawned detached: silently refresh cache and exit
+    if background_worker {
+        let receipt = forgum_platform::read_receipt().unwrap_or(None);
+        let channel = receipt
+            .as_ref()
+            .map(|r| r.channel)
+            .unwrap_or(forgum_platform::ReleaseChannel::Stable);
+        let _ = forgum_platform::check_for_updates_cached(channel, true);
+        return ExitCode::SUCCESS;
+    }
+
     if let Some(ch_str) = channel_flag {
         match ch_str.parse::<forgum_platform::ReleaseChannel>() {
             Ok(c) => {
@@ -2442,6 +2571,7 @@ fn handle_update_command(check: bool, channel_flag: Option<&str>) -> ExitCode {
         .map(|r| r.channel)
         .unwrap_or(forgum_platform::ReleaseChannel::Stable);
     let source = forgum_platform::detect_installation_source();
+    let cfg = build_scene_config(args).unwrap_or_default();
 
     let shadows = forgum_platform::detect_shadow_installations();
     let conflicts: Vec<_> = shadows.iter().filter(|s| !s.is_active).collect();
@@ -2457,124 +2587,268 @@ fn handle_update_command(check: bool, channel_flag: Option<&str>) -> ExitCode {
         );
     }
 
-    let action_str = if check {
-        "Checking for available updates"
+    // Contributor & Tester Git Synchronization
+    if method_flag.is_none() && cfg.update_method.is_none() {
+        if let Some(mut git_status) = forgum_platform::detect_git_status(channel) {
+            println!("\x1b[1;36m━━━ Git Workspace Detected (Contributor / Tester Mode) ━━━\x1b[0m");
+            println!(
+                "  • Current Branch:    \x1b[1;32m{}\x1b[0m (commit: {})",
+                git_status.branch, git_status.local_commit
+            );
+            println!(
+                "  • Target Tracking:   \x1b[1morigin/{}\x1b[0m",
+                git_status.remote_branch
+            );
+            if git_status.is_dirty {
+                println!(
+                    "  • Working Directory: \x1b[1;33m⚠️  Uncommitted modifications detected\x1b[0m"
+                );
+            } else {
+                println!("  • Working Directory: \x1b[1;32m✓ Clean\x1b[0m");
+            }
+
+            print!("  • Remote Status:     Fetching updates from HKDevLoops/Forgum... ");
+            let _ = std::io::Write::flush(&mut std::io::stdout());
+
+            match forgum_platform::check_git_updates(&mut git_status) {
+                Ok(()) => {
+                    if git_status.commits_behind == 0 {
+                        println!(
+                            "\x1b[1;32m✓ Up to date with origin/{}\x1b[0m",
+                            git_status.remote_branch
+                        );
+                    } else {
+                        println!(
+                            "\x1b[1;33m⚠️  Behind origin/{} by {} commit(s)\x1b[0m",
+                            git_status.remote_branch, git_status.commits_behind
+                        );
+                    }
+
+                    if let Some(ref summary) = git_status.latest_remote_summary {
+                        println!("  • Latest Remote:     \x1b[90m{summary}\x1b[0m");
+                    }
+
+                    if check {
+                        if git_status.commits_behind > 0 {
+                            println!(
+                                "\nRun `forgum update` to pull latest changes and rebuild binary."
+                            );
+                        }
+                        return ExitCode::SUCCESS;
+                    }
+
+                    if git_status.commits_behind == 0 {
+                        println!(
+                            "\n\x1b[1;32m✓ Git tree is synchronized with origin/{}.\x1b[0m",
+                            git_status.remote_branch
+                        );
+                        let version = env!("CARGO_PKG_VERSION");
+                        let target_exe = forgum_platform::local_release_binary_path();
+                        if !target_exe.exists() {
+                            println!(
+                                "\x1b[36m>> Rebuilding binary from current repository...\x1b[0m"
+                            );
+                            match forgum_platform::execute_git_update(&git_status) {
+                                Ok(msg) => println!("{msg}"),
+                                Err(e) => eprintln!("\x1b[1;31m✗ Build failed:\x1b[0m {e}"),
+                            }
+                        } else {
+                            println!("\x1b[1;32m✓ Already on latest version of Forgum ({version}). No update required.\x1b[0m");
+                            println!(
+                                "\x1b[1;36m{}\x1b[0m\n",
+                                forgum_platform::get_funky_latest_version_quote()
+                            );
+                        }
+                        return ExitCode::SUCCESS;
+                    }
+
+                    println!(
+                        "\n\x1b[1;36m>> Pulling latest commits from origin/{}...\x1b[0m",
+                        git_status.remote_branch
+                    );
+                    match forgum_platform::execute_git_update(&git_status) {
+                        Ok(msg) => {
+                            println!("{msg}");
+                            println!("\n\x1b[1;32m✓ Tester/Contributor update completed successfully.\x1b[0m");
+                            return ExitCode::SUCCESS;
+                        }
+                        Err(err) => {
+                            eprintln!("\x1b[1;31m✗ Git update failed:\x1b[0m {err}");
+                            return ExitCode::from(1);
+                        }
+                    }
+                }
+                Err(e) => {
+                    println!("\x1b[1;31m✗ Could not fetch remote:\x1b[0m {e}");
+                }
+            }
+            println!();
+        }
+    }
+
+    if check {
+        println!("\x1b[1;36m━━━ Forgum Auto-Update ━━━\x1b[0m");
+        println!("Installed via:    \x1b[1;32m{}\x1b[0m", source.name());
+        let preferred_method_name = if let Some(m) = method_flag {
+            m.to_string()
+        } else {
+            cfg.update_method
+                .clone()
+                .unwrap_or_else(|| "prompt (ask each time)".into())
+        };
+        println!(
+            "Preferred Method: \x1b[1;32m{}\x1b[0m",
+            preferred_method_name
+        );
+        println!(
+            "Release Channel:  \x1b[1;33m{}\x1b[0m",
+            channel.display_name()
+        );
+        println!(
+            "Action:           \x1b[1;33mChecking for available updates\x1b[0m (Command: `{}`)\n",
+            source.check_command()
+        );
+
+        let local_ver = env!("CARGO_PKG_VERSION").trim_start_matches('v');
+        print!(
+            "Checking latest version on channel \x1b[1;33m{}\x1b[0m... ",
+            channel.display_name()
+        );
+        let _ = std::io::Write::flush(&mut std::io::stdout());
+
+        match forgum_platform::fetch_remote_channel_version(channel) {
+            Ok(remote_ver) => {
+                let clean_remote = remote_ver.trim_start_matches('v');
+                println!("\x1b[1;32mv{}\x1b[0m", clean_remote);
+                let now = std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .map(|d| d.as_secs())
+                    .unwrap_or(0);
+                let has_update = forgum_platform::is_newer_version(local_ver, clean_remote);
+                let cache = forgum_platform::UpdateCheckCache {
+                    last_checked: now,
+                    latest_version: clean_remote.to_string(),
+                    channel,
+                };
+                let _ = forgum_platform::write_update_cache(&cache);
+
+                if !has_update && local_ver == clean_remote {
+                    println!(
+                        "\n\x1b[1;32m✓ Already on latest version of Forgum (v{local_ver}) on channel '{}'.\x1b[0m\n\
+                         \x1b[1;36m{}\x1b[0m\n",
+                        channel.as_str(),
+                        forgum_platform::get_funky_latest_version_quote()
+                    );
+                } else {
+                    println!(
+                        "  • Installed:  \x1b[1;33mv{local_ver}\x1b[0m\n\
+                         • Upstream:   \x1b[1;32mv{clean_remote}\x1b[0m (Update available!)\n\n\
+                         Run `forgum update` to upgrade."
+                    );
+                }
+            }
+            Err(e) => {
+                println!("\x1b[90m(online check skipped: {e})\x1b[0m\n");
+            }
+        }
+        return ExitCode::SUCCESS;
+    }
+
+    // Resolve update method / package manager
+    let chosen_pm = if let Some(m) = method_flag {
+        match forgum_platform::PackageManager::from_str_loose(m) {
+            Some(pm) => pm,
+            None => {
+                eprintln!(
+                    "{PROGRAM}: unknown update method '{m}'.\n\
+                     Supported methods: zypper, scoop, winget, homebrew, apt, dnf, pacman, cargo, standalone, etc."
+                );
+                return ExitCode::from(1);
+            }
+        }
     } else {
-        "Updating Forgum"
+        let configured = cfg.update_method.as_deref().unwrap_or("prompt");
+        if configured.eq_ignore_ascii_case("auto") {
+            source
+        } else if !configured.eq_ignore_ascii_case("prompt")
+            && !configured.eq_ignore_ascii_case("ask")
+        {
+            match forgum_platform::PackageManager::from_str_loose(configured) {
+                Some(pm) => pm,
+                None => {
+                    if non_interactive || !std::io::stdin().is_terminal() {
+                        source
+                    } else {
+                        forgum_platform::select_update_method_interactive(source).unwrap_or(source)
+                    }
+                }
+            }
+        } else {
+            // Default: ask every time with interactive selection
+            if non_interactive || !std::io::stdin().is_terminal() {
+                println!(
+                    "\x1b[90m(Non-interactive environment detected: proceeding with default method: {})\x1b[0m\n",
+                    source.name()
+                );
+                source
+            } else {
+                forgum_platform::select_update_method_interactive(source).unwrap_or(source)
+            }
+        }
     };
 
     println!("\x1b[1;36m━━━ Forgum Auto-Update ━━━\x1b[0m");
-    println!("Installed via:   \x1b[1;32m{}\x1b[0m", source.name());
+    println!("Update Method:   \x1b[1;32m{}\x1b[0m", chosen_pm.name());
     println!(
         "Release Channel: \x1b[1;33m{}\x1b[0m",
         channel.display_name()
     );
-    println!(
-        "Action:          \x1b[1;33m{}\x1b[0m (Command: `{}`)\n",
-        action_str,
-        if check {
-            source.check_command()
-        } else {
-            source.update_command()
-        }
+    println!("Command:         `{}`\n", chosen_pm.update_command());
+
+    let local_ver = env!("CARGO_PKG_VERSION").trim_start_matches('v');
+    print!(
+        "Checking latest version on channel \x1b[1;33m{}\x1b[0m... ",
+        channel.display_name()
     );
+    let _ = std::io::Write::flush(&mut std::io::stdout());
 
-    // Contributor & Tester Git Synchronization
-    if let Some(mut git_status) = forgum_platform::detect_git_status(channel) {
-        println!("\x1b[1;36m━━━ Git Workspace Detected (Contributor / Tester Mode) ━━━\x1b[0m");
-        println!(
-            "  • Current Branch:    \x1b[1;32m{}\x1b[0m (commit: {})",
-            git_status.branch, git_status.local_commit
-        );
-        println!(
-            "  • Target Tracking:   \x1b[1morigin/{}\x1b[0m",
-            git_status.remote_branch
-        );
-        if git_status.is_dirty {
-            println!(
-                "  • Working Directory: \x1b[1;33m⚠️  Uncommitted modifications detected\x1b[0m"
-            );
-        } else {
-            println!("  • Working Directory: \x1b[1;32m✓ Clean\x1b[0m");
-        }
+    match forgum_platform::fetch_remote_channel_version(channel) {
+        Ok(remote_ver) => {
+            let clean_remote = remote_ver.trim_start_matches('v');
+            println!("\x1b[1;32mv{}\x1b[0m", clean_remote);
+            let now = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_secs())
+                .unwrap_or(0);
+            let has_update = forgum_platform::is_newer_version(local_ver, clean_remote);
+            let cache = forgum_platform::UpdateCheckCache {
+                last_checked: now,
+                latest_version: clean_remote.to_string(),
+                channel,
+            };
+            let _ = forgum_platform::write_update_cache(&cache);
 
-        print!("  • Remote Status:     Fetching updates from HKDevLoops/Forgum... ");
-        let _ = std::io::Write::flush(&mut std::io::stdout());
-
-        match forgum_platform::check_git_updates(&mut git_status) {
-            Ok(()) => {
-                if git_status.commits_behind == 0 {
-                    println!(
-                        "\x1b[1;32m✓ Up to date with origin/{}\x1b[0m",
-                        git_status.remote_branch
-                    );
-                } else {
-                    println!(
-                        "\x1b[1;33m⚠️  Behind origin/{} by {} commit(s)\x1b[0m",
-                        git_status.remote_branch, git_status.commits_behind
-                    );
-                }
-
-                if let Some(ref summary) = git_status.latest_remote_summary {
-                    println!("  • Latest Remote:     \x1b[90m{summary}\x1b[0m");
-                }
-
-                if check {
-                    if git_status.commits_behind > 0 {
-                        println!(
-                            "\nRun `forgum update` to pull latest changes and rebuild binary."
-                        );
-                    }
-                    return ExitCode::SUCCESS;
-                }
-
-                if git_status.commits_behind == 0 {
-                    println!(
-                        "\n\x1b[1;32m✓ Git tree is synchronized with origin/{}.\x1b[0m",
-                        git_status.remote_branch
-                    );
-                    let version = env!("CARGO_PKG_VERSION");
-                    let target_exe = forgum_platform::local_release_binary_path();
-                    if !target_exe.exists() {
-                        println!("\x1b[36m>> Rebuilding binary from current repository...\x1b[0m");
-                        match forgum_platform::execute_git_update(&git_status) {
-                            Ok(msg) => println!("{msg}"),
-                            Err(e) => eprintln!("\x1b[1;31m✗ Build failed:\x1b[0m {e}"),
-                        }
-                    } else {
-                        println!("\x1b[1;32m✓ Already on latest version of Forgum ({version}). No update required.\x1b[0m");
-                        println!(
-                            "\x1b[1;36m{}\x1b[0m\n",
-                            forgum_platform::get_funky_latest_version_quote()
-                        );
-                    }
-                    return ExitCode::SUCCESS;
-                }
-
+            if !has_update && local_ver == clean_remote {
                 println!(
-                    "\n\x1b[1;36m>> Pulling latest commits from origin/{}...\x1b[0m",
-                    git_status.remote_branch
+                    "\n\x1b[1;32m✓ Already on latest version of Forgum (v{local_ver}) on channel '{}'.\x1b[0m\n\
+                     \x1b[1;36m{}\x1b[0m\n",
+                    channel.as_str(),
+                    forgum_platform::get_funky_latest_version_quote()
                 );
-                match forgum_platform::execute_git_update(&git_status) {
-                    Ok(msg) => {
-                        println!("{msg}");
-                        println!("\n\x1b[1;32m✓ Tester/Contributor update completed successfully.\x1b[0m");
-                        return ExitCode::SUCCESS;
-                    }
-                    Err(err) => {
-                        eprintln!("\x1b[1;31m✗ Git update failed:\x1b[0m {err}");
-                        return ExitCode::from(1);
-                    }
-                }
-            }
-            Err(e) => {
-                println!("\x1b[1;31m✗ Could not fetch remote:\x1b[0m {e}");
+                return ExitCode::SUCCESS;
+            } else {
+                println!(
+                    "  • Installed:  \x1b[1;33mv{local_ver}\x1b[0m\n\
+                     • Upstream:   \x1b[1;32mv{clean_remote}\x1b[0m (Proceeding with update...)\n"
+                );
             }
         }
-        println!();
+        Err(e) => {
+            println!("\x1b[90m(online check note: {e})\x1b[0m\n");
+        }
     }
 
-    if !check && source == forgum_platform::PackageManager::DirectBinary {
+    if chosen_pm == forgum_platform::PackageManager::DirectBinary {
         if let Ok(cur_exe) = std::env::current_exe() {
             if let Some(parent) = cur_exe.parent() {
                 let test_probe = parent.join(format!(".forgum_write_probe_{}", std::process::id()));
@@ -2594,97 +2868,36 @@ fn handle_update_command(check: bool, channel_flag: Option<&str>) -> ExitCode {
                 }
             }
         }
-    }
 
-    let local_ver = env!("CARGO_PKG_VERSION").trim_start_matches('v');
-
-    print!(
-        "Checking latest version on channel \x1b[1;33m{}\x1b[0m... ",
-        channel.display_name()
-    );
-    let _ = std::io::Write::flush(&mut std::io::stdout());
-
-    match forgum_platform::fetch_remote_channel_version(channel) {
-        Ok(remote_ver) => {
-            let clean_remote = remote_ver.trim_start_matches('v');
-            println!("\x1b[1;32mv{}\x1b[0m", clean_remote);
-
-            if local_ver == clean_remote {
-                println!(
-                    "\n\x1b[1;32m✓ Already on latest version of Forgum (v{local_ver}) on channel '{}'.\x1b[0m\n\
-                     \x1b[1;36m{}\x1b[0m\n",
-                    channel.as_str(),
-                    forgum_platform::get_funky_latest_version_quote()
-                );
-                return ExitCode::SUCCESS;
-            } else {
-                println!(
-                    "  • Installed:  \x1b[1;33mv{local_ver}\x1b[0m\n\
-                     • Upstream:   \x1b[1;32mv{clean_remote}\x1b[0m (Update available!)\n"
-                );
-            }
-        }
-        Err(e) => {
-            println!("\x1b[90m(online check skipped: {e})\x1b[0m\n");
-        }
-    }
-
-    match source {
-        forgum_platform::PackageManager::DirectBinary => {
-            let version = env!("CARGO_PKG_VERSION");
-            let channel_stream = match channel {
-                forgum_platform::ReleaseChannel::Stable => {
-                    "https://github.com/HKDevLoops/Forgum/releases/latest"
-                }
-                forgum_platform::ReleaseChannel::Alpha => {
-                    "https://github.com/HKDevLoops/Forgum/releases/tag/alpha"
-                }
-                forgum_platform::ReleaseChannel::Nightly => {
-                    "https://github.com/HKDevLoops/Forgum/releases/tag/nightly"
-                }
-                forgum_platform::ReleaseChannel::Dev => {
-                    "https://github.com/HKDevLoops/Forgum/tree/dev"
-                }
-            };
-            let channel_name = channel.as_str();
-            let ref_name = channel.git_ref();
-            if check {
-                println!(
-                    "Forgum v{version} is running as a Standalone Binary.\n\
-                     Target stream for channel {channel}:\n\
-                     {channel_stream}\n\n\
-                     Instant update commands via celestial installer scripts:\n\
-                       PowerShell: irm https://raw.githubusercontent.com/HKDevLoops/Forgum/{ref_name}/install.ps1 | iex\n\
-                       Bash/Zsh:   curl -4 -fsSL --connect-timeout 5 https://raw.githubusercontent.com/HKDevLoops/Forgum/{ref_name}/install.sh | bash -s -- --channel {channel_name}"
-                );
+        println!(
+            "\x1b[36m>> Executing standalone upgrade via celestial installer script...\x1b[0m"
+        );
+        match forgum_platform::execute_standalone_update(channel) {
+            Ok(msg) => {
+                println!("\n\x1b[1;32m✓ {msg}\x1b[0m");
+                let _ = forgum_platform::clear_update_cache();
                 ExitCode::SUCCESS
-            } else {
-                println!("\x1b[36m>> Executing standalone upgrade via celestial installer script...\x1b[0m");
-                match forgum_platform::execute_standalone_update(channel) {
-                    Ok(msg) => {
-                        println!("\n\x1b[1;32m✓ {msg}\x1b[0m");
-                        ExitCode::SUCCESS
-                    }
-                    Err(err) => {
-                        eprintln!("\x1b[1;31m✗ Upgrade failed:\x1b[0m {err}");
-                        ExitCode::from(1)
-                    }
-                }
+            }
+            Err(err) => {
+                eprintln!("\x1b[1;31m✗ Upgrade failed:\x1b[0m {err}");
+                ExitCode::from(1)
             }
         }
-        _ => match forgum_platform::execute_package_manager_action(source, check) {
+    } else {
+        match forgum_platform::execute_package_manager_action(chosen_pm, false) {
             Ok(output) => {
                 if !output.is_empty() {
                     println!("{output}");
                 }
-                println!("\n\x1b[1;32m✓ Action completed.\x1b[0m");
+                println!("\n\x1b[1;32m✓ Update completed successfully.\x1b[0m");
+                let _ = forgum_platform::clear_update_cache();
                 ExitCode::SUCCESS
             }
             Err(err) => {
                 eprintln!("\x1b[1;31m✗ Update action failed:\x1b[0m {err}");
                 ExitCode::from(1)
             }
-        },
+        }
     }
 }
 
