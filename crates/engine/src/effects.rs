@@ -1659,7 +1659,7 @@ impl Effect for ParticlesEffect {
                 rows,
             );
         }
-        self.pool.update(dt);
+        self.pool.update_accelerated(dt, cols, rows);
     }
 
     fn render(&self, fb: &mut FrameBuffer, time: f32) {

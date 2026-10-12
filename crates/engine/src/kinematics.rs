@@ -481,8 +481,9 @@ impl QuadrupedLegPartition {
 
 /// Articulated leg glyph resolution for 8-phase quadruped and biped locomotion.
 ///
-/// Uses rich articulated characters: '|', '/', '\\', '_', ')', '(', 'J', 'L', 'd', 'b'
-/// representing knee flexion, ankle push-off, and paw/hoof strike.
+/// Uses authentic ASCII limb strokes: '|', '/', '\\', ')', '('
+/// representing knee flexion, ankle push-off, and paw/hoof strike without
+/// disruptive alphabetic character collisions ('J', 'L', etc.).
 #[must_use]
 pub fn articulated_leg_glyph(
     stage: usize,
@@ -500,61 +501,25 @@ pub fn articulated_leg_glyph(
 
     if faces_right {
         match stage % 8 {
-            0 => {
-                if is_outer_leg {
-                    'L'
-                } else {
-                    '\\'
-                }
-            } // Strike: hoof/paw contact forward
-            1 => '|', // Landing: full vertical stance
-            2 => '|', // Mid-Stance: vertical weight-bearing
-            3 => '/', // Late Stance: ankle extending back
-            4 => {
-                if is_outer_leg {
-                    'b'
-                } else {
-                    '/'
-                }
-            } // Push-Off: ankle drive / push-off
-            5 => ')', // Lift/Recoil: knee flexion in air
+            0 => '\\', // Strike: hoof/paw contact forward (reaching right)
+            1 => '|',  // Landing: full vertical stance
+            2 => '|',  // Mid-Stance: vertical weight-bearing
+            3 => '/',  // Late Stance: ankle extending back
+            4 => '/',  // Push-Off: ankle drive / push-off
+            5 => ')',  // Lift/Recoil: knee flexion in air
             6 => '\\', // Mid-Swing: forward swing
-            _ => {
-                if is_outer_leg {
-                    'L'
-                } else {
-                    '\\'
-                }
-            } // Terminal Swing: forward reach
+            _ => '\\', // Terminal Swing: forward reach
         }
     } else {
         match stage % 8 {
-            0 => {
-                if is_outer_leg {
-                    'J'
-                } else {
-                    '/'
-                }
-            } // Strike: hoof/paw contact forward
+            0 => '/',  // Strike: hoof/paw contact forward (reaching left)
             1 => '|',  // Landing: full vertical stance
             2 => '|',  // Mid-Stance: vertical weight-bearing
             3 => '\\', // Late Stance: ankle extending back
-            4 => {
-                if is_outer_leg {
-                    'd'
-                } else {
-                    '\\'
-                }
-            } // Push-Off: ankle drive / push-off
+            4 => '\\', // Push-Off: ankle drive / push-off
             5 => '(',  // Lift/Recoil: knee flexion in air
             6 => '/',  // Mid-Swing: forward swing
-            _ => {
-                if is_outer_leg {
-                    'J'
-                } else {
-                    '/'
-                }
-            } // Terminal Swing: forward reach
+            _ => '/',  // Terminal Swing: forward reach
         }
     }
 }
@@ -950,8 +915,29 @@ mod tests {
         // Articulated leg glyphs across phases
         let lh_strike = articulated_leg_glyph(0, false, false, false);
         let stance = articulated_leg_glyph(1, false, false, false);
-        assert!(matches!(lh_strike, '/' | 'J'));
+        assert_eq!(lh_strike, '/');
         assert_eq!(stance, '|');
+
+        // Verify that no alphabetic characters ('J', 'L', 'd', 'b') appear in any phase,
+        // direction, or leg partition
+        for stage in 0..16 {
+            for faces_right in [false, true] {
+                for is_moonwalk in [false, true] {
+                    for is_outer_leg in [false, true] {
+                        let ch =
+                            articulated_leg_glyph(stage, faces_right, is_moonwalk, is_outer_leg);
+                        assert!(
+                            !ch.is_alphabetic(),
+                            "Leg glyph must not be alphabetic ('{ch}') at stage {stage}, faces_right={faces_right}, moonwalk={is_moonwalk}, outer={is_outer_leg}"
+                        );
+                        assert!(
+                            matches!(ch, '|' | '/' | '\\' | ')' | '('),
+                            "Leg glyph '{ch}' must be an authentic ASCII limb stroke"
+                        );
+                    }
+                }
+            }
+        }
     }
 
     #[test]

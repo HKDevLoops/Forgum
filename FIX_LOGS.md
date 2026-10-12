@@ -364,6 +364,40 @@ This document records the complete, immutable register of all bugs, defects, reg
 
 ---
 
+### BUG-027: Multi-Pane & Split-Mode Alignment Calibration (Logged for Deferred Focus)
+- **Severity:** Medium / Terminal Layout & Alignment Calibration
+- **Component:** `crates/platform/src/terminal.rs`, `crates/engine/src/scenery.rs`, `crates/engine/src/cow.rs`
+- **Symptom:** In multi-pane and multiplexer split configurations (e.g. tmux split, zellij panes, DECSTBM margin reservations), alignment drift occurs under certain aspect ratios and dynamic resize events.
+- **Status:** **Logged for deferred deep focus and calibration** per explicit user request. Scheduled for comprehensive multi-multiplexer geometry harmonization.
+
+---
+
+### BUG-028: Elimination of Alphabetic Leg Glyphs ('J', 'L', 'd', 'b') in Richard Williams Walk Kinematics
+- **Severity:** High / Visual Rendering Defect
+- **Component:** `crates/engine/src/kinematics.rs`
+- **Symptom:** In animated mascot walk cycles, alphabetic characters ('J', 'L', 'd', 'b') appeared on mascot legs/hooves during stride contact and push-off phases instead of authentic ASCII limb strokes.
+- **Root Cause:** `articulated_leg_glyph` returned literal alphabetic characters `'J'`, `'L'`, `'d'`, and `'b'` for outer legs during stages 0, 4, and 7 of the 8-phase gait sequence.
+- **Permanent Resolution:**
+  1. Replaced all alphabetic glyph substitutions in `articulated_leg_glyph` with authentic limb strokes (`'/'`, `'\\'`, `'|'`, `')'`, `'('`).
+  2. Updated tests to enforce `!ch.is_alphabetic()` and ensure strict adherence to valid limb characters across all 16 walk cycle phases, facing directions, and outer/inner leg partitions.
+- **Verification:** `kinematics::tests::test_quadruped_leg_partition_lateral_sequence`, `test_quadruped_8_phase_gait_cycle`, and `tests/cartoon_kinematics.rs`.
+
+---
+
+### FEATURE-029: High-Entropy SplitMix64 PRNG & Dynamic Incommensurate Particle Showering
+- **Severity:** Medium / Natural Mathematics & Motion Realism
+- **Component:** `crates/engine/src/particles.rs`, `crates/platform/src/compute.rs`, `crates/engine/src/effects.rs`
+- **Symptom:** Particle shower effects suffered from mechanical repetition, synchronized identical glyph cycles per frame (`(time * 10.0) as usize % len`), and potential zero fixed-point collapse in `xorshift32`.
+- **Root Cause:** Standard xorshift32 generator has a degenerate fixed-point at 0 ($0 \oplus 0 = 0$) and all spawned particles in a frame shared a single rigid deterministic glyph modulo.
+- **Permanent Resolution:**
+  1. Replaced degenerate xorshift32 with 64-bit SplitMix64 pseudo-random generator coupled to Golden Ratio Weyl constant ($\Phi = 0x9E3779B97F4A7C15$).
+  2. Implemented Box-Muller Gaussian normal distribution sampling `rand_normal(mean, std_dev)`.
+  3. Upgraded `spawn_fire`, `spawn_bubbles`, `spawn_stars`, and `spawn_zzz` to use dynamic incommensurate harmonic turbulence ($\omega_2 = \omega_1 \cdot 1.6180339887$) and independent per-particle glyph selection.
+  4. Added lateral aerodynamic micro-turbulence to `eval_particle_chunk` in `crates/platform/src/compute.rs`.
+- **Verification:** `particles::tests::seed_frame_rng_zero_never_collapses`, `test_rand_normal_distribution_properties`, `test_particle_showering_non_repetitive_across_bursts`, and `compute::tests::test_particle_physics_incommensurate_turbulence_non_linear`.
+
+---
+
 ## 3. Verification & Quality Gate Record
 
 Every fix in this ledger has been validated against the following automated gates:

@@ -306,20 +306,27 @@ impl ParticlePool {
 // ── Particle spawners per type ─────────────────────────────────────
 
 /// Spawn fire particles (dragons, daemons).
+/// Uses Box-Muller Gaussian thermal plume distribution and incommensurate harmonic turbulence.
 pub fn spawn_fire(pool: &mut ParticlePool, x: f32, y: f32, palette: &[(u8, u8, u8)], time: f32) {
-    let glyphs = ['*', '^', '.', '~', '*'];
+    let glyphs = ['*', '^', '.', '~'];
+    let phi = 1.6180339887f32;
     for _ in 0..3 {
-        let glyph = glyphs[(time * 10.0) as usize % glyphs.len()];
+        let glyph_idx = (next_u64() as usize) % glyphs.len();
+        let glyph = glyphs[glyph_idx];
         let (r, g, b) = if palette.len() >= 2 {
             lerp_palette(palette, rand_01())
         } else {
             (255, 128, 0)
         };
+        // Quasi-periodic thermal draft turbulence:
+        let swirl = (time * 3.7 + phi * rand_01()).sin() * 0.75;
+        let vx = rand_normal(0.0, 1.2) + swirl;
+        let vy = rand_normal(-10.0, 2.5).min(-4.0);
         let _ = pool.spawn(Particle {
-            x: x + rand_range(-1.0, 1.0),
+            x: x + rand_normal(0.0, 0.7),
             y,
-            vx: rand_range(-2.0, 2.0),
-            vy: rand_range(-15.0, -5.0),
+            vx,
+            vy,
             life: rand_range(0.6, 1.4),
             max_life: 1.4,
             ch: glyph,
@@ -329,19 +336,25 @@ pub fn spawn_fire(pool: &mut ParticlePool, x: f32, y: f32, palette: &[(u8, u8, u
 }
 
 /// Spawn bubble particles (dolphins, whales).
+/// Uses incommensurate dual-harmonic buoyancy wobbling to prevent mechanical repetition.
 pub fn spawn_bubbles(pool: &mut ParticlePool, x: f32, y: f32, palette: &[(u8, u8, u8)], time: f32) {
     let glyphs = ['o', 'O', '*', '.'];
-    let glyph = glyphs[(time * 3.0) as usize % glyphs.len()];
+    let glyph_idx = (next_u64() as usize) % glyphs.len();
+    let glyph = glyphs[glyph_idx];
     let (r, g, b) = if palette.len() >= 2 {
         lerp_palette(palette, rand_01())
     } else {
         (100, 200, 255)
     };
+    let phi = 1.6180339887f32;
+    // Incommensurate sinusoidal superposition: never locks into a repeating cycle
+    let buoyancy_drift =
+        (time * 2.3).sin() * 1.1 + (time * 2.3 * phi).cos() * 0.65 + rand_normal(0.0, 0.35);
     let _ = pool.spawn(Particle {
-        x: x + rand_range(-0.5, 0.5),
+        x: x + rand_range(-0.6, 0.6),
         y,
-        vx: (time * 2.0).sin() * 1.5,
-        vy: rand_range(-3.0, -1.0),
+        vx: buoyancy_drift,
+        vy: rand_normal(-2.2, 0.55).min(-0.8),
         life: rand_range(1.5, 3.0),
         max_life: 3.0,
         ch: glyph,
@@ -350,31 +363,41 @@ pub fn spawn_bubbles(pool: &mut ParticlePool, x: f32, y: f32, palette: &[(u8, u8
 }
 
 /// Spawn star particles (nyan, wizard).
+/// Uses radiant showering distribution with Gaussian angular dispersal.
 pub fn spawn_stars(pool: &mut ParticlePool, x: f32, y: f32, time: f32) {
     let glyphs = ['*', '+', '.', 'o'];
-    let glyph = glyphs[(time * 8.0) as usize % glyphs.len()];
-    let hue = ((x * 0.01 + time * 2.0) % 1.0 + 1.0) % 1.0;
+    let glyph_idx = (next_u64() as usize) % glyphs.len();
+    let glyph = glyphs[glyph_idx];
+    let hue = ((x * 0.01 + time * 2.0 + rand_01() * 0.15) % 1.0 + 1.0) % 1.0;
     let (r, g, b) = hsv_to_rgb(hue * 360.0, 0.9, 1.0);
+    let angle = rand_range(0.0, std::f32::consts::TAU);
+    let speed = rand_range(2.0, 6.5);
+    let vx = angle.cos() * speed;
+    let vy = -angle.sin().abs() * speed - 1.8;
     let _ = pool.spawn(Particle {
-        x: x + rand_range(-1.0, 1.0),
-        y: y + rand_range(-0.5, 0.5),
-        vx: rand_range(-3.0, 3.0),
-        vy: rand_range(-8.0, -3.0),
-        life: rand_range(0.4, 0.8),
-        max_life: 0.8,
+        x: x + rand_normal(0.0, 0.8),
+        y: y + rand_normal(0.0, 0.4),
+        vx,
+        vy,
+        life: rand_range(0.4, 0.9),
+        max_life: 0.9,
         ch: glyph,
         color: Color::rgb(r, g, b),
     });
 }
 
 /// Spawn zzz particles (sleeping animals).
+/// Employs gentle incommensurate floating buoyancy.
 pub fn spawn_zzz(pool: &mut ParticlePool, x: f32, y: f32, time: f32) {
     let glyphs = ['Z', 'z', 'z'];
-    let glyph = glyphs[(time * 2.0) as usize % glyphs.len()];
+    let glyph_idx = (next_u64() as usize) % glyphs.len();
+    let glyph = glyphs[glyph_idx];
+    let phi = 1.6180339887f32;
+    let sway = (time * 1.3).sin() * 1.3 + (time * 1.3 * phi).sin() * 0.55;
     let _ = pool.spawn(Particle {
         x: x + rand_range(-0.5, 0.5),
         y,
-        vx: (time * 1.5).sin() * 2.0,
+        vx: sway,
         vy: rand_range(-2.0, -1.0),
         life: rand_range(2.0, 4.0),
         max_life: 4.0,
@@ -386,7 +409,7 @@ pub fn spawn_zzz(pool: &mut ParticlePool, x: f32, y: f32, time: f32) {
 /// Spawn glitch particles (skeletons, doge).
 pub fn spawn_glitch(pool: &mut ParticlePool, _x: f32, _y: f32, width: usize, height: usize) {
     let glyphs = ['0', '1', '#', '@', '%', '=', '$'];
-    let glyph = glyphs[(rand_01() * glyphs.len() as f32) as usize % glyphs.len()];
+    let glyph = glyphs[(next_u64() as usize) % glyphs.len()];
     let rx = rand_01() * width as f32;
     let ry = rand_01() * height as f32;
     let _ = pool.spawn(Particle {
@@ -423,36 +446,51 @@ pub fn spawn_for_type(
     }
 }
 
-// ── Internal PRNG ──────────────────────────────────────────────────
+// ── High-Entropy Pseudo-Random Generator (SplitMix64 + Golden Ratio Weyl) ───────────
 
 thread_local! {
-    static FRAME_SEED: Cell<u32> = const { Cell::new(0) };
+    static RND_STATE: Cell<u64> = const { Cell::new(0x9E3779B97F4A7C15) };
 }
 
-fn xorshift32(state: &mut u32) {
-    *state ^= *state << 13;
-    *state ^= *state >> 17;
-    *state ^= *state << 5;
-}
-
-/// Get a pseudo-random f32 in [0, 1).
-pub fn rand_01() -> f32 {
-    FRAME_SEED.with(|cell| {
-        let mut s = cell.get();
-        xorshift32(&mut s);
-        cell.set(s);
-        (s >> 8) as f32 / (1 << 24) as f32
+/// Advance the 64-bit SplitMix64 generator and return a high-entropy 64-bit word.
+pub fn next_u64() -> u64 {
+    RND_STATE.with(|cell| {
+        let mut z = cell.get().wrapping_add(0x9E3779B97F4A7C15);
+        cell.set(z);
+        z = (z ^ (z >> 30)).wrapping_mul(0xBF58476D1CE4E5B9);
+        z = (z ^ (z >> 27)).wrapping_mul(0x94D049BB133111EB);
+        z ^ (z >> 31)
     })
 }
 
+/// Get a pseudo-random f32 in [0.0, 1.0).
+pub fn rand_01() -> f32 {
+    (next_u64() >> 40) as f32 / (1u32 << 24) as f32
+}
+
 /// Get a pseudo-random f32 in [lo, hi).
-fn rand_range(lo: f32, hi: f32) -> f32 {
+pub fn rand_range(lo: f32, hi: f32) -> f32 {
     lo + rand_01() * (hi - lo)
 }
 
+/// Box-Muller Gaussian normal distribution sampling: N(mean, std_dev^2).
+/// Provides authentic natural diffusion for particle plumes, thermal convection, and kinematic bursts.
+pub fn rand_normal(mean: f32, std_dev: f32) -> f32 {
+    let u1 = rand_01().max(1e-7); // guard against ln(0)
+    let u2 = rand_01();
+    let z0 = (-2.0 * u1.ln()).sqrt() * (2.0 * std::f32::consts::PI * u2).cos();
+    mean + z0 * std_dev
+}
+
 /// Seed the frame PRNG. Call once per frame.
+/// Resilient against 0 seeds via golden-ratio initialization hashing.
 pub fn seed_frame_rng(seed: u32) {
-    FRAME_SEED.with(|cell| cell.set(seed));
+    let s64 = if seed == 0 {
+        0x9E3779B97F4A7C15
+    } else {
+        (seed as u64).wrapping_mul(0x9E3779B97F4A7C15) ^ 0xBF58476D1CE4E5B9
+    };
+    RND_STATE.with(|cell| cell.set(s64));
 }
 
 #[cfg(test)]
@@ -568,6 +606,54 @@ mod tests {
         seed_frame_rng(42);
         let b = rand_01();
         assert_eq!(a, b);
+    }
+
+    #[test]
+    fn seed_frame_rng_zero_never_collapses() {
+        seed_frame_rng(0);
+        let a = rand_01();
+        let b = rand_01();
+        assert!(a >= 0.0 && a < 1.0);
+        assert!(b >= 0.0 && b < 1.0);
+        assert_ne!(a, b, "Zero seed must not degenerate into a fixed point");
+    }
+
+    #[test]
+    fn test_rand_normal_distribution_properties() {
+        seed_frame_rng(12345);
+        let mut sum = 0.0;
+        let n = 1000;
+        for _ in 0..n {
+            sum += rand_normal(0.0, 1.0);
+        }
+        let mean = sum / n as f32;
+        assert!(
+            mean.abs() < 0.2,
+            "Sample mean of N(0, 1) should be close to 0: {mean}"
+        );
+    }
+
+    #[test]
+    fn test_particle_showering_non_repetitive_across_bursts() {
+        let mut pool = ParticlePool::new();
+        let empty: &[(u8, u8, u8)] = &[];
+        seed_frame_rng(777);
+        spawn_fire(&mut pool, 20.0, 10.0, empty, 0.0);
+        spawn_fire(&mut pool, 20.0, 10.0, empty, 0.1);
+        assert_eq!(pool.active_count(), 6);
+        let velocities: Vec<f32> = pool.particles.iter().map(|(_, p)| p.vx).collect();
+        // Ensure not all spawned velocities are identical
+        let mut unique = true;
+        for i in 1..velocities.len() {
+            if (velocities[i] - velocities[0]).abs() > 0.001 {
+                unique = false;
+                break;
+            }
+        }
+        assert!(
+            !unique,
+            "Showering particles must have diversified velocity distributions"
+        );
     }
 
     #[test]

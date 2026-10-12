@@ -394,7 +394,14 @@ impl ComputeEngine {
             vx[i] *= drag_factor;
             vy[i] *= drag_factor;
 
-            px[i] += vx[i] * dt;
+            // Incommensurate quasi-periodic lateral turbulence based on Golden Ratio (Φ ≈ 1.6180339887):
+            // Produces dynamic, natural, non-repetitive organic drift across terminal space
+            // without heap allocations or PRNG state corruption.
+            let phi = 1.6180339887f32;
+            let phase = px[i] * 0.17 + py[i] * 0.29 + life[i] * 4.31;
+            let turb_x = (phase.sin() + (phase * phi).cos() * 0.618) * 0.35;
+
+            px[i] += (vx[i] + turb_x) * dt;
             py[i] += vy[i] * dt;
 
             life[i] -= dt;
@@ -597,6 +604,26 @@ mod tests {
         );
         assert!(life[0] > 0.0);
         assert_eq!(life[1], 0.0);
+    }
+
+    #[test]
+    fn test_particle_physics_incommensurate_turbulence_non_linear() {
+        let engine = ComputeEngine::init(AccelerationMode::Cpu);
+        let mut px = [10.0f32, 10.0f32];
+        let mut py = [5.0f32, 5.0f32];
+        let mut vx = [0.0f32, 0.0f32];
+        let mut vy = [0.0f32, 0.0f32];
+        let mut life = [1.0f32, 2.5f32]; // Different lifetimes produce distinct incommensurate phases
+
+        engine.compute_particle_physics_step(
+            &mut px, &mut py, &mut vx, &mut vy, &mut life, 0.1, 0.0, 0.0, 80, 24,
+        );
+
+        // Different phases must result in distinct dynamic lateral perturbations
+        assert_ne!(
+            px[0], px[1],
+            "Incommensurate turbulence must produce distinct lateral positions for distinct phases"
+        );
     }
 
     #[test]
