@@ -14,18 +14,18 @@ flowchart TD
         A3 --> A4["Adversarial Invariant Audit\n(132 mascots, zero CP437, <100MB RAM)"]
     end
 
-    subgraph S2["Stage 2: Multi-Manifest Synchronization"]
-        B1["Root Cargo.toml\n[workspace.package] version = '0.0.5-beta'"]
-        B2["Platform doc link\ncrates/platform/src/lib.rs"]
-        B3["Windows Package Managers\nScoop: packaging/scoop/forgum.json\nWinget: packaging/winget/HKDevLoops.Forgum.yaml\nChoco: packaging/choco/forgum.nuspec"]
-        B4["Linux Package Managers\nDebian: packaging/deb/DEBIAN/control\nRPM: packaging/rpm/forgum.spec\nPacman: packaging/pacman/PKGBUILD\nNix: packaging/nix/flake.nix\nGentoo: packaging/gentoo/forgum-0.0.5.ebuild"]
-        B5["macOS / BSD\nHomebrew: packaging/homebrew/forgum.rb\nGuix: packaging/guix/forgum.scm"]
+    subgraph S2["Stage 2: Multi-Manifest & Installer Synchronization"]
+        B1["Cargo Workspace\nCargo.toml: [workspace.package] version\ncrates/platform/src/lib.rs: html_root_url"]
+        B2["Windows Package Managers\nScoop: packaging/scoop/forgum.json\nWinget: packaging/winget/HKDevLoops.Forgum.yaml\nChocolatey: packaging/choco/forgum.nuspec\nChoco Helper: packaging/choco/tools/chocolateyinstall.ps1\nWiX MSI: packaging/windows/forgum.wxs"]
+        B3["Linux & BSD Package Managers\nDebian: packaging/deb/DEBIAN/control\nRPM: packaging/rpm/forgum.spec\nPacman: packaging/pacman/PKGBUILD\nNix: packaging/nix/flake.nix & package.nix\nGentoo: packaging/gentoo/forgum-0.0.5.ebuild\nGuix: packaging/guix/forgum.scm\nHomebrew: packaging/homebrew/forgum.rb"]
+        B4["Universal Installers & PowerShell Module\nPowerShell Module: Forgum.psd1 (ModuleVersion)\nWindows Installer: install.ps1 ($Version fallback)\nUnix/macOS Installer: install.sh (resolve_version fallback)"]
     end
 
-    subgraph S3["Stage 3: Documentation & Ledger Sync"]
-        C1["CHANGELOG.md\nAdd ## [0.0.5-beta] section"]
-        C2["FIX_LOGS.md\nDocument BUG-021..024 & FEATURE-025..026"]
-        C3["RELEASE_MAP.md\nVerify graph & release checklist"]
+    subgraph S3["Stage 3: Documentation, Guides & Ledgers Sync"]
+        C1["Primary Repository Documentation\nREADME.md: Header version badge & TUI Configurator preview\nCHANGELOG.md: Keep-a-Changelog release section\nARCHITECTURE_MAP.md: Milestone taxonomy & capabilities"]
+        C2["Sub-Guides & Samples\ndocs/samples/README.md: SceneConfig schema validator\ndocs/CHANNELS.md: Channel matrix & status output\ndocs/GUIDE.md: Diagnostic checkhealth sample output"]
+        C3["Packaging & Uninstallation Documentation\npackaging/windows/README.md: Portable zip asset name\npackaging/gentoo/README.md: Ebuild filename & testing steps\npackaging/UNINSTALL.md: Overlay ebuild unmerge command"]
+        C4["Defect Ledger & Flight Protocol\nFIX_LOGS.md: Target Release header & defect registers\nRELEASE_SOP.md: Release SOP stage examples & tag command\nRELEASE_MAP.md: Definitive distribution graph & change matrix"]
     end
 
     subgraph S4["Stage 4: Git Branch Promotion & Tagging"]
@@ -39,8 +39,9 @@ flowchart TD
 
     subgraph S5["Stage 5: CI/CD Pipeline Monitoring"]
         E1["GitHub Actions Trigger\n.github/workflows/release.yml"] --> E2["Build 8 Target Triples\n(Linux gnu/musl, macOS darwin, Windows msvc)"]
-        E2 --> E3["Cryptographic Checksums\nsha256sums.txt generation"]
-        E3 --> E4["Publish GitHub Release Assets\ngh release view v0.0.5-beta"]
+        E2 --> E3["Package Distributions\n(.rpm, .deb, .msi, .nupkg, .zip, .tar.gz)"]
+        E3 --> E4["Cryptographic Checksums\nsha256sums.txt generation"]
+        E4 --> E5["Publish GitHub Release Assets\ngh release view v0.0.5-beta"]
     end
 
     S1 --> S2
@@ -57,19 +58,34 @@ flowchart TD
 | :--- | :--- | :--- | :--- | :--- |
 | **Cargo Workspace** | `Cargo.toml` | `[workspace.package].version` | `"0.0.4-beta"` | `"0.0.5-beta"` |
 | **Platform Docs** | `crates/platform/src/lib.rs` | `#![doc(html_root_url = ...)]` | `.../0.0.3-beta` | `.../0.0.5-beta` |
-| **Scoop** | `packaging/scoop/forgum.json` | `"version"` & download URLs | `"0.0.4-beta"` | `"0.0.5-beta"` |
-| **Winget** | `packaging/winget/HKDevLoops.Forgum.yaml` | `PackageVersion` & URLs | `0.0.4-beta` | `0.0.5-beta` |
-| **Chocolatey** | `packaging/choco/forgum.nuspec` | `<version>` | `0.0.4-beta` | `0.0.5-beta` |
-| **Homebrew** | `packaging/homebrew/forgum.rb` | `version` | `"0.0.4-beta"` | `"0.0.5-beta"` |
+| **Primary README** | `README.md` | Line 31 (Version badge) & Line 811 (TUI header) | `0.0.4-beta` | `0.0.5-beta` |
+| **Changelog** | `CHANGELOG.md` | Release header & release date | `## [0.0.4-beta]` | `## [0.0.5-beta] - 2026-10-12` |
+| **Defect Ledger** | `FIX_LOGS.md` | Line 3 (`Target Release`) & defect entries | `v0.0.4-beta` | `v0.0.5-beta` (BUG-027, BUG-028, FEATURE-029) |
+| **Architecture Map** | `ARCHITECTURE_MAP.md` | Section 1.2 header & overview | `(0.0.4-beta)` | `(0.0.5-beta)` |
+| **Release SOP** | `RELEASE_SOP.md` | Lines 13, 67, 72–88, 96, 119, 152 | `0.0.4-beta` | `0.0.5-beta` |
+| **PowerShell Module** | `Forgum.psd1` | Line 3 (`ModuleVersion`) | `'0.0.3'` | `'0.0.5'` |
+| **Windows Installer** | `install.ps1` | Line 213 (`$Version = ...` fallback) | `"0.0.4-beta"` | `"0.0.5-beta"` |
+| **Unix / macOS Installer** | `install.sh` | Line 17 (env comment) & Line 553 (`echo ...` fallback) | `0.0.4-beta` | `0.0.5-beta` |
+| **Scoop Manifest** | `packaging/scoop/forgum.json` | `"version"` & download URLs | `"0.0.4-beta"` | `"0.0.5-beta"` |
+| **Winget Manifest** | `packaging/winget/HKDevLoops.Forgum.yaml` | `PackageVersion` & URLs | `0.0.4-beta` | `0.0.5-beta` |
+| **Chocolatey Nuspec** | `packaging/choco/forgum.nuspec` | `<version>` | `0.0.4-beta` | `0.0.5-beta` |
+| **Chocolatey Helper** | `packaging/choco/tools/chocolateyinstall.ps1` | Line 6 (`$version = ...`) | `'0.0.4-beta'` | `'0.0.5-beta'` |
+| **Homebrew Formula** | `packaging/homebrew/forgum.rb` | `version` & release URL | `"0.0.4-beta"` | `"0.0.5-beta"` |
 | **Debian (APT)** | `packaging/deb/DEBIAN/control` | `Version:` | `0.0.4-beta` | `0.0.5-beta` |
-| **Red Hat (RPM)** | `packaging/rpm/forgum.spec` | `Version:` | `0.0.4` | `0.0.5` |
-| **Arch Linux** | `packaging/pacman/PKGBUILD` | `pkgver` | `0.0.4.beta` | `0.0.5.beta` |
+| **Red Hat (RPM)** | `packaging/rpm/forgum.spec` | `Version:` & changelog block | `0.0.4` | `0.0.5` |
+| **Arch Linux** | `packaging/pacman/PKGBUILD` | `pkgver` (normalized pacman format) | `0.0.4.beta` | `0.0.5.beta` |
 | **Nix Flake** | `packaging/nix/flake.nix` | `version = ...` | `"0.0.4-beta"` | `"0.0.5-beta"` |
 | **Nix Package** | `packaging/nix/package.nix` | `version = ...` | `"0.0.4-beta"` | `"0.0.5-beta"` |
+| **GNU Guix** | `packaging/guix/forgum.scm` | `(version "...")` | `"0.0.4-beta"` | `"0.0.5-beta"` |
 | **Windows MSI (WiX)** | `packaging/windows/forgum.wxs` | `Version="..."` | `0.0.4` | `0.0.5` |
-| **Gentoo** | `packaging/gentoo/forgum-0.0.5.ebuild` | Ebuild filename | `forgum-0.0.4.ebuild` | `forgum-0.0.5.ebuild` |
-| **Changelog** | `CHANGELOG.md` | Release header & release date | `## [0.0.4-beta]` | `## [0.0.5-beta] - 2026-10-12` |
-| **Defect Ledger** | `FIX_LOGS.md` | Remediation entries | Up to BUG-023 | BUG-021 through FEATURE-026 |
+| **Gentoo Ebuild** | `packaging/gentoo/forgum-0.0.5.ebuild` | Ebuild filename | `forgum-0.0.4.ebuild` | `forgum-0.0.5.ebuild` |
+| **Gentoo Packaging Guide** | `packaging/gentoo/README.md` | Lines 13, 27, 32 (ebuild testing commands) | `forgum-0.0.3.ebuild` | `forgum-0.0.5.ebuild` |
+| **Windows Packaging Guide** | `packaging/windows/README.md` | Line 37 (portable zip asset reference) | `forgum-0.0.3-beta` | `forgum-0.0.5-beta` |
+| **Uninstall Guide** | `packaging/UNINSTALL.md` | Line 146 (Gentoo overlay unmerge command) | `forgum-0.0.3.ebuild` | `forgum-0.0.5.ebuild` |
+| **Sample Configs Guide** | `docs/samples/README.md` | Line 7 (SceneConfig schema version validator) | `v0.0.4-beta` | `v0.0.5-beta` |
+| **Release Channels Guide** | `docs/CHANNELS.md` | Lines 51 & 73 (Stable channel tag & CLI output) | `0.0.3-beta` | `0.0.5-beta` |
+| **Diagnostics & User Guide** | `docs/GUIDE.md` | Line 263 (`checkhealth` sample output header) | `v0.0.3-beta` | `v0.0.5-beta` |
+| **Distribution Map** | `RELEASE_MAP.md` | Flowchart, sync matrix & capability registers | Full 0.0.4 matrix | Complete 29-target 0.0.5 matrix |
 
 ---
 
