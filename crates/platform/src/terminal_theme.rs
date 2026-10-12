@@ -169,6 +169,217 @@ impl ContrastMode {
     }
 }
 
+/// Color Vision Deficiency (CVD) accessibility translation mode.
+///
+/// Implements accessible Daltonization and physiological LMS cone projection matrices
+/// (Brettel-Viénot-Mollon 1997 / Machado et al. 2009 / Okabe-Ito 2008) to provide
+/// clear, soothing, high-differentiation color translation for users with color vision deficiencies.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum ColorblindMode {
+    /// Default: standard truecolor without alteration.
+    #[default]
+    None,
+    /// Protanopia (Red-Blind / L-cone deficiency): Daltonized red->gold/blue shift for distinction.
+    Protanopia,
+    /// Deuteranopia (Green-Blind / M-cone deficiency): Daltonized green->blue/yellow shift for distinction.
+    Deuteranopia,
+    /// Tritanopia (Blue-Blind / S-cone deficiency): Daltonized blue/yellow->cyan/red-orange shift for distinction.
+    Tritanopia,
+    /// Achromatopsia / Monochromacy: High-contrast ITU-R BT.709 perceptual luminance grayscale.
+    Achromatopsia,
+    /// Protanopia Simulation: Physiological LMS simulation of red-cone blindness.
+    ProtanopiaSim,
+    /// Deuteranopia Simulation: Physiological LMS simulation of green-cone blindness.
+    DeuteranopiaSim,
+    /// Tritanopia Simulation: Physiological LMS simulation of blue-cone blindness.
+    TritanopiaSim,
+}
+
+impl ColorblindMode {
+    pub const ALL: [ColorblindMode; 8] = [
+        ColorblindMode::None,
+        ColorblindMode::Protanopia,
+        ColorblindMode::Deuteranopia,
+        ColorblindMode::Tritanopia,
+        ColorblindMode::Achromatopsia,
+        ColorblindMode::ProtanopiaSim,
+        ColorblindMode::DeuteranopiaSim,
+        ColorblindMode::TritanopiaSim,
+    ];
+
+    #[must_use]
+    pub fn as_str(self) -> &'static str {
+        match self {
+            ColorblindMode::None => "none",
+            ColorblindMode::Protanopia => "protanopia",
+            ColorblindMode::Deuteranopia => "deuteranopia",
+            ColorblindMode::Tritanopia => "tritanopia",
+            ColorblindMode::Achromatopsia => "achromatopsia",
+            ColorblindMode::ProtanopiaSim => "protanopia_sim",
+            ColorblindMode::DeuteranopiaSim => "deuteranopia_sim",
+            ColorblindMode::TritanopiaSim => "tritanopia_sim",
+        }
+    }
+
+    #[must_use]
+    pub fn display_name(self) -> &'static str {
+        match self {
+            ColorblindMode::None => "Normal (None)",
+            ColorblindMode::Protanopia => "Protanopia (Red-Blind)",
+            ColorblindMode::Deuteranopia => "Deuteranopia (Green-Blind)",
+            ColorblindMode::Tritanopia => "Tritanopia (Blue-Blind)",
+            ColorblindMode::Achromatopsia => "Achromatopsia (Monochrome)",
+            ColorblindMode::ProtanopiaSim => "Protanopia Sim (LMS)",
+            ColorblindMode::DeuteranopiaSim => "Deuteranopia Sim (LMS)",
+            ColorblindMode::TritanopiaSim => "Tritanopia Sim (LMS)",
+        }
+    }
+
+    #[must_use]
+    pub fn description(self) -> &'static str {
+        match self {
+            ColorblindMode::None => "Standard truecolor palette (unaltered)",
+            ColorblindMode::Protanopia => {
+                "Daltonized red-blind correction (shifts red to gold/blue)"
+            }
+            ColorblindMode::Deuteranopia => {
+                "Daltonized green-blind correction (shifts green to yellow/blue)"
+            }
+            ColorblindMode::Tritanopia => {
+                "Daltonized blue-blind correction (shifts blue/yellow to cyan/rust)"
+            }
+            ColorblindMode::Achromatopsia => "Rec. 709 high-contrast perceptual grayscale",
+            ColorblindMode::ProtanopiaSim => "LMS physiological simulation of L-cone deficiency",
+            ColorblindMode::DeuteranopiaSim => "LMS physiological simulation of M-cone deficiency",
+            ColorblindMode::TritanopiaSim => "LMS physiological simulation of S-cone deficiency",
+        }
+    }
+
+    #[must_use]
+    pub fn from_str_loose(s: &str) -> Self {
+        let cleaned = s.to_lowercase().replace(['-', '_', ' '], "");
+        match cleaned.as_str() {
+            "protanopia" | "protan" | "redblind" => ColorblindMode::Protanopia,
+            "deuteranopia" | "deutan" | "greenblind" => ColorblindMode::Deuteranopia,
+            "tritanopia" | "tritan" | "blueblind" => ColorblindMode::Tritanopia,
+            "achromatopsia" | "grayscale" | "monochrome" | "mono" | "achromat" => {
+                ColorblindMode::Achromatopsia
+            }
+            "protanopiasim" | "protansim" | "protanlms" => ColorblindMode::ProtanopiaSim,
+            "deuteranopiasim" | "deutansim" | "deutanlms" => ColorblindMode::DeuteranopiaSim,
+            "tritanopiasim" | "tritansim" | "tritanlms" => ColorblindMode::TritanopiaSim,
+            _ => ColorblindMode::None,
+        }
+    }
+
+    #[must_use]
+    pub fn adjust_rgb(self, r: u8, g: u8, b: u8) -> (u8, u8, u8) {
+        apply_colorblind_transform(r, g, b, self)
+    }
+}
+
+/// Apply Color Vision Deficiency (CVD) translation or simulation to an RGB triple.
+#[must_use]
+pub fn apply_colorblind_transform(r: u8, g: u8, b: u8, mode: ColorblindMode) -> (u8, u8, u8) {
+    if mode == ColorblindMode::None {
+        return (r, g, b);
+    }
+
+    let to_linear = |c: u8| -> f32 {
+        let val = c as f32 / 255.0;
+        if val <= 0.04045 {
+            val / 12.92
+        } else {
+            ((val + 0.055) / 1.055).powf(2.4)
+        }
+    };
+
+    let from_linear = |c: f32| -> u8 {
+        let val = c.clamp(0.0, 1.0);
+        let srgb = if val <= 0.0031308 {
+            val * 12.92
+        } else {
+            1.055 * val.powf(1.0 / 2.4) - 0.055
+        };
+        (srgb * 255.0).round().clamp(0.0, 255.0) as u8
+    };
+
+    let lr = to_linear(r);
+    let lg = to_linear(g);
+    let lb = to_linear(b);
+
+    match mode {
+        ColorblindMode::None => (r, g, b),
+        ColorblindMode::Achromatopsia => {
+            // ITU-R BT.709 perceptual luminance weighting
+            let lum = 0.2126 * lr + 0.7152 * lg + 0.0722 * lb;
+            let val = from_linear(lum);
+            (val, val, val)
+        }
+        ColorblindMode::ProtanopiaSim => {
+            // Machado/Brettel LMS Protanopia simulation matrix
+            let sim_r = 0.56667 * lr + 0.43333 * lg;
+            let sim_g = 0.55833 * lr + 0.44167 * lg;
+            let sim_b = 0.24167 * lg + 0.75833 * lb;
+            (from_linear(sim_r), from_linear(sim_g), from_linear(sim_b))
+        }
+        ColorblindMode::DeuteranopiaSim => {
+            // Machado/Brettel LMS Deuteranopia simulation matrix
+            let sim_r = 0.625 * lr + 0.375 * lg;
+            let sim_g = 0.70 * lr + 0.30 * lg;
+            let sim_b = 0.30 * lg + 0.70 * lb;
+            (from_linear(sim_r), from_linear(sim_g), from_linear(sim_b))
+        }
+        ColorblindMode::TritanopiaSim => {
+            // Machado/Brettel LMS Tritanopia simulation matrix
+            let sim_r = 0.95 * lr + 0.05 * lg;
+            let sim_g = 0.43333 * lg + 0.56667 * lb;
+            let sim_b = 0.475 * lg + 0.525 * lb;
+            (from_linear(sim_r), from_linear(sim_g), from_linear(sim_b))
+        }
+        ColorblindMode::Protanopia => {
+            // Daltonized Protanopia: shift lost red energy into green and blue channels
+            let sim_r = 0.56667 * lr + 0.43333 * lg;
+            let sim_g = 0.55833 * lr + 0.44167 * lg;
+            let sim_b = 0.24167 * lg + 0.75833 * lb;
+            let err_r = lr - sim_r;
+            let err_g = lg - sim_g;
+            let err_b = lb - sim_b;
+            let out_r = lr;
+            let out_g = lg + 0.7 * err_r + 1.0 * err_g;
+            let out_b = lb + 0.7 * err_r + 1.0 * err_b;
+            (from_linear(out_r), from_linear(out_g), from_linear(out_b))
+        }
+        ColorblindMode::Deuteranopia => {
+            // Daltonized Deuteranopia: shift lost green energy into red and blue channels
+            let sim_r = 0.625 * lr + 0.375 * lg;
+            let sim_g = 0.70 * lr + 0.30 * lg;
+            let sim_b = 0.30 * lg + 0.70 * lb;
+            let err_r = lr - sim_r;
+            let err_g = lg - sim_g;
+            let err_b = lb - sim_b;
+            let out_r = lr + 0.6 * err_g + 0.3 * err_r;
+            let out_g = lg;
+            let out_b = lb + 0.6 * err_g + 0.3 * err_b;
+            (from_linear(out_r), from_linear(out_g), from_linear(out_b))
+        }
+        ColorblindMode::Tritanopia => {
+            // Daltonized Tritanopia: shift lost blue energy into red and green channels
+            let sim_r = 0.95 * lr + 0.05 * lg;
+            let sim_g = 0.43333 * lg + 0.56667 * lb;
+            let sim_b = 0.475 * lg + 0.525 * lb;
+            let err_r = lr - sim_r;
+            let err_g = lg - sim_g;
+            let err_b = lb - sim_b;
+            let out_r = lr + 0.6 * err_b + 0.2 * err_r;
+            let out_g = lg + 0.4 * err_b + 0.2 * err_g;
+            let out_b = lb;
+            (from_linear(out_r), from_linear(out_g), from_linear(out_b))
+        }
+    }
+}
+
 /// Discovered terminal color scheme and background metadata.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TerminalTheme {
@@ -293,6 +504,8 @@ pub fn parse_hex_color(s: &str) -> Option<(u8, u8, u8)> {
 
 static CACHED_THEME: std::sync::OnceLock<TerminalTheme> = std::sync::OnceLock::new();
 static ACTIVE_CONTRAST_MODE: std::sync::RwLock<Option<ContrastMode>> = std::sync::RwLock::new(None);
+static ACTIVE_COLORBLIND_MODE: std::sync::RwLock<Option<ColorblindMode>> =
+    std::sync::RwLock::new(None);
 
 /// Set the globally active background contrast mode override.
 pub fn set_active_contrast_mode(mode: ContrastMode) {
@@ -305,6 +518,19 @@ pub fn set_active_contrast_mode(mode: ContrastMode) {
 #[must_use]
 pub fn get_active_contrast_mode() -> Option<ContrastMode> {
     ACTIVE_CONTRAST_MODE.read().ok().and_then(|lock| *lock)
+}
+
+/// Set the globally active color vision deficiency (colorblind) mode override.
+pub fn set_active_colorblind_mode(mode: ColorblindMode) {
+    if let Ok(mut lock) = ACTIVE_COLORBLIND_MODE.write() {
+        *lock = Some(mode);
+    }
+}
+
+/// Retrieve the globally active color vision deficiency (colorblind) mode override, if set.
+#[must_use]
+pub fn get_active_colorblind_mode() -> Option<ColorblindMode> {
+    ACTIVE_COLORBLIND_MODE.read().ok().and_then(|lock| *lock)
 }
 
 /// Detect the active terminal's theme by cascading across environment overrides,

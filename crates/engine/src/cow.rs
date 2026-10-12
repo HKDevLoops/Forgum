@@ -59,7 +59,7 @@ pub fn load_cow_with_landmarks(
     };
     // 1. Try bundled data directory.
     let cow_path = data_dir.join("Cows").join(format!("{resolved}.cow"));
-    if let Ok(raw) = std::fs::read_to_string(&cow_path) {
+    if let Ok(raw) = forgum_platform::read_text_file_compatible(&cow_path) {
         crate::log_debug!(
             "cow",
             "Loaded mascot '{resolved}' from {}",
@@ -76,7 +76,7 @@ pub fn load_cow_with_landmarks(
     // 2. Try user's custom cows directory (Phase 8.12: community cow packs).
     if let Some(custom_path) = custom_cows_dir() {
         let custom_cow = custom_path.join(format!("{resolved}.cow"));
-        if let Ok(raw) = std::fs::read_to_string(&custom_cow) {
+        if let Ok(raw) = forgum_platform::read_text_file_compatible(&custom_cow) {
             crate::log_debug!(
                 "cow",
                 "Loaded custom mascot '{resolved}' from {}",
@@ -244,7 +244,7 @@ pub fn load_cow_from_path(
     tongue: &str,
     thoughts: &str,
 ) -> Result<String, String> {
-    let raw = std::fs::read_to_string(path)
+    let raw = forgum_platform::read_text_file_compatible(path)
         .map_err(|e| format!("failed to read cow file {}: {e}", path.display()))?;
     Ok(expand_cow(&raw, eyes, tongue, thoughts))
 }
@@ -626,8 +626,224 @@ pub fn strip_common_leading_indent(text: &str) -> String {
         .join("\n")
 }
 
+/// Intelligently compress or sample repeated internal torso, neck, or filler lines proportionally
+/// to fit within `max_rows` while strictly preserving all anatomical landmarks (horns, eyes, muzzle, legs, tail).
+#[must_use]
+pub fn compress_mascot_height_preserving_landmarks(cow_text: &str, max_rows: usize) -> String {
+    let raw_lines: Vec<&str> = cow_text.lines().collect();
+    if raw_lines.is_empty() || raw_lines.len() <= max_rows {
+        return cow_text.to_string();
+    }
+
+    // Locate first and last non-empty art lines
+    let first_art = match raw_lines.iter().position(|l| !l.trim().is_empty()) {
+        Some(pos) => pos,
+        None => return cow_text.to_string(),
+    };
+    let last_art = match raw_lines.iter().rposition(|l| !l.trim().is_empty()) {
+        Some(pos) => pos,
+        None => return cow_text.to_string(),
+    };
+
+    let art_height = last_art.saturating_sub(first_art) + 1;
+    if art_height <= max_rows {
+        return raw_lines[first_art..=last_art].join("\n");
+    }
+
+    // 1. Identify anatomical landmark lines
+    let mut landmarks: std::collections::BTreeSet<usize> = std::collections::BTreeSet::new();
+
+    // Top landmark: cranial crest / horns / ears
+    landmarks.insert(first_art);
+    if first_art + 1 < last_art {
+        let second_line = raw_lines[first_art + 1];
+        if second_line.contains('^') || second_line.contains('/') || second_line.contains('\\') {
+            landmarks.insert(first_art + 1);
+        }
+    }
+
+    // Eyes landmark
+    let eyes = detect_cow_eyes(cow_text, 0);
+    for (eye_row, _) in eyes {
+        if eye_row >= first_art && eye_row <= last_art {
+            landmarks.insert(eye_row);
+        }
+    }
+
+    // Mouth / snout landmark
+    for (r, line) in raw_lines
+        .iter()
+        .enumerate()
+        .take(last_art + 1)
+        .skip(first_art)
+    {
+        if line.contains("(__)")
+            || line.contains("\\__/")
+            || line.contains("(..)")
+            || line.contains("(==)")
+            || line.contains("\\_/")
+            || line.contains("v ")
+            || line.contains("w ")
+            || line.contains("U ")
+        {
+            landmarks.insert(r);
+            break;
+        }
+    }
+
+    // Tail landmark
+    for (r, line) in raw_lines
+        .iter()
+        .enumerate()
+        .take(last_art + 1)
+        .skip(first_art)
+    {
+        if line.contains(")\\/") || line.contains(")/") || line.contains("~\\") {
+            landmarks.insert(r);
+            break;
+        }
+    }
+
+    // Bottom landmarks: feet / hooves
+    landmarks.insert(last_art);
+    if last_art > first_art + 1 {
+        let prev_line = raw_lines[last_art - 1];
+        if prev_line.contains("||")
+            || prev_line.contains('|')
+            || prev_line.contains('/')
+            || prev_line.contains('\\')
+        {
+            landmarks.insert(last_art - 1);
+        }
+    }
+
+    // If landmark count exceeds max_rows (e.g. extremely tight budget), prioritize landmarks
+    if landmarks.len() >= max_rows {
+        let mut priority_lines = Vec::new();
+        // Priority 1: Eyes
+        for (eye_row, _) in detect_cow_eyes(cow_text, 0) {
+            if landmarks.contains(&eye_row) && !priority_lines.contains(&eye_row) {
+                priority_lines.push(eye_row);
+            }
+        }
+        // Priority 2: Mouth
+        for &r in &landmarks {
+            let line = raw_lines[r];
+            if (line.contains("(__)") || line.contains("\\__/")) && !priority_lines.contains(&r) {
+                priority_lines.push(r);
+            }
+        }
+        // Priority 3: Feet
+        if !priority_lines.contains(&last_art) {
+            priority_lines.push(last_art);
+        }
+        // Priority 4: Horns / head top
+        if !priority_lines.contains(&first_art) {
+            priority_lines.push(first_art);
+        }
+        // Add other landmarks
+        for &r in &landmarks {
+            if !priority_lines.contains(&r) {
+                priority_lines.push(r);
+            }
+        }
+
+        priority_lines.truncate(max_rows);
+        priority_lines.sort_unstable();
+        return priority_lines
+            .iter()
+            .map(|&idx| raw_lines[idx])
+            .collect::<Vec<&str>>()
+            .join("\n");
+    }
+
+    // 2. We have spare budget: sample non-landmark filler rows proportionally
+    let remaining_budget = max_rows.saturating_sub(landmarks.len());
+    let landmark_vec: Vec<usize> = landmarks.iter().copied().collect();
+
+    // Group non-landmark filler intervals between consecutive landmarks
+    let mut intervals: Vec<(usize, usize)> = Vec::new();
+    for w in landmark_vec.windows(2) {
+        if w[1] > w[0] + 1 {
+            intervals.push((w[0] + 1, w[1] - 1));
+        }
+    }
+
+    let total_filler_count: usize = intervals.iter().map(|(s, e)| e - s + 1).sum();
+    let mut sampled_indices: std::collections::BTreeSet<usize> = landmarks.clone();
+
+    if total_filler_count > 0 && remaining_budget > 0 {
+        let mut budget_assigned = 0;
+        let mut interval_budgets = Vec::new();
+
+        for &(s, e) in &intervals {
+            let count = e - s + 1;
+            let share = ((count as f32 / total_filler_count as f32) * remaining_budget as f32)
+                .round() as usize;
+            interval_budgets.push(share);
+            budget_assigned += share;
+        }
+
+        // Adjust rounding discrepancies
+        while budget_assigned > remaining_budget {
+            if let Some(max_b) = interval_budgets.iter_mut().max_by_key(|b| **b) {
+                if *max_b > 0 {
+                    *max_b -= 1;
+                    budget_assigned -= 1;
+                } else {
+                    break;
+                }
+            } else {
+                break;
+            }
+        }
+        while budget_assigned < remaining_budget {
+            if let Some((idx, _)) = intervals.iter().enumerate().max_by_key(|&(i, (s, e))| {
+                let count = e - s + 1;
+                count.saturating_sub(interval_budgets[i])
+            }) {
+                interval_budgets[idx] += 1;
+                budget_assigned += 1;
+            } else {
+                break;
+            }
+        }
+
+        // Sample lines uniformly within each interval
+        for (i, &(s, e)) in intervals.iter().enumerate() {
+            let k = interval_budgets[i];
+            let count = e - s + 1;
+            if k == 0 {
+                continue;
+            }
+            if k >= count {
+                for line_idx in s..=e {
+                    sampled_indices.insert(line_idx);
+                }
+            } else {
+                let step = count as f32 / k as f32;
+                for j in 0..k {
+                    let offset = ((j as f32 + 0.5) * step).floor() as usize;
+                    let pick = (s + offset).min(e);
+                    sampled_indices.insert(pick);
+                }
+            }
+        }
+    }
+
+    let mut result_indices: Vec<usize> = sampled_indices.into_iter().collect();
+    result_indices.sort_unstable();
+    result_indices.truncate(max_rows);
+
+    result_indices
+        .iter()
+        .map(|&idx| raw_lines[idx])
+        .collect::<Vec<&str>>()
+        .join("\n")
+}
+
 /// Compact a mascot's ASCII art to fit comfortably and look aesthetically pleasing
-/// in small terminal panes (e.g. 30x30, 20x20, down to 15x15).
+/// in small terminal panes (e.g. 30x30, 20x20, down to 15x15) and enforce Mascot Bounded Height Governor.
 #[must_use]
 pub fn compact_mascot_for_viewport(
     cow_text: &str,
@@ -635,20 +851,41 @@ pub fn compact_mascot_for_viewport(
     target_height: usize,
 ) -> String {
     let unindented = strip_common_leading_indent(cow_text);
-    if target_width > 35 && target_height > 25 {
+    let line_count = unindented.lines().count();
+
+    // If within comfortable dimensions and not oversized, return unindented
+    if target_width > 35 && target_height > 25 && line_count <= target_height.saturating_sub(4) {
         return unindented;
     }
 
-    let lines: Vec<&str> = unindented.lines().collect();
+    // Determine vertical budget (comfortable 8-12 line ceiling in compact viewports)
+    let budget_h = if target_height <= 15 {
+        7
+    } else if target_height <= 20 {
+        9
+    } else if target_height <= 25 {
+        12
+    } else {
+        target_height.saturating_sub(4).max(12)
+    };
+
+    // Apply Mascot Bounded Height Governor if line count exceeds vertical budget
+    let height_compacted = if line_count > budget_h {
+        compress_mascot_height_preserving_landmarks(&unindented, budget_h)
+    } else {
+        unindented
+    };
+
+    let lines: Vec<&str> = height_compacted.lines().collect();
     let cur_width = lines
         .iter()
         .map(|l| str_display_width(l))
         .max()
         .unwrap_or(0);
 
-    // If already fitting within target_width, return unindented art
+    // If already fitting within target_width, return height_compacted art
     if cur_width <= target_width {
-        return unindented;
+        return height_compacted;
     }
 
     // For nano-panes (width <= 18, e.g. 15x15): compact long ASCII spans like "____" or "----"
@@ -685,8 +922,10 @@ pub fn default_cow_expanded(eyes: &str, tongue: &str, thoughts: &str) -> String 
 pub fn compose_scene_with_mode(cow_text: &str, bubble_text: &str, is_thought: bool) -> String {
     let (term_w, term_h) = forgum_platform::terminal_size();
     let is_small_pane = term_w <= 35 || term_h <= 30;
+    let line_count = cow_text.lines().count();
+    let is_oversized = line_count > (term_h as usize).saturating_sub(4);
 
-    let adapted_cow = if is_small_pane {
+    let adapted_cow = if is_small_pane || is_oversized {
         compact_mascot_for_viewport(cow_text, term_w as usize, term_h as usize)
     } else {
         cow_text.to_string()
@@ -1794,5 +2033,68 @@ mod tests {
                 str_display_width(line)
             );
         }
+    }
+
+    #[test]
+    fn test_compress_mascot_height_preserving_landmarks_oversized() {
+        // Construct an oversized mascot with 24 lines:
+        // Horns, eyes, muzzle, 18 filler torso lines, legs, and feet
+        let mut lines = Vec::new();
+        lines.push("   ^__^   ");
+        lines.push("  (oo)\\_______");
+        lines.push("  (__)\\       )\\");
+        lines.extend(std::iter::repeat_n("       |     |  ", 18));
+        lines.push("      ||----w | ");
+        lines.push("      ||     || ");
+        lines.push("      db     db ");
+
+        let oversized = lines.join("\n");
+        assert_eq!(oversized.lines().count(), 24);
+
+        // Compress to 10 rows
+        let compacted = compress_mascot_height_preserving_landmarks(&oversized, 10);
+        let compacted_lines: Vec<&str> = compacted.lines().collect();
+
+        assert!(
+            compacted_lines.len() <= 10,
+            "Compacted lines ({}) must be <= 10",
+            compacted_lines.len()
+        );
+
+        // Verify all anatomical landmarks are strictly preserved
+        assert!(
+            compacted.contains("^__^"),
+            "Horns/ears landmark must be preserved"
+        );
+        assert!(
+            compacted.contains("(oo)"),
+            "Eyes landmark must be preserved"
+        );
+        assert!(
+            compacted.contains("(__)"),
+            "Muzzle landmark must be preserved"
+        );
+        assert!(compacted.contains("db"), "Feet landmark must be preserved");
+    }
+
+    #[test]
+    fn test_compact_mascot_for_viewport_governs_height_under_25() {
+        let mut lines = Vec::new();
+        lines.push("   ^__^   ");
+        lines.push("  (oo)\\_______");
+        lines.push("  (__)\\       )\\");
+        lines.extend(std::iter::repeat_n("       |     |  ", 22));
+        lines.push("      ||     || ");
+        let oversized = lines.join("\n");
+
+        // target_height = 20 (budget_h = 9)
+        let compacted = compact_mascot_for_viewport(&oversized, 80, 20);
+        assert!(
+            compacted.lines().count() <= 10,
+            "Mascot height must be bounded to <= 10 lines for target_height=20, got {}",
+            compacted.lines().count()
+        );
+        assert!(compacted.contains("(oo)"), "Eyes must be preserved");
+        assert!(compacted.contains("||"), "Feet must be preserved");
     }
 }

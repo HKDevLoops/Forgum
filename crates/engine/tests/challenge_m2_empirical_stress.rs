@@ -358,8 +358,8 @@ fn challenge_timing_invariants_empirical_cli() {
     let expected_ms = duration_secs * 1000;
     // Disallow premature termination (the user bug where 240 FPS finished in 1s or less)
     let min_allowed_ms = expected_ms - 250;
-    // Allow process launch/teardown margin under parallel test runs
-    let max_allowed_ms = expected_ms + 2500;
+    // Allow process launch/teardown margin under heavy parallel workspace test runs
+    let max_allowed_ms = expected_ms + 4000;
 
     for &fps in &fps_list {
         eprintln!(

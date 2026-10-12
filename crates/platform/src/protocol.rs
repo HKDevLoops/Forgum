@@ -131,6 +131,16 @@ pub struct SceneConfig {
     #[serde(default)]
     pub contrast_mode: Option<String>,
 
+    /// Color Vision Deficiency (CVD) accessibility mode: "none", "protanopia", "deuteranopia", "tritanopia", "achromatopsia", etc.
+    #[serde(
+        default,
+        alias = "cvd",
+        alias = "colorblind",
+        alias = "color_blind",
+        alias = "colorblind_mode"
+    )]
+    pub colorblind_mode: Option<String>,
+
     /// Hardware acceleration mode: "auto", "dedicated", "integrated", "cpu".
     #[serde(
         default,
@@ -477,6 +487,7 @@ impl Default for SceneConfig {
             banner: false,
             aspect: None,
             aspect_mode: None,
+            colorblind_mode: None,
             keybindings: None,
         }
     }
@@ -611,6 +622,7 @@ mod tests {
             banner: true,
             aspect: Some("16:9".into()),
             aspect_mode: Some("dynamic".into()),
+            colorblind_mode: Some("deuteranopia".into()),
             keybindings: None,
         };
 

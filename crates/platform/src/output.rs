@@ -49,6 +49,13 @@ pub enum OutputTarget {
 impl OutputHandle {
     /// Open the right output. See module docs for the resolution order.
     pub fn open() -> Result<Self, PlatformError> {
+        #[cfg(windows)]
+        #[allow(unsafe_code)]
+        unsafe {
+            windows_sys::Win32::System::Console::SetConsoleOutputCP(65001);
+            windows_sys::Win32::System::Console::SetConsoleCP(65001);
+        }
+
         let target = pick_target();
         // If we picked the TTY but can't actually open it (e.g. a
         // headless daemon with no controlling terminal, where open("/dev/tty")
@@ -182,6 +189,8 @@ fn open_tty() -> Result<Box<dyn Write + Send>, PlatformError> {
     // the terminal driver instead of being ignored or printed raw.
     let handle = f.as_raw_handle() as windows_sys::Win32::Foundation::HANDLE;
     unsafe {
+        windows_sys::Win32::System::Console::SetConsoleOutputCP(65001);
+        windows_sys::Win32::System::Console::SetConsoleCP(65001);
         let mut mode: u32 = 0;
         if GetConsoleMode(handle, &mut mode) != 0 {
             let vt_mode = mode

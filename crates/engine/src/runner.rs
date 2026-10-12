@@ -2772,7 +2772,8 @@ fn handle_think_command(mut args: cli::Args, thought: Vec<String>) -> ExitCode {
         use std::io::Read;
         let mut buf = String::new();
         let _ = std::io::stdin().read_to_string(&mut buf);
-        let trimmed = buf.trim().to_string();
+        let sanitized = forgum_platform::sanitize_and_normalize(&buf);
+        let trimmed = sanitized.trim().to_string();
         if !trimmed.is_empty() && !trimmed.eq_ignore_ascii_case("random") {
             trimmed
         } else {
@@ -2955,6 +2956,12 @@ fn print_colored_scene(
                     crate::framebuffer::Color::WHITE,
                     ch,
                 )
+            };
+            let cell_fg = if let Some(cb) = forgum_platform::get_active_colorblind_mode() {
+                let (cr, cg, c_b) = cb.adjust_rgb(cell_fg.r, cell_fg.g, cell_fg.b);
+                crate::framebuffer::Color::rgb(cr, cg, c_b)
+            } else {
+                cell_fg
             };
 
             if current_fg != Some(cell_fg) {
@@ -3264,10 +3271,21 @@ fn render_subcommand_with_scene(
     args: cli::Args,
     mut scene: forgum_engine::protocol::SceneConfig,
 ) -> ExitCode {
-    if let Some(ref cm_str) = scene.contrast_mode {
+    if let Some(cm_str) = args.contrast_mode.as_ref().or(scene.contrast_mode.as_ref()) {
         forgum_platform::set_active_contrast_mode(forgum_platform::ContrastMode::from_str_loose(
             cm_str,
         ));
+    }
+
+    let active_cb = args
+        .colorblind
+        .clone()
+        .or_else(|| scene.colorblind_mode.clone());
+    if let Some(ref cb_str) = active_cb {
+        scene.colorblind_mode = Some(cb_str.clone());
+        forgum_platform::set_active_colorblind_mode(
+            forgum_platform::ColorblindMode::from_str_loose(cb_str),
+        );
     }
 
     if args.internal_daemon_runner {

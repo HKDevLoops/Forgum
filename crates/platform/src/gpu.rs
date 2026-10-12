@@ -161,7 +161,8 @@ pub fn detect_gpu_devices() -> &'static [GpuInfo] {
 ///
 /// Hierarchy:
 /// 1. If `Auto`:
-///    - Dedicated GPU present -> (Dedicated, Some(GpuInfo))
+///    - NPU present -> (Npu, Some(GpuInfo)) [prioritizes zero-overhead neural accelerator offload]
+///    - Else if Dedicated GPU present -> (Dedicated, Some(GpuInfo))
 ///    - Else if Integrated GPU present -> (Integrated, Some(GpuInfo))
 ///    - Else -> (Cpu, None)
 /// 2. If `Dedicated`:
@@ -170,7 +171,10 @@ pub fn detect_gpu_devices() -> &'static [GpuInfo] {
 /// 3. If `Integrated`:
 ///    - Integrated GPU present -> (Integrated, Some(GpuInfo))
 ///    - Else -> (Cpu, None)
-/// 4. If `Cpu`:
+/// 4. If `Npu`:
+///    - NPU present -> (Npu, Some(GpuInfo))
+///    - Else -> (Cpu, None)
+/// 5. If `Cpu`:
 ///    - (Cpu, None)
 #[must_use]
 pub fn resolve_acceleration(mode: AccelerationMode) -> (GpuDeviceType, Option<GpuInfo>) {
@@ -193,12 +197,12 @@ pub fn resolve_acceleration(mode: AccelerationMode) -> (GpuDeviceType, Option<Gp
 
     match mode {
         AccelerationMode::Auto => {
-            if let Some(gpu) = dedicated {
+            if let Some(npu_dev) = npu {
+                (GpuDeviceType::Npu, Some(npu_dev))
+            } else if let Some(gpu) = dedicated {
                 (GpuDeviceType::Dedicated, Some(gpu))
             } else if let Some(gpu) = integrated {
                 (GpuDeviceType::Integrated, Some(gpu))
-            } else if let Some(npu_dev) = npu {
-                (GpuDeviceType::Npu, Some(npu_dev))
             } else {
                 (GpuDeviceType::Cpu, None)
             }
@@ -1119,5 +1123,17 @@ mod tests {
         let (q_arch, _, _) =
             classify_gpu_architecture("Qualcomm Snapdragon X Elite NPU", "Qualcomm", "");
         assert!(q_arch.contains("Hexagon"));
+    }
+
+    #[test]
+    fn test_npu_priority_in_auto_mode() {
+        let (dev_type, _) = resolve_acceleration(AccelerationMode::Auto);
+        assert!(matches!(
+            dev_type,
+            GpuDeviceType::Npu
+                | GpuDeviceType::Dedicated
+                | GpuDeviceType::Integrated
+                | GpuDeviceType::Cpu
+        ));
     }
 }

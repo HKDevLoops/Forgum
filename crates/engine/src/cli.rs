@@ -393,6 +393,18 @@ pub struct Cli {
     )]
     pub contrast_mode: Option<String>,
 
+    /// Color Vision Deficiency (CVD) accessibility mode: none, protanopia, deuteranopia, tritanopia, achromatopsia.
+    #[arg(
+        long = "colorblind",
+        visible_alias = "colorblind-mode",
+        visible_alias = "cvd",
+        global = true,
+        value_name = "MODE",
+        help = "Colorblind accessibility mode (none, protanopia, deuteranopia, tritanopia, achromatopsia)",
+        long_help = "Color Vision Deficiency (CVD) accessibility mode applying Daltonization or physiological simulation: 'none', 'protanopia' (red-blind), 'deuteranopia' (green-blind), 'tritanopia' (blue-blind), 'achromatopsia' (monochrome), 'protanopia_sim', 'deuteranopia_sim', 'tritanopia_sim'."
+    )]
+    pub colorblind: Option<String>,
+
     /// Positional speech message text (cowsay compatibility).
     #[arg(value_name = "MESSAGE", num_args = 0..)]
     pub message: Vec<String>,
@@ -1104,6 +1116,7 @@ pub struct Args {
     pub aspect: Option<String>,
     pub aspect_mode: Option<String>,
     pub contrast_mode: Option<String>,
+    pub colorblind: Option<String>,
 }
 
 /// Error type returned by `parse_args`, carrying the intended process exit code.
@@ -1354,6 +1367,7 @@ pub fn parse_args(argv: Vec<String>) -> Result<(Args, Option<Commands>), CliErro
         aspect: cli.aspect,
         aspect_mode: cli.aspect_mode,
         contrast_mode: cli.contrast_mode,
+        colorblind: cli.colorblind,
     };
 
     Ok((args, cli.command))
@@ -1614,6 +1628,9 @@ pub fn build_scene_config(args: &Args) -> Result<SceneConfig, String> {
     }
     if let Some(contrast_mode) = &args.contrast_mode {
         cfg.contrast_mode = Some(contrast_mode.clone());
+    }
+    if let Some(colorblind) = &args.colorblind {
+        cfg.colorblind_mode = Some(colorblind.clone());
     }
 
     // Validate mascot taxonomy locomotion consistency

@@ -109,8 +109,6 @@ pub(crate) fn is_eye_glyph(ch: char) -> bool {
             | 'w'
             | '8'
             | 'Q'
-            | '•'
-            | '●'
     )
 }
 
@@ -567,7 +565,7 @@ impl Effect for BreatheEffect {
                     if !is_inhale && my < fb.height {
                         // Dragon is exhaling: BREATHE FIRE!
                         let flame_reach = (((eased - 0.4) / 0.6) * 8.0) as usize;
-                        let fire_glyphs = ['*', '^', '~', '§', '»', '>', '#'];
+                        let fire_glyphs = ['*', '^', '~', '+', '>', '#', '!'];
                         let fire_colors = [
                             Color::rgb(255, 34, 0),    // blazing vermilion
                             Color::rgb(255, 102, 0),   // fiery orange
@@ -660,7 +658,7 @@ impl Effect for BreatheEffect {
                             let b_ch = if ((time * 3.0) as usize).is_multiple_of(2) {
                                 'o'
                             } else {
-                                '°'
+                                '.'
                             };
                             let _ = fb.set(
                                 bubble_x,
@@ -717,7 +715,7 @@ impl Effect for BreatheEffect {
             AnimalInstinct::Spectral => {
                 // Arcane mystic runes floating and orbiting
                 if let Some((my, mx)) = self.mouth_pos {
-                    let runes = ['✦', '*', '°', '·', '✧'];
+                    let runes = ['*', '+', 'o', '.', '^'];
                     for (i, &rune) in runes.iter().enumerate() {
                         let angle = (time * 2.0 + i as f32 * 1.25) % std::f32::consts::TAU;
                         let rx = (mx as f32 + angle.cos() * 3.5).max(0.0) as usize;
@@ -864,7 +862,7 @@ impl Effect for FloatEffect {
         let hover_pulse = hover_intensity > 0.5;
 
         // Compute continuous vertical bob offset in terminal rows.
-        // Amplitude is amp.float * 2 rows (max ±1 row by default with amp.float=0.3).
+        // Amplitude is amp.float * 2 rows (max +/-1 row by default with amp.float=0.3).
         let bob_raw =
             (time * self.speed * std::f32::consts::TAU + self.phase).sin() * self.amp.float * 2.0;
         let bob_offset: i32 = bob_raw.round() as i32;
@@ -888,7 +886,7 @@ impl Effect for FloatEffect {
                     let wave_ch = if ((wx + ((time * 3.0) as usize)) % 4) < 2 {
                         '~'
                     } else {
-                        '≈'
+                        '-'
                     };
                     let _ = fb.set(wx, surface_y, Cell::new(wave_ch, wave_fg));
                 }
@@ -1020,7 +1018,7 @@ impl Effect for FloatEffect {
                         - ((time * 4.0 + i as f32 * 2.5) % fb.height.max(1) as f32))
                         .max(0.0) as usize;
                     if bx < fb.width && by < fb.height {
-                        let b_ch = if i % 2 == 0 { 'o' } else { '°' };
+                        let b_ch = if i % 2 == 0 { 'o' } else { '.' };
                         let _ = fb.set(bx, by, Cell::new(b_ch, Color::rgb(0, 229, 255)));
                     }
                 }
@@ -1058,7 +1056,7 @@ impl Effect for FloatEffect {
             }
             AnimalInstinct::Spectral => {
                 // Levitating arcane runes
-                let runes = ['✦', '*', '°', '·'];
+                let runes = ['*', '+', 'o', '.'];
                 for (i, &rune) in runes.iter().enumerate() {
                     let angle = (time * 1.8 + i as f32 * 1.57) % std::f32::consts::TAU;
                     let rx = ((fb.width / 2) as f32 + angle.cos() * 8.0).max(0.0) as usize;
@@ -1131,6 +1129,7 @@ pub struct WalkEffect {
     line_offsets: Vec<usize>,
     leg_line_idx: usize,
     leg_cols: Vec<usize>,
+    pub leg_partition: crate::kinematics::QuadrupedLegPartition,
     eye_pos: Option<(usize, usize)>,
     mouth_pos: Option<(usize, usize)>,
     tail_pos: Option<(usize, usize)>,
@@ -1286,12 +1285,18 @@ impl WalkEffect {
             leg_line_idx,
         );
         let rig = crate::kinematics::CartoonRig::new(segments);
+        let leg_partition = crate::kinematics::QuadrupedLegPartition::partition(
+            &leg_cols,
+            segments.head_col,
+            segments.tail_col,
+        );
 
         Self {
             cow_text,
             line_offsets,
             leg_line_idx,
             leg_cols,
+            leg_partition,
             eye_pos,
             mouth_pos,
             tail_pos,
@@ -1327,31 +1332,15 @@ impl Effect for WalkEffect {
     }
 
     fn render(&self, fb: &mut FrameBuffer, time: f32) {
-        let stride = (time * self.speed + self.phase) % 1.0;
-
-        // Dynamic leg stride coupling:
-        let (leg_l, leg_r) = if self.is_moonwalk {
-            // Moonwalk reverse-slip sliding gait:
-            // One foot flat ('|') while the other slides angled ('/' or '\'), alternating backwards
-            if stride < 0.25 {
-                ('|', '\\')
-            } else if stride < 0.50 {
-                ('|', '|')
-            } else if stride < 0.75 {
-                ('/', '|')
-            } else {
-                ('|', '|')
-            }
+        // Stride-Velocity Coupling strictly coupled to linear velocity vx (eliminating treadmill sliding)
+        let step_len = (8.0 / self.speed.max(0.1)).clamp(2.0, 16.0);
+        let disp = if self.body.x.abs() > 0.001 {
+            self.body.x.abs()
         } else {
-            // 4-phase natural forward leg stride coupling using clean ASCII:
-            if stride < 0.25 || (0.50..0.75).contains(&stride) {
-                ('|', '|')
-            } else if stride < 0.50 {
-                ('/', '\\')
-            } else {
-                ('\\', '/')
-            }
+            (self.body.vx * time).abs()
         };
+        let stride = ((disp / step_len) + self.phase) % 1.0;
+        let global_phase = ((stride * 8.0).floor() as usize) % 8;
 
         // Eye blink cycle: every ~3.5 seconds, blink for ~150ms
         let blink_cycle = (time * 0.28 + self.phase) % 1.0;
@@ -1402,9 +1391,16 @@ impl Effect for WalkEffect {
                     continue;
                 }
 
-                // 1. Leg stride animation on bottom foot line
+                // 1. Fluid 8-Phase Richard Williams Quadruped Leg Stride Coupling
                 if y == self.leg_line_idx && self.leg_cols.contains(&x) {
-                    display_ch = if x % 2 == 0 { leg_l } else { leg_r };
+                    let (limb_offset, is_outer) = self.leg_partition.resolve_limb_offset(x);
+                    let limb_stage = (global_phase + 8 - limb_offset) % 8;
+                    display_ch = crate::kinematics::articulated_leg_glyph(
+                        limb_stage,
+                        self.rig.segments.faces_right,
+                        self.is_moonwalk,
+                        is_outer,
+                    );
                 }
 
                 // 2. Eye blinking animation
@@ -1533,7 +1529,7 @@ impl Effect for WalkEffect {
                         let foot_x = (col as i32 + x_off) as usize;
                         if foot_x < fb.width && foot_y < fb.height {
                             let _ =
-                                fb.set(foot_x, foot_y, Cell::new('·', Color::rgb(128, 255, 219)));
+                                fb.set(foot_x, foot_y, Cell::new('.', Color::rgb(128, 255, 219)));
                         }
                     }
                 }
@@ -1545,7 +1541,7 @@ impl Effect for WalkEffect {
                             let dust_ch = if ((time * 8.0) as usize).is_multiple_of(2) {
                                 '.'
                             } else {
-                                '°'
+                                'o'
                             };
                             let _ = fb.set(
                                 foot_x,
@@ -1790,12 +1786,12 @@ impl Effect for PulseEffect {
             AnimalInstinct::Spectral if intensity > 0.6 => {
                 let rx = ((time * 9.0) as usize) % fb.width.max(1);
                 let ry = ((time * 5.0) as usize) % fb.height.max(1);
-                let _ = fb.set(rx, ry, Cell::new('✦', Color::rgb(189, 147, 249)));
+                let _ = fb.set(rx, ry, Cell::new('*', Color::rgb(189, 147, 249)));
             }
             AnimalInstinct::Marine if intensity > 0.6 => {
                 let rx = ((time * 8.0) as usize) % fb.width.max(1);
                 let ry = ((time * 6.0) as usize) % fb.height.max(1);
-                let _ = fb.set(rx, ry, Cell::new('°', Color::rgb(0, 229, 255)));
+                let _ = fb.set(rx, ry, Cell::new('o', Color::rgb(0, 229, 255)));
             }
             _ => {}
         }
@@ -1864,27 +1860,27 @@ impl Effect for GlitchEffect {
         }
         let (glitch_chars, c1, c2) = match self.instinct {
             AnimalInstinct::Dragon => (
-                &['*', '^', '#', '@', '§', '»'][..],
+                &['*', '^', '#', '@', '+', '>'][..],
                 Color::rgb(255, 68, 0),
                 Color::rgb(255, 204, 0),
             ),
             AnimalInstinct::Marine => (
-                &['~', 'o', '°', '≈', '*', '#'][..],
+                &['~', 'o', '.', '-', '*', '#'][..],
                 Color::rgb(0, 229, 255),
                 Color::rgb(0, 150, 255),
             ),
             AnimalInstinct::Cephalopod => (
-                &['@', '%', '*', '§', '&', '#'][..],
+                &['@', '%', '*', '+', '&', '#'][..],
                 Color::rgb(186, 104, 200),
                 Color::rgb(0, 255, 204),
             ),
             AnimalInstinct::Spectral => (
-                &['✦', '✧', '0', '1', '·', '█'][..],
+                &['*', '+', '0', '1', '.', '#'][..],
                 Color::rgb(128, 255, 219),
                 Color::rgb(189, 147, 249),
             ),
             _ => (
-                &['0', '1', '#', '@', '█', '▓'][..],
+                &['0', '1', '#', '@', '%', '='][..],
                 Color::rgb(0, 255, 0),
                 Color::rgb(255, 0, 0),
             ),
@@ -2010,13 +2006,13 @@ impl FlyEffect {
                 }
 
                 // Starfield twinkling:
-                if (ch == '+' || ch == 'o' || ch == '*' || ch == '·') && !is_trail_row {
+                if (ch == '+' || ch == 'o' || ch == '*' || ch == '.') && !is_trail_row {
                     let star_seed = (x * 13 + y * 7 + (time * 6.0) as usize) % 4;
                     let star_glyph = match star_seed {
-                        0 => '✦',
-                        1 => '*',
-                        2 => '+',
-                        _ => '·',
+                        0 => '*',
+                        1 => '+',
+                        2 => 'o',
+                        _ => '.',
                     };
                     let star_color = match star_seed {
                         0 => Color::rgb(128, 216, 255), // star cyan
@@ -2225,7 +2221,7 @@ impl Effect for FlyEffect {
                     let seed = i * 31 + (time * 7.0) as usize;
                     let ex = (seed * 11 + 3) % fb.width.max(1);
                     let ey = (seed * 5 + self.cow_start_line) % fb.height.max(1);
-                    let _ = fb.set(ex, ey, Cell::new('✦', Color::rgb(189, 147, 249)));
+                    let _ = fb.set(ex, ey, Cell::new('*', Color::rgb(189, 147, 249)));
                 }
             }
             AnimalInstinct::Canine => {
@@ -2243,7 +2239,7 @@ impl Effect for FlyEffect {
                     let seed = i * 15 + (time * 8.0) as usize;
                     let ex = (seed * 6 + 10) % fb.width.max(1);
                     let ey = (seed * 3 + self.cow_start_line) % fb.height.max(1);
-                    let _ = fb.set(ex, ey, Cell::new('°', Color::rgb(0, 255, 204)));
+                    let _ = fb.set(ex, ey, Cell::new('o', Color::rgb(0, 255, 204)));
                 }
             }
             _ => {}
@@ -2424,7 +2420,7 @@ impl Effect for TalkEffect {
                 if px < fb.width && my < fb.height {
                     match self.instinct {
                         AnimalInstinct::Dragon => {
-                            let puff_ch = if mouth_ch == 'O' { '»' } else { '*' };
+                            let puff_ch = if mouth_ch == 'O' { '>' } else { '*' };
                             let _ = fb.set(px, my, Cell::new(puff_ch, Color::rgb(255, 68, 0)));
                         }
                         AnimalInstinct::Marine => {
@@ -2440,11 +2436,11 @@ impl Effect for TalkEffect {
                             let _ = fb.set(px, my, Cell::new(bark_ch, Color::rgb(255, 183, 77)));
                         }
                         AnimalInstinct::Avian => {
-                            let note_ch = if mouth_ch == 'O' { '♫' } else { '♪' };
+                            let note_ch = if mouth_ch == 'O' { '#' } else { '*' };
                             let _ = fb.set(px, my, Cell::new(note_ch, Color::rgb(0, 230, 118)));
                         }
                         AnimalInstinct::Spectral => {
-                            let spark_ch = if mouth_ch == 'O' { '⚡' } else { '*' };
+                            let spark_ch = if mouth_ch == 'O' { '!' } else { '*' };
                             let _ = fb.set(px, my, Cell::new(spark_ch, Color::rgb(128, 255, 219)));
                         }
                         _ => {}
@@ -2777,7 +2773,7 @@ fn for_each_line<F: FnMut(&str)>(text: &str, offsets: &[usize], mut f: F) {
 }
 
 /// Resolve foreground color based on color_mode, animal DNA palette, and character glyph.
-pub(crate) fn resolve_fg_palette_char(
+pub fn resolve_fg_palette_char(
     color_mode: &str,
     palette: &[(u8, u8, u8)],
     x: usize,
@@ -2810,6 +2806,92 @@ pub(crate) fn resolve_fg_palette_char(
         }
         "solid" | "static" | "white" => Color::WHITE,
         "none" => base,
+        "cyberpunk" => {
+            const CYBERPUNK_PALETTE: &[(u8, u8, u8)] = &[
+                (0, 245, 255), // Electric Cyan
+                (255, 0, 128), // Neon Magenta
+                (170, 0, 255), // Ultraviolet
+                (255, 230, 0), // Electric Yellow
+            ];
+            let (r, g, b) =
+                crate::color::palette_gradient(CYBERPUNK_PALETTE, x as f32, y as f32, time);
+            Color { r, g, b, a: 255 }
+        }
+        "autumn" => {
+            const AUTUMN_PALETTE: &[(u8, u8, u8)] = &[
+                (220, 100, 20), // Amber Orange
+                (180, 40, 20),  // Russet Crimson
+                (230, 180, 40), // Goldenrod
+                (120, 50, 15),  // Forest Bark Brown
+            ];
+            let (r, g, b) =
+                crate::color::palette_gradient(AUTUMN_PALETTE, x as f32, y as f32, time);
+            Color { r, g, b, a: 255 }
+        }
+        "pastel" => {
+            const PASTEL_PALETTE: &[(u8, u8, u8)] = &[
+                (255, 182, 193), // Light Pink
+                (200, 180, 240), // Soft Lavender
+                (180, 220, 240), // Baby Blue
+                (190, 240, 210), // Mint Green
+                (255, 225, 180), // Soft Peach
+            ];
+            let (r, g, b) =
+                crate::color::palette_gradient(PASTEL_PALETTE, x as f32, y as f32, time);
+            Color { r, g, b, a: 255 }
+        }
+        "matrix" => {
+            const MATRIX_PALETTE: &[(u8, u8, u8)] = &[
+                (0, 255, 65),   // Terminal Bright Phosphor Green
+                (0, 180, 45),   // Mid Matrix Green
+                (0, 110, 30),   // Dark Green
+                (50, 255, 120), // White-Green Glint
+            ];
+            let (r, g, b) =
+                crate::color::palette_gradient(MATRIX_PALETTE, x as f32, y as f32, time);
+            Color { r, g, b, a: 255 }
+        }
+        "monochrome" | "grayscale" | "greyscale" => {
+            const MONO_PALETTE: &[(u8, u8, u8)] = &[
+                (240, 240, 240), // Near White
+                (180, 180, 180), // Silver Gray
+                (120, 120, 120), // Charcoal
+                (200, 200, 200), // Light Mist
+            ];
+            let (r, g, b) = crate::color::palette_gradient(MONO_PALETTE, x as f32, y as f32, time);
+            Color { r, g, b, a: 255 }
+        }
+        "sunset" => {
+            const SUNSET_PALETTE: &[(u8, u8, u8)] = &[
+                (255, 210, 60), // Golden Glow
+                (255, 110, 50), // Crimson Coral
+                (220, 40, 120), // Magenta Twilight
+                (80, 20, 100),  // Violet Nightfall
+            ];
+            let (r, g, b) =
+                crate::color::palette_gradient(SUNSET_PALETTE, x as f32, y as f32, time);
+            Color { r, g, b, a: 255 }
+        }
+        "ocean" => {
+            const OCEAN_PALETTE: &[(u8, u8, u8)] = &[
+                (0, 120, 220),   // Cerulean Blue
+                (0, 210, 200),   // Turquoise Reef
+                (10, 40, 140),   // Deep Abyss Navy
+                (120, 240, 220), // Seafoam Highlight
+            ];
+            let (r, g, b) = crate::color::palette_gradient(OCEAN_PALETTE, x as f32, y as f32, time);
+            Color { r, g, b, a: 255 }
+        }
+        "fire" | "inferno" => {
+            const FIRE_PALETTE: &[(u8, u8, u8)] = &[
+                (255, 40, 0),    // Blazing Vermilion
+                (255, 120, 0),   // Fiery Orange
+                (255, 210, 0),   // Golden Ember
+                (255, 250, 180), // White-Hot Flame Core
+            ];
+            let (r, g, b) = crate::color::palette_gradient(FIRE_PALETTE, x as f32, y as f32, time);
+            Color { r, g, b, a: 255 }
+        }
         _ => {
             if let Some(mascot) = color_mode
                 .strip_prefix("natural:")
@@ -2854,7 +2936,7 @@ pub(crate) fn resolve_fg_palette_char(
 }
 
 /// Resolve foreground color based on color_mode and animal DNA palette.
-pub(crate) fn resolve_fg_palette(
+pub fn resolve_fg_palette(
     color_mode: &str,
     palette: &[(u8, u8, u8)],
     x: usize,
@@ -3069,7 +3151,7 @@ fn apply_glow(fb: &mut FrameBuffer, cx: f32, cy: f32, radius: f32, color: Color,
                     x,
                     y,
                     Cell {
-                        ch: '·',
+                        ch: '.',
                         fg: Color {
                             r: color.r,
                             g: color.g,
@@ -3939,10 +4021,7 @@ mod tests {
         let legs_b: Vec<char> = (0..fb_b.width).map(|x| fb_b.get(x, last_row).ch).collect();
 
         // At least one leg char must be present
-        let has_slash = |v: &[char]| {
-            v.iter()
-                .any(|c| *c == '/' || *c == '\\' || *c == '╱' || *c == '╲')
-        };
+        let has_slash = |v: &[char]| v.iter().any(|c| *c == '/' || *c == '\\');
         assert!(
             has_slash(&legs_a),
             "walk t=0.25 must have leg chars: {legs_a:?}"
@@ -4021,7 +4100,7 @@ mod tests {
     #[test]
     fn glitch_intensity_varies_with_time() {
         let dna = CowDna::default();
-        let glitch_chars = ['0', '1', '#', '@', '█', '▓'];
+        let glitch_chars = ['0', '1', '#', '@', '%', '='];
 
         let count_glitch = |fb: &FrameBuffer| -> usize {
             let mut n = 0;
@@ -4385,18 +4464,18 @@ mod tests {
         effect.render(&mut fb, 0.5);
         fb.swap();
 
-        // Glow should fill some empty cells with '·' character
+        // Glow should fill some empty cells with '.' character
         let mut glow_count = 0;
         for y in 0..fb.height {
             for x in 0..fb.width {
-                if fb.get(x, y).ch == '·' {
+                if fb.get(x, y).ch == '.' {
                     glow_count += 1;
                 }
             }
         }
         assert!(
             glow_count > 0,
-            "pulse glow should fill empty cells with '·' characters"
+            "pulse glow should fill empty cells with '.' characters"
         );
     }
 

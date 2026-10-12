@@ -379,12 +379,12 @@ impl Battle {
         let turf_color = Color::rgb(70, 150, 90);
 
         // 1. Draw top border
-        fb.set(0, 0, Cell::new('╔', border_color));
+        fb.set(0, 0, Cell::new('+', border_color));
         for x in 1..(self.width.saturating_sub(1)) {
-            fb.set(x, 0, Cell::new('═', border_color));
+            fb.set(x, 0, Cell::new('-', border_color));
         }
         if self.width > 1 {
-            fb.set(self.width - 1, 0, Cell::new('╗', border_color));
+            fb.set(self.width - 1, 0, Cell::new('+', border_color));
         }
 
         // 2. Row 1: Match header and health bars
@@ -394,8 +394,8 @@ impl Battle {
         let hp1_bar = format!(
             "{} [{}{}] {}/{}HP",
             self.cow1.name,
-            "■".repeat(hp1_filled),
-            "░".repeat(bar_len.saturating_sub(hp1_filled)),
+            "#".repeat(hp1_filled),
+            "-".repeat(bar_len.saturating_sub(hp1_filled)),
             self.cow1.hp,
             self.cow1.max_hp
         );
@@ -404,8 +404,8 @@ impl Battle {
         let hp2_bar = format!(
             "{} [{}{}] {}/{}HP",
             self.cow2.name,
-            "■".repeat(hp2_filled),
-            "░".repeat(bar_len.saturating_sub(hp2_filled)),
+            "#".repeat(hp2_filled),
+            "-".repeat(bar_len.saturating_sub(hp2_filled)),
             self.cow2.hp,
             self.cow2.max_hp
         );
@@ -473,21 +473,21 @@ impl Battle {
 
         // 4. Side walls
         for y in 1..self.height.saturating_sub(1) {
-            fb.set(0, y, Cell::new('║', border_color));
+            fb.set(0, y, Cell::new('|', border_color));
             if self.width > 1 {
-                fb.set(self.width - 1, y, Cell::new('║', border_color));
+                fb.set(self.width - 1, y, Cell::new('|', border_color));
             }
         }
 
         // 5. Ground divider line
         let ground_y = self.height.saturating_sub(3);
         if ground_y < self.height {
-            fb.set(0, ground_y, Cell::new('╟', border_color));
+            fb.set(0, ground_y, Cell::new('+', border_color));
             for x in 1..(self.width.saturating_sub(1)) {
-                fb.set(x, ground_y, Cell::new('─', turf_color));
+                fb.set(x, ground_y, Cell::new('-', turf_color));
             }
             if self.width > 1 {
-                fb.set(self.width - 1, ground_y, Cell::new('╢', border_color));
+                fb.set(self.width - 1, ground_y, Cell::new('+', border_color));
             }
         }
 
@@ -506,12 +506,12 @@ impl Battle {
 
         // 7. Bottom border
         let bottom_y = self.height.saturating_sub(1);
-        fb.set(0, bottom_y, Cell::new('╚', border_color));
+        fb.set(0, bottom_y, Cell::new('+', border_color));
         for x in 1..(self.width.saturating_sub(1)) {
-            fb.set(x, bottom_y, Cell::new('═', border_color));
+            fb.set(x, bottom_y, Cell::new('-', border_color));
         }
         if self.width > 1 {
-            fb.set(self.width - 1, bottom_y, Cell::new('╝', border_color));
+            fb.set(self.width - 1, bottom_y, Cell::new('+', border_color));
         }
 
         // 8. Galloping dust

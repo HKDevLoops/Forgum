@@ -318,4 +318,178 @@ fn zero_cp437_mojibake_symbols_invariance() {
             );
         }
     }
+
+    // Assert that scenery, effects, and particles module sources are 100% pure ASCII to prevent CP437 mojibake (Γöé, Γòæ, òæ)
+    for path in [
+        "crates/engine/src/scenery.rs",
+        "crates/engine/src/effects.rs",
+        "crates/engine/src/particles.rs",
+    ] {
+        let src = std::fs::read_to_string(path)
+            .or_else(|_| {
+                std::fs::read_to_string(format!(
+                    "src/{}",
+                    path.trim_start_matches("crates/engine/src/")
+                ))
+            })
+            .unwrap_or_else(|_| panic!("read {}", path));
+        for (line_no, line) in src.lines().enumerate() {
+            let mut code_part = if let Some((code, _comment)) = line.split_once("//") {
+                code
+            } else {
+                line
+            };
+            let stripped;
+            if code_part.contains("/*") && code_part.contains("*/") {
+                let start = code_part.find("/*").unwrap();
+                let end = code_part.find("*/").unwrap() + 2;
+                stripped = format!("{}{}", &code_part[..start], &code_part[end..]);
+                code_part = &stripped;
+            }
+            for ch in code_part.chars() {
+                assert!(
+                    ch.is_ascii(),
+                    "{} line {} contains non-ASCII character '{}' (U+{:04X}) that can cause CP437 mojibake",
+                    path,
+                    line_no + 1,
+                    ch,
+                    ch as u32
+                );
+            }
+        }
+    }
+
+    // Assert that battle.rs, timer.rs, rps.rs, showcase.rs contain no CP437-collision box drawing characters
+    for path in [
+        "crates/engine/src/battle.rs",
+        "crates/engine/src/timer.rs",
+        "crates/engine/src/rps.rs",
+        "crates/engine/src/showcase.rs",
+    ] {
+        if let Ok(src) = std::fs::read_to_string(path) {
+            for (line_no, line) in src.lines().enumerate() {
+                for ch in line.chars() {
+                    assert!(
+                        !matches!(
+                            ch,
+                            '╔' | '═'
+                                | '╗'
+                                | '║'
+                                | '╚'
+                                | '╝'
+                                | '╟'
+                                | '─'
+                                | '╢'
+                                | '┌'
+                                | '┐'
+                                | '└'
+                                | '┘'
+                                | '│'
+                        ),
+                        "{} line {} contains CP437-collision box character '{}' (U+{:04X})",
+                        path,
+                        line_no + 1,
+                        ch,
+                        ch as u32
+                    );
+                }
+            }
+        }
+    }
+}
+
+// ── Invariant 9: All Color Modes Functional & Beautiful ─────────────
+
+#[test]
+fn all_color_modes_implemented_and_functional() {
+    let modes = [
+        "natural",
+        "animal",
+        "rainbow",
+        "cyberpunk",
+        "autumn",
+        "pastel",
+        "matrix",
+        "monochrome",
+        "sunset",
+        "ocean",
+        "fire",
+        "solid",
+        "none",
+    ];
+
+    let base = forgum_engine::framebuffer::Color::WHITE;
+    let palette = [(255, 0, 0), (0, 255, 0), (0, 0, 255)];
+
+    for &mode in &modes {
+        for ch in ['@', '#', '*', ' ', 'o'] {
+            let col = effects::resolve_fg_palette_char(mode, &palette, 10, 5, 1.0, base, ch);
+            assert!(
+                col.a == 255,
+                "Color mode '{mode}' produced non-opaque alpha {}",
+                col.a
+            );
+        }
+    }
+}
+
+// ── Invariant 10: Universal UTF & Unicode Invariance ─────────────────
+
+#[test]
+fn universal_utf_and_unicode_resilience_invariance() {
+    let bom_cow = "\u{feff}$the_cow = <<\"EOC\";\n  (o o)\n  (   )\nEOC\n";
+    let tmp_cow = std::env::temp_dir().join("forgum_test_utf_bom.cow");
+    std::fs::write(&tmp_cow, bom_cow.as_bytes()).unwrap();
+
+    let loaded = forgum_engine::cow::load_cow_from_path(&tmp_cow, "oo", "  ", "\\");
+    assert!(
+        loaded.is_ok(),
+        "Failed to load cow file with UTF BOM: {:?}",
+        loaded.err()
+    );
+    let cow_str = loaded.unwrap();
+    assert!(
+        !cow_str.contains('\u{feff}'),
+        "BOM was not stripped from cow template"
+    );
+    let _ = std::fs::remove_file(tmp_cow);
+
+    // Test BiDi Trojan Source removal
+    let malicious = "safe_prefix \u{202E}malicious_reversed\u{202C} suffix";
+    let sanitized = forgum_platform::sanitize_and_normalize(malicious);
+    assert!(!sanitized.contains('\u{202E}'));
+    assert!(!sanitized.contains('\u{202C}'));
+    assert_eq!(sanitized, "safe_prefix malicious_reversed suffix");
+}
+
+// ── Invariant 11: Dynamic Animation Compute Offload Invariance ───────
+
+#[test]
+fn dynamic_animation_compute_offload_invariance() {
+    use forgum_engine::kinematics::{AnatomicalSegments, BoundsMode, CartoonRig, KinematicBody};
+
+    let mut body = KinematicBody::new(
+        10,
+        5,
+        BoundsMode::Lissajous {
+            amp_x: 2.0,
+            amp_y: 1.0,
+            freq_x: 1.0,
+            freq_y: 0.5,
+            phase_x: 0.0,
+            phase_y: 0.0,
+        },
+    );
+
+    // Update with compute engine offload
+    body.update(0.016, 1.0, 80, 24);
+    assert!(body.x >= 0.0 && body.x <= 70.0);
+    assert!(body.y >= 0.0 && body.y <= 19.0);
+
+    let segs = AnatomicalSegments::detect(" (oo)\n (  )\n", 0, None, None, None, 1);
+    let mut rig = CartoonRig::new(segs);
+    rig.update(0.016, 2.0);
+
+    assert!((-3.0..=3.0).contains(&rig.bubble_offset_x));
+    assert!((-1.0..=1.0).contains(&rig.bubble_offset_y));
 }

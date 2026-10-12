@@ -404,6 +404,94 @@ impl ComputeEngine {
             }
         }
     }
+
+    /// Evaluates continuous spring-damper dialogue bubble physics.
+    /// Offloads continuous spring-damper calculations and floating harmonic buoyancy.
+    pub fn compute_dynamic_bubble_inertia(
+        &self,
+        dt: f32,
+        elapsed: f32,
+        mascot_vx: f32,
+        bubble_offset_x: &mut f32,
+        bubble_vel_x: &mut f32,
+        bubble_offset_y: &mut f32,
+        bubble_vel_y: &mut f32,
+    ) {
+        let target_x = -(mascot_vx * 0.08).clamp(-2.0, 2.0);
+        let spring_k = 12.0; // Spring stiffness
+        let damping_c = 4.5; // Damping ratio
+        let force_x = spring_k * (target_x - *bubble_offset_x) - damping_c * *bubble_vel_x;
+        *bubble_vel_x += force_x * dt;
+        *bubble_offset_x += *bubble_vel_x * dt;
+        *bubble_offset_x = (*bubble_offset_x).clamp(-3.0, 3.0);
+
+        // Buoyant aerodynamic vertical floating on bubble:
+        let float_freq = 2.4;
+        let target_y = (elapsed * float_freq).sin() * 0.4;
+        let force_y = spring_k * (target_y - *bubble_offset_y) - damping_c * *bubble_vel_y;
+        *bubble_vel_y += force_y * dt;
+        *bubble_offset_y += *bubble_vel_y * dt;
+        *bubble_offset_y = (*bubble_offset_y).clamp(-1.0, 1.0);
+    }
+
+    /// Evaluates continuous 2D harmonic Lissajous or continuous trajectory displacement.
+    /// Operates with zero dynamic allocation.
+    pub fn compute_dynamic_kinematics_step(
+        &self,
+        total_time: f32,
+        cols: usize,
+        rows: usize,
+        width: usize,
+        height: usize,
+        amp_x: f32,
+        amp_y: f32,
+        freq_x: f32,
+        freq_y: f32,
+        phase_x: f32,
+        phase_y: f32,
+        out_x: &mut f32,
+        out_y: &mut f32,
+    ) {
+        let max_x = cols.saturating_sub(width) as f32;
+        let max_y = rows.saturating_sub(height) as f32;
+
+        let center_x = (max_x / 2.0).max(0.0);
+        let center_y = (max_y / 2.0).max(0.0);
+
+        let offset_x = (total_time * freq_x * std::f32::consts::TAU + phase_x).sin() * amp_x;
+        let offset_y = (total_time * freq_y * std::f32::consts::TAU + phase_y).cos() * amp_y;
+
+        *out_x = (center_x + offset_x).clamp(0.0, max_x.max(0.0));
+        *out_y = (center_y + offset_y).clamp(0.0, max_y.max(0.0));
+    }
+
+    /// Batch-evaluates aquatic underwater rising bubble kinematics (turbulence, wobble, vertical drift).
+    pub fn compute_underwater_bubble_kinematics(
+        &self,
+        dt: f32,
+        time: f32,
+        xs: &mut [f32],
+        ys: &mut [f32],
+        lifetimes: &mut [f32],
+        rise_speeds: &[f32],
+    ) {
+        let n = xs
+            .len()
+            .min(ys.len())
+            .min(lifetimes.len())
+            .min(rise_speeds.len());
+        if n == 0 {
+            return;
+        }
+        for i in 0..n {
+            if lifetimes[i] > 0.0 {
+                lifetimes[i] -= dt;
+                let wobble = ((ys[i] * 0.5) + time * 3.0 + (i as f32)).sin() * 0.35;
+                xs[i] += wobble * dt;
+                ys[i] -= rise_speeds[i] * dt;
+            }
+        }
+    }
 }
 
 #[cfg(test)]
@@ -509,5 +597,49 @@ mod tests {
         );
         assert!(life[0] > 0.0);
         assert_eq!(life[1], 0.0);
+    }
+
+    #[test]
+    fn test_dynamic_bubble_inertia_bounded() {
+        let engine = ComputeEngine::init(AccelerationMode::Cpu);
+        let mut ox = 0.0f32;
+        let mut vx = 0.0f32;
+        let mut oy = 0.0f32;
+        let mut vy = 0.0f32;
+
+        engine.compute_dynamic_bubble_inertia(0.1, 1.0, 5.0, &mut ox, &mut vx, &mut oy, &mut vy);
+
+        assert!((-3.0..=3.0).contains(&ox));
+        assert!((-1.0..=1.0).contains(&oy));
+    }
+
+    #[test]
+    fn test_dynamic_kinematics_step_within_bounds() {
+        let engine = ComputeEngine::init(AccelerationMode::Cpu);
+        let mut x = 0.0f32;
+        let mut y = 0.0f32;
+
+        engine.compute_dynamic_kinematics_step(
+            1.5, 80, 24, 20, 10, 5.0, 3.0, 1.0, 1.0, 0.0, 0.0, &mut x, &mut y,
+        );
+
+        assert!((0.0..=60.0).contains(&x));
+        assert!((0.0..=14.0).contains(&y));
+    }
+
+    #[test]
+    fn test_underwater_bubble_kinematics() {
+        let engine = ComputeEngine::init(AccelerationMode::Cpu);
+        let mut xs = [10.0f32, 20.0];
+        let mut ys = [15.0f32, 18.0];
+        let mut lives = [1.0f32, 0.0];
+        let speeds = [2.0f32, 2.0];
+
+        engine
+            .compute_underwater_bubble_kinematics(0.1, 0.5, &mut xs, &mut ys, &mut lives, &speeds);
+
+        assert!(ys[0] < 15.0); // Risen
+        assert!(lives[0] < 1.0); // Life decreased
+        assert_eq!(ys[1], 18.0); // Expired bubble untouched
     }
 }

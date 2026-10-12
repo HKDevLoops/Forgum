@@ -1,5 +1,5 @@
 Name:           forgum
-Version:        0.0.4
+Version:        0.0.5
 Release:        1%{?dist}
 Summary:        Cross-platform ANSI animation mascot and shell integration engine
 

@@ -21,7 +21,7 @@ use ratatui::Frame;
 
 use forgum_platform::protocol::{ConfigFormat, SceneConfig};
 use forgum_platform::shell::Shell;
-use forgum_platform::terminal_theme::ContrastMode;
+use forgum_platform::terminal_theme::{ColorblindMode, ContrastMode};
 
 /// Tailwind CSS inspired color tokens for modern vibrant terminal styling.
 pub mod tailwind {
@@ -199,7 +199,21 @@ impl Dropdown {
 }
 
 /// Dropdown option choices for ColorMode.
-pub const COLOR_MODE_OPTIONS: &[&str] = &["natural", "animal", "rainbow", "solid", "none"];
+pub const COLOR_MODE_OPTIONS: &[&str] = &[
+    "natural",
+    "animal",
+    "rainbow",
+    "cyberpunk",
+    "autumn",
+    "pastel",
+    "matrix",
+    "monochrome",
+    "sunset",
+    "ocean",
+    "fire",
+    "solid",
+    "none",
+];
 
 /// Dropdown option choices for Background Preset / Contrast Profile.
 pub const CONTRAST_OPTIONS: &[(&str, &str, ContrastMode)] = &[
@@ -219,6 +233,61 @@ pub const CONTRAST_OPTIONS: &[(&str, &str, ContrastMode)] = &[
 
 pub const CONTRAST_MODE_OPTIONS: &[&str] =
     &["standard", "acrylic_glass", "high_contrast", "vibrant"];
+
+/// Dropdown option choices for Colorblind Accessibility Mode.
+pub const COLORBLIND_OPTIONS: &[(&str, &str, ColorblindMode)] = &[
+    (
+        "none",
+        "None (Standard Full Spectrum)",
+        ColorblindMode::None,
+    ),
+    (
+        "protanopia",
+        "Protanopia (Red-Blind Daltonized)",
+        ColorblindMode::Protanopia,
+    ),
+    (
+        "deuteranopia",
+        "Deuteranopia (Green-Blind Daltonized)",
+        ColorblindMode::Deuteranopia,
+    ),
+    (
+        "tritanopia",
+        "Tritanopia (Blue-Blind Daltonized)",
+        ColorblindMode::Tritanopia,
+    ),
+    (
+        "achromatopsia",
+        "Achromatopsia (Monochrome Luminance)",
+        ColorblindMode::Achromatopsia,
+    ),
+    (
+        "protanopia_sim",
+        "Protanopia Sim (LMS Filter)",
+        ColorblindMode::ProtanopiaSim,
+    ),
+    (
+        "deuteranopia_sim",
+        "Deuteranopia Sim (LMS Filter)",
+        ColorblindMode::DeuteranopiaSim,
+    ),
+    (
+        "tritanopia_sim",
+        "Tritanopia Sim (LMS Filter)",
+        ColorblindMode::TritanopiaSim,
+    ),
+];
+
+pub const COLORBLIND_MODE_OPTIONS: &[&str] = &[
+    "none",
+    "protanopia",
+    "deuteranopia",
+    "tritanopia",
+    "achromatopsia",
+    "protanopia_sim",
+    "deuteranopia_sim",
+    "tritanopia_sim",
+];
 
 /// Dropdown option choices for Hardware Acceleration.
 pub const ACCEL_MODE_OPTIONS: &[&str] = &["auto", "dedicated", "integrated", "npu", "cpu"];
@@ -760,6 +829,7 @@ pub enum ConfigField {
     Banner = 31,
     Aspect = 32,
     AspectMode = 33,
+    ColorblindMode = 34,
 }
 
 impl ConfigField {
@@ -767,7 +837,7 @@ impl ConfigField {
     #[allow(non_upper_case_globals)]
     pub const AccelMode: ConfigField = ConfigField::HardwareAccel;
 
-    pub const ALL: [ConfigField; 34] = [
+    pub const ALL: [ConfigField; 35] = [
         ConfigField::Duration,
         ConfigField::Fps,
         ConfigField::Text,
@@ -802,6 +872,7 @@ impl ConfigField {
         ConfigField::Banner,
         ConfigField::Aspect,
         ConfigField::AspectMode,
+        ConfigField::ColorblindMode,
     ];
 
     pub fn label(self) -> &'static str {
@@ -834,6 +905,7 @@ impl ConfigField {
             ConfigField::ConfigFormat => "config_format",
             ConfigField::Random => "random",
             ConfigField::ContrastMode => "contrast_mode",
+            ConfigField::ColorblindMode => "colorblind_mode",
             ConfigField::HardwareAccel => "accel_mode",
             ConfigField::ReduceMotion => "reduce_motion",
             ConfigField::TextOnly => "text_only",
@@ -848,6 +920,7 @@ impl ConfigField {
             ConfigField::ColorMode
             | ConfigField::Palette
             | ConfigField::ContrastMode
+            | ConfigField::ColorblindMode
             | ConfigField::Eyes
             | ConfigField::Tongue
             | ConfigField::Image => ("Visual", tailwind::PURPLE_400),
@@ -911,6 +984,7 @@ impl ConfigField {
             ConfigField::ConfigFormat => "File serialization syntax: JSON, YAML, or TOML",
             ConfigField::Random => "Universally randomize mascot, scenery, fx, and thoughts on startup",
             ConfigField::ContrastMode => "Background contrast profile: standard, acrylic_glass (transparency), high_contrast, vibrant",
+            ConfigField::ColorblindMode => "Color vision deficiency mode: none, protanopia (red-blind Daltonized), deuteranopia (green-blind Daltonized), tritanopia (blue-blind Daltonized), achromatopsia (monochrome), or LMS simulations",
             ConfigField::HardwareAccel => "Hardware acceleration engine: auto (preferred GPU with CPU fallback), dedicated (discrete GPU), integrated (APU/iGPU), cpu (pure CPU)",
             ConfigField::ReduceMotion => "Accessibility mode: disable kinetic motion & heavy particles (gentle fades only)",
             ConfigField::TextOnly => "Print speech bubble text directly without ASCII cow mascot art",
@@ -946,7 +1020,8 @@ pub struct ConfigApp {
     pub effect_idx: usize,
     pub color_idx: usize,
     pub contrast_idx: usize,
-    pub fx_sub_focus: usize, // 0 = effect list, 1 = color list, 2 = contrast list
+    pub colorblind_idx: usize,
+    pub fx_sub_focus: usize, // 0 = effect list, 1 = color list, 2 = contrast list, 3 = colorblind list
 
     // Shell Installer Tab state
     pub shells: Vec<ShellInfo>,
@@ -972,6 +1047,7 @@ pub struct ConfigApp {
     pub split_mode_dropdown: Dropdown,
     pub editor_dropdown: Dropdown,
     pub contrast_mode_dropdown: Dropdown,
+    pub colorblind_mode_dropdown: Dropdown,
     pub accel_mode_dropdown: Dropdown,
     pub aspect_dropdown: Dropdown,
     pub aspect_mode_dropdown: Dropdown,
@@ -1094,6 +1170,13 @@ impl ConfigApp {
             .iter()
             .position(|(c, _, _)| c.eq_ignore_ascii_case(contrast_mode_str))
             .unwrap_or(0);
+        let colorblind_mode_str = config.colorblind_mode.as_deref().unwrap_or("none");
+        let colorblind_mode_dropdown =
+            Dropdown::new(COLORBLIND_MODE_OPTIONS.to_vec(), colorblind_mode_str);
+        let colorblind_idx = COLORBLIND_OPTIONS
+            .iter()
+            .position(|(c, _, _)| c.eq_ignore_ascii_case(colorblind_mode_str))
+            .unwrap_or(0);
         let accel_mode_str = config.accel_mode.as_deref().unwrap_or("auto");
         let accel_mode_dropdown = Dropdown::new(ACCEL_MODE_OPTIONS.to_vec(), accel_mode_str);
         let aspect_str = config.aspect.as_deref().unwrap_or("auto");
@@ -1183,6 +1266,7 @@ impl ConfigApp {
             effect_idx,
             color_idx,
             contrast_idx,
+            colorblind_idx,
             fx_sub_focus: 0,
             shells,
             selected_shell_idx: 0,
@@ -1205,6 +1289,7 @@ impl ConfigApp {
             split_mode_dropdown,
             editor_dropdown,
             contrast_mode_dropdown,
+            colorblind_mode_dropdown,
             accel_mode_dropdown,
             aspect_dropdown,
             aspect_mode_dropdown,
@@ -1415,6 +1500,13 @@ impl ConfigApp {
             .position(|(c, _, _)| c.eq_ignore_ascii_case(contrast_mode_str))
             .unwrap_or(0);
         let accel_mode_str = self.config.accel_mode.as_deref().unwrap_or("auto");
+        let colorblind_mode_str = self.config.colorblind_mode.as_deref().unwrap_or("none");
+        self.colorblind_mode_dropdown =
+            Dropdown::new(COLORBLIND_MODE_OPTIONS.to_vec(), colorblind_mode_str);
+        self.colorblind_idx = COLORBLIND_OPTIONS
+            .iter()
+            .position(|(c, _, _)| c.eq_ignore_ascii_case(colorblind_mode_str))
+            .unwrap_or(0);
         self.accel_mode_dropdown = Dropdown::new(ACCEL_MODE_OPTIONS.to_vec(), accel_mode_str);
         let aspect_str = self.config.aspect.as_deref().unwrap_or("auto");
         self.aspect_dropdown = Dropdown::new(ASPECT_RATIO_OPTIONS.to_vec(), aspect_str);
@@ -1445,6 +1537,90 @@ impl ConfigApp {
             .unwrap_or(0);
         self.contrast_mode_dropdown =
             Dropdown::new(CONTRAST_MODE_OPTIONS.to_vec(), contrast_mode_str);
+    }
+
+    /// Return active color vision deficiency (colorblind) mode.
+    #[must_use]
+    pub fn active_colorblind_mode(&self) -> ColorblindMode {
+        if let Some(ref mode) = self.config.colorblind_mode {
+            ColorblindMode::from_str_loose(mode)
+        } else if self.colorblind_idx < COLORBLIND_OPTIONS.len() {
+            COLORBLIND_OPTIONS[self.colorblind_idx].2
+        } else {
+            ColorblindMode::None
+        }
+    }
+
+    /// Sync colorblind mode dropdown and index from config.
+    pub fn sync_colorblind_from_config(&mut self) {
+        let colorblind_mode_str = self.config.colorblind_mode.as_deref().unwrap_or("none");
+        self.colorblind_idx = COLORBLIND_OPTIONS
+            .iter()
+            .position(|(c, _, _)| c.eq_ignore_ascii_case(colorblind_mode_str))
+            .unwrap_or(0);
+        self.colorblind_mode_dropdown =
+            Dropdown::new(COLORBLIND_MODE_OPTIONS.to_vec(), colorblind_mode_str);
+    }
+
+    /// Return active colorblind display label.
+    #[must_use]
+    pub fn active_colorblind_display(&self) -> &'static str {
+        match self.active_colorblind_mode() {
+            ColorblindMode::None => "None (Normal Vision)",
+            ColorblindMode::Protanopia => "Protanopia (Red-Blind Daltonized)",
+            ColorblindMode::Deuteranopia => "Deuteranopia (Green-Blind Daltonized)",
+            ColorblindMode::Tritanopia => "Tritanopia (Blue-Blind Daltonized)",
+            ColorblindMode::Achromatopsia => "Achromatopsia (Monochrome)",
+            ColorblindMode::ProtanopiaSim => "Protanopia Sim (LMS Filter)",
+            ColorblindMode::DeuteranopiaSim => "Deuteranopia Sim (LMS Filter)",
+            ColorblindMode::TritanopiaSim => "Tritanopia Sim (LMS Filter)",
+        }
+    }
+
+    /// Return active colorblind badge.
+    #[must_use]
+    pub fn active_colorblind_badge(&self) -> &'static str {
+        match self.active_colorblind_mode() {
+            ColorblindMode::None => "⚪ NORMAL",
+            ColorblindMode::Protanopia => "👁️ PROTANOPIA",
+            ColorblindMode::Deuteranopia => "👁️ DEUTERANOPIA",
+            ColorblindMode::Tritanopia => "👁️ TRITANOPIA",
+            ColorblindMode::Achromatopsia => "⚪ ACHROMATOPSIA",
+            ColorblindMode::ProtanopiaSim => "🔬 PROTANOPIA SIM",
+            ColorblindMode::DeuteranopiaSim => "🔬 DEUTERANOPIA SIM",
+            ColorblindMode::TritanopiaSim => "🔬 TRITANOPIA SIM",
+        }
+    }
+
+    /// Return active colorblind description.
+    #[must_use]
+    pub fn active_colorblind_desc(&self) -> &'static str {
+        match self.active_colorblind_mode() {
+            ColorblindMode::None => {
+                "Standard full-spectrum color rendering without color vision deficiency adjustments."
+            }
+            ColorblindMode::Protanopia => {
+                "Accessible Daltonization for red-blind/deficient vision (L-cone loss correction)."
+            }
+            ColorblindMode::Deuteranopia => {
+                "Accessible Daltonization for green-blind/deficient vision (M-cone loss correction)."
+            }
+            ColorblindMode::Tritanopia => {
+                "Accessible Daltonization for blue-blind/deficient vision (S-cone loss correction)."
+            }
+            ColorblindMode::Achromatopsia => {
+                "Rec.709 relative luminance grayscale transform for total color agnosia."
+            }
+            ColorblindMode::ProtanopiaSim => {
+                "LMS spectral simulation of protanopic red-blind vision."
+            }
+            ColorblindMode::DeuteranopiaSim => {
+                "LMS spectral simulation of deuteranopic green-blind vision."
+            }
+            ColorblindMode::TritanopiaSim => {
+                "LMS spectral simulation of tritanopic blue-blind vision."
+            }
+        }
     }
 
     /// Return active hardware acceleration mode key ("auto", "dedicated", "integrated", "cpu").
@@ -1996,9 +2172,10 @@ impl ConfigApp {
                             let chunks = Layout::default()
                                 .direction(Direction::Vertical)
                                 .constraints([
-                                    Constraint::Percentage(38),
-                                    Constraint::Percentage(32),
-                                    Constraint::Percentage(30),
+                                    Constraint::Percentage(28),
+                                    Constraint::Percentage(24),
+                                    Constraint::Percentage(24),
+                                    Constraint::Percentage(24),
                                 ])
                                 .split(Rect::new(0, 3, left_width, area_h));
 
@@ -2040,6 +2217,25 @@ impl ConfigApp {
                                     self.contrast_mode_dropdown =
                                         Dropdown::new(CONTRAST_MODE_OPTIONS.to_vec(), &c);
                                     self.saved = false;
+                                }
+                            } else if mouse.row > chunks[3].y
+                                && mouse.row < chunks[3].y + chunks[3].height
+                            {
+                                let idx = (mouse.row - (chunks[3].y + 1)) as usize;
+                                if idx < COLORBLIND_OPTIONS.len() {
+                                    self.colorblind_idx = idx;
+                                    self.fx_sub_focus = 3;
+                                    let cb = COLORBLIND_OPTIONS[self.colorblind_idx].0.to_string();
+                                    self.config.colorblind_mode =
+                                        if cb == "none" { None } else { Some(cb.clone()) };
+                                    self.colorblind_mode_dropdown =
+                                        Dropdown::new(COLORBLIND_MODE_OPTIONS.to_vec(), &cb);
+                                    self.saved = false;
+                                    self.status_message = format!(
+                                        "Colorblind Accessibility: {} [{}]",
+                                        COLORBLIND_OPTIONS[self.colorblind_idx].1,
+                                        self.active_colorblind_badge()
+                                    );
                                 }
                             }
                         }
@@ -2117,12 +2313,19 @@ impl ConfigApp {
                         let col = COLOR_OPTIONS[self.color_idx].0.to_string();
                         self.config.color_mode = col.clone();
                         self.color_mode_dropdown = Dropdown::new(COLOR_MODE_OPTIONS.to_vec(), &col);
-                    } else {
+                    } else if self.fx_sub_focus == 2 {
                         self.contrast_idx = (self.contrast_idx + 1) % CONTRAST_OPTIONS.len();
                         let c = CONTRAST_OPTIONS[self.contrast_idx].0.to_string();
                         self.config.contrast_mode = Some(c.clone());
                         self.contrast_mode_dropdown =
                             Dropdown::new(CONTRAST_MODE_OPTIONS.to_vec(), &c);
+                    } else {
+                        self.colorblind_idx = (self.colorblind_idx + 1) % COLORBLIND_OPTIONS.len();
+                        let cb = COLORBLIND_OPTIONS[self.colorblind_idx].0.to_string();
+                        self.config.colorblind_mode =
+                            if cb == "none" { None } else { Some(cb.clone()) };
+                        self.colorblind_mode_dropdown =
+                            Dropdown::new(COLORBLIND_MODE_OPTIONS.to_vec(), &cb);
                     }
                     self.saved = false;
                 }
@@ -2193,7 +2396,7 @@ impl ConfigApp {
                         let col = COLOR_OPTIONS[self.color_idx].0.to_string();
                         self.config.color_mode = col.clone();
                         self.color_mode_dropdown = Dropdown::new(COLOR_MODE_OPTIONS.to_vec(), &col);
-                    } else {
+                    } else if self.fx_sub_focus == 2 {
                         if self.contrast_idx > 0 {
                             self.contrast_idx -= 1;
                         } else {
@@ -2203,6 +2406,17 @@ impl ConfigApp {
                         self.config.contrast_mode = Some(c.clone());
                         self.contrast_mode_dropdown =
                             Dropdown::new(CONTRAST_MODE_OPTIONS.to_vec(), &c);
+                    } else {
+                        if self.colorblind_idx > 0 {
+                            self.colorblind_idx -= 1;
+                        } else {
+                            self.colorblind_idx = COLORBLIND_OPTIONS.len().saturating_sub(1);
+                        }
+                        let cb = COLORBLIND_OPTIONS[self.colorblind_idx].0.to_string();
+                        self.config.colorblind_mode =
+                            if cb == "none" { None } else { Some(cb.clone()) };
+                        self.colorblind_mode_dropdown =
+                            Dropdown::new(COLORBLIND_MODE_OPTIONS.to_vec(), &cb);
                     }
                     self.saved = false;
                 }
@@ -2445,11 +2659,17 @@ impl ConfigApp {
                     let col = COLOR_OPTIONS[0].0.to_string();
                     self.config.color_mode = col.clone();
                     self.color_mode_dropdown = Dropdown::new(COLOR_MODE_OPTIONS.to_vec(), &col);
-                } else {
+                } else if self.fx_sub_focus == 2 {
                     self.contrast_idx = 0;
                     let c = CONTRAST_OPTIONS[0].0.to_string();
                     self.config.contrast_mode = Some(c.clone());
                     self.contrast_mode_dropdown = Dropdown::new(CONTRAST_MODE_OPTIONS.to_vec(), &c);
+                } else {
+                    self.colorblind_idx = 0;
+                    let cb = COLORBLIND_OPTIONS[0].0.to_string();
+                    self.config.colorblind_mode = None;
+                    self.colorblind_mode_dropdown =
+                        Dropdown::new(COLORBLIND_MODE_OPTIONS.to_vec(), &cb);
                 }
                 self.saved = false;
             }
@@ -2498,11 +2718,17 @@ impl ConfigApp {
                     let col = COLOR_OPTIONS[self.color_idx].0.to_string();
                     self.config.color_mode = col.clone();
                     self.color_mode_dropdown = Dropdown::new(COLOR_MODE_OPTIONS.to_vec(), &col);
-                } else {
+                } else if self.fx_sub_focus == 2 {
                     self.contrast_idx = CONTRAST_OPTIONS.len().saturating_sub(1);
                     let c = CONTRAST_OPTIONS[self.contrast_idx].0.to_string();
                     self.config.contrast_mode = Some(c.clone());
                     self.contrast_mode_dropdown = Dropdown::new(CONTRAST_MODE_OPTIONS.to_vec(), &c);
+                } else {
+                    self.colorblind_idx = COLORBLIND_OPTIONS.len().saturating_sub(1);
+                    let cb = COLORBLIND_OPTIONS[self.colorblind_idx].0.to_string();
+                    self.config.colorblind_mode = Some(cb.clone());
+                    self.colorblind_mode_dropdown =
+                        Dropdown::new(COLORBLIND_MODE_OPTIONS.to_vec(), &cb);
                 }
                 self.saved = false;
             }
@@ -2579,7 +2805,7 @@ impl ConfigApp {
                     let col = COLOR_OPTIONS[self.color_idx].0.to_string();
                     self.config.color_mode = col.clone();
                     self.color_mode_dropdown = Dropdown::new(COLOR_MODE_OPTIONS.to_vec(), &col);
-                } else {
+                } else if self.fx_sub_focus == 2 {
                     if down {
                         self.contrast_idx =
                             (self.contrast_idx + 2).min(CONTRAST_OPTIONS.len().saturating_sub(1));
@@ -2589,6 +2815,18 @@ impl ConfigApp {
                     let c = CONTRAST_OPTIONS[self.contrast_idx].0.to_string();
                     self.config.contrast_mode = Some(c.clone());
                     self.contrast_mode_dropdown = Dropdown::new(CONTRAST_MODE_OPTIONS.to_vec(), &c);
+                } else {
+                    if down {
+                        self.colorblind_idx = (self.colorblind_idx + 3)
+                            .min(COLORBLIND_OPTIONS.len().saturating_sub(1));
+                    } else {
+                        self.colorblind_idx = self.colorblind_idx.saturating_sub(3);
+                    }
+                    let cb = COLORBLIND_OPTIONS[self.colorblind_idx].0.to_string();
+                    self.config.colorblind_mode =
+                        if cb == "none" { None } else { Some(cb.clone()) };
+                    self.colorblind_mode_dropdown =
+                        Dropdown::new(COLORBLIND_MODE_OPTIONS.to_vec(), &cb);
                 }
                 self.saved = false;
             }
@@ -2695,11 +2933,14 @@ impl ConfigApp {
             KeyCode::Char('3') => {
                 self.fx_sub_focus = 2;
             }
+            KeyCode::Char('4') => {
+                self.fx_sub_focus = 3;
+            }
             KeyCode::BackTab | KeyCode::Left | KeyCode::Char('h') => {
-                self.fx_sub_focus = (self.fx_sub_focus + 2) % 3;
+                self.fx_sub_focus = (self.fx_sub_focus + 3) % 4;
             }
             KeyCode::Tab | KeyCode::Right | KeyCode::Char('l') => {
-                self.fx_sub_focus = (self.fx_sub_focus + 1) % 3;
+                self.fx_sub_focus = (self.fx_sub_focus + 1) % 4;
             }
             KeyCode::Char('H') => {
                 self.h_scroll = self.h_scroll.saturating_sub(2);
@@ -2732,7 +2973,7 @@ impl ConfigApp {
                     self.config.color_mode = col.clone();
                     self.color_mode_dropdown = Dropdown::new(COLOR_MODE_OPTIONS.to_vec(), &col);
                     self.saved = false;
-                } else {
+                } else if self.fx_sub_focus == 2 {
                     if self.contrast_idx > 0 {
                         self.contrast_idx -= 1;
                     } else {
@@ -2741,6 +2982,18 @@ impl ConfigApp {
                     let c = CONTRAST_OPTIONS[self.contrast_idx].0.to_string();
                     self.config.contrast_mode = Some(c.clone());
                     self.contrast_mode_dropdown = Dropdown::new(CONTRAST_MODE_OPTIONS.to_vec(), &c);
+                    self.saved = false;
+                } else {
+                    if self.colorblind_idx > 0 {
+                        self.colorblind_idx -= 1;
+                    } else {
+                        self.colorblind_idx = COLORBLIND_OPTIONS.len() - 1;
+                    }
+                    let cb = COLORBLIND_OPTIONS[self.colorblind_idx].0.to_string();
+                    self.config.colorblind_mode =
+                        if cb == "none" { None } else { Some(cb.clone()) };
+                    self.colorblind_mode_dropdown =
+                        Dropdown::new(COLORBLIND_MODE_OPTIONS.to_vec(), &cb);
                     self.saved = false;
                 }
             }
@@ -2759,20 +3012,29 @@ impl ConfigApp {
                     self.config.color_mode = col.clone();
                     self.color_mode_dropdown = Dropdown::new(COLOR_MODE_OPTIONS.to_vec(), &col);
                     self.saved = false;
-                } else {
+                } else if self.fx_sub_focus == 2 {
                     self.contrast_idx = (self.contrast_idx + 1) % CONTRAST_OPTIONS.len();
                     let c = CONTRAST_OPTIONS[self.contrast_idx].0.to_string();
                     self.config.contrast_mode = Some(c.clone());
                     self.contrast_mode_dropdown = Dropdown::new(CONTRAST_MODE_OPTIONS.to_vec(), &c);
+                    self.saved = false;
+                } else {
+                    self.colorblind_idx = (self.colorblind_idx + 1) % COLORBLIND_OPTIONS.len();
+                    let cb = COLORBLIND_OPTIONS[self.colorblind_idx].0.to_string();
+                    self.config.colorblind_mode =
+                        if cb == "none" { None } else { Some(cb.clone()) };
+                    self.colorblind_mode_dropdown =
+                        Dropdown::new(COLORBLIND_MODE_OPTIONS.to_vec(), &cb);
                     self.saved = false;
                 }
             }
             KeyCode::Enter | KeyCode::Char(' ') => {
                 self.saved = false;
                 let c = CONTRAST_OPTIONS[self.contrast_idx].0;
+                let cb = COLORBLIND_OPTIONS[self.colorblind_idx].1;
                 self.status_message = format!(
-                    "Effect: '{}' | Color: '{}' | Contrast: '{}'",
-                    self.config.effect, self.config.color_mode, c
+                    "Effect: '{}' | Color: '{}' | Contrast: '{}' | CVD: '{}'",
+                    self.config.effect, self.config.color_mode, c, cb
                 );
             }
             KeyCode::Char('t') => {
@@ -3237,6 +3499,12 @@ export extern "forgum" [
                     "Editing Tongue: type characters and press Enter (Esc to cancel)".into();
             }
             ConfigField::Palette => {
+                let is_natural = self.config.color_mode.eq_ignore_ascii_case("natural")
+                    || self.config.color_mode.eq_ignore_ascii_case("animal");
+                if !is_natural {
+                    self.status_message = "🔒 Color Palette is locked: select 'natural' Color Mode to cycle authentic animal morphs!".to_string();
+                    return;
+                }
                 self.config_edit_buffer = self.config.palette.clone().unwrap_or_default();
                 self.editing_config = true;
                 self.status_message =
@@ -4009,6 +4277,22 @@ export extern "forgum" [
                 self.saved = false;
                 self.status_message = format!("Aspect adaptation mode switched to {}", current);
             }
+            ConfigField::ColorblindMode => {
+                self.colorblind_mode_dropdown.cycle(forward);
+                let current = self.colorblind_mode_dropdown.current();
+                self.config.colorblind_mode = if current == "none" {
+                    None
+                } else {
+                    Some(current.clone())
+                };
+                self.sync_colorblind_from_config();
+                self.saved = false;
+                self.status_message = format!(
+                    "Colorblind accessibility mode switched to {} [{}]",
+                    self.active_colorblind_display(),
+                    self.active_colorblind_badge()
+                );
+            }
         }
     }
 
@@ -4729,7 +5013,7 @@ export extern "forgum" [
                     "Open with System Editor (Notepad/GUI)  ",
                     Style::default().fg(Color::White),
                 ),
-                Span::styled("│  ", Style::default().fg(Color::DarkGray)),
+                Span::styled("|  ", Style::default().fg(Color::DarkGray)),
                 Span::styled(
                     "[I] ",
                     Style::default()
@@ -4740,7 +5024,7 @@ export extern "forgum" [
                     "Install Neovim (winget/scoop)  ",
                     Style::default().fg(Color::White),
                 ),
-                Span::styled("│  ", Style::default().fg(Color::DarkGray)),
+                Span::styled("|  ", Style::default().fg(Color::DarkGray)),
                 Span::styled(
                     "[Esc] ",
                     Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
@@ -5816,9 +6100,10 @@ export extern "forgum" [
         let chunks = Layout::default()
             .direction(Direction::Vertical)
             .constraints([
-                Constraint::Percentage(38),
-                Constraint::Percentage(32),
-                Constraint::Percentage(30),
+                Constraint::Percentage(28),
+                Constraint::Percentage(24),
+                Constraint::Percentage(24),
+                Constraint::Percentage(24),
             ])
             .split(area);
 
@@ -6012,6 +6297,69 @@ export extern "forgum" [
                 .title(contrast_title),
         );
         f.render_widget(contrast_list, chunks[2]);
+
+        // Colorblind Accessibility Modes
+        let colorblind_items: Vec<ListItem> = COLORBLIND_OPTIONS
+            .iter()
+            .enumerate()
+            .map(|(i, (name, _label, _mode))| {
+                let is_sel = i == self.colorblind_idx;
+                let is_focused = self.fx_sub_focus == 3;
+                let prefix = if is_sel { "▶ " } else { "  " };
+                let style = if is_sel && is_focused {
+                    Style::default()
+                        .fg(tailwind::AMBER_400)
+                        .add_modifier(Modifier::BOLD)
+                } else if is_sel {
+                    Style::default().fg(tailwind::EMERALD_400)
+                } else {
+                    Style::default().fg(Color::White)
+                };
+                let badge = if *name == "none" {
+                    Span::styled(" [OFF]", Style::default().fg(Color::DarkGray))
+                } else if name.ends_with("_sim") {
+                    Span::styled(" [SIM]", Style::default().fg(tailwind::SKY_400))
+                } else if *name == "achromatopsia" {
+                    Span::styled(" [MONO]", Style::default().fg(tailwind::SLATE_400))
+                } else {
+                    Span::styled(" [DALTONIZE]", Style::default().fg(tailwind::EMERALD_400))
+                };
+                ListItem::new(Line::from(vec![
+                    Span::styled(prefix, Style::default().fg(Color::Cyan)),
+                    Span::styled(*name, style),
+                    badge,
+                ]))
+            })
+            .collect();
+
+        let visible_rows_cb = (chunks[3].height.saturating_sub(2) as usize).max(1);
+        let start_cb = if self.colorblind_idx >= visible_rows_cb {
+            self.colorblind_idx + 1 - visible_rows_cb
+        } else {
+            0
+        };
+        let visible_cb_items: Vec<ListItem> = colorblind_items
+            .into_iter()
+            .skip(start_cb)
+            .take(visible_rows_cb)
+            .collect();
+
+        let cb_title = format!(
+            " CVD / Colorblind Accessibility ({}) ",
+            COLORBLIND_OPTIONS.len()
+        );
+        let cb_list = List::new(visible_cb_items).block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_type(BorderType::Rounded)
+                .border_style(if self.fx_sub_focus == 3 {
+                    Style::default().fg(tailwind::AMBER_400)
+                } else {
+                    Style::default().fg(tailwind::SLATE_600)
+                })
+                .title(cb_title),
+        );
+        f.render_widget(cb_list, chunks[3]);
     }
 
     fn render_installer_list(&self, f: &mut Frame, area: Rect) {
@@ -6364,6 +6712,12 @@ export extern "forgum" [
                 };
                 format!("{cur}{desc} (←/→ cycle)")
             }
+            ConfigField::ColorblindMode => {
+                let display = self.active_colorblind_display();
+                let badge = self.active_colorblind_badge();
+                let desc = self.active_colorblind_desc();
+                format!("{} [{}] - {} (←/→ cycle)", display, badge, desc)
+            }
         }
     }
 
@@ -6629,6 +6983,11 @@ export extern "forgum" [
         let (t, progress_fraction) = Self::cycle_duration_time(quantized_t, self.config.duration);
         let elapsed_display = t;
         let contrast = self.active_contrast_mode();
+        let colorblind = self.active_colorblind_mode();
+        let adjust_color = |r: u8, g: u8, b: u8| -> (u8, u8, u8) {
+            let (cr, cg, cb) = contrast.adjust_rgb(r, g, b);
+            colorblind.adjust_rgb(cr, cg, cb)
+        };
 
         let cow_art = self
             .cow_cache
@@ -6704,7 +7063,7 @@ export extern "forgum" [
                 let m_chars: Vec<char> = mountain_layer.chars().collect();
                 let m_start = (t * 1.5 + wave[0]) as usize % m_chars.len();
                 let m_slice: String = m_chars.iter().cycle().skip(m_start).take(30).collect();
-                let (mr, mg, mb) = contrast.adjust_rgb(110, 110, 110);
+                let (mr, mg, mb) = adjust_color(110, 110, 110);
                 lines.push(Line::from(Span::styled(
                     format!("  {m_slice}"),
                     Style::default().fg(Color::Rgb(mr, mg, mb)),
@@ -6742,7 +7101,7 @@ export extern "forgum" [
                     "graveyard" => (97, 97, 97),
                     _ => (76, 175, 80),
                 };
-                let (atr, atg, atb) = contrast.adjust_rgb(tr, tg, tb);
+                let (atr, atg, atb) = adjust_color(tr, tg, tb);
                 lines.push(Line::from(Span::styled(
                     format!("  {tree_slice}"),
                     Style::default().fg(Color::Rgb(atr, atg, atb)),
@@ -7057,19 +7416,19 @@ export extern "forgum" [
                     .last()
                     .map(|(idx, _)| idx);
 
-                let (conn_r, conn_g, conn_b) = contrast.adjust_rgb(180, 230, 255);
+                let (conn_r, conn_g, conn_b) = adjust_color(180, 230, 255);
                 let mut conn_style = Style::default().fg(Color::Rgb(conn_r, conn_g, conn_b));
                 if contrast.requires_bold() {
                     conn_style = conn_style.add_modifier(Modifier::BOLD);
                 }
 
-                let (bord_r, bord_g, bord_b) = contrast.adjust_rgb(215, 225, 240);
+                let (bord_r, bord_g, bord_b) = adjust_color(215, 225, 240);
                 let mut bord_style = Style::default().fg(Color::Rgb(bord_r, bord_g, bord_b));
                 if contrast.requires_bold() {
                     bord_style = bord_style.add_modifier(Modifier::BOLD);
                 }
 
-                let (txt_r, txt_g, txt_b) = contrast.adjust_rgb(255, 255, 255);
+                let (txt_r, txt_g, txt_b) = adjust_color(255, 255, 255);
                 let txt_style = Style::default()
                     .fg(Color::Rgb(txt_r, txt_g, txt_b))
                     .add_modifier(Modifier::BOLD);
@@ -7134,7 +7493,7 @@ export extern "forgum" [
                             spans.push(Span::raw(" "));
                         } else {
                             let (r, g, b) = Self::natural_creature_color(p, x, animal_rel_y, ch);
-                            let (cr, cg, cb) = contrast.adjust_rgb(r, g, b);
+                            let (cr, cg, cb) = adjust_color(r, g, b);
                             let mut style = Style::default().fg(Color::Rgb(cr, cg, cb));
                             if contrast.requires_bold() {
                                 style = style.add_modifier(Modifier::BOLD);
@@ -7143,7 +7502,7 @@ export extern "forgum" [
                         }
                     }
                     if !sparkle.is_empty() {
-                        let (sr, sg, sb) = contrast.adjust_rgb(255, 235, 59);
+                        let (sr, sg, sb) = adjust_color(255, 235, 59);
                         let mut s_style = Style::default().fg(Color::Rgb(sr, sg, sb));
                         if contrast.requires_bold() {
                             s_style = s_style.add_modifier(Modifier::BOLD);
@@ -7154,7 +7513,35 @@ export extern "forgum" [
                 } else {
                     let adj_color = match color {
                         Color::Rgb(r, g, b) => {
-                            let (cr, cg, cb) = contrast.adjust_rgb(r, g, b);
+                            let (cr, cg, cb) = adjust_color(r, g, b);
+                            Color::Rgb(cr, cg, cb)
+                        }
+                        Color::Red => {
+                            let (cr, cg, cb) = adjust_color(255, 80, 80);
+                            Color::Rgb(cr, cg, cb)
+                        }
+                        Color::Green => {
+                            let (cr, cg, cb) = adjust_color(80, 220, 80);
+                            Color::Rgb(cr, cg, cb)
+                        }
+                        Color::Yellow => {
+                            let (cr, cg, cb) = adjust_color(255, 230, 80);
+                            Color::Rgb(cr, cg, cb)
+                        }
+                        Color::Blue => {
+                            let (cr, cg, cb) = adjust_color(80, 140, 255);
+                            Color::Rgb(cr, cg, cb)
+                        }
+                        Color::Magenta => {
+                            let (cr, cg, cb) = adjust_color(255, 80, 255);
+                            Color::Rgb(cr, cg, cb)
+                        }
+                        Color::Cyan => {
+                            let (cr, cg, cb) = adjust_color(80, 230, 255);
+                            Color::Rgb(cr, cg, cb)
+                        }
+                        Color::White => {
+                            let (cr, cg, cb) = adjust_color(240, 240, 240);
                             Color::Rgb(cr, cg, cb)
                         }
                         c => c,
@@ -7179,16 +7566,16 @@ export extern "forgum" [
                 "magma" => "~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ~~~ ",
                 "ice" => "=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--= ",
                 "seabed" => "~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ~~~~ ",
-                "sidewalk" | "paved" => "═══ ═══ ═══ ═══ ═══ ═══ ═══ ═══ ═══ ═══ ═══ ═══ ═══ ═══ ",
+                "sidewalk" | "paved" => "=== === === === === === === === === === === === === === ",
                 "roof" => "^^^ ^^^ ^^^ ^^^ ^^^ ^^^ ^^^ ^^^ ^^^ ^^^ ^^^ ^^^ ^^^ ^^^ ",
                 "grid" => "#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-",
                 "crypt" => "[+][+][+][+][+][+][+][+][+][+][+][+][+][+][+][+][+][+] ",
                 "savanna" => ".. -- .. -- .. -- .. -- .. -- .. -- .. -- .. -- .. -- .. ",
                 "mud" => "~~~...~~~...~~~...~~~...~~~...~~~...~~~...~~~...~~~... ",
-                "tracks" | "railway" => "─┼──┼──┼──┼──┼──┼──┼──┼──┼──┼──┼──┼──┼──┼──┼──┼──┼──┼── ",
-                "checkerboard" => "■□■□■□■□■□■□■□■□■□■□■□■□■□■□■□■□■□■□■□■□■□■□■□■□■□■□■□ ",
+                "tracks" | "railway" => "-+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+-- ",
+                "checkerboard" => "#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.",
                 "none" => "",
-                _ => "─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ─── ",
+                _ => "--- --- --- --- --- --- --- --- --- --- --- --- --- --- ",
             };
             if !ground_pattern.is_empty() {
                 let mut undulation = [0.0f32; 1];
@@ -7196,7 +7583,7 @@ export extern "forgum" [
                 let g_chars: Vec<char> = ground_pattern.chars().collect();
                 let g_start = ((t * 8.0) as usize + (undulation[0] as usize)) % g_chars.len();
                 let g_slice: String = g_chars.iter().cycle().skip(g_start).take(32).collect();
-                let (gr, gg, gb) = contrast.adjust_rgb(115, 115, 115);
+                let (gr, gg, gb) = adjust_color(115, 115, 115);
                 lines.push(Line::from(Span::styled(
                     format!("  {g_slice}"),
                     Style::default().fg(Color::Rgb(gr, gg, gb)),
@@ -7205,14 +7592,26 @@ export extern "forgum" [
         }
 
         let env_name = self.config.environment.as_deref().unwrap_or("pasture");
-        let title = format!(
-            " 🐮 Live {} FPS Canvas: {} [{}] [{}] [{}] ",
-            self.config.fps,
-            self.config.cow,
-            env_name,
-            self.config.effect,
-            contrast.display_name(),
-        );
+        let title = if colorblind != ColorblindMode::None {
+            format!(
+                " 🐮 Live {} FPS Canvas: {} [{}] [{}] [{}] [{}] ",
+                self.config.fps,
+                self.config.cow,
+                env_name,
+                self.config.effect,
+                contrast.display_name(),
+                self.active_colorblind_badge(),
+            )
+        } else {
+            format!(
+                " 🐮 Live {} FPS Canvas: {} [{}] [{}] [{}] ",
+                self.config.fps,
+                self.config.cow,
+                env_name,
+                self.config.effect,
+                contrast.display_name(),
+            )
+        };
 
         let p = Paragraph::new(lines).block(
             Block::default()
@@ -7273,7 +7672,7 @@ export extern "forgum" [
                     ),
                     Span::styled(
                         format!(
-                            "Env: {}  │  Road: {}  │  Skyline: {}",
+                            "Env: {}  |  Road: {}  |  Skyline: {}",
                             biome.environment, biome.road, biome.mountain
                         ),
                         Style::default().fg(Color::White),
@@ -7303,7 +7702,7 @@ export extern "forgum" [
                 lines.push(Line::from(vec![
                     Span::styled("Shortcuts: ", Style::default().fg(Color::DarkGray)),
                     Span::styled(
-                        "[Enter/b] Apply Native Scenery  │  [r] Random Mascot",
+                        "[Enter/b] Apply Native Scenery  |  [r] Random Mascot",
                         Style::default().fg(Color::Cyan),
                     ),
                 ]));
@@ -7422,14 +7821,17 @@ export extern "forgum" [
                 let cl_desc = COLOR_OPTIONS[self.color_idx].1;
                 let ct_desc = CONTRAST_OPTIONS[self.contrast_idx].1;
                 let ct_mode = self.active_contrast_mode();
+                let cb_desc = COLORBLIND_OPTIONS[self.colorblind_idx].1;
                 let text = format!(
-                    "Kinematics: {}\nPalette: {}\nContrast: {} (Min Lum: {}, Sat: {:.1}x, Bold: {})",
+                    "Kinematics: {}\nPalette: {}\nContrast: {} (Min Lum: {}, Sat: {:.1}x, Bold: {})\nCVD Accessibility: {} [{}]",
                     ef_desc,
                     cl_desc,
                     ct_desc,
                     ct_mode.min_luminance_floor(),
                     ct_mode.saturation_factor(),
                     if ct_mode.requires_bold() { "Yes" } else { "No" },
+                    cb_desc,
+                    self.active_colorblind_badge(),
                 );
                 let p = Paragraph::new(text).wrap(Wrap { trim: true }).block(
                     Block::default()
@@ -7437,7 +7839,7 @@ export extern "forgum" [
                         .border_type(BorderType::Rounded)
                         .border_style(Style::default().fg(tailwind::INDIGO_400))
                         .title(Span::styled(
-                            " ✨ Dynamics, Colors & Contrast Profile ",
+                            " ✨ Dynamics, Colors & CVD Accessibility ",
                             Style::default()
                                 .fg(tailwind::VIOLET_400)
                                 .add_modifier(Modifier::BOLD),
@@ -7575,7 +7977,7 @@ export extern "forgum" [
                                 format!("{} ({})", info.architecture, info.generation_year),
                                 Style::default().fg(tailwind::SLATE_200),
                             ),
-                            Span::raw("  │  "),
+                            Span::raw("  |  "),
                             Span::styled(
                                 "VRAM: ",
                                 Style::default()
@@ -7819,7 +8221,7 @@ export extern "forgum" [
                 ),
                 Span::styled(" Quit  ", Style::default().fg(tailwind::SLATE_300)),
                 Span::styled(
-                    format!(" │ {}", self.status_message),
+                    format!(" | {}", self.status_message),
                     Style::default().fg(tailwind::SKY_400),
                 ),
             ]
@@ -7845,14 +8247,14 @@ export extern "forgum" [
                         .bg(tailwind::SLATE_800)
                         .fg(tailwind::SKY_400),
                 ),
-                Span::styled(" Step ±1  ", Style::default().fg(tailwind::SLATE_300)),
+                Span::styled(" Step +/-1  ", Style::default().fg(tailwind::SLATE_300)),
                 Span::styled(
                     " <Left/Right> ",
                     Style::default()
                         .bg(tailwind::SLATE_800)
                         .fg(tailwind::SKY_400),
                 ),
-                Span::styled(" Step ±5  ", Style::default().fg(tailwind::SLATE_300)),
+                Span::styled(" Step +/-5  ", Style::default().fg(tailwind::SLATE_300)),
                 Span::styled(
                     " <Ctrl+U> ",
                     Style::default()
@@ -7861,7 +8263,7 @@ export extern "forgum" [
                 ),
                 Span::styled(" Clear  ", Style::default().fg(tailwind::SLATE_300)),
                 Span::styled(
-                    format!(" │ {}", self.status_message),
+                    format!(" | {}", self.status_message),
                     Style::default().fg(tailwind::SKY_400),
                 ),
             ]
@@ -7924,7 +8326,7 @@ export extern "forgum" [
                 ),
                 Span::styled(" Quit  ", Style::default().fg(tailwind::SLATE_300)),
                 Span::styled(
-                    format!(" │ {}", self.status_message),
+                    format!(" | {}", self.status_message),
                     Style::default().fg(tailwind::SKY_400),
                 ),
             ]
@@ -7987,7 +8389,7 @@ export extern "forgum" [
                 ),
                 Span::styled(" Quit  ", Style::default().fg(tailwind::SLATE_300)),
                 Span::styled(
-                    format!(" │ {}", self.status_message),
+                    format!(" | {}", self.status_message),
                     Style::default().fg(tailwind::SKY_400),
                 ),
             ]
@@ -9501,5 +9903,97 @@ mod tests {
         let key_h = Event::Key(KeyEvent::new(KeyCode::Char('H'), KeyModifiers::NONE));
         let _ = app.handle_event(key_h).expect("handle 'H'");
         assert!(app.show_vim_help);
+    }
+
+    #[test]
+    fn test_colorblind_mode_sync_across_tabs_and_tui_cycle() {
+        let mut app = ConfigApp::new(None, None, Some(Tab::Config));
+        app.config_field_idx = ConfigField::ColorblindMode as usize;
+
+        // Default state
+        assert_eq!(app.active_colorblind_mode(), ColorblindMode::None);
+        assert_eq!(app.active_colorblind_display(), "None (Normal Vision)");
+        assert_eq!(app.active_colorblind_badge(), "⚪ NORMAL");
+        assert!(app
+            .active_colorblind_desc()
+            .contains("Standard full-spectrum"));
+
+        // Cycle through modes in Tab 5 (Config matrix)
+        let expected_modes = [
+            ("protanopia", ColorblindMode::Protanopia, "👁️ PROTANOPIA"),
+            (
+                "deuteranopia",
+                ColorblindMode::Deuteranopia,
+                "👁️ DEUTERANOPIA",
+            ),
+            ("tritanopia", ColorblindMode::Tritanopia, "👁️ TRITANOPIA"),
+            (
+                "achromatopsia",
+                ColorblindMode::Achromatopsia,
+                "⚪ ACHROMATOPSIA",
+            ),
+            (
+                "protanopia_sim",
+                ColorblindMode::ProtanopiaSim,
+                "🔬 PROTANOPIA SIM",
+            ),
+            (
+                "deuteranopia_sim",
+                ColorblindMode::DeuteranopiaSim,
+                "🔬 DEUTERANOPIA SIM",
+            ),
+            (
+                "tritanopia_sim",
+                ColorblindMode::TritanopiaSim,
+                "🔬 TRITANOPIA SIM",
+            ),
+            ("none", ColorblindMode::None, "⚪ NORMAL"),
+        ];
+
+        for (exp_str, exp_mode, exp_badge) in expected_modes {
+            app.cycle_config_field(true);
+            assert_eq!(app.active_colorblind_mode(), exp_mode);
+            assert_eq!(app.active_colorblind_badge(), exp_badge);
+            if exp_str == "none" {
+                assert!(app.config.colorblind_mode.is_none());
+            } else {
+                assert_eq!(app.config.colorblind_mode.as_deref(), Some(exp_str));
+            }
+            let val = app.field_value(ConfigField::ColorblindMode, false);
+            assert!(val.contains(exp_badge));
+        }
+
+        // Test Tab 3 (Effects) keyboard controls
+        app.current_tab = Tab::Effects;
+        // Press 'h' to wrap around to Colorblind Accessibility panel (0 -> 3)
+        let key_h = Event::Key(KeyEvent::new(KeyCode::Char('h'), KeyModifiers::NONE));
+        app.handle_event(key_h)
+            .expect("focus colorblind panel with 'h'");
+        assert_eq!(app.fx_sub_focus, 3);
+
+        // Press 'j' (down) to cycle to protanopia
+        let key_j = Event::Key(KeyEvent::new(KeyCode::Char('j'), KeyModifiers::NONE));
+        app.handle_event(key_j)
+            .expect("cycle colorblind down with 'j'");
+        assert_eq!(app.colorblind_idx, 1);
+        assert_eq!(app.active_colorblind_mode(), ColorblindMode::Protanopia);
+        assert_eq!(app.config.colorblind_mode.as_deref(), Some("protanopia"));
+
+        // Vim jump to bottom 'G' in Tab 3 subfocus 3
+        app.vim_jump_to_bottom();
+        assert_eq!(app.colorblind_idx, COLORBLIND_OPTIONS.len() - 1);
+        assert_eq!(app.active_colorblind_mode(), ColorblindMode::TritanopiaSim);
+
+        // Vim jump to top 'gg' in Tab 3 subfocus 3
+        app.vim_jump_to_top();
+        assert_eq!(app.colorblind_idx, 0);
+        assert_eq!(app.active_colorblind_mode(), ColorblindMode::None);
+
+        // Verify live preview renders cleanly with colorblind filter
+        app.config.colorblind_mode = Some("deuteranopia".to_string());
+        app.sync_colorblind_from_config();
+        let backend = ratatui::backend::TestBackend::new(80, 24);
+        let mut terminal = ratatui::Terminal::new(backend).unwrap();
+        terminal.draw(|f| app.render(f)).unwrap();
     }
 }

@@ -274,6 +274,29 @@ impl FrameBuffer {
         self.width
     }
 
+    /// Apply Color Vision Deficiency (CVD) accessibility translation filter to all active back-buffer cells.
+    pub fn apply_colorblind_filter(&mut self, mode: forgum_platform::ColorblindMode) {
+        if mode == forgum_platform::ColorblindMode::None {
+            return;
+        }
+        for (i, cell) in self.back.iter_mut().enumerate() {
+            if cell.alpha > 0 {
+                let (r, g, b) = mode.adjust_rgb(cell.fg.r, cell.fg.g, cell.fg.b);
+                if (cell.fg.r, cell.fg.g, cell.fg.b) != (r, g, b) {
+                    cell.fg.r = r;
+                    cell.fg.g = g;
+                    cell.fg.b = b;
+                    let x = i % self.width;
+                    let y = i / self.width;
+                    if !self.dirty[i] {
+                        self.dirty[i] = true;
+                        self.damage_list.push((x, y));
+                    }
+                }
+            }
+        }
+    }
+
     /// Swap buffers: `front` becomes the frame just built in `back`, and `back`
     /// is repopulated as a copy of that displayed frame so the next frame is
     /// built on top of it.

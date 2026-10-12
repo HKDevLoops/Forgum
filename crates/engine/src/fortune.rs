@@ -17,7 +17,7 @@ pub fn load_fortunes(data_dir: &Path) -> Vec<String> {
 
     // Read the main fortunes file.
     let main_file = fortunes_dir.join("fortunes.txt");
-    if let Ok(content) = std::fs::read_to_string(&main_file) {
+    if let Ok(content) = forgum_platform::read_text_file_compatible(&main_file) {
         parse_fortunes(&content, &mut all);
     }
 
@@ -28,7 +28,7 @@ pub fn load_fortunes(data_dir: &Path) -> Vec<String> {
             if path.extension().is_some_and(|e| e == "txt")
                 && path.file_name().is_some_and(|n| n != "fortunes.txt")
             {
-                if let Ok(content) = std::fs::read_to_string(&path) {
+                if let Ok(content) = forgum_platform::read_text_file_compatible(&path) {
                     parse_fortunes(&content, &mut all);
                 }
             }

@@ -275,6 +275,71 @@ impl GpuComputeEngine {
             rows,
         );
     }
+
+    /// Evaluates continuous spring-damper dialogue bubble physics.
+    pub fn compute_dynamic_bubble_inertia(
+        &self,
+        dt: f32,
+        elapsed: f32,
+        mascot_vx: f32,
+        bubble_offset_x: &mut f32,
+        bubble_vel_x: &mut f32,
+        bubble_offset_y: &mut f32,
+        bubble_vel_y: &mut f32,
+    ) {
+        self.platform_engine.compute_dynamic_bubble_inertia(
+            dt,
+            elapsed,
+            mascot_vx,
+            bubble_offset_x,
+            bubble_vel_x,
+            bubble_offset_y,
+            bubble_vel_y,
+        );
+    }
+
+    /// Evaluates continuous 2D harmonic Lissajous or continuous trajectory displacement.
+    pub fn compute_dynamic_kinematics_step(
+        &self,
+        total_time: f32,
+        cols: usize,
+        rows: usize,
+        width: usize,
+        height: usize,
+        amp_x: f32,
+        amp_y: f32,
+        freq_x: f32,
+        freq_y: f32,
+        phase_x: f32,
+        phase_y: f32,
+        out_x: &mut f32,
+        out_y: &mut f32,
+    ) {
+        self.platform_engine.compute_dynamic_kinematics_step(
+            total_time, cols, rows, width, height, amp_x, amp_y, freq_x, freq_y, phase_x, phase_y,
+            out_x, out_y,
+        );
+    }
+
+    /// Batch-evaluates aquatic underwater rising bubble kinematics (turbulence, wobble, vertical drift).
+    pub fn compute_underwater_bubble_kinematics(
+        &self,
+        dt: f32,
+        time: f32,
+        xs: &mut [f32],
+        ys: &mut [f32],
+        lifetimes: &mut [f32],
+        rise_speeds: &[f32],
+    ) {
+        self.platform_engine.compute_underwater_bubble_kinematics(
+            dt,
+            time,
+            xs,
+            ys,
+            lifetimes,
+            rise_speeds,
+        );
+    }
 }
 
 #[cfg(test)]
@@ -383,5 +448,33 @@ mod tests {
         );
         assert!(life[0] > 0.0);
         assert_eq!(life[1], 0.0);
+    }
+
+    #[test]
+    fn test_dynamic_bubble_inertia_gpu_compute() {
+        let engine = GpuComputeEngine::init(AccelerationMode::Cpu);
+        let mut ox = 0.0f32;
+        let mut vx = 0.0f32;
+        let mut oy = 0.0f32;
+        let mut vy = 0.0f32;
+
+        engine.compute_dynamic_bubble_inertia(0.1, 1.0, 5.0, &mut ox, &mut vx, &mut oy, &mut vy);
+
+        assert!((-3.0..=3.0).contains(&ox));
+        assert!((-1.0..=1.0).contains(&oy));
+    }
+
+    #[test]
+    fn test_dynamic_kinematics_step_gpu_compute() {
+        let engine = GpuComputeEngine::init(AccelerationMode::Cpu);
+        let mut x = 0.0f32;
+        let mut y = 0.0f32;
+
+        engine.compute_dynamic_kinematics_step(
+            1.5, 80, 24, 20, 10, 5.0, 3.0, 1.0, 1.0, 0.0, 0.0, &mut x, &mut y,
+        );
+
+        assert!((0.0..=60.0).contains(&x));
+        assert!((0.0..=14.0).contains(&y));
     }
 }

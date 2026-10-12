@@ -252,11 +252,11 @@ pub fn render_showdown_arena(
     outcome: RpsOutcome,
 ) -> String {
     let mut out = String::with_capacity(2048);
-    let border = "═".repeat(74);
+    let border = "=".repeat(74);
 
-    out.push_str(&format!("\x1b[1;36m╔{border}╗\x1b[0m\x1b[K\r\n"));
-    out.push_str("║  ⚔️  \x1b[1;33mROCK • PAPER • SCISSORS SHOWDOWN: USER VS COMPUTER\x1b[0m            ⚔️   ║\x1b[K\r\n");
-    out.push_str(&format!("\x1b[1;36m╚{border}╝\x1b[0m\x1b[K\r\n\x1b[K\r\n"));
+    out.push_str(&format!("\x1b[1;36m+{border}+\x1b[0m\x1b[K\r\n"));
+    out.push_str("|  ⚔️  \x1b[1;33mROCK • PAPER • SCISSORS SHOWDOWN: USER VS COMPUTER\x1b[0m            ⚔️   |\x1b[K\r\n");
+    out.push_str(&format!("\x1b[1;36m+{border}+\x1b[0m\x1b[K\r\n\x1b[K\r\n"));
 
     let p_header = format!(
         "\x1b[1;32m[USER] {}\x1b[0m: {} {}",
@@ -335,11 +335,11 @@ pub fn render_showdown_arena(
 /// Prompt the user interactively in the terminal for their weapon selection.
 pub fn prompt_user_choice() -> Option<RpsMove> {
     print!("\x1b[2J\x1b[H");
-    print!("\x1b[1;36m┌────────────────────────────────────────────────────────┐\x1b[0m\x1b[K\r\n");
-    print!("│ 🎮 \x1b[1;33mCHOOSE YOUR WEAPON (USER VS COMPUTER):\x1b[0m              │\x1b[K\r\n");
-    print!("│    \x1b[1;32m[r] Rock 🪨\x1b[0m       \x1b[1;34m[p] Paper 📄\x1b[0m     \x1b[1;35m[s] Scissors ✂️\x1b[0m  │\x1b[K\r\n");
-    print!("│    \x1b[1;31m[q] Flee arena\x1b[0m                                      │\x1b[K\r\n");
-    print!("\x1b[1;36m└────────────────────────────────────────────────────────┘\x1b[0m\x1b[K\r\n");
+    print!("\x1b[1;36m+--------------------------------------------------------+\x1b[0m\x1b[K\r\n");
+    print!("| 🎮 \x1b[1;33mCHOOSE YOUR WEAPON (USER VS COMPUTER):\x1b[0m              |\x1b[K\r\n");
+    print!("|    \x1b[1;32m[r] Rock 🪨\x1b[0m       \x1b[1;34m[p] Paper 📄\x1b[0m     \x1b[1;35m[s] Scissors ✂️\x1b[0m  |\x1b[K\r\n");
+    print!("|    \x1b[1;31m[q] Flee arena\x1b[0m                                      |\x1b[K\r\n");
+    print!("\x1b[1;36m+--------------------------------------------------------+\x1b[0m\x1b[K\r\n");
     print!("\x1b[1;33m❯ Select move [r/p/s] (or q to exit): \x1b[0m\x1b[K");
     let _ = io::stdout().flush();
 

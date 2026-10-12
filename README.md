@@ -936,6 +936,7 @@ forgum fortune
 
 | Document                 | What it covers                                                         |
 | :----------------------- | :--------------------------------------------------------------------- |
+| `CREDITS.md`             | Academic inspirations, animation literature & procedural math citations |
 | `CONTRIBUTING.md`        | How to contribute, and the current status of each package-manager lane |
 | `ADVANCED.md`            | Deep dives into the engine, daemon, and capability probe               |
 | `docs/TALES.md`          | Longer stories from the Forgum menagerie                               |

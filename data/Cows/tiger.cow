@@ -2,10 +2,12 @@
 ## Bengal Tiger (Panthera tigris)
 ##
 $the_cow = <<EOC;
-   $thoughts
-    $thoughts    /\___/\
-     $thoughts  ( $eyes  )___
-        (  $tongue  )   )\/\
-         /|||/|--||~
-        (_)(_)  (_)
+  $thoughts                     _//
+   $thoughts   /\___/\       .-' /
+    $thoughts ( $eyes )_.---'   /
+       ( $tongue )  // || \\ \ /
+        /       /  //  ||  \\ \
+       | |  | |   //   ||   \\ )
+       | |  | |__//____||____\\_\
+      (_)  (_)              (_) (_)
 EOC

@@ -674,7 +674,7 @@ pub fn load_animations(data_dir: &Path) -> HashMap<String, CowDna> {
             continue;
         }
         any_candidate_existed = true;
-        match std::fs::read_to_string(path) {
+        match forgum_platform::read_text_file_compatible(path) {
             Ok(content) => match parse_animations_json_str(&content, Some(path)) {
                 Ok(catalog) => {
                     crate::log_info!(

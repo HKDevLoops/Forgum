@@ -31,11 +31,12 @@
 //! cfg_windows! { /* windows-only code */ }
 //! ```
 
-#![doc(html_root_url = "https://docs.rs/forgum-platform/0.0.3-beta")]
+#![doc(html_root_url = "https://docs.rs/forgum-platform/0.0.5-beta")]
 
 pub mod biome;
 pub mod compute;
 pub mod daemon_socket;
+pub mod encoding;
 pub mod error;
 pub mod gpu;
 pub mod guards;
@@ -69,6 +70,7 @@ pub mod platform_windows;
 // Re-exports for ergonomic callers.
 pub use compute::{get_compute_engine, init_compute_engine, ComputeEngine};
 pub use daemon_socket::{DaemonSocket, SocketConnection};
+pub use encoding::{decode_text_compatible, read_text_file_compatible, sanitize_and_normalize};
 pub use error::PlatformError;
 pub use gpu::{detect_gpu_devices, resolve_acceleration, AccelerationMode, GpuDeviceType, GpuInfo};
 pub use guards::{AltScreenGuard, CursorShowGuard, RawModeGuard, TimerResolutionGuard};
@@ -154,9 +156,10 @@ pub use terminal::{
     GraphicsCaps, NativeSplitPlan, SplitMode, TerminalCapabilities, TerminalEmulator,
 };
 pub use terminal_theme::{
-    boost_saturation, calculate_luminance, detect_terminal_theme, elevate_luminance,
-    get_active_contrast_mode, set_active_contrast_mode, BackgroundPreset, ContrastMode,
-    ContrastProfile, TerminalTheme,
+    apply_colorblind_transform, boost_saturation, calculate_luminance, detect_terminal_theme,
+    elevate_luminance, get_active_colorblind_mode, get_active_contrast_mode,
+    set_active_colorblind_mode, set_active_contrast_mode, BackgroundPreset, ColorblindMode,
+    ContrastMode, ContrastProfile, TerminalTheme,
 };
 /// Expand to the contained code only when compiling on a Unix-like target.
 ///

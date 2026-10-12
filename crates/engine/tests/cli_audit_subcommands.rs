@@ -150,10 +150,8 @@ fn audit_timer_subcommand_timing_and_box_rendering() {
 
     let rendered = forgum_engine::timer::render_timer_cow(&result);
     assert!(rendered.contains("✓"));
-    assert!(rendered.contains("┌"));
-    assert!(rendered.contains("┐"));
-    assert!(rendered.contains("└"));
-    assert!(rendered.contains("┘"));
+    assert!(rendered.contains("+"));
+    assert!(rendered.contains("-"));
 }
 
 #[test]

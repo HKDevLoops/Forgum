@@ -79,8 +79,8 @@ pub fn smooth_particle_glyph(base_ch: char, life_ratio: f32) -> char {
             let decay_idx = ((r / 0.25) * 2.0).round() as usize;
             DONUT_LUMINANCE_RAMP[decay_idx.min(2)]
         }
-        'o' | 'O' | '0' => '°',
-        _ => '·',
+        'o' | 'O' | '0' => 'o',
+        _ => '.',
     }
 }
 
@@ -246,7 +246,7 @@ impl ParticlePool {
                     if (txi != xi || tyi != yi) && txi < fb.width && tyi < fb.height && tyi >= min_y
                     {
                         let existing = fb.get(txi, tyi);
-                        if existing.ch == ' ' || existing.ch == '·' || existing.ch == '.' {
+                        if existing.ch == ' ' || existing.ch == '.' || existing.ch == 'o' {
                             let trail_alpha = (alpha / 2).max(1);
                             let mut trail_c = p.color;
                             trail_c.a = trail_alpha;
@@ -254,7 +254,7 @@ impl ParticlePool {
                                 txi,
                                 tyi,
                                 FbCell {
-                                    ch: '·',
+                                    ch: '.',
                                     fg: trail_c,
                                     bg: Color::TRANSPARENT,
                                     alpha: trail_alpha,
@@ -330,7 +330,7 @@ pub fn spawn_fire(pool: &mut ParticlePool, x: f32, y: f32, palette: &[(u8, u8, u
 
 /// Spawn bubble particles (dolphins, whales).
 pub fn spawn_bubbles(pool: &mut ParticlePool, x: f32, y: f32, palette: &[(u8, u8, u8)], time: f32) {
-    let glyphs = ['o', 'O', '°', '.'];
+    let glyphs = ['o', 'O', '*', '.'];
     let glyph = glyphs[(time * 3.0) as usize % glyphs.len()];
     let (r, g, b) = if palette.len() >= 2 {
         lerp_palette(palette, rand_01())
@@ -351,7 +351,7 @@ pub fn spawn_bubbles(pool: &mut ParticlePool, x: f32, y: f32, palette: &[(u8, u8
 
 /// Spawn star particles (nyan, wizard).
 pub fn spawn_stars(pool: &mut ParticlePool, x: f32, y: f32, time: f32) {
-    let glyphs = ['*', '+', '✦', '✧'];
+    let glyphs = ['*', '+', '.', 'o'];
     let glyph = glyphs[(time * 8.0) as usize % glyphs.len()];
     let hue = ((x * 0.01 + time * 2.0) % 1.0 + 1.0) % 1.0;
     let (r, g, b) = hsv_to_rgb(hue * 360.0, 0.9, 1.0);
@@ -385,7 +385,7 @@ pub fn spawn_zzz(pool: &mut ParticlePool, x: f32, y: f32, time: f32) {
 
 /// Spawn glitch particles (skeletons, doge).
 pub fn spawn_glitch(pool: &mut ParticlePool, _x: f32, _y: f32, width: usize, height: usize) {
-    let glyphs = ['0', '1', '#', '@', '█', '▓', '░'];
+    let glyphs = ['0', '1', '#', '@', '%', '=', '$'];
     let glyph = glyphs[(rand_01() * glyphs.len() as f32) as usize % glyphs.len()];
     let rx = rand_01() * width as f32;
     let ry = rand_01() * height as f32;
@@ -419,7 +419,7 @@ pub fn spawn_for_type(
         ParticleType::Stars => spawn_stars(pool, x, y, time),
         ParticleType::Zzz => spawn_zzz(pool, x, y, time),
         ParticleType::Glitch => spawn_glitch(pool, x, y, width, height),
-        ParticleType::Pulse => { /* No particles for pulse — it colors text */ }
+        ParticleType::Pulse => { /* No particles for pulse - it colors text */ }
     }
 }
 
@@ -525,7 +525,7 @@ mod tests {
         assert_eq!(pool.active_count(), 1);
 
         let (_key, p) = pool.particles.iter().next().unwrap();
-        assert!(['o', 'O', '°', '.'].contains(&p.ch));
+        assert!(['o', 'O', '*', '.'].contains(&p.ch));
         assert!(p.life > 0.0);
     }
 
@@ -536,7 +536,7 @@ mod tests {
         assert_eq!(pool.active_count(), 1);
 
         let (_key, p) = pool.particles.iter().next().unwrap();
-        assert!(['*', '+', '✦', '✧'].contains(&p.ch));
+        assert!(['*', '+', '.', 'o'].contains(&p.ch));
         assert!(p.life > 0.0);
     }
 
@@ -558,7 +558,7 @@ mod tests {
         assert_eq!(pool.active_count(), 1);
 
         let (_key, p) = pool.particles.iter().next().unwrap();
-        assert!(['0', '1', '#', '@', '█', '▓', '░'].contains(&p.ch));
+        assert!(['0', '1', '#', '@', '%', '=', '$'].contains(&p.ch));
     }
 
     #[test]

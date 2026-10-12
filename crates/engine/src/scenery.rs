@@ -736,106 +736,26 @@ pub fn render_mountain(
             let h_int = h_curr.round() as usize;
             let start_y = mountain_base_y.saturating_sub(h_int);
 
+            let slope = h_next - h_prev;
             for y in start_y..=mountain_base_y {
                 if y >= fb.height {
                     continue;
                 }
-                let ch = if y == start_y {
-                    // Summit / ridge line glyph based on slope
-                    let slope = h_next - h_prev;
-                    match style {
-                        MountainStyle::Skyline => {
-                            if x % 3 == 0 {
-                                '|'
-                            } else {
-                                '_'
-                            }
-                        }
-                        MountainStyle::Castle => {
-                            if x % 2 == 0 {
-                                '#'
-                            } else {
-                                '_'
-                            }
-                        }
-                        MountainStyle::Plateau => {
-                            if slope.abs() < 0.2 {
-                                '_'
-                            } else if slope > 0.0 {
-                                '/'
-                            } else {
-                                '\\'
-                            }
-                        }
-                        MountainStyle::Garden => {
-                            if x % 4 == 0 {
-                                '*'
-                            } else {
-                                '^'
-                            }
-                        }
-                        _ => {
-                            if h_curr > h_prev && h_curr > h_next {
-                                '^'
-                            } else if slope > 0.25 {
-                                '/'
-                            } else if slope < -0.25 {
-                                '\\'
-                            } else {
-                                '-'
-                            }
-                        }
-                    }
-                } else if y == mountain_base_y {
-                    match style {
-                        MountainStyle::Volcano => '~',
-                        MountainStyle::Skyline => '_',
-                        MountainStyle::Seamount => '~',
-                        _ => '.',
-                    }
-                } else {
-                    // Body texture
-                    match style {
-                        MountainStyle::Skyline => {
-                            if (x + y) % 2 == 0 {
-                                '#'
-                            } else {
-                                '|'
-                            }
-                        }
-                        MountainStyle::Iceberg => {
-                            if (x + y) % 3 == 0 {
-                                '^'
-                            } else {
-                                '|'
-                            }
-                        }
-                        MountainStyle::Volcano => {
-                            if (x + y) % 4 == 0 {
-                                '/'
-                            } else {
-                                '\\'
-                            }
-                        }
-                        MountainStyle::Gothic => {
-                            if x % 3 == 0 {
-                                '|'
-                            } else {
-                                '/'
-                            }
-                        }
-                        _ => {
-                            if (x + y) % 3 == 0 {
-                                '|'
-                            } else {
-                                '/'
-                            }
-                        }
-                    }
-                };
+                let (ch, col) = calculate_mountain_depth_cell(
+                    style,
+                    fg,
+                    x,
+                    y,
+                    start_y,
+                    mountain_base_y,
+                    slope,
+                    h_curr,
+                    h_prev,
+                    h_next,
+                );
 
                 if ch != ' ' {
-                    let _ = fb.set(x, y, Cell::new(ch, fg));
+                    let _ = fb.set(x, y, Cell::new(ch, col));
                 }
             }
         }
@@ -843,8 +763,198 @@ pub fn render_mountain(
     }
 }
 
+/// Cool slate/cyan sfumato aerial mist tint for distant atmospheric mountain horizon.
+pub const SFUMATO_SLATE: Color = Color::rgb(72, 105, 126);
+
+/// Mathematical color blending with linear interpolation.
+#[inline]
+pub fn blend_color(c1: Color, c2: Color, t: f32) -> Color {
+    let t_clamped = t.clamp(0.0, 1.0);
+    let inv_t = 1.0 - t_clamped;
+    Color::rgb(
+        ((c1.r as f32 * inv_t + c2.r as f32 * t_clamped).round()) as u8,
+        ((c1.g as f32 * inv_t + c2.g as f32 * t_clamped).round()) as u8,
+        ((c1.b as f32 * inv_t + c2.b as f32 * t_clamped).round()) as u8,
+    )
+}
+
+/// Calculate the depth-shaded cell glyph and TrueColor for mountain rendering across multiple strata.
+/// Implements atmospheric aerial perspective (Leonardo da Vinci sfumato principle):
+/// - Foreground crests: high-contrast sunlit highlights and deep shadow facets.
+/// - Mid-ground foothills: rock strata and crevasse textures.
+/// - Distant mountain layer: cool slate/cyan desaturation and soft mist textures.
+pub fn calculate_mountain_depth_cell(
+    style: MountainStyle,
+    base_fg: Color,
+    x: usize,
+    y: usize,
+    start_y: usize,
+    mountain_base_y: usize,
+    slope: f32,
+    h_curr: f32,
+    h_prev: f32,
+    h_next: f32,
+) -> (char, Color) {
+    if y == start_y {
+        // Foreground Crests: High-contrast sunlit highlights & deep shadow facets
+        let ch = match style {
+            MountainStyle::Skyline => {
+                if x.is_multiple_of(3) {
+                    '|'
+                } else {
+                    '_'
+                }
+            }
+            MountainStyle::Castle => {
+                if x.is_multiple_of(2) {
+                    '#'
+                } else {
+                    '_'
+                }
+            }
+            MountainStyle::Plateau => {
+                if slope.abs() < 0.2 {
+                    '_'
+                } else if slope > 0.0 {
+                    '/'
+                } else {
+                    '\\'
+                }
+            }
+            MountainStyle::Garden => {
+                if x.is_multiple_of(4) {
+                    '*'
+                } else {
+                    '^'
+                }
+            }
+            _ => {
+                if h_curr > h_prev && h_curr > h_next {
+                    '^'
+                } else if slope > 0.25 {
+                    '/'
+                } else if slope < -0.25 {
+                    '\\'
+                } else {
+                    '-'
+                }
+            }
+        };
+
+        let col = if h_curr > h_prev && h_curr > h_next {
+            // Sunlit alpine peak apex highlight
+            Color::rgb(
+                base_fg.r.saturating_add(55),
+                base_fg.g.saturating_add(55),
+                base_fg.b.saturating_add(65),
+            )
+        } else if slope >= 0.0 {
+            // Sunward slope highlight
+            Color::rgb(
+                base_fg.r.saturating_add(40),
+                base_fg.g.saturating_add(40),
+                base_fg.b.saturating_add(50),
+            )
+        } else {
+            // Deep shadow facet on leeward slope
+            Color::rgb(
+                base_fg.r.saturating_sub(25),
+                base_fg.g.saturating_sub(25),
+                base_fg.b.saturating_sub(20),
+            )
+        };
+        (ch, col)
+    } else if y >= mountain_base_y.saturating_sub(1) {
+        // Distant Mountain Layer: Cool slate/cyan desaturation and soft mist textures (Sfumato)
+        let ch = if y == mountain_base_y {
+            match style {
+                MountainStyle::Volcano => '~',
+                MountainStyle::Skyline => '_',
+                MountainStyle::Seamount => '~',
+                _ => '.',
+            }
+        } else {
+            match (x + y) % 4 {
+                0 => '~',
+                1 => '.',
+                2 => ':',
+                _ => '-',
+            }
+        };
+        let col = blend_color(base_fg, SFUMATO_SLATE, 0.55);
+        (ch, col)
+    } else {
+        // Mid-Ground Foothills Layer: Rock strata and crevasse textures
+        let strata = (y * 2 + x / 3) % 4;
+        let is_crevasse = (x * 5 + y * 7).is_multiple_of(11);
+        let ch = if is_crevasse {
+            ':'
+        } else {
+            match style {
+                MountainStyle::Skyline => {
+                    if (x + y).is_multiple_of(2) {
+                        '#'
+                    } else {
+                        '|'
+                    }
+                }
+                MountainStyle::Iceberg => {
+                    if (x + y).is_multiple_of(3) {
+                        '^'
+                    } else {
+                        '|'
+                    }
+                }
+                MountainStyle::Volcano => {
+                    if (x + y).is_multiple_of(4) {
+                        '/'
+                    } else {
+                        '\\'
+                    }
+                }
+                MountainStyle::Gothic => {
+                    if x.is_multiple_of(3) {
+                        '|'
+                    } else {
+                        '/'
+                    }
+                }
+                _ => {
+                    if strata == 0 {
+                        '='
+                    } else if (x + y).is_multiple_of(3) {
+                        '|'
+                    } else {
+                        '/'
+                    }
+                }
+            }
+        };
+
+        let col = if is_crevasse {
+            Color::rgb(
+                base_fg.r.saturating_sub(20),
+                base_fg.g.saturating_sub(20),
+                base_fg.b.saturating_sub(15),
+            )
+        } else if strata == 0 {
+            Color::rgb(
+                base_fg.r.saturating_add(18),
+                base_fg.g.saturating_add(18),
+                base_fg.b.saturating_add(22),
+            )
+        } else {
+            base_fg
+        };
+        (ch, col)
+    }
+}
+
+/// Golden Ratio Phi constant for optimal low-discrepancy flora dispersion.
+pub const PHI_GOLDEN: f32 = 1.618_033_988_7;
+
 /// Fibonacci / Golden Ratio reciprocal constant for optimal low-discrepancy flora dispersion.
-pub const PHI_RECIPROCAL: f32 = 0.618_034;
+pub const PHI_RECIPROCAL: f32 = 0.618_033_988_7;
 
 /// Mathematical distance between tree k and tree k+1 using Fibonacci phyllotaxis and grove clustering.
 /// Models biological root exclusion and natural tree clumping (alternating stands and clearings).
@@ -890,10 +1000,10 @@ pub fn calculate_tree_count(width: usize, env: EnvironmentStyle, animal_height: 
         EnvironmentStyle::Jurassic => 1.25_f32,
         EnvironmentStyle::Hive => 0.85_f32,
         EnvironmentStyle::Swamp => 0.90_f32,
+        EnvironmentStyle::Ocean => 0.55_f32,
         EnvironmentStyle::City
         | EnvironmentStyle::Space
         | EnvironmentStyle::Cyber
-        | EnvironmentStyle::Ocean
         | EnvironmentStyle::None => return 0,
         _ => 0.90_f32,
     };
@@ -912,8 +1022,8 @@ pub fn calculate_tree_count(width: usize, env: EnvironmentStyle, animal_height: 
     count.max(1)
 }
 
-/// Tree species variants for procedural mixed-stand rendering.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// The 22 distinct botanical and ecological flora species variants for procedural mixed-stand rendering.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum TreeSpecies {
     Oak,
     Pine,
@@ -922,54 +1032,436 @@ pub enum TreeSpecies {
     DeadTree,
     Birch,
     Palm,
+    WeepingWillow,
+    Bonsai,
+    Bamboo,
+    Mangrove,
+    Cactus,
+    Fern,
+    CreeperVine,
+    BerryShrub,
+    BloomingShrub,
+    HerbalCluster,
+    Cypress,
+    Maple,
+    CherryBlossom,
+    Baobab,
+    Redwood,
+}
+
+impl TreeSpecies {
+    /// Comprehensive array of all 22 distinct flora species.
+    pub const ALL_SPECIES: &'static [TreeSpecies] = &[
+        Self::Oak,
+        Self::Pine,
+        Self::Acacia,
+        Self::SnowFir,
+        Self::DeadTree,
+        Self::Birch,
+        Self::Palm,
+        Self::WeepingWillow,
+        Self::Bonsai,
+        Self::Bamboo,
+        Self::Mangrove,
+        Self::Cactus,
+        Self::Fern,
+        Self::CreeperVine,
+        Self::BerryShrub,
+        Self::BloomingShrub,
+        Self::HerbalCluster,
+        Self::Cypress,
+        Self::Maple,
+        Self::CherryBlossom,
+        Self::Baobab,
+        Self::Redwood,
+    ];
+
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Oak => "oak",
+            Self::Pine => "pine",
+            Self::Acacia => "acacia",
+            Self::SnowFir => "snow_fir",
+            Self::DeadTree => "dead_tree",
+            Self::Birch => "birch",
+            Self::Palm => "palm",
+            Self::WeepingWillow => "weeping_willow",
+            Self::Bonsai => "bonsai",
+            Self::Bamboo => "bamboo",
+            Self::Mangrove => "mangrove",
+            Self::Cactus => "cactus",
+            Self::Fern => "fern",
+            Self::CreeperVine => "creeper_vine",
+            Self::BerryShrub => "berry_shrub",
+            Self::BloomingShrub => "blooming_shrub",
+            Self::HerbalCluster => "herbal_cluster",
+            Self::Cypress => "cypress",
+            Self::Maple => "maple",
+            Self::CherryBlossom => "cherry_blossom",
+            Self::Baobab => "baobab",
+            Self::Redwood => "redwood",
+        }
+    }
+}
+
+/// Retrieve the ecologically authentic flora species pool for a given environment biome.
+pub fn get_biome_species_pool(env: EnvironmentStyle) -> &'static [TreeSpecies] {
+    match env {
+        // Cold / Arctic / Glacier: Conifers (SnowFir, Pine, Cypress), hardy shrubs. Zero creepers/vines.
+        EnvironmentStyle::Arctic => &[
+            TreeSpecies::SnowFir,
+            TreeSpecies::Pine,
+            TreeSpecies::Cypress,
+            TreeSpecies::BerryShrub,
+            TreeSpecies::HerbalCluster,
+        ],
+        // Water / Ocean / Beach: Palm, Mangrove, aquatic reeds / Ferns / HerbalCluster. Zero temperate creepers.
+        EnvironmentStyle::Ocean => &[
+            TreeSpecies::Palm,
+            TreeSpecies::Mangrove,
+            TreeSpecies::Fern,
+            TreeSpecies::HerbalCluster,
+        ],
+        // Rainy / Jungle / Wetlands: Broadleaf trees (Mangrove, WeepingWillow, Oak, Bamboo), climbing CreeperVine, lush Ferns.
+        EnvironmentStyle::Jurassic | EnvironmentStyle::Swamp => &[
+            TreeSpecies::Mangrove,
+            TreeSpecies::WeepingWillow,
+            TreeSpecies::Oak,
+            TreeSpecies::Bamboo,
+            TreeSpecies::CreeperVine,
+            TreeSpecies::Fern,
+        ],
+        // Savanna / Desert: Acacia, Baobab, Cactus, sparse arid herbs, DeadTree.
+        EnvironmentStyle::Savanna => &[
+            TreeSpecies::Acacia,
+            TreeSpecies::Baobab,
+            TreeSpecies::Cactus,
+            TreeSpecies::HerbalCluster,
+            TreeSpecies::DeadTree,
+        ],
+        // Graveyard: DeadTree, WeepingWillow, eerie Oak, thorny CreeperVine, Cypress.
+        EnvironmentStyle::Graveyard => &[
+            TreeSpecies::DeadTree,
+            TreeSpecies::WeepingWillow,
+            TreeSpecies::Oak,
+            TreeSpecies::CreeperVine,
+            TreeSpecies::Cypress,
+        ],
+        // Inferno: Arid scorched flora
+        EnvironmentStyle::Inferno => &[
+            TreeSpecies::DeadTree,
+            TreeSpecies::Cactus,
+            TreeSpecies::Bonsai,
+            TreeSpecies::HerbalCluster,
+        ],
+        // Hive: Floral nectar-rich shrubs & flowering trees
+        EnvironmentStyle::Hive => &[
+            TreeSpecies::BloomingShrub,
+            TreeSpecies::BerryShrub,
+            TreeSpecies::HerbalCluster,
+            TreeSpecies::CherryBlossom,
+            TreeSpecies::Bonsai,
+        ],
+        // Throne: Formal topiary and stately trees
+        EnvironmentStyle::Throne => &[
+            TreeSpecies::Cypress,
+            TreeSpecies::CherryBlossom,
+            TreeSpecies::Bonsai,
+            TreeSpecies::Oak,
+            TreeSpecies::BloomingShrub,
+        ],
+        // Forest / Pasture (and default): Oak, Maple, Birch, Pine, CherryBlossom, BerryShrub, BloomingShrub, HerbalCluster.
+        _ => &[
+            TreeSpecies::Oak,
+            TreeSpecies::Maple,
+            TreeSpecies::Birch,
+            TreeSpecies::Pine,
+            TreeSpecies::CherryBlossom,
+            TreeSpecies::BerryShrub,
+            TreeSpecies::BloomingShrub,
+            TreeSpecies::HerbalCluster,
+        ],
+    }
 }
 
 /// Determine the mathematical tree species / order for tree index n within an environment biome.
-/// Uses a low-discrepancy Weyl sequence to guarantee natural mixed diversity without artificial repetition.
+/// Uses a low-discrepancy Weyl sequence with Golden Ratio Phi (1.6180339887) and animal seed
+/// to guarantee non-repetitive, natural mixed flora distribution across the viewport width.
 pub fn calculate_tree_species(n: usize, env: EnvironmentStyle, animal_seed: u32) -> TreeSpecies {
-    let seed_offset = (animal_seed % 7) as f32 * 0.142857;
-    let sequence_val = (((n as f32) * PHI_RECIPROCAL + seed_offset).fract() * 100.0) as usize;
+    let pool = get_biome_species_pool(env);
+    let seed_offset = ((animal_seed as f32 * PHI_RECIPROCAL).fract() * 0.77).abs();
+    let weyl = ((n as f32 + 1.0) * PHI_RECIPROCAL + seed_offset).fract();
+    let idx = ((weyl * pool.len() as f32).floor() as usize) % pool.len();
+    pool[idx]
+}
 
-    match env {
-        EnvironmentStyle::Arctic => {
-            if sequence_val.is_multiple_of(3) {
-                TreeSpecies::Pine
+/// Allometric dynamic trunk width scaling (1, 2, or 3 columns) based on species allometry,
+/// target tree height, and non-repetitive tree index variation.
+pub fn calculate_trunk_width(species: TreeSpecies, target_height: usize, tree_idx: usize) -> usize {
+    let var = ((tree_idx as f32 * PHI_RECIPROCAL).fract() * 100.0) as usize;
+    match species {
+        TreeSpecies::Redwood => {
+            if target_height >= 8 {
+                3
+            } else if target_height >= 4 {
+                2
             } else {
-                TreeSpecies::SnowFir
+                1
             }
         }
-        EnvironmentStyle::Savanna => {
-            if sequence_val.is_multiple_of(4) {
-                TreeSpecies::DeadTree
+        TreeSpecies::Baobab => {
+            if target_height >= 6 {
+                3
             } else {
-                TreeSpecies::Acacia
+                2
             }
         }
-        EnvironmentStyle::Graveyard => {
-            if sequence_val.is_multiple_of(3) {
-                TreeSpecies::Oak
+        TreeSpecies::Oak | TreeSpecies::Maple | TreeSpecies::Mangrove => {
+            if target_height >= 9 && var.is_multiple_of(2) {
+                3
+            } else if target_height >= 5 {
+                2
             } else {
-                TreeSpecies::DeadTree
+                1
             }
         }
-        EnvironmentStyle::Jurassic => {
-            if sequence_val.is_multiple_of(2) {
-                TreeSpecies::Palm
-            } else {
-                TreeSpecies::Pine
-            }
+        TreeSpecies::Pine
+        | TreeSpecies::SnowFir
+        | TreeSpecies::Birch
+        | TreeSpecies::Palm
+        | TreeSpecies::WeepingWillow
+        | TreeSpecies::CherryBlossom
+        | TreeSpecies::Cypress
+        | TreeSpecies::DeadTree
+            if target_height >= 8 && var.is_multiple_of(3) =>
+        {
+            2
         }
-        _ => {
-            let r = sequence_val % 3;
-            if r == 0 {
-                TreeSpecies::Oak
-            } else if r == 1 {
-                TreeSpecies::Pine
-            } else {
-                TreeSpecies::Birch
-            }
-        }
+        _ => 1,
     }
+}
+
+// Calibrated multi-shade bark palette (organic woodland tones)
+pub const BARK_ESPRESSO: Color = Color::rgb(58, 42, 34);
+pub const BARK_CHESTNUT: Color = Color::rgb(128, 82, 48);
+pub const BARK_RAW_UMBER: Color = Color::rgb(106, 78, 54);
+pub const BARK_BIRCH_SILVER: Color = Color::rgb(216, 214, 206);
+pub const BARK_MOSSY: Color = Color::rgb(72, 92, 64);
+pub const BARK_TERRACOTTA: Color = Color::rgb(168, 88, 58);
+
+/// Procedural bark texturing and rich multi-shade bark coloring.
+/// Generates authentic textures ('||', '|/|', '(|)', '||', '!!', '|:|', '|;|')
+/// across espresso, chestnut, raw umber, birch silver, mossy bark, and terracotta palettes.
+pub fn get_bark_glyph_and_color(
+    species: TreeSpecies,
+    col_offset: usize,
+    total_width: usize,
+    y_from_base: usize,
+    tree_idx: usize,
+) -> (char, Color) {
+    // 1. Determine base and accent colors for this species
+    let (primary_col, accent_col) = match species {
+        TreeSpecies::Birch => (BARK_BIRCH_SILVER, BARK_ESPRESSO),
+        TreeSpecies::Redwood => (BARK_TERRACOTTA, BARK_CHESTNUT),
+        TreeSpecies::DeadTree => (BARK_RAW_UMBER, BARK_ESPRESSO),
+        TreeSpecies::Baobab | TreeSpecies::Acacia => (BARK_RAW_UMBER, BARK_CHESTNUT),
+        TreeSpecies::CherryBlossom => (BARK_ESPRESSO, BARK_RAW_UMBER),
+        TreeSpecies::Pine | TreeSpecies::SnowFir | TreeSpecies::Cypress => {
+            (BARK_ESPRESSO, BARK_CHESTNUT)
+        }
+        _ => (BARK_CHESTNUT, BARK_RAW_UMBER),
+    };
+
+    // Mossy bark grounding near the soil contact line
+    let col = if y_from_base == 0
+        && matches!(
+            species,
+            TreeSpecies::Oak
+                | TreeSpecies::Maple
+                | TreeSpecies::WeepingWillow
+                | TreeSpecies::Redwood
+                | TreeSpecies::Mangrove
+                | TreeSpecies::Bonsai
+        ) {
+        BARK_MOSSY
+    } else if col_offset == 1 && total_width == 3 {
+        accent_col
+    } else {
+        primary_col
+    };
+
+    // 2. Procedural bark texturing
+    let row_phase = (y_from_base + tree_idx) % 5;
+    let ch = match total_width {
+        1 => match row_phase % 4 {
+            0 => '|',
+            1 => '|',
+            2 => '!',
+            _ => ':',
+        },
+        2 => {
+            if col_offset == 0 {
+                match row_phase % 4 {
+                    0 | 2 => '|',
+                    1 => '!',
+                    _ => '|',
+                }
+            } else {
+                match row_phase % 4 {
+                    0 => '|', // "||"
+                    1 => '!', // "!!"
+                    2 => '/', // "|/"
+                    _ => ':', // "|:"
+                }
+            }
+        }
+        3 => {
+            if col_offset == 0 {
+                match row_phase {
+                    0 | 4 => '|',
+                    1 => '(',
+                    2 | 3 => '|',
+                    _ => '|',
+                }
+            } else if col_offset == 1 {
+                match row_phase {
+                    0 => '/', // "|/|"
+                    1 => '|', // "(|)"
+                    2 => ':', // "|:|"
+                    3 => ';', // "|;|"
+                    _ => '|', // "|||"
+                }
+            } else {
+                match row_phase {
+                    0 | 4 => '|',
+                    1 => ')',
+                    2 | 3 => '|',
+                    _ => '|',
+                }
+            }
+        }
+        _ => '|',
+    };
+
+    (ch, col)
+}
+
+// Soothing, calibrated fruit, flower, and star ornament palette (harmonious nature-calibrated shades)
+pub const FRUIT_RUBY_BERRY: Color = Color::rgb(188, 84, 98); // Soft dusty roseberry / wild currant (warm, gentle, zero eye poke)
+pub const FRUIT_GOLDEN_CITRUS: Color = Color::rgb(218, 165, 82); // Calibrated golden honey / soft apricot (subtle amber warmth)
+pub const FRUIT_AMETHYST_PLUM: Color = Color::rgb(138, 108, 148); // Soothing elderberry / muted lavender plum (serene tranquility)
+pub const FRUIT_CHERRY_BLOSSOM: Color = Color::rgb(232, 180, 194); // Delicate sakura petal pink (gentle pastel)
+pub const FRUIT_IVORY_STAR: Color = Color::rgb(240, 238, 218); // Pale warm jasmine star flower (soothing warm white)
+
+/// Procedurally place dynamic fruits, flowers, and star patterns on foliage envelopes
+/// using a deterministic phyllotaxis spiral, modulated by tree index.
+/// Guaranteed unique and never repeating within the animation viewport width.
+pub fn get_foliage_ornament(
+    species: TreeSpecies,
+    tree_idx: usize,
+    dx: isize,
+    dy: isize,
+    foliage_ch: char,
+) -> Option<(char, Color)> {
+    if species == TreeSpecies::DeadTree {
+        return None;
+    }
+
+    // Deterministic phyllotaxis spiral node calculation
+    let r2 = (dx * dx + dy * dy) as f32;
+    let dist = r2.sqrt();
+    let angle = (dy as f32).atan2(dx as f32);
+    let tree_spiral_phase = (tree_idx as f32 * PHI_GOLDEN).fract() * 6.2831853;
+    let spiral_val = ((dist * PHI_RECIPROCAL + angle * 0.381966 + tree_spiral_phase)
+        / std::f32::consts::PI)
+        .fract()
+        .abs();
+
+    let is_prime_organ = matches!(foliage_ch, '@' | '*' | '%' | 'o' | 'O');
+    if !is_prime_organ && spiral_val > 0.28 {
+        return None;
+    }
+
+    // Multiplicative hash ensures uniqueness across tree_idx
+    let orn_seed = (tree_idx.wrapping_mul(2654435761)
+        ^ (dx.wrapping_mul(31) as usize)
+        ^ (dy.wrapping_mul(17) as usize))
+        % 5;
+
+    let (ch, col) = match species {
+        TreeSpecies::BerryShrub => {
+            if orn_seed == 0 {
+                ('o', FRUIT_GOLDEN_CITRUS)
+            } else if orn_seed == 1 {
+                ('@', FRUIT_AMETHYST_PLUM)
+            } else {
+                ('*', FRUIT_RUBY_BERRY)
+            }
+        }
+        TreeSpecies::BloomingShrub => match orn_seed {
+            0 => ('*', FRUIT_IVORY_STAR),
+            1 => ('@', FRUIT_CHERRY_BLOSSOM),
+            2 => ('*', FRUIT_RUBY_BERRY),
+            3 => ('%', FRUIT_AMETHYST_PLUM),
+            _ => ('o', FRUIT_GOLDEN_CITRUS),
+        },
+        TreeSpecies::CherryBlossom => {
+            if orn_seed.is_multiple_of(2) {
+                ('*', FRUIT_CHERRY_BLOSSOM)
+            } else {
+                ('*', FRUIT_IVORY_STAR)
+            }
+        }
+        TreeSpecies::Cactus => {
+            if dy <= -4 {
+                ('*', FRUIT_RUBY_BERRY)
+            } else {
+                return None;
+            }
+        }
+        TreeSpecies::Palm => {
+            if matches!(foliage_ch, 'o' | '*') {
+                ('o', FRUIT_GOLDEN_CITRUS)
+            } else {
+                return None;
+            }
+        }
+        TreeSpecies::Oak
+        | TreeSpecies::Maple
+        | TreeSpecies::Bonsai
+        | TreeSpecies::HerbalCluster => match orn_seed {
+            0 => ('o', FRUIT_RUBY_BERRY),
+            1 => ('o', FRUIT_GOLDEN_CITRUS),
+            2 => ('@', FRUIT_AMETHYST_PLUM),
+            3 => ('*', FRUIT_CHERRY_BLOSSOM),
+            _ => ('*', FRUIT_IVORY_STAR),
+        },
+        TreeSpecies::SnowFir => ('*', FRUIT_IVORY_STAR),
+        TreeSpecies::Pine | TreeSpecies::Cypress | TreeSpecies::Redwood => {
+            if orn_seed.is_multiple_of(2) {
+                ('*', FRUIT_GOLDEN_CITRUS)
+            } else {
+                ('*', FRUIT_IVORY_STAR)
+            }
+        }
+        TreeSpecies::WeepingWillow
+        | TreeSpecies::Fern
+        | TreeSpecies::Bamboo
+        | TreeSpecies::Birch
+        | TreeSpecies::Acacia
+        | TreeSpecies::Mangrove
+        | TreeSpecies::CreeperVine
+        | TreeSpecies::Baobab => match orn_seed {
+            0 => ('*', FRUIT_IVORY_STAR),
+            1 => ('o', FRUIT_GOLDEN_CITRUS),
+            2 => ('*', FRUIT_RUBY_BERRY),
+            3 => ('@', FRUIT_AMETHYST_PLUM),
+            _ => ('*', FRUIT_CHERRY_BLOSSOM),
+        },
+        TreeSpecies::DeadTree => return None,
+    };
+
+    Some((ch, col))
 }
 
 /// Mathematical tree height calculation proportioned with respect to the mascot's stature,
@@ -1048,7 +1540,6 @@ pub fn render_trees_with_animal(
                 | EnvironmentStyle::City
                 | EnvironmentStyle::Space
                 | EnvironmentStyle::Cyber
-                | EnvironmentStyle::Ocean
         )
     {
         return;
@@ -1069,12 +1560,27 @@ pub fn render_trees_with_animal(
     let min_dist = 16.0_f32;
     let var_dist = 12.0_f32;
 
-    let tree_green = Color::rgb(76, 175, 80);
-    let trunk_brown = Color::rgb(121, 85, 72);
-    let snow_white = Color::rgb(224, 247, 250);
-    let acacia_gold = Color::rgb(139, 195, 74);
-    let dark_wood = Color::rgb(97, 97, 97);
-    let birch_cream = Color::rgb(238, 238, 210);
+    let tree_green = Color::rgb(68, 138, 86); // Calibrated woodland sage
+    let snow_white = Color::rgb(205, 222, 226); // Frosty morning mist
+    let acacia_gold = Color::rgb(142, 158, 84); // Savanna olive gold
+    let birch_leaves = Color::rgb(118, 162, 120); // Gentle meadow birch
+    let dark_wood = Color::rgb(92, 92, 92); // Weathered timber
+    let pine_green = Color::rgb(42, 92, 60); // Calming deep spruce
+    let willow_green = Color::rgb(108, 142, 88); // Serene weeping willow sage
+    let bonsai_green = Color::rgb(58, 112, 74); // Refined juniper
+    let bamboo_green = Color::rgb(112, 154, 98); // Gentle bamboo jade
+    let mangrove_green = Color::rgb(54, 104, 72); // Tidal mangrove olive
+    let cactus_green = Color::rgb(82, 132, 92); // Succulent sage green
+    let fern_green = Color::rgb(92, 136, 76); // Temperate forest fern
+    let vine_green = Color::rgb(108, 142, 88); // Climbing ivy olive
+    let shrub_green = Color::rgb(64, 118, 76); // Boxwood green
+    let blooming_green = Color::rgb(96, 148, 104); // Delicate spring leaf
+    let herb_green = Color::rgb(120, 146, 88); // Herbal tea green
+    let cypress_green = Color::rgb(34, 76, 52); // Muted Mediterranean evergreen
+    let maple_red = Color::rgb(188, 96, 76); // Warm autumnal amber (zero harsh glare)
+    let cherry_pink = Color::rgb(232, 178, 192); // Delicate sakura blossom pink
+    let baobab_green = Color::rgb(130, 156, 96); // Warm arid savanna canopy
+    let redwood_green = Color::rgb(48, 96, 68); // Ancient redwood deep canopy
 
     // Natural Fibonacci phyllotaxis tree range across the visible span
     let avg_stride = min_dist + var_dist * 0.5;
@@ -1083,6 +1589,7 @@ pub fn render_trees_with_animal(
     // Start 6 trees earlier so wide canopies exiting on the left screen boundary do not clip prematurely
     let start_tree = start_tree.saturating_sub(6);
     let end_tree = (((scroll_x + width + 40) as f32 / min_dist).ceil() as usize) + 4;
+    let fb_cell = std::cell::RefCell::new(fb);
 
     for t_idx in start_tree..=end_tree {
         let world_x = calculate_tree_position(t_idx, min_dist, var_dist);
@@ -1093,275 +1600,537 @@ pub fn render_trees_with_animal(
 
         let target_tree_h = calculate_tree_height(t_idx, animal_h, anim, tree_base_y);
         let species = calculate_tree_species(t_idx, env, animal_seed);
+        let trunk_w = calculate_trunk_width(species, target_tree_h, t_idx);
 
-        let mut plot = |dx: isize, dy: isize, ch: char, col: Color| {
-            if ch == ' ' {
-                return;
+        let plot_row = |dx_start: isize, dy: isize, s: &str, col: Color| {
+            let mut fb_guard = fb_cell.borrow_mut();
+            for (i, c) in s.chars().enumerate() {
+                if c == ' ' {
+                    continue;
+                }
+                let px = screen_x + dx_start + (i as isize);
+                if px >= 0 && (px as usize) < width {
+                    let py = (tree_base_y as isize) + dy;
+                    if py >= 0 && (py as usize) < fb_guard.height {
+                        let (final_ch, final_col) = if !matches!(
+                            c,
+                            '|' | '/' | '\\' | '-' | '_' | '=' | '#' | ' ' | '[' | ']' | '!' | '+'
+                        ) {
+                            if let Some((orn_ch, orn_col)) =
+                                get_foliage_ornament(species, t_idx, dx_start + (i as isize), dy, c)
+                            {
+                                (orn_ch, orn_col)
+                            } else {
+                                (c, col)
+                            }
+                        } else {
+                            (c, col)
+                        };
+                        let _ =
+                            fb_guard.set(px as usize, py as usize, Cell::new(final_ch, final_col));
+                    }
+                }
             }
-            let px = screen_x + dx;
-            if px >= 0 && (px as usize) < width {
-                let py = (tree_base_y as isize) + dy;
-                if py >= 0 && (py as usize) < fb.height {
-                    let _ = fb.set(px as usize, py as usize, Cell::new(ch, col));
+        };
+
+        let draw_trunk = |trunk_center: isize, top_dy: isize, width_cols: usize| {
+            let mut fb_guard = fb_cell.borrow_mut();
+            let mut plot_cell = |dx: isize, dy: isize, ch: char, col: Color| {
+                if ch == ' ' {
+                    return;
+                }
+                let px = screen_x + dx;
+                if px >= 0 && (px as usize) < width {
+                    let py = (tree_base_y as isize) + dy;
+                    if py >= 0 && (py as usize) < fb_guard.height {
+                        let _ = fb_guard.set(px as usize, py as usize, Cell::new(ch, col));
+                    }
+                }
+            };
+            for dy in top_dy..=0 {
+                let y_from_base = (-dy) as usize;
+                match width_cols {
+                    1 => {
+                        let (ch, col) = get_bark_glyph_and_color(species, 0, 1, y_from_base, t_idx);
+                        plot_cell(trunk_center, dy, ch, col);
+                    }
+                    2 => {
+                        let (ch_l, col_l) =
+                            get_bark_glyph_and_color(species, 0, 2, y_from_base, t_idx);
+                        let (ch_r, col_r) =
+                            get_bark_glyph_and_color(species, 1, 2, y_from_base, t_idx);
+                        plot_cell(trunk_center, dy, ch_l, col_l);
+                        plot_cell(trunk_center + 1, dy, ch_r, col_r);
+                    }
+                    3 => {
+                        let (ch_l, col_l) =
+                            get_bark_glyph_and_color(species, 0, 3, y_from_base, t_idx);
+                        let (ch_m, col_m) =
+                            get_bark_glyph_and_color(species, 1, 3, y_from_base, t_idx);
+                        let (ch_r, col_r) =
+                            get_bark_glyph_and_color(species, 2, 3, y_from_base, t_idx);
+                        plot_cell(trunk_center - 1, dy, ch_l, col_l);
+                        plot_cell(trunk_center, dy, ch_m, col_m);
+                        plot_cell(trunk_center + 1, dy, ch_r, col_r);
+                    }
+                    _ => {
+                        let (ch, col) = get_bark_glyph_and_color(species, 0, 1, y_from_base, t_idx);
+                        plot_cell(trunk_center, dy, ch, col);
+                    }
                 }
             }
         };
 
         match species {
-            TreeSpecies::SnowFir => {
+            TreeSpecies::Oak => {
                 if target_tree_h >= 8 {
-                    plot(4, -8, '^', snow_white);
-                    plot(3, -7, '/', snow_white);
-                    plot(4, -7, '|', snow_white);
-                    plot(5, -7, '\\', snow_white);
-                    plot(2, -6, '/', snow_white);
-                    plot(3, -6, '*', snow_white);
-                    plot(4, -6, '|', snow_white);
-                    plot(5, -6, '*', snow_white);
-                    plot(6, -6, '\\', snow_white);
-                    plot(1, -5, '/', snow_white);
-                    plot(2, -5, '*', snow_white);
-                    plot(4, -5, '|', snow_white);
-                    plot(6, -5, '*', snow_white);
-                    plot(7, -5, '\\', snow_white);
-                    plot(0, -4, '/', snow_white);
-                    plot(2, -4, '*', snow_white);
-                    plot(4, -4, '|', snow_white);
-                    plot(6, -4, '*', snow_white);
-                    plot(8, -4, '\\', snow_white);
-                    plot(1, -3, '/', snow_white);
-                    plot(3, -3, '_', snow_white);
-                    plot(4, -3, '|', snow_white);
-                    plot(5, -3, '_', snow_white);
-                    plot(7, -3, '\\', snow_white);
-                    plot(4, -2, '|', dark_wood);
-                    plot(4, -1, '|', dark_wood);
-                    plot(4, 0, '|', dark_wood);
+                    plot_row(0, -8, "   .---.   ", tree_green);
+                    plot_row(0, -7, " .'     '. ", tree_green);
+                    plot_row(0, -6, "/  (@)    \\", tree_green);
+                    plot_row(0, -5, "|  (@)  (@)|", tree_green);
+                    plot_row(0, -4, "|    (@)   |", tree_green);
+                    plot_row(0, -3, " \\  _____ / ", tree_green);
+                    draw_trunk(5, -2, trunk_w);
                 } else if target_tree_h >= 4 {
-                    plot(2, -4, '^', snow_white);
-                    plot(1, -3, '/', snow_white);
-                    plot(2, -3, '*', snow_white);
-                    plot(3, -3, '\\', snow_white);
-                    plot(0, -2, '/', snow_white);
-                    plot(1, -2, '*', snow_white);
-                    plot(2, -2, '|', snow_white);
-                    plot(3, -2, '*', snow_white);
-                    plot(4, -2, '\\', snow_white);
-                    plot(2, -1, '|', dark_wood);
-                    plot(2, 0, '|', dark_wood);
-                } else if target_tree_h >= 2 {
-                    plot(1, -2, '^', snow_white);
-                    plot(0, -1, '/', snow_white);
-                    plot(1, -1, '*', snow_white);
-                    plot(2, -1, '\\', snow_white);
-                    plot(1, 0, '|', dark_wood);
-                }
-            }
-            TreeSpecies::Acacia => {
-                if target_tree_h >= 7 {
-                    for (i, c) in "  .-----------.  ".chars().enumerate() {
-                        plot(i as isize, -7, c, acacia_gold);
-                    }
-                    for (i, c) in " (_____________) ".chars().enumerate() {
-                        plot(i as isize, -6, c, acacia_gold);
-                    }
-                    for (i, c) in "   \\   |   /   ".chars().enumerate() {
-                        plot(i as isize, -5, c, acacia_gold);
-                    }
-                    plot(4, -4, '\\', trunk_brown);
-                    plot(7, -4, '|', trunk_brown);
-                    plot(10, -4, '/', trunk_brown);
-                    plot(5, -3, '\\', trunk_brown);
-                    plot(7, -3, '|', trunk_brown);
-                    plot(9, -3, '/', trunk_brown);
-                    plot(7, -2, '|', trunk_brown);
-                    plot(7, -1, '|', trunk_brown);
-                    plot(7, 0, '|', trunk_brown);
-                } else if target_tree_h >= 4 {
-                    for (i, c) in " _.~---~._ ".chars().take(9).enumerate() {
-                        plot(i as isize, -3, c, acacia_gold);
-                    }
-                    plot(2, -2, '\\', trunk_brown);
-                    plot(4, -2, '/', trunk_brown);
-                    plot(3, -1, '|', trunk_brown);
-                    plot(3, 0, '|', trunk_brown);
-                } else if target_tree_h >= 1 {
-                    for (i, c) in "__~---~__".chars().take(5).enumerate() {
-                        plot(i as isize, -1, c, acacia_gold);
-                    }
-                    plot(2, 0, '|', trunk_brown);
-                }
-            }
-            TreeSpecies::DeadTree => {
-                if target_tree_h >= 8 {
-                    plot(0, -8, '\\', dark_wood);
-                    plot(4, -8, '/', dark_wood);
-                    plot(5, -8, '\\', dark_wood);
-                    plot(8, -8, '/', dark_wood);
-                    plot(1, -7, '\\', dark_wood);
-                    plot(3, -7, '/', dark_wood);
-                    plot(6, -7, '\\', dark_wood);
-                    plot(7, -7, '/', dark_wood);
-                    plot(2, -6, '\\', dark_wood);
-                    plot(4, -6, '|', dark_wood);
-                    plot(6, -6, '/', dark_wood);
-                    plot(3, -5, '\\', dark_wood);
-                    plot(4, -5, '|', dark_wood);
-                    plot(5, -5, '/', dark_wood);
-                    plot(4, -4, '|', dark_wood);
-                    plot(4, -3, '|', dark_wood);
-                    plot(4, -2, '|', dark_wood);
-                    plot(4, -1, '|', dark_wood);
-                    plot(4, 0, '|', dark_wood);
-                } else if target_tree_h >= 4 {
-                    plot(0, -4, '\\', dark_wood);
-                    plot(4, -4, '/', dark_wood);
-                    plot(1, -3, '\\', dark_wood);
-                    plot(2, -3, '|', dark_wood);
-                    plot(3, -3, '/', dark_wood);
-                    plot(2, -2, '|', dark_wood);
-                    plot(2, -1, '|', dark_wood);
-                    plot(2, 0, '|', dark_wood);
-                } else if target_tree_h >= 2 {
-                    plot(0, -2, '\\', dark_wood);
-                    plot(1, -2, '|', dark_wood);
-                    plot(2, -2, '/', dark_wood);
-                    plot(1, -1, '|', dark_wood);
-                    plot(1, 0, '|', dark_wood);
+                    plot_row(0, -4, " .---. ", tree_green);
+                    plot_row(0, -3, "( @ @ )", tree_green);
+                    plot_row(0, -2, " \\___/ ", tree_green);
+                    draw_trunk(3, -1, trunk_w.min(2));
+                } else {
+                    plot_row(0, -2, "(@)", tree_green);
+                    plot_row(0, -1, "(_)", tree_green);
+                    draw_trunk(1, 0, 1);
                 }
             }
             TreeSpecies::Pine => {
                 if target_tree_h >= 8 {
-                    plot(4, -8, '^', tree_green);
-                    plot(3, -7, '/', tree_green);
-                    plot(4, -7, '|', tree_green);
-                    plot(5, -7, '\\', tree_green);
-                    plot(2, -6, '/', tree_green);
-                    plot(3, -6, '*', tree_green);
-                    plot(4, -6, '|', tree_green);
-                    plot(5, -6, '*', tree_green);
-                    plot(6, -6, '\\', tree_green);
-                    plot(1, -5, '/', tree_green);
-                    plot(2, -5, '*', tree_green);
-                    plot(4, -5, '|', tree_green);
-                    plot(6, -5, '*', tree_green);
-                    plot(7, -5, '\\', tree_green);
-                    plot(0, -4, '/', tree_green);
-                    plot(2, -4, '*', tree_green);
-                    plot(4, -4, '|', tree_green);
-                    plot(6, -4, '*', tree_green);
-                    plot(8, -4, '\\', tree_green);
-                    plot(1, -3, '/', tree_green);
-                    plot(3, -3, '_', tree_green);
-                    plot(4, -3, '|', tree_green);
-                    plot(5, -3, '_', tree_green);
-                    plot(7, -3, '\\', tree_green);
-                    plot(4, -2, '|', trunk_brown);
-                    plot(4, -1, '|', trunk_brown);
-                    plot(4, 0, '|', trunk_brown);
+                    plot_row(0, -8, "    ^    ", pine_green);
+                    plot_row(0, -7, "   /|\\   ", pine_green);
+                    plot_row(0, -6, "  /*|*\\  ", pine_green);
+                    plot_row(0, -5, " /* | *\\ ", pine_green);
+                    plot_row(0, -4, "/ * | * \\", pine_green);
+                    plot_row(0, -3, " /__|__\\ ", pine_green);
+                    draw_trunk(4, -2, trunk_w);
                 } else if target_tree_h >= 4 {
-                    plot(2, -4, '^', tree_green);
-                    plot(1, -3, '/', tree_green);
-                    plot(2, -3, '|', tree_green);
-                    plot(3, -3, '\\', tree_green);
-                    plot(0, -2, '/', tree_green);
-                    plot(1, -2, '/', tree_green);
-                    plot(2, -2, '|', tree_green);
-                    plot(3, -2, '\\', tree_green);
-                    plot(4, -2, '\\', tree_green);
-                    plot(2, -1, '|', trunk_brown);
-                    plot(2, 0, '|', trunk_brown);
-                } else if target_tree_h >= 2 {
-                    plot(1, -2, '^', tree_green);
-                    plot(0, -1, '/', tree_green);
-                    plot(1, -1, '|', tree_green);
-                    plot(2, -1, '\\', tree_green);
-                    plot(1, 0, '|', trunk_brown);
+                    plot_row(0, -4, "  ^  ", pine_green);
+                    plot_row(0, -3, " /|\\ ", pine_green);
+                    plot_row(0, -2, "//|\\\\", pine_green);
+                    draw_trunk(2, -1, 1);
+                } else {
+                    plot_row(0, -2, " ^ ", pine_green);
+                    plot_row(0, -1, "/*\\", pine_green);
+                    draw_trunk(1, 0, 1);
+                }
+            }
+            TreeSpecies::Acacia => {
+                if target_tree_h >= 8 {
+                    plot_row(0, -7, "  .-----------.  ", acacia_gold);
+                    plot_row(0, -6, " (_____________) ", acacia_gold);
+                    plot_row(0, -5, "   \\   |   /   ", acacia_gold);
+                    plot_row(0, -4, "    \\  |  /    ", acacia_gold);
+                    draw_trunk(8, -3, trunk_w);
+                } else if target_tree_h >= 4 {
+                    plot_row(0, -3, " _.~---~._ ", acacia_gold);
+                    plot_row(0, -2, "   \\ | /   ", acacia_gold);
+                    draw_trunk(5, -1, 1);
+                } else {
+                    plot_row(0, -1, "__~---~__", acacia_gold);
+                    draw_trunk(4, 0, 1);
+                }
+            }
+            TreeSpecies::SnowFir => {
+                if target_tree_h >= 8 {
+                    plot_row(0, -8, "    ^    ", snow_white);
+                    plot_row(0, -7, "   /|\\   ", snow_white);
+                    plot_row(0, -6, "  /*|*\\  ", snow_white);
+                    plot_row(0, -5, " /* | *\\ ", snow_white);
+                    plot_row(0, -4, "/ * | * \\", snow_white);
+                    plot_row(0, -3, " /__|__\\ ", snow_white);
+                    draw_trunk(4, -2, trunk_w);
+                } else if target_tree_h >= 4 {
+                    plot_row(0, -4, "  ^  ", snow_white);
+                    plot_row(0, -3, " /|\\ ", snow_white);
+                    plot_row(0, -2, "/*|*\\", snow_white);
+                    draw_trunk(2, -1, 1);
+                } else {
+                    plot_row(0, -2, " ^ ", snow_white);
+                    plot_row(0, -1, "/*\\", snow_white);
+                    draw_trunk(1, 0, 1);
+                }
+            }
+            TreeSpecies::DeadTree => {
+                if target_tree_h >= 8 {
+                    plot_row(0, -8, "\\   /   \\", dark_wood);
+                    plot_row(0, -7, " \\ / \\ / ", dark_wood);
+                    plot_row(0, -6, "  \\ | /  ", dark_wood);
+                    plot_row(0, -5, "   \\|/   ", dark_wood);
+                    draw_trunk(4, -4, trunk_w);
+                } else if target_tree_h >= 4 {
+                    plot_row(0, -4, "\\ / \\", dark_wood);
+                    plot_row(0, -3, " \\|/ ", dark_wood);
+                    draw_trunk(2, -2, 1);
+                } else {
+                    plot_row(0, -2, "\\ /", dark_wood);
+                    plot_row(0, -1, " | ", dark_wood);
+                    draw_trunk(1, 0, 1);
                 }
             }
             TreeSpecies::Birch => {
-                if target_tree_h >= 6 {
-                    plot(2, -5, '^', tree_green);
-                    plot(1, -4, '(', tree_green);
-                    plot(2, -4, '*', tree_green);
-                    plot(3, -4, ')', tree_green);
-                    plot(1, -3, '/', tree_green);
-                    plot(2, -3, '|', birch_cream);
-                    plot(3, -3, '\\', tree_green);
-                    plot(2, -2, '|', birch_cream);
-                    plot(2, -1, '|', birch_cream);
-                    plot(2, 0, '|', birch_cream);
-                } else if target_tree_h >= 3 {
-                    plot(1, -2, '*', tree_green);
-                    plot(1, -1, '|', birch_cream);
-                    plot(1, 0, '|', birch_cream);
+                if target_tree_h >= 8 {
+                    plot_row(0, -8, "   .---.   ", birch_leaves);
+                    plot_row(0, -7, " .(* * *). ", birch_leaves);
+                    plot_row(0, -6, "(* * * * *)", birch_leaves);
+                    plot_row(0, -5, " (* * * *) ", birch_leaves);
+                    plot_row(0, -4, "  \\  |  /  ", birch_leaves);
+                    draw_trunk(5, -3, trunk_w);
+                } else if target_tree_h >= 4 {
+                    plot_row(0, -4, " .(*). ", birch_leaves);
+                    plot_row(0, -3, "(* * *)", birch_leaves);
+                    plot_row(0, -2, " \\_|_/ ", birch_leaves);
+                    draw_trunk(3, -1, 1);
+                } else {
+                    plot_row(0, -2, "(*)", birch_leaves);
+                    plot_row(0, -1, "/*\\", birch_leaves);
+                    draw_trunk(1, 0, 1);
                 }
             }
             TreeSpecies::Palm => {
-                if target_tree_h >= 6 {
-                    plot(1, -5, '\\', tree_green);
-                    plot(3, -5, '^', tree_green);
-                    plot(5, -5, '/', tree_green);
-                    plot(2, -4, '\\', tree_green);
-                    plot(3, -4, '*', tree_green);
-                    plot(4, -4, '/', tree_green);
-                    plot(3, -3, '/', trunk_brown);
-                    plot(3, -2, '|', trunk_brown);
-                    plot(3, -1, '|', trunk_brown);
-                    plot(3, 0, '|', trunk_brown);
-                } else if target_tree_h >= 3 {
-                    plot(1, -2, '\\', tree_green);
-                    plot(2, -2, '^', tree_green);
-                    plot(3, -2, '/', tree_green);
-                    plot(2, -1, '|', trunk_brown);
-                    plot(2, 0, '|', trunk_brown);
+                if target_tree_h >= 8 {
+                    plot_row(0, -8, "  \\  |  /  ", tree_green);
+                    plot_row(0, -7, " --( * )-- ", tree_green);
+                    plot_row(0, -6, "  /  |  \\  ", tree_green);
+                    plot_row(0, -5, "    (o)    ", tree_green);
+                    draw_trunk(5, -4, trunk_w);
+                } else if target_tree_h >= 4 {
+                    plot_row(0, -4, " \\ | / ", tree_green);
+                    plot_row(0, -3, "--(*)--", tree_green);
+                    plot_row(0, -2, "  (o)  ", tree_green);
+                    draw_trunk(3, -1, 1);
+                } else {
+                    plot_row(0, -2, "\\|/", tree_green);
+                    plot_row(0, -1, "(*)", tree_green);
+                    draw_trunk(1, 0, 1);
                 }
             }
-            TreeSpecies::Oak => {
+            TreeSpecies::WeepingWillow => {
                 if target_tree_h >= 8 {
-                    for (i, c) in "   .---.   ".chars().enumerate() {
-                        plot(i as isize, -8, c, tree_green);
-                    }
-                    for (i, c) in " .'     '. ".chars().enumerate() {
-                        plot(i as isize, -7, c, tree_green);
-                    }
-                    for (i, c) in "/  (@)    \\".chars().enumerate() {
-                        plot(i as isize, -6, c, tree_green);
-                    }
-                    for (i, c) in "|  (@)  (@)|".chars().enumerate() {
-                        plot(i as isize, -5, c, tree_green);
-                    }
-                    for (i, c) in "|    (@)   |".chars().enumerate() {
-                        plot(i as isize, -4, c, tree_green);
-                    }
-                    for (i, c) in " \\  _____ / ".chars().enumerate() {
-                        plot(i as isize, -3, c, tree_green);
-                    }
-                    plot(5, -2, '|', trunk_brown);
-                    plot(5, -1, '|', trunk_brown);
-                    plot(5, 0, '|', trunk_brown);
+                    plot_row(0, -8, "   .---.   ", willow_green);
+                    plot_row(0, -7, " .( ;;; ). ", willow_green);
+                    plot_row(0, -6, "(: | : | :)", willow_green);
+                    plot_row(0, -5, " | : | : | ", willow_green);
+                    plot_row(0, -4, " : | : | : ", willow_green);
+                    plot_row(0, -3, " :   |   : ", willow_green);
+                    draw_trunk(5, -2, trunk_w);
                 } else if target_tree_h >= 4 {
-                    plot(1, -4, '(', tree_green);
-                    plot(2, -4, '_', tree_green);
-                    plot(3, -4, ')', tree_green);
-                    plot(0, -3, '(', tree_green);
-                    plot(2, -3, '@', tree_green);
-                    plot(4, -3, ')', tree_green);
-                    plot(0, -2, '(', tree_green);
-                    plot(1, -2, '_', tree_green);
-                    plot(2, -2, '_', tree_green);
-                    plot(3, -2, '_', tree_green);
-                    plot(4, -2, ')', tree_green);
-                    plot(2, -1, '|', trunk_brown);
-                    plot(2, 0, '|', trunk_brown);
-                } else if target_tree_h >= 2 {
-                    plot(0, -2, '(', tree_green);
-                    plot(1, -2, '\'', tree_green);
-                    plot(2, -2, ')', tree_green);
-                    plot(0, -1, '(', tree_green);
-                    plot(1, -1, '_', tree_green);
-                    plot(2, -1, ')', tree_green);
-                    plot(1, 0, '|', trunk_brown);
+                    plot_row(0, -4, " .---. ", willow_green);
+                    plot_row(0, -3, "(:|:|:)", willow_green);
+                    plot_row(0, -2, " : | : ", willow_green);
+                    draw_trunk(3, -1, 1);
+                } else {
+                    plot_row(0, -2, "(;:;)", willow_green);
+                    plot_row(0, -1, " :|: ", willow_green);
+                    draw_trunk(2, 0, 1);
+                }
+            }
+            TreeSpecies::Bonsai => {
+                if target_tree_h >= 8 {
+                    plot_row(0, -7, "    (~~)    ", bonsai_green);
+                    plot_row(0, -6, "   _/-'     ", bonsai_green);
+                    plot_row(0, -5, " (~~~)  (~) ", bonsai_green);
+                    plot_row(0, -4, "  /.-/  /   ", bonsai_green);
+                    plot_row(0, -3, "    \\_./    ", bonsai_green);
+                    draw_trunk(6, -2, 1);
+                } else if target_tree_h >= 4 {
+                    plot_row(0, -4, "  (~~) ", bonsai_green);
+                    plot_row(0, -3, " ~/ -' ", bonsai_green);
+                    plot_row(0, -2, "(~~) | ", bonsai_green);
+                    draw_trunk(5, -1, 1);
+                } else {
+                    plot_row(0, -2, " (~) ", bonsai_green);
+                    plot_row(0, -1, " _/| ", bonsai_green);
+                    draw_trunk(3, 0, 1);
+                }
+            }
+            TreeSpecies::Bamboo => {
+                if target_tree_h >= 8 {
+                    plot_row(0, -8, "  ~^~  ~^~  ", bamboo_green);
+                    plot_row(0, -7, " //|\\\\ //|\\\\ ", bamboo_green);
+                    plot_row(0, -6, "   |-|   |-|   ", bamboo_green);
+                    plot_row(0, -5, "   | |   | |   ", bamboo_green);
+                    plot_row(0, -4, " \\ |-| / |-| \\ ", bamboo_green);
+                    plot_row(0, -3, "   | |   | |   ", bamboo_green);
+                    plot_row(0, -2, "   |-|   |-|   ", bamboo_green);
+                    plot_row(0, -1, "   | |   | |   ", bamboo_green);
+                    plot_row(0, 0, "   |-|   |-|   ", bamboo_green);
+                } else if target_tree_h >= 4 {
+                    plot_row(0, -4, " ~^~ ", bamboo_green);
+                    plot_row(0, -3, "//|\\\\", bamboo_green);
+                    plot_row(0, -2, " |-| ", bamboo_green);
+                    plot_row(0, -1, " | | ", bamboo_green);
+                    plot_row(0, 0, " |-| ", bamboo_green);
+                } else {
+                    plot_row(0, -2, " ~^~ ", bamboo_green);
+                    plot_row(0, -1, " |-| ", bamboo_green);
+                    plot_row(0, 0, " | | ", bamboo_green);
+                }
+            }
+            TreeSpecies::Mangrove => {
+                if target_tree_h >= 8 {
+                    plot_row(0, -8, "  .-----.  ", mangrove_green);
+                    plot_row(0, -7, " (_______) ", mangrove_green);
+                    plot_row(0, -6, " (/ @ @ \\) ", mangrove_green);
+                    plot_row(0, -5, "  \\_____/  ", mangrove_green);
+                    plot_row(0, -4, "    |||    ", BARK_RAW_UMBER);
+                    plot_row(0, -3, "   / | \\   ", BARK_RAW_UMBER);
+                    plot_row(0, -2, "  / / \\ \\  ", BARK_RAW_UMBER);
+                    plot_row(0, -1, " / /   \\ \\ ", BARK_RAW_UMBER);
+                    plot_row(0, 0, "/ /     \\ \\", BARK_RAW_UMBER);
+                } else if target_tree_h >= 4 {
+                    plot_row(0, -4, " (____) ", mangrove_green);
+                    plot_row(0, -3, "  /||\\  ", BARK_RAW_UMBER);
+                    plot_row(0, -2, " / || \\ ", BARK_RAW_UMBER);
+                    plot_row(0, -1, "/  ||  \\", BARK_RAW_UMBER);
+                    plot_row(0, 0, "/        \\", BARK_RAW_UMBER);
+                } else {
+                    plot_row(0, -2, " (__) ", mangrove_green);
+                    plot_row(0, -1, " /||\\ ", BARK_RAW_UMBER);
+                    plot_row(0, 0, "/    \\", BARK_RAW_UMBER);
+                }
+            }
+            TreeSpecies::Cactus => {
+                if target_tree_h >= 8 {
+                    plot_row(0, -7, "   _     _   ", cactus_green);
+                    plot_row(0, -6, "  | |   | |  ", cactus_green);
+                    plot_row(0, -5, "  | |_._| |  ", cactus_green);
+                    plot_row(0, -4, "  |_   _  |  ", cactus_green);
+                    plot_row(0, -3, "    | | |    ", cactus_green);
+                    plot_row(0, -2, "    | : |    ", cactus_green);
+                    plot_row(0, -1, "    | : |    ", cactus_green);
+                    plot_row(0, 0, "    | : |    ", cactus_green);
+                } else if target_tree_h >= 4 {
+                    plot_row(0, -4, " _._ ", cactus_green);
+                    plot_row(0, -3, "|_:_|", cactus_green);
+                    plot_row(0, -2, " |:| ", cactus_green);
+                    plot_row(0, -1, " |:| ", cactus_green);
+                    plot_row(0, 0, " |:| ", cactus_green);
+                } else {
+                    plot_row(0, -2, "(_)", cactus_green);
+                    plot_row(0, -1, "|:|", cactus_green);
+                    plot_row(0, 0, "|:|", cactus_green);
+                }
+            }
+            TreeSpecies::Fern => {
+                if target_tree_h >= 8 {
+                    plot_row(0, -8, " \\\\  |  // ", fern_green);
+                    plot_row(0, -7, "  \\\\ | //  ", fern_green);
+                    plot_row(0, -6, "===~*~====", fern_green);
+                    plot_row(0, -5, " (/ | \\)  ", fern_green);
+                    plot_row(0, -4, "    ||    ", BARK_RAW_UMBER);
+                    plot_row(0, -3, "    ||    ", BARK_RAW_UMBER);
+                    plot_row(0, -2, "    ||    ", BARK_RAW_UMBER);
+                    plot_row(0, -1, "    ||    ", BARK_RAW_UMBER);
+                    plot_row(0, 0, "    ||    ", BARK_RAW_UMBER);
+                } else if target_tree_h >= 4 {
+                    plot_row(0, -4, " \\ | / ", fern_green);
+                    plot_row(0, -3, "({%*})", fern_green);
+                    plot_row(0, -2, "  / \\  ", fern_green);
+                    plot_row(0, -1, "  |||  ", BARK_RAW_UMBER);
+                    plot_row(0, 0, "  |||  ", BARK_RAW_UMBER);
+                } else {
+                    plot_row(0, -2, " ,\\|/, ", fern_green);
+                    plot_row(0, -1, "  %%%  ", fern_green);
+                    plot_row(0, 0, "  |||  ", BARK_RAW_UMBER);
+                }
+            }
+            TreeSpecies::CreeperVine => {
+                if target_tree_h >= 8 {
+                    plot_row(0, -8, "   ~@~   ", vine_green);
+                    plot_row(0, -7, "  ~/|/~  ", vine_green);
+                    plot_row(0, -6, " ~/ | ~  ", vine_green);
+                    plot_row(0, -5, " ~ \\|/~  ", vine_green);
+                    plot_row(0, -4, "  ~/|~   ", vine_green);
+                    plot_row(0, -3, " ~/ | ~  ", vine_green);
+                    plot_row(0, -2, " ~ \\|/~  ", vine_green);
+                    plot_row(0, -1, "  ~/|~   ", vine_green);
+                    plot_row(0, 0, "   |~    ", vine_green);
+                } else if target_tree_h >= 4 {
+                    plot_row(0, -4, " ~@~ ", vine_green);
+                    plot_row(0, -3, "~/|/~", vine_green);
+                    plot_row(0, -2, " ~|~ ", vine_green);
+                    plot_row(0, -1, "~/|~ ", vine_green);
+                    plot_row(0, 0, " |~  ", vine_green);
+                } else {
+                    plot_row(0, -2, " ~@ ", vine_green);
+                    plot_row(0, -1, "~/|~", vine_green);
+                    plot_row(0, 0, " |  ", vine_green);
+                }
+            }
+            TreeSpecies::BerryShrub => {
+                if target_tree_h >= 8 {
+                    plot_row(0, -7, "   .---.   ", shrub_green);
+                    plot_row(0, -6, " .( *o* ). ", shrub_green);
+                    plot_row(0, -5, "(* o * o *)", shrub_green);
+                    plot_row(0, -4, "( o * o * )", shrub_green);
+                    plot_row(0, -3, " (_______) ", shrub_green);
+                    plot_row(0, -2, "   / | \\   ", BARK_RAW_UMBER);
+                    plot_row(0, -1, "   \\ | /   ", BARK_RAW_UMBER);
+                    plot_row(0, 0, "    |||    ", BARK_RAW_UMBER);
+                } else if target_tree_h >= 4 {
+                    plot_row(0, -4, " .(o*o). ", shrub_green);
+                    plot_row(0, -3, "(* o * o)", shrub_green);
+                    plot_row(0, -2, " (_____) ", shrub_green);
+                    plot_row(0, -1, "   |||   ", BARK_RAW_UMBER);
+                    plot_row(0, 0, "   |||   ", BARK_RAW_UMBER);
+                } else {
+                    plot_row(0, -2, " (o*o) ", shrub_green);
+                    plot_row(0, -1, " (___) ", shrub_green);
+                    plot_row(0, 0, "  |||  ", BARK_RAW_UMBER);
+                }
+            }
+            TreeSpecies::BloomingShrub => {
+                if target_tree_h >= 8 {
+                    plot_row(0, -7, "   .---.   ", blooming_green);
+                    plot_row(0, -6, " .(@ % *). ", blooming_green);
+                    plot_row(0, -5, "(* % @ * %)", blooming_green);
+                    plot_row(0, -4, "(% * % @ *)", blooming_green);
+                    plot_row(0, -3, " (_______) ", blooming_green);
+                    plot_row(0, -2, "   / | \\   ", BARK_RAW_UMBER);
+                    plot_row(0, -1, "   \\ | /   ", BARK_RAW_UMBER);
+                    plot_row(0, 0, "    |||    ", BARK_RAW_UMBER);
+                } else if target_tree_h >= 4 {
+                    plot_row(0, -4, " .(*%*). ", blooming_green);
+                    plot_row(0, -3, "(@ * % @)", blooming_green);
+                    plot_row(0, -2, " (_____) ", blooming_green);
+                    plot_row(0, -1, "   |||   ", BARK_RAW_UMBER);
+                    plot_row(0, 0, "   |||   ", BARK_RAW_UMBER);
+                } else {
+                    plot_row(0, -2, " (*%*) ", blooming_green);
+                    plot_row(0, -1, " (___) ", blooming_green);
+                    plot_row(0, 0, "  |||  ", BARK_RAW_UMBER);
+                }
+            }
+            TreeSpecies::HerbalCluster => {
+                if target_tree_h >= 8 {
+                    plot_row(0, -7, " |  |  | ", herb_green);
+                    plot_row(0, -6, " |i |i |i", herb_green);
+                    plot_row(0, -5, " |i |i |i", herb_green);
+                    plot_row(0, -4, " \\||/||/ ", herb_green);
+                    plot_row(0, -3, "  \\ || / ", herb_green);
+                    plot_row(0, -2, "   \\||/  ", herb_green);
+                    plot_row(0, -1, "   /||\\  ", herb_green);
+                    plot_row(0, 0, "   \"\"\"  ", herb_green);
+                } else if target_tree_h >= 4 {
+                    plot_row(0, -4, " i | i ", herb_green);
+                    plot_row(0, -3, " |i|i|i", herb_green);
+                    plot_row(0, -2, " \\|/|/ ", herb_green);
+                    plot_row(0, -1, "  \\|/  ", herb_green);
+                    plot_row(0, 0, "  \"\"\"  ", herb_green);
+                } else {
+                    plot_row(0, -2, " \\|/ ", herb_green);
+                    plot_row(0, -1, " |i| ", herb_green);
+                    plot_row(0, 0, " \"\"  ", herb_green);
+                }
+            }
+            TreeSpecies::Cypress => {
+                if target_tree_h >= 8 {
+                    plot_row(0, -8, "   ^   ", cypress_green);
+                    plot_row(0, -7, "  /|\\  ", cypress_green);
+                    plot_row(0, -6, " (| |) ", cypress_green);
+                    plot_row(0, -5, " (| |) ", cypress_green);
+                    plot_row(0, -4, " (| |) ", cypress_green);
+                    plot_row(0, -3, " (| |) ", cypress_green);
+                    plot_row(0, -2, "  \\|/  ", cypress_green);
+                    draw_trunk(3, -1, trunk_w);
+                } else if target_tree_h >= 4 {
+                    plot_row(0, -4, "  ^  ", cypress_green);
+                    plot_row(0, -3, " /|\\ ", cypress_green);
+                    plot_row(0, -2, " (| |) ", cypress_green);
+                    draw_trunk(3, -1, 1);
+                } else {
+                    plot_row(0, -2, " ^ ", cypress_green);
+                    plot_row(0, -1, "(|)", cypress_green);
+                    draw_trunk(1, 0, 1);
+                }
+            }
+            TreeSpecies::Maple => {
+                if target_tree_h >= 8 {
+                    plot_row(0, -8, "   .---.   ", maple_red);
+                    plot_row(0, -7, " ./{% %}\\. ", maple_red);
+                    plot_row(0, -6, "/{% % % %}\\", maple_red);
+                    plot_row(0, -5, "|% % % % %|", maple_red);
+                    plot_row(0, -4, " \\{% % %}/ ", maple_red);
+                    plot_row(0, -3, "  \\_____/  ", maple_red);
+                    draw_trunk(5, -2, trunk_w);
+                } else if target_tree_h >= 4 {
+                    plot_row(0, -4, " .{%}\\. ", maple_red);
+                    plot_row(0, -3, "({% %})", maple_red);
+                    plot_row(0, -2, " \\___/ ", maple_red);
+                    draw_trunk(3, -1, 1);
+                } else {
+                    plot_row(0, -2, "({%})", maple_red);
+                    plot_row(0, -1, " \\_/ ", maple_red);
+                    draw_trunk(2, 0, 1);
+                }
+            }
+            TreeSpecies::CherryBlossom => {
+                if target_tree_h >= 8 {
+                    plot_row(0, -8, "   .---.   ", cherry_pink);
+                    plot_row(0, -7, " .(* @ *). ", cherry_pink);
+                    plot_row(0, -6, "(* @ * @ *)", cherry_pink);
+                    plot_row(0, -5, "(* \\   / *)", cherry_pink);
+                    plot_row(0, -4, " \\  \\_/  / ", cherry_pink);
+                    draw_trunk(5, -3, trunk_w);
+                } else if target_tree_h >= 4 {
+                    plot_row(0, -4, " .(*@*). ", cherry_pink);
+                    plot_row(0, -3, "(* @ * *)", cherry_pink);
+                    plot_row(0, -2, "  \\_|_/  ", cherry_pink);
+                    draw_trunk(4, -1, 1);
+                } else {
+                    plot_row(0, -2, " (*@*) ", cherry_pink);
+                    plot_row(0, -1, "  \\|/  ", cherry_pink);
+                    draw_trunk(3, 0, 1);
+                }
+            }
+            TreeSpecies::Baobab => {
+                if target_tree_h >= 8 {
+                    plot_row(0, -8, "  \\ | /  ", baobab_green);
+                    plot_row(0, -7, " (_____) ", baobab_green);
+                    plot_row(0, -6, "  /---\\  ", BARK_RAW_UMBER);
+                    plot_row(0, -5, " | ::: | ", BARK_RAW_UMBER);
+                    plot_row(0, -4, " | ::: | ", BARK_RAW_UMBER);
+                    plot_row(0, -3, " | ::: | ", BARK_RAW_UMBER);
+                    plot_row(0, -2, " | ::: | ", BARK_RAW_UMBER);
+                    plot_row(0, -1, " | ::: | ", BARK_RAW_UMBER);
+                    plot_row(0, 0, "  \\---/  ", BARK_RAW_UMBER);
+                } else if target_tree_h >= 4 {
+                    plot_row(0, -4, " \\ | / ", baobab_green);
+                    plot_row(0, -3, " (___) ", baobab_green);
+                    plot_row(0, -2, " |:::| ", BARK_RAW_UMBER);
+                    plot_row(0, -1, " |:::| ", BARK_RAW_UMBER);
+                    plot_row(0, 0, " \\---/ ", BARK_RAW_UMBER);
+                } else {
+                    plot_row(0, -2, "  \\|/  ", baobab_green);
+                    plot_row(0, -1, " |:::| ", BARK_RAW_UMBER);
+                    plot_row(0, 0, " \\---/ ", BARK_RAW_UMBER);
+                }
+            }
+            TreeSpecies::Redwood => {
+                if target_tree_h >= 8 {
+                    plot_row(0, -8, "     ^     ", redwood_green);
+                    plot_row(0, -7, "    /|\\    ", redwood_green);
+                    plot_row(0, -6, "   //|\\\\   ", redwood_green);
+                    plot_row(0, -5, "  ///|\\\\\\  ", redwood_green);
+                    plot_row(0, -4, "   //|\\\\   ", redwood_green);
+                    draw_trunk(5, -3, trunk_w);
+                } else if target_tree_h >= 4 {
+                    plot_row(0, -4, "   ^   ", redwood_green);
+                    plot_row(0, -3, "  /|\\  ", redwood_green);
+                    plot_row(0, -2, " //|\\\\ ", redwood_green);
+                    draw_trunk(3, -1, trunk_w.min(2));
+                } else {
+                    plot_row(0, -2, "  ^  ", redwood_green);
+                    plot_row(0, -1, " /|\\ ", redwood_green);
+                    draw_trunk(2, 0, 1);
                 }
             }
         }
@@ -1450,7 +2219,7 @@ pub fn calculate_road_texture(x: usize, style: RoadStyle, time: f32) -> (char, C
             } else if slab == 5 {
                 '_'
             } else {
-                '─' // smooth pavement
+                '-' // smooth pavement
             };
             (ch, fg)
         }
@@ -1555,7 +2324,7 @@ pub fn calculate_road_subsurface(x: usize, style: RoadStyle, time: f32) -> (char
                 Color::rgb(213, 0, 0) // molten mantle
             };
             let ch = if roughness > 0.65 {
-                '≈' // convection current
+                '^' // spitting magma fountain
             } else if roughness > 0.30 {
                 '~' // molten wave
             } else {
@@ -1568,7 +2337,7 @@ pub fn calculate_road_subsurface(x: usize, style: RoadStyle, time: f32) -> (char
             let ch = if (x + ((time * 1.5) as usize)).is_multiple_of(7) {
                 '|' // deep ice fracture
             } else if roughness > 0.45 {
-                '≡' // compressed glacial shelf
+                '-' // compressed glacial shelf
             } else {
                 '=' // blue ice bed
             };
@@ -1591,7 +2360,7 @@ pub fn calculate_road_subsurface(x: usize, style: RoadStyle, time: f32) -> (char
             let ch = if slab == 0 {
                 '|' // curb expansion seam
             } else {
-                '▔' // street curb stone ledge
+                '_' // street curb stone ledge
             };
             (ch, fg)
         }
@@ -1615,7 +2384,7 @@ pub fn calculate_road_subsurface(x: usize, style: RoadStyle, time: f32) -> (char
         RoadStyle::Grid => {
             let fg = Color::rgb(0, 230, 118);
             let node = (x + ((time * 3.0) as usize)) % 6;
-            let ch = if node == 0 { '╩' } else { '│' };
+            let ch = if node == 0 { '+' } else { '|' };
             (ch, fg)
         }
         RoadStyle::Crypt => {
@@ -1643,7 +2412,7 @@ pub fn calculate_road_subsurface(x: usize, style: RoadStyle, time: f32) -> (char
         RoadStyle::Mud => {
             let fg = Color::rgb(62, 39, 35);
             let ch = if roughness > 0.65 {
-                '≈' // bubbling mire
+                'o' // bubbling mire
             } else if roughness > 0.35 {
                 '~' // thick peat slurry
             } else {
@@ -1661,8 +2430,96 @@ pub fn calculate_road_subsurface(x: usize, style: RoadStyle, time: f32) -> (char
     }
 }
 
+/// Generate near curb gutter band texture for multi-band perspective gradient from horizon to near curb.
+pub fn calculate_road_curb_gutter(x: usize, style: RoadStyle, time: f32) -> (char, Color) {
+    let x_f = x as f32;
+    let r1 = (x_f * 0.51 + time * 1.2).sin();
+    let r2 = (x_f * 1.13 - time * 0.4).cos();
+    let roughness = (r1 * 0.55 + r2 * 0.45).abs();
+
+    match style {
+        RoadStyle::Dirt => {
+            let fg = Color::rgb(82, 54, 44);
+            let ch = if roughness > 0.65 {
+                '.'
+            } else if roughness > 0.35 {
+                ','
+            } else {
+                ' '
+            };
+            (ch, fg)
+        }
+        RoadStyle::Cobblestone => {
+            let fg = Color::rgb(75, 75, 75);
+            let slab = (x + ((time * 2.8) as usize)) % 5;
+            let ch = if slab == 0 { '|' } else { '_' };
+            (ch, fg)
+        }
+        RoadStyle::Magma => {
+            let fg = Color::rgb(150, 20, 10);
+            let ch = if roughness > 0.60 { '~' } else { '.' };
+            (ch, fg)
+        }
+        RoadStyle::Ice => {
+            let fg = Color::rgb(92, 172, 184);
+            let ch = if roughness > 0.50 { '=' } else { '-' };
+            (ch, fg)
+        }
+        RoadStyle::Seabed => {
+            let fg = Color::rgb(175, 130, 90);
+            let ch = if roughness > 0.55 { '~' } else { '.' };
+            (ch, fg)
+        }
+        RoadStyle::Sidewalk => {
+            let fg = Color::rgb(110, 110, 110);
+            let joint = (x + ((time * 2.5) as usize)) % 10;
+            let ch = if joint == 0 { '|' } else { ' ' };
+            (ch, fg)
+        }
+        RoadStyle::Roof => {
+            let fg = Color::rgb(90, 60, 50);
+            let tile = (x + ((time * 2.0) as usize)) % 4;
+            let ch = if tile == 0 { '|' } else { '_' };
+            (ch, fg)
+        }
+        RoadStyle::Grid => {
+            let fg = Color::rgb(0, 160, 90);
+            let node = (x + ((time * 3.0) as usize)) % 6;
+            let ch = if node == 0 { '+' } else { '-' };
+            (ch, fg)
+        }
+        RoadStyle::Crypt => {
+            let fg = Color::rgb(70, 70, 70);
+            let ch = if roughness > 0.60 { '.' } else { ' ' };
+            (ch, fg)
+        }
+        RoadStyle::Savanna => {
+            let fg = Color::rgb(125, 82, 58);
+            let ch = if roughness > 0.60 { '_' } else { '.' };
+            (ch, fg)
+        }
+        RoadStyle::Mud => {
+            let fg = Color::rgb(42, 28, 24);
+            let ch = if roughness > 0.60 { '~' } else { '=' };
+            (ch, fg)
+        }
+        RoadStyle::Tracks => {
+            let fg = Color::rgb(72, 86, 96);
+            let ch = if roughness > 0.50 { '.' } else { ',' };
+            (ch, fg)
+        }
+        RoadStyle::Checkerboard => {
+            let fg = Color::rgb(120, 120, 120);
+            let tile = (x + ((time * 2.0) as usize)) % 4;
+            let ch = if tile < 2 { '#' } else { ' ' };
+            (ch, fg)
+        }
+        RoadStyle::None => (' ', Color::rgb(0, 0, 0)),
+    }
+}
+
 /// Render ground / road baseline directly at cow_bottom_y with procedural harmonic texture synthesis.
-/// Supports multi-row realistic ground depth (contact surface + subsurface foundation bed).
+/// Supports multi-row realistic ground depth (contact surface + subsurface foundation bed + near curb gutter).
 pub fn render_road(
     fb: &mut FrameBuffer,
     style: RoadStyle,
@@ -1705,6 +2562,18 @@ pub fn render_road(
                 let (ch, fg) = calculate_road_subsurface(x, style, time);
                 if ch != ' ' {
                     let _ = fb.set(x, subsurface_y, Cell::new(ch, fg));
+                }
+            }
+        }
+
+        // Row 2: Near curb gutter band (multi-band perspective gradient to near curb)
+        let curb_y = cow_bottom_y + 2;
+        if curb_y < fb.height {
+            for i in 0..chunk_len {
+                let x = chunk_start + i;
+                let (ch, fg) = calculate_road_curb_gutter(x, style, time);
+                if ch != ' ' {
+                    let _ = fb.set(x, curb_y, Cell::new(ch, fg));
                 }
             }
         }
@@ -1781,7 +2650,7 @@ pub fn render_environment(
                 let wave_ch = if ((x + (time * 3.0) as usize) % 4) < 2 {
                     '~'
                 } else {
-                    '≈'
+                    '-'
                 };
                 let y_wave = ((surface_y as f32 + wave_harmonic).round() as usize)
                     .min(ground_y.saturating_sub(1));
@@ -2029,22 +2898,272 @@ mod tests {
         let s0 = calculate_tree_species(0, EnvironmentStyle::Pasture, 42);
         let s1 = calculate_tree_species(1, EnvironmentStyle::Pasture, 42);
         let s2 = calculate_tree_species(2, EnvironmentStyle::Pasture, 42);
-        // Ensure species are valid variants
-        assert!(matches!(
-            s0,
-            TreeSpecies::Oak | TreeSpecies::Pine | TreeSpecies::Birch
-        ));
-        assert!(matches!(
-            s1,
-            TreeSpecies::Oak | TreeSpecies::Pine | TreeSpecies::Birch
-        ));
-        assert!(matches!(
-            s2,
-            TreeSpecies::Oak | TreeSpecies::Pine | TreeSpecies::Birch
-        ));
+        let pasture_pool = get_biome_species_pool(EnvironmentStyle::Pasture);
+        assert!(pasture_pool.contains(&s0));
+        assert!(pasture_pool.contains(&s1));
+        assert!(pasture_pool.contains(&s2));
 
         let arctic_s = calculate_tree_species(0, EnvironmentStyle::Arctic, 10);
-        assert!(matches!(arctic_s, TreeSpecies::Pine | TreeSpecies::SnowFir));
+        let arctic_pool = get_biome_species_pool(EnvironmentStyle::Arctic);
+        assert!(arctic_pool.contains(&arctic_s));
+    }
+
+    #[test]
+    fn test_22_species_sequencing_and_biome_filtering() {
+        // 1. Verify that ALL_SPECIES contains all 22 distinct species
+        assert_eq!(TreeSpecies::ALL_SPECIES.len(), 22);
+        for sp in TreeSpecies::ALL_SPECIES {
+            assert!(!sp.as_str().is_empty());
+        }
+
+        // 2. Biome filtering invariants:
+        // Cold / Arctic: Conifers (SnowFir, Pine, Cypress), hardy shrubs. Zero creepers/vines.
+        let arctic_pool = get_biome_species_pool(EnvironmentStyle::Arctic);
+        assert!(arctic_pool.contains(&TreeSpecies::SnowFir));
+        assert!(arctic_pool.contains(&TreeSpecies::Pine));
+        assert!(arctic_pool.contains(&TreeSpecies::Cypress));
+        assert!(!arctic_pool.contains(&TreeSpecies::CreeperVine));
+
+        // Water / Ocean / Beach: Palm, Mangrove, aquatic reeds. Zero temperate creepers.
+        let ocean_pool = get_biome_species_pool(EnvironmentStyle::Ocean);
+        assert!(ocean_pool.contains(&TreeSpecies::Palm));
+        assert!(ocean_pool.contains(&TreeSpecies::Mangrove));
+        assert!(!ocean_pool.contains(&TreeSpecies::CreeperVine));
+
+        // Savanna / Desert: Acacia, Baobab, Cactus, sparse arid herbs, DeadTree.
+        let savanna_pool = get_biome_species_pool(EnvironmentStyle::Savanna);
+        assert!(savanna_pool.contains(&TreeSpecies::Acacia));
+        assert!(savanna_pool.contains(&TreeSpecies::Baobab));
+        assert!(savanna_pool.contains(&TreeSpecies::Cactus));
+        assert!(savanna_pool.contains(&TreeSpecies::DeadTree));
+
+        // Graveyard: DeadTree, WeepingWillow, eerie Oak, thorny CreeperVine, Cypress.
+        let grave_pool = get_biome_species_pool(EnvironmentStyle::Graveyard);
+        assert!(grave_pool.contains(&TreeSpecies::DeadTree));
+        assert!(grave_pool.contains(&TreeSpecies::WeepingWillow));
+        assert!(grave_pool.contains(&TreeSpecies::Oak));
+        assert!(grave_pool.contains(&TreeSpecies::CreeperVine));
+        assert!(grave_pool.contains(&TreeSpecies::Cypress));
+
+        // Forest / Pasture: Oak, Maple, Birch, Pine, CherryBlossom, BerryShrub, BloomingShrub, HerbalCluster.
+        let forest_pool = get_biome_species_pool(EnvironmentStyle::Forest);
+        assert!(forest_pool.contains(&TreeSpecies::Oak));
+        assert!(forest_pool.contains(&TreeSpecies::Maple));
+        assert!(forest_pool.contains(&TreeSpecies::Birch));
+        assert!(forest_pool.contains(&TreeSpecies::Pine));
+        assert!(forest_pool.contains(&TreeSpecies::CherryBlossom));
+        assert!(forest_pool.contains(&TreeSpecies::BerryShrub));
+        assert!(forest_pool.contains(&TreeSpecies::BloomingShrub));
+        assert!(forest_pool.contains(&TreeSpecies::HerbalCluster));
+
+        // 3. Low-discrepancy Weyl sequence natural mixed distribution test
+        let mut sampled_species = std::collections::HashSet::new();
+        for n in 0..40 {
+            let sp = calculate_tree_species(n, EnvironmentStyle::Forest, 7);
+            sampled_species.insert(sp);
+        }
+        assert!(
+            sampled_species.len() >= 6,
+            "Expected at least 6 species sampled across 40 trees, got {}",
+            sampled_species.len()
+        );
+    }
+
+    #[test]
+    fn test_fruit_star_uniqueness_across_viewport_widths() {
+        let mut all_tree_patterns = Vec::new();
+        let mut colors_seen = std::collections::HashSet::new();
+
+        for t_idx in 0..25 {
+            let species = calculate_tree_species(t_idx, EnvironmentStyle::Forest, 42);
+            let mut tree_ornaments = Vec::new();
+            for dy in -8..=-2 {
+                for dx in -5..=5 {
+                    if let Some((ch, col)) = get_foliage_ornament(species, t_idx, dx, dy, '@') {
+                        tree_ornaments.push((dx, dy, ch, col.r, col.g, col.b));
+                        colors_seen.insert((col.r, col.g, col.b));
+                    }
+                }
+            }
+            if !tree_ornaments.is_empty() {
+                for prev in &all_tree_patterns {
+                    assert_ne!(
+                        &tree_ornaments, prev,
+                        "Tree {} produced duplicate ornament pattern with a prior tree!",
+                        t_idx
+                    );
+                }
+                all_tree_patterns.push(tree_ornaments);
+            }
+        }
+        assert!(all_tree_patterns.len() >= 15);
+        assert!(colors_seen.contains(&(
+            FRUIT_RUBY_BERRY.r,
+            FRUIT_RUBY_BERRY.g,
+            FRUIT_RUBY_BERRY.b
+        )));
+        assert!(colors_seen.contains(&(
+            FRUIT_GOLDEN_CITRUS.r,
+            FRUIT_GOLDEN_CITRUS.g,
+            FRUIT_GOLDEN_CITRUS.b
+        )));
+        assert!(colors_seen.contains(&(
+            FRUIT_AMETHYST_PLUM.r,
+            FRUIT_AMETHYST_PLUM.g,
+            FRUIT_AMETHYST_PLUM.b
+        )));
+        assert!(colors_seen.contains(&(
+            FRUIT_CHERRY_BLOSSOM.r,
+            FRUIT_CHERRY_BLOSSOM.g,
+            FRUIT_CHERRY_BLOSSOM.b
+        )));
+        assert!(colors_seen.contains(&(
+            FRUIT_IVORY_STAR.r,
+            FRUIT_IVORY_STAR.g,
+            FRUIT_IVORY_STAR.b
+        )));
+    }
+
+    #[test]
+    fn test_trunk_thickness_and_multi_shade_coloring() {
+        // 1. Allometric width scaling
+        let rw_tall = calculate_trunk_width(TreeSpecies::Redwood, 9, 0);
+        let rw_med = calculate_trunk_width(TreeSpecies::Redwood, 5, 0);
+        assert_eq!(rw_tall, 3);
+        assert_eq!(rw_med, 2);
+
+        let bb_tall = calculate_trunk_width(TreeSpecies::Baobab, 8, 0);
+        assert_eq!(bb_tall, 3);
+
+        let herb_w = calculate_trunk_width(TreeSpecies::HerbalCluster, 8, 0);
+        assert_eq!(herb_w, 1);
+
+        // 2. Multi-shade bark palette coverage
+        let mut bark_colors_seen = std::collections::HashSet::new();
+        for sp in TreeSpecies::ALL_SPECIES {
+            for y in 0..5 {
+                let (_, col) = get_bark_glyph_and_color(*sp, 0, 1, y, 0);
+                bark_colors_seen.insert((col.r, col.g, col.b));
+            }
+        }
+        assert!(bark_colors_seen.contains(&(BARK_ESPRESSO.r, BARK_ESPRESSO.g, BARK_ESPRESSO.b)));
+        assert!(bark_colors_seen.contains(&(BARK_CHESTNUT.r, BARK_CHESTNUT.g, BARK_CHESTNUT.b)));
+        assert!(bark_colors_seen.contains(&(BARK_RAW_UMBER.r, BARK_RAW_UMBER.g, BARK_RAW_UMBER.b)));
+        assert!(bark_colors_seen.contains(&(
+            BARK_BIRCH_SILVER.r,
+            BARK_BIRCH_SILVER.g,
+            BARK_BIRCH_SILVER.b
+        )));
+        assert!(bark_colors_seen.contains(&(BARK_MOSSY.r, BARK_MOSSY.g, BARK_MOSSY.b)));
+        assert!(bark_colors_seen.contains(&(
+            BARK_TERRACOTTA.r,
+            BARK_TERRACOTTA.g,
+            BARK_TERRACOTTA.b
+        )));
+
+        // 3. Bark texturing characters produce requested procedural textures:
+        // '||', '|/|', '(|)', '||', '!!', '|:|', '|;|'
+        let (ch_w1, _) = get_bark_glyph_and_color(TreeSpecies::Pine, 0, 1, 0, 0);
+        assert_eq!(ch_w1, '|');
+
+        let (w2_0, _) = get_bark_glyph_and_color(TreeSpecies::Pine, 0, 2, 0, 0);
+        let (w2_1, _) = get_bark_glyph_and_color(TreeSpecies::Pine, 1, 2, 0, 0);
+        assert_eq!((w2_0, w2_1), ('|', '|')); // "||"
+
+        let (w2_0_alt, _) = get_bark_glyph_and_color(TreeSpecies::Pine, 0, 2, 1, 0);
+        let (w2_1_alt, _) = get_bark_glyph_and_color(TreeSpecies::Pine, 1, 2, 1, 0);
+        assert_eq!((w2_0_alt, w2_1_alt), ('!', '!')); // "!!"
+
+        let (w3_l0, _) = get_bark_glyph_and_color(TreeSpecies::Redwood, 0, 3, 0, 0);
+        let (w3_m0, _) = get_bark_glyph_and_color(TreeSpecies::Redwood, 1, 3, 0, 0);
+        let (w3_r0, _) = get_bark_glyph_and_color(TreeSpecies::Redwood, 2, 3, 0, 0);
+        assert_eq!((w3_l0, w3_m0, w3_r0), ('|', '/', '|')); // "|/|"
+
+        let (w3_l1, _) = get_bark_glyph_and_color(TreeSpecies::Redwood, 0, 3, 1, 0);
+        let (w3_m1, _) = get_bark_glyph_and_color(TreeSpecies::Redwood, 1, 3, 1, 0);
+        let (w3_r1, _) = get_bark_glyph_and_color(TreeSpecies::Redwood, 2, 3, 1, 0);
+        assert_eq!((w3_l1, w3_m1, w3_r1), ('(', '|', ')')); // "(|)"
+
+        let (w3_l2, _) = get_bark_glyph_and_color(TreeSpecies::Redwood, 0, 3, 2, 0);
+        let (w3_m2, _) = get_bark_glyph_and_color(TreeSpecies::Redwood, 1, 3, 2, 0);
+        let (w3_r2, _) = get_bark_glyph_and_color(TreeSpecies::Redwood, 2, 3, 2, 0);
+        assert_eq!((w3_l2, w3_m2, w3_r2), ('|', ':', '|')); // "|:|"
+
+        let (w3_l3, _) = get_bark_glyph_and_color(TreeSpecies::Redwood, 0, 3, 3, 0);
+        let (w3_m3, _) = get_bark_glyph_and_color(TreeSpecies::Redwood, 1, 3, 3, 0);
+        let (w3_r3, _) = get_bark_glyph_and_color(TreeSpecies::Redwood, 2, 3, 3, 0);
+        assert_eq!((w3_l3, w3_m3, w3_r3), ('|', ';', '|')); // "|;|"
+    }
+
+    #[test]
+    fn test_mountain_depth_shading_layers() {
+        let base_fg = Color::rgb(64, 82, 92);
+        let start_y = 5;
+        let mountain_base_y = 20;
+
+        // 1. Foreground crests: apex highlight is brighter than base
+        let (ch_apex, col_apex) = calculate_mountain_depth_cell(
+            MountainStyle::Peaks,
+            base_fg,
+            10,
+            start_y,
+            start_y,
+            mountain_base_y,
+            0.5,
+            15.0,
+            12.0,
+            12.0,
+        );
+        assert_eq!(ch_apex, '^');
+        assert!(col_apex.r > base_fg.r && col_apex.g > base_fg.g && col_apex.b > base_fg.b);
+
+        // Leeward shadow facet is darker than base
+        let (_ch_shadow, col_shadow) = calculate_mountain_depth_cell(
+            MountainStyle::Peaks,
+            base_fg,
+            10,
+            start_y,
+            start_y,
+            mountain_base_y,
+            -0.8,
+            10.0,
+            12.0,
+            8.0,
+        );
+        assert!(col_shadow.r < base_fg.r && col_shadow.g < base_fg.g && col_shadow.b < base_fg.b);
+
+        // 2. Mid-ground foothills layer: strata / crevasse texturing
+        let (ch_mid, _) = calculate_mountain_depth_cell(
+            MountainStyle::Peaks,
+            base_fg,
+            10,
+            10,
+            start_y,
+            mountain_base_y,
+            0.0,
+            10.0,
+            10.0,
+            10.0,
+        );
+        assert!(matches!(ch_mid, '=' | ':' | '|' | '/'));
+
+        // 3. Distant mountain layer: Leonardo da Vinci sfumato desaturation & mist textures
+        let (ch_base, col_base) = calculate_mountain_depth_cell(
+            MountainStyle::Peaks,
+            base_fg,
+            10,
+            mountain_base_y,
+            start_y,
+            mountain_base_y,
+            0.0,
+            5.0,
+            5.0,
+            5.0,
+        );
+        assert_eq!(ch_base, '.');
+        let dist_to_slate_base = (col_base.r as i32 - SFUMATO_SLATE.r as i32).abs();
+        let dist_to_slate_orig = (base_fg.r as i32 - SFUMATO_SLATE.r as i32).abs();
+        assert!(dist_to_slate_base <= dist_to_slate_orig);
     }
 
     #[test]

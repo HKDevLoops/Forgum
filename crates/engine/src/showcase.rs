@@ -55,10 +55,10 @@ pub fn run_showcase() -> String {
     let start = Instant::now();
 
     let mut output = String::new();
-    output.push_str("╔══════════════════════════════════════════════════════════════╗\n");
-    output.push_str("║                    FORGUM SHOWCASE                          ║\n");
-    output.push_str("║              The Terminal Cow Companion                     ║\n");
-    output.push_str("╚══════════════════════════════════════════════════════════════╝\n\n");
+    output.push_str("+==============================================================+\n");
+    output.push_str("|                    FORGUM SHOWCASE                          |\n");
+    output.push_str("|              The Terminal Cow Companion                     |\n");
+    output.push_str("+==============================================================+\n\n");
 
     for (i, seg) in segs.iter().enumerate() {
         let elapsed = start.elapsed().as_secs();

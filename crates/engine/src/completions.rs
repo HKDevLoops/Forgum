@@ -168,6 +168,7 @@ _forgum_accel="auto dedicated integrated npu cpu"
 _forgum_attach_modes="startup prompt clear split pane"
 _forgum_aspects="auto 21:9 16:9 16:10 4:3 1:1 narrow"
 _forgum_aspect_modes="preset dynamic auto"
+_forgum_colorblind="none protanopia deuteranopia tritanopia achromatopsia protanopia_sim deuteranopia_sim tritanopia_sim"
 
 _forgum_custom_complete() {
     local prev="${COMP_WORDS[COMP_CWORD-1]}"
@@ -191,6 +192,10 @@ _forgum_custom_complete() {
             ;;
         --color-mode)
             COMPREPLY=( $(compgen -W "$_forgum_colors" -- "$cur") )
+            return 0
+            ;;
+        --colorblind|--cvd)
+            COMPREPLY=( $(compgen -W "$_forgum_colorblind" -- "$cur") )
             return 0
             ;;
         --cow|--animal|-a)
@@ -464,6 +469,16 @@ _forgum_aspect_modes=(
     'dynamic:Live recalculation on window resize'
     'auto:Context-aware adaptation'
 )
+_forgum_colorblind=(
+    'none:Standard full-color spectrum'
+    'protanopia:Red-weak/blind Daltonization (enhanced blue/amber contrast)'
+    'deuteranopia:Green-weak/blind Daltonization (enhanced yellow/blue contrast)'
+    'tritanopia:Blue-weak/blind Daltonization (enhanced red/cyan contrast)'
+    'achromatopsia:Complete monochrome luminance grayscale'
+    'protanopia_sim:Protanopia LMS simulation filter (inspection mode)'
+    'deuteranopia_sim:Deuteranopia LMS simulation filter (inspection mode)'
+    'tritanopia_sim:Tritanopia LMS simulation filter (inspection mode)'
+)
 "#;
     script.push_str(zsh_extra);
     script
@@ -506,11 +521,12 @@ complete -c forgum -n '__fish_forgum_no_subcommand' -a 'moonwalk' -d 'Perform le
 
 # Rich option value completions with descriptions
 complete -c forgum -l effect -s e -d 'Animation effect' -x -a 'moonwalk	"Legendary reverse-glide moonwalk with sliding hooves" walk	"Natural bovine walking animation" breathe	"Gentle idle breathing animation" float	"Drifting levitation animation" fly	"Flying creature animation" talk	"Conversational jaw animation" sway	"Swaying pendulum animation" pulse	"Pulsing scale animation" glitch	"Digital cyberpunk glitch animation" particles	"Ambient particle emitter animation" dissolve	"Dissolve and materialize animation" animal_natural	"Unique per-creature natural kinetic animation"'
-complete -c forgum -l cow -l animal -s c -s a -d 'Animal mascot name' -x -a 'apt	"Mascot apt" armadillo	"Mascot armadillo" atat	"Mascot atat" bearface	"Mascot bearface" beavis.zen	"Mascot beavis.zen" bees	"Mascot bees" bill-the-cat	"Mascot bill-the-cat" bud-frogs	"Mascot bud-frogs" bunny	"Mascot bunny" cat	"Mascot cat" cat2	"Mascot cat2" catfence	"Mascot catfence" charizardvice	"Mascot charizardvice" charlie	"Mascot charlie" claw-arm	"Mascot claw-arm" corgi	"Mascot corgi" cower	"Mascot cower" cowfee	"Mascot cowfee" cthulhu-mini	"Mascot cthulhu-mini" daemon	"Mascot daemon" default	"Mascot default" docker-whale	"Mascot docker-whale" doge	"Mascot doge" dolphin	"Mascot dolphin" dragon	"Mascot dragon" dragon-and-cow	"Mascot dragon-and-cow" duck	"Mascot duck" ebi_furai	"Mascot ebi_furai" elephant	"Mascot elephant" elephant-in-snake	"Mascot elephant-in-snake" elephant2	"Mascot elephant2" eyes	"Mascot eyes" fat-banana	"Mascot fat-banana" fat-cow	"Mascot fat-cow" fence	"Mascot fence" flaming-sheep	"Mascot flaming-sheep" fox	"Mascot fox" ghost	"Mascot ghost" ghostbusters	"Mascot ghostbusters" glados	"Mascot glados" goat	"Mascot goat" goat2	"Mascot goat2" golden-eagle	"Mascot golden-eagle" hamster	"Mascot hamster" happy-whale	"Mascot happy-whale" hedgehog	"Mascot hedgehog" hellokitty	"Mascot hellokitty" hippie	"Mascot hippie" hiya	"Mascot hiya" hypno	"Mascot hypno" jellyfish	"Mascot jellyfish" jesus	"Mascot jesus" king	"Mascot king" kiss	"Mascot kiss" kitten	"Mascot kitten" kitty	"Mascot kitty" knight	"Mascot knight" koala	"Mascot koala" kosh	"Mascot kosh" lamb	"Mascot lamb" lamb2	"Mascot lamb2" lobster	"Mascot lobster" lollerskates	"Mascot lollerskates" luke-koala	"Mascot luke-koala" mech-and-cow	"Mascot mech-and-cow" meow	"Mascot meow" minotaur	"Mascot minotaur" mona-lisa	"Mascot mona-lisa" moofasa	"Mascot moofasa" mooghidjirah	"Mascot mooghidjirah" moojira	"Mascot moojira" moose	"Mascot moose" mule	"Mascot mule" mutilated	"Mascot mutilated" nyan	"Mascot nyan" octopus	"Mascot octopus" owl	"Mascot owl" panther	"Mascot panther" pawn	"Mascot pawn" periodic-table	"Mascot periodic-table" personality-sphere	"Mascot personality-sphere" pig	"Mascot pig" pterodactyl	"Mascot pterodactyl" pufferfish	"Mascot pufferfish" queen	"Mascot queen" radioactive-kitty	"Mascot radioactive-kitty" ram	"Mascot ram" ren	"Mascot ren" rhino	"Mascot rhino" rook	"Mascot rook" rooster	"Mascot rooster" satanic	"Mascot satanic" sauron	"Mascot sauron" seahorse	"Mascot seahorse" seahorse-big	"Mascot seahorse-big" sheep	"Mascot sheep" shikato	"Mascot shikato" shrug	"Mascot shrug" skeleton	"Mascot skeleton" sloth	"Mascot sloth" small	"Mascot small" smiling-octopus	"Mascot smiling-octopus" snoopy	"Mascot snoopy" snoopyhouse	"Mascot snoopyhouse" snoopysleep	"Mascot snoopysleep" spidercow	"Mascot spidercow" squid	"Mascot squid" squirrel	"Mascot squirrel" stegosaurus	"Mascot stegosaurus" stimpy	"Mascot stimpy" supermilker	"Mascot supermilker" surgery	"Mascot surgery" telebears	"Mascot telebears" three-eyes	"Mascot three-eyes" tiger	"Mascot tiger" tortoise	"Mascot tortoise" turkey	"Mascot turkey" turtle	"Mascot turtle" tux	"Mascot tux" tux-big	"Mascot tux-big" tweety-bird	"Mascot tweety-bird" unipony	"Mascot unipony" vader	"Mascot vader" viper	"Mascot viper" vulpix	"Mascot vulpix" walrus	"Mascot walrus" weeping-angel	"Mascot weeping-angel" whale	"Mascot whale" wizard	"Mascot wizard" wolf	"Mascot wolf" world	"Mascot world" yoda	"Mascot yoda" random	"Mascot random"'
+complete -c forgum -l cow -l animal -s c -s a -d 'Animal mascot name' -x -a 'apt	"Mascot apt" armadillo	"Mascot armadillo" atat	"Mascot atat" bearface	"Mascot bearface" beavis.zen	"Mascot beavis.zen" bees	"Mascot bees" bill-the-cat	"Mascot bill-the-cat" bud-frogs	"Mascot bud-frogs" bunny	"Mascot bunny" cat	"Mascot cat" cat2	"Mascot cat2" catfence	"Mascot catfence" charizardvice	"Mascot charizardvice" charlie	"Mascot charlie" claw-arm	"Mascot claw-arm" corgi	"Mascot corgi" cower	"Mascot cower" cowfee	"Mascot cowfee" cthulhu-mini	"Mascot cthulhu-mini" daemon	"Mascot daemon" default	"Mascot default" docker-whale	"Mascot docker-whale" doge	"Mascot doge" dolphin	"Mascot dolphin" dragon	"Mascot dragon" dragon-and-cow	"Mascot dragon-and-cow" duck	"Mascot duck" ebi_furai	"Mascot ebi_furai" elephant	"Mascot elephant" elephant-in-snake	"Mascot elephant-in-snake" elephant2	"Mascot elephant2" eyes	"Mascot eyes" fat-banana	"Mascot fat-banana" fat-cow	"Mascot fat-cow" fence	"Mascot fence" flaming-sheep	"Mascot flaming-sheep" fox	"Mascot fox" ghost	"Mascot ghost" ghostbusters	"Mascot ghostbusters" glados	"Mascot glados" goat	"Mascot goat" goat2	"Mascot goat2" golden-eagle	"Mascot golden-eagle" hamster	"Mascot hamster" happy-whale	"Mascot happy-whale" hedgehog	"Mascot hedgehog" hellokitty	"Mascot hellokitty" hippie	"Mascot hippie" hiya	"Mascot hiya" hypno	"Mascot hypno" jellyfish	"Mascot jellyfish" jesus	"Mascot jesus" king	"Mascot king" kiss	"Mascot kiss" kitten	"Mascot kitten" kitty	"Mascot kitty" knight	"Mascot knight" koala	"Mascot koala" kosh	"Mascot kosh" lamb	"Mascot lamb" lamb2	"Mascot lamb2" lobster	"Mascot lobster" lollerskates	"Mascot lollerskates" luke-koala	"Mascot luke-koala" mech-and-cow	"Mascot mech-and-cow" meow	"Mascot meow" minotaur	"Mascot minotaur" mona-lisa	"Mascot mona-lisa" moofasa	"Mascot moofasa" mooghidjirah	"Mascot mooghidjirah" moojira	"Mascot mooghidjirah" moose	"Mascot moose" mule	"Mascot mule" mutilated	"Mascot mutilated" nyan	"Mascot nyan" octopus	"Mascot octopus" owl	"Mascot owl" panther	"Mascot panther" pawn	"Mascot pawn" periodic-table	"Mascot periodic-table" personality-sphere	"Mascot personality-sphere" pig	"Mascot pig" pterodactyl	"Mascot pterodactyl" pufferfish	"Mascot pufferfish" queen	"Mascot queen" radioactive-kitty	"Mascot radioactive-kitty" ram	"Mascot ram" ren	"Mascot ren" rhino	"Mascot rhino" rook	"Mascot rook" rooster	"Mascot rooster" satanic	"Mascot satanic" sauron	"Mascot sauron" seahorse	"Mascot seahorse" seahorse-big	"Mascot seahorse-big" sheep	"Mascot sheep" shikato	"Mascot shikato" shrug	"Mascot shrug" skeleton	"Mascot skeleton" sloth	"Mascot sloth" small	"Mascot small" smiling-octopus	"Mascot smiling-octopus" snoopy	"Mascot snoopy" snoopyhouse	"Mascot snoopyhouse" snoopysleep	"Mascot snoopysleep" spidercow	"Mascot spidercow" squid	"Mascot squid" squirrel	"Mascot squirrel" stegosaurus	"Mascot stegosaurus" stimpy	"Mascot stimpy" supermilker	"Mascot supermilker" surgery	"Mascot surgery" telebears	"Mascot telebears" three-eyes	"Mascot three-eyes" tiger	"Mascot tiger" tortoise	"Mascot tortoise" turkey	"Mascot turkey" turtle	"Mascot turtle" tux	"Mascot tux" tux-big	"Mascot tux-big" tweety-bird	"Mascot tweety-bird" unipony	"Mascot unipony" vader	"Mascot vader" viper	"Mascot viper" vulpix	"Mascot vulpix" walrus	"Mascot walrus" weeping-angel	"Mascot weeping-angel" whale	"Mascot whale" wizard	"Mascot wizard" wolf	"Mascot wolf" world	"Mascot world" yoda	"Mascot yoda" random	"Mascot random"'
 complete -c forgum -l mountain -d 'Mountain/horizon style' -x -a 'hills	"Rolling verdant hills" peaks	"Jagged alpine peaks" volcano	"Active smoldering volcano" iceberg	"Frozen glacier ridges" skyline	"Urban skyscraper silhouette" seamount	"Underwater tectonic ridges" plateau	"Desert mesa and canyon ridges" crater	"Impact rim and astral ridge" gothic	"Spire and cathedral silhouette" castle	"Fortress ramparts" garden	"Terraced hedge and floral ridge" none	"Disable mountain horizon"'
 complete -c forgum -l road -d 'Road/ground style' -x -a 'dirt	"Countryside dirt trail" cobblestone	"Medieval stone pavement" magma	"Cracked volcanic basalt" ice	"Packed crystalline ice" seabed	"Ripple sands and deep coral" sidewalk	"Paved urban asphalt" roof	"Ceramic roof shingles" grid	"Neon vector cyber grid" crypt	"Dark catacomb flagstones" savanna	"Sun-baked arid trail" mud	"Squishy wet soil" tracks	"Railroad ties" checkerboard	"High-contrast dual tiles" none	"Disable ground layer"'
 complete -c forgum -l environment -d 'Environment particle effect' -x -a 'pasture	"Open meadows" inferno	"Blazing magma" ocean	"Aquatic realm" arctic	"Frozen tundra" city	"Metropolitan skyline" forest	"Ancient woodlands" savanna	"Golden plains" swamp	"Murky bayou" space	"Cosmos void" cyber	"Digital matrix" graveyard	"Gothic cemetery" jurassic	"Primeval wilds" hive	"Bio hive" throne	"Gothic sanctuary" none	"Disable particles"'
 complete -c forgum -l color-mode -d 'Color rendering mode' -x -a 'default	"Creature natural wildlife colors" animal	"Alias for default" natural	"Divine natural colors given by God in nature" animal_natural	"Alias for natural" rainbow	"Refined OKLCH lolcat spectrum" lolcat	"Alias for rainbow" solid	"Single pure hue" none	"Monochrome terminal default"'
+complete -c forgum -l colorblind -l cvd -d 'Color vision deficiency accessibility mode' -x -a 'none	"Standard full spectrum" protanopia	"Red-blind Daltonization" deuteranopia	"Green-blind Daltonization" tritanopia	"Blue-blind Daltonization" achromatopsia	"Monochrome luminance" protanopia_sim	"Protanopia LMS simulation" deuteranopia_sim	"Deuteranopia LMS simulation" tritanopia_sim	"Tritanopia LMS simulation"'
 complete -c forgum -l text -s t -d 'Text inside the speech bubble'
 complete -c forgum -l think -s T -d 'Render as thought bubble instead of speech bubble'
 complete -c forgum -l background -s b -d 'Render above prompt as non-blocking overlay'
@@ -784,6 +800,17 @@ Register-ArgumentCompleter -Native -CommandName 'forgum' -ScriptBlock {
         'auto' = 'Context-aware adaptation'
     }
 
+    $colorblindModes = @{
+        'none' = 'Standard full-color spectrum'
+        'protanopia' = 'Red-weak/blind Daltonization (enhanced blue/amber contrast)'
+        'deuteranopia' = 'Green-weak/blind Daltonization (enhanced yellow/blue contrast)'
+        'tritanopia' = 'Blue-weak/blind Daltonization (enhanced red/cyan contrast)'
+        'achromatopsia' = 'Complete monochrome luminance grayscale'
+        'protanopia_sim' = 'Protanopia LMS simulation filter (inspection mode)'
+        'deuteranopia_sim' = 'Deuteranopia LMS simulation filter (inspection mode)'
+        'tritanopia_sim' = 'Tritanopia LMS simulation filter (inspection mode)'
+    }
+
     $targetMap = $null
     switch ($prevWord) {
         { $_ -in '--effect', '-e' } { $targetMap = $effects }
@@ -791,6 +818,7 @@ Register-ArgumentCompleter -Native -CommandName 'forgum' -ScriptBlock {
         '--road' { $targetMap = $roads }
         '--environment' { $targetMap = $environments }
         '--color-mode' { $targetMap = $colors }
+        { $_ -in '--colorblind', '--cvd' } { $targetMap = $colorblindModes }
         { $_ -in '--cow', '--animal', '-a' } { $targetMap = $animals }
         '--accel' { $targetMap = $accelModes }
         { $_ -in '--shell-attach-mode', '--attach-mode' } { $targetMap = $attachModes }
@@ -807,7 +835,7 @@ Register-ArgumentCompleter -Native -CommandName 'forgum' -ScriptBlock {
 
     $flags = @(
         '--cow', '--animal', '--effect', '--mountain', '--road', '--environment',
-        '--color-mode', '--text', '--think', '--background', '--banner',
+        '--color-mode', '--colorblind', '--cvd', '--text', '--think', '--background', '--banner',
         '--duration', '--fps', '--thought-interval', '--split-scroll',
         '--reserve-rows', '--reserve-cols', '--split-ratio',
         '--eyes', '--tongue', '--palette', '--accel', '--shell-attach-mode',
@@ -864,7 +892,22 @@ export extern "forgum" [
     --shell-attach-mode: string@"nu_forgum_attach_modes" # Shell execution attach mode
     --aspect: string@"nu_forgum_aspects"               # Viewport aspect ratio preset
     --aspect-mode: string@"nu_forgum_aspect_modes"     # Aspect ratio adaptation mode
+    --colorblind: string@"nu_forgum_colorblind"        # Color vision deficiency mode
+    --cvd: string@"nu_forgum_colorblind"               # Alias for colorblind mode
 ]
+
+def "nu_forgum_colorblind" [] {
+    [
+        { value: "none", description: "Standard full-color spectrum" },
+        { value: "protanopia", description: "Red-blind Daltonization" },
+        { value: "deuteranopia", description: "Green-blind Daltonization" },
+        { value: "tritanopia", description: "Blue-blind Daltonization" },
+        { value: "achromatopsia", description: "Monochrome luminance grayscale" },
+        { value: "protanopia_sim", description: "Protanopia LMS simulation" },
+        { value: "deuteranopia_sim", description: "Deuteranopia LMS simulation" },
+        { value: "tritanopia_sim", description: "Tritanopia LMS simulation" }
+    ]
+}
 
 def "nu_forgum_aspects" [] {
     [
@@ -1164,12 +1207,16 @@ flags:
   --shell-attach-mode=: Shell execution attach mode (startup, prompt, clear, split, pane)
   --aspect=: Viewport aspect ratio preset (auto, 21:9, 16:9, 16:10, 4:3, 1:1, narrow)
   --aspect-mode=: Aspect ratio adaptation mode (preset, dynamic, auto)
+  --colorblind=: Color vision deficiency accessibility mode (none, protanopia, deuteranopia, tritanopia, achromatopsia, protanopia_sim, deuteranopia_sim, tritanopia_sim)
+  --cvd=: Color vision deficiency accessibility mode
 completion:
   flag:
     accel: ["auto\tAutomatic GPU detection with CPU fallback", "dedicated\tPrefer dedicated GPU", "integrated\tPrefer internal APU", "npu\tPrefer neural NPU", "cpu\tForce pure CPU"]
     shell-attach-mode: ["startup\tFastfetch launch banner", "prompt\tInteractive hook on prompt", "clear\tRe-render only after clear/cls", "split\tDECSTBM top margin", "pane\tMultiplexer pane or daemon"]
     aspect: ["auto\tAuto-detect from terminal", "21:9\tUltrawide panoramic", "16:9\tWidescreen standard", "16:10\tGolden tall ratio", "4:3\tClassic standard", "1:1\tSquare display", "narrow\tVertical mobile/split pane"]
     aspect-mode: ["preset\tFixed aspect math", "dynamic\tLive resize recalculation", "auto\tContext-aware adaptation"]
+    colorblind: ["none\tStandard full spectrum", "protanopia\tRed-blind Daltonization", "deuteranopia\tGreen-blind Daltonization", "tritanopia\tBlue-blind Daltonization", "achromatopsia\tMonochrome luminance", "protanopia_sim\tProtanopia LMS sim", "deuteranopia_sim\tDeuteranopia LMS sim", "tritanopia_sim\tTritanopia LMS sim"]
+    cvd: ["none\tStandard full spectrum", "protanopia\tRed-blind Daltonization", "deuteranopia\tGreen-blind Daltonization", "tritanopia\tBlue-blind Daltonization", "achromatopsia\tMonochrome luminance", "protanopia_sim\tProtanopia LMS sim", "deuteranopia_sim\tDeuteranopia LMS sim", "tritanopia_sim\tTritanopia LMS sim"]
     cow: ["apt\tMascot apt", "armadillo\tMascot armadillo", "atat\tMascot atat", "bearface\tMascot bearface", "beavis.zen\tMascot beavis.zen", "bees\tMascot bees", "bill-the-cat\tMascot bill-the-cat", "bud-frogs\tMascot bud-frogs", "bunny\tCute rabbit", "cat\tPlayful feline", "cat2\tMascot cat2", "catfence\tMascot catfence", "charizardvice\tMascot charizardvice", "charlie\tMascot charlie", "claw-arm\tMascot claw-arm", "corgi\tPlayful corgi", "cower\tMascot cower", "cowfee\tMascot cowfee", "cthulhu-mini\tMascot cthulhu-mini", "daemon\tMascot daemon", "default\tStandard bovine mascot", "docker-whale\tMascot docker-whale", "doge\tMascot doge", "dolphin\tMascot dolphin", "dragon\tFire-breathing dragon", "dragon-and-cow\tMascot dragon-and-cow", "duck\tMascot duck", "ebi_furai\tMascot ebi_furai", "elephant\tGentle giant", "elephant-in-snake\tMascot elephant-in-snake", "elephant2\tMascot elephant2", "eyes\tMascot eyes", "fat-banana\tMascot fat-banana", "fat-cow\tMascot fat-cow", "fence\tMascot fence", "flaming-sheep\tMascot flaming-sheep", "fox\tWoodland fox", "ghost\tSpooky phantom", "ghostbusters\tMascot ghostbusters", "glados\tMascot glados", "goat\tMascot goat", "goat2\tMascot goat2", "golden-eagle\tMascot golden-eagle", "hamster\tMascot hamster", "happy-whale\tMascot happy-whale", "hedgehog\tMascot hedgehog", "hellokitty\tMascot hellokitty", "hippie\tMascot hippie", "hiya\tMascot hiya", "hypno\tMascot hypno", "jellyfish\tMascot jellyfish", "jesus\tMascot jesus", "king\tMascot king", "kiss\tMascot kiss", "kitten\tMascot kitten", "kitty\tMascot kitty", "knight\tMascot knight", "koala\tMascot koala", "kosh\tMascot kosh", "lamb\tMascot lamb", "lamb2\tMascot lamb2", "lobster\tMascot lobster", "lollerskates\tMascot lollerskates", "luke-koala\tMascot luke-koala", "mech-and-cow\tMascot mech-and-cow", "meow\tMascot meow", "minotaur\tMascot minotaur", "mona-lisa\tMascot mona-lisa", "moofasa\tMascot moofasa", "mooghidjirah\tMascot mooghidjirah", "moojira\tMascot moojira", "moose\tMascot moose", "mule\tMascot mule", "mutilated\tMascot mutilated", "nyan\tMascot nyan", "octopus\tMascot octopus", "owl\tMascot owl", "panther\tMascot panther", "pawn\tMascot pawn", "periodic-table\tMascot periodic-table", "personality-sphere\tMascot personality-sphere", "pig\tMascot pig", "pterodactyl\tMascot pterodactyl", "pufferfish\tMascot pufferfish", "queen\tMascot queen", "radioactive-kitty\tMascot radioactive-kitty", "ram\tMascot ram", "ren\tMascot ren", "rhino\tMascot rhino", "rook\tMascot rook", "rooster\tMascot rooster", "satanic\tMascot satanic", "sauron\tMascot sauron", "seahorse\tMascot seahorse", "seahorse-big\tMascot seahorse-big", "sheep\tMascot sheep", "shikato\tMascot shikato", "shrug\tMascot shrug", "skeleton\tMascot skeleton", "sloth\tMascot sloth", "small\tMascot small", "smiling-octopus\tMascot smiling-octopus", "snoopy\tMascot snoopy", "snoopyhouse\tMascot snoopyhouse", "snoopysleep\tMascot snoopysleep", "spidercow\tMascot spidercow", "squid\tMascot squid", "squirrel\tMascot squirrel", "stegosaurus\tMascot stegosaurus", "stimpy\tMascot stimpy", "supermilker\tMascot supermilker", "surgery\tMascot surgery", "telebears\tMascot telebears", "three-eyes\tMascot three-eyes", "tiger\tMascot tiger", "tortoise\tMascot tortoise", "turkey\tMascot turkey", "turtle\tMascot turtle", "tux\tLinux penguin", "tux-big\tMascot tux-big", "tweety-bird\tMascot tweety-bird", "unipony\tMascot unipony", "vader\tMascot vader", "viper\tMascot viper", "vulpix\tMascot vulpix", "walrus\tMascot walrus", "weeping-angel\tMascot weeping-angel", "whale\tMascot whale", "wizard\tMascot wizard", "wolf\tMascot wolf", "world\tMascot world", "yoda\tMascot yoda", "random\tPick random mascot"]
     animal: ["apt\tMascot apt", "armadillo\tMascot armadillo", "atat\tMascot atat", "bearface\tMascot bearface", "beavis.zen\tMascot beavis.zen", "bees\tMascot bees", "bill-the-cat\tMascot bill-the-cat", "bud-frogs\tMascot bud-frogs", "bunny\tCute rabbit", "cat\tPlayful feline", "cat2\tMascot cat2", "catfence\tMascot catfence", "charizardvice\tMascot charizardvice", "charlie\tMascot charlie", "claw-arm\tMascot claw-arm", "corgi\tPlayful corgi", "cower\tMascot cower", "cowfee\tMascot cowfee", "cthulhu-mini\tMascot cthulhu-mini", "daemon\tMascot daemon", "default\tStandard bovine mascot", "docker-whale\tMascot docker-whale", "doge\tMascot doge", "dolphin\tMascot dolphin", "dragon\tFire-breathing dragon", "dragon-and-cow\tMascot dragon-and-cow", "duck\tMascot duck", "ebi_furai\tMascot ebi_furai", "elephant\tGentle giant", "elephant-in-snake\tMascot elephant-in-snake", "elephant2\tMascot elephant2", "eyes\tMascot eyes", "fat-banana\tMascot fat-banana", "fat-cow\tMascot fat-cow", "fence\tMascot fence", "flaming-sheep\tMascot flaming-sheep", "fox\tWoodland fox", "ghost\tSpooky phantom", "ghostbusters\tMascot ghostbusters", "glados\tMascot glados", "goat\tMascot goat", "goat2\tMascot goat2", "golden-eagle\tMascot golden-eagle", "hamster\tMascot hamster", "happy-whale\tMascot happy-whale", "hedgehog\tMascot hedgehog", "hellokitty\tMascot hellokitty", "hippie\tMascot hippie", "hiya\tMascot hiya", "hypno\tMascot hypno", "jellyfish\tMascot jellyfish", "jesus\tMascot jesus", "king\tMascot king", "kiss\tMascot kiss", "kitten\tMascot kitten", "kitty\tMascot kitty", "knight\tMascot knight", "koala\tMascot koala", "kosh\tMascot kosh", "lamb\tMascot lamb", "lamb2\tMascot lamb2", "lobster\tMascot lobster", "lollerskates\tMascot lollerskates", "luke-koala\tMascot luke-koala", "mech-and-cow\tMascot mech-and-cow", "meow\tMascot meow", "minotaur\tMascot minotaur", "mona-lisa\tMascot mona-lisa", "moofasa\tMascot moofasa", "mooghidjirah\tMascot mooghidjirah", "moojira\tMascot moojira", "moose\tMascot moose", "mule\tMascot mule", "mutilated\tMascot mutilated", "nyan\tMascot nyan", "octopus\tMascot octopus", "owl\tMascot owl", "panther\tMascot panther", "pawn\tMascot pawn", "periodic-table\tMascot periodic-table", "personality-sphere\tMascot personality-sphere", "pig\tMascot pig", "pterodactyl\tMascot pterodactyl", "pufferfish\tMascot pufferfish", "queen\tMascot queen", "radioactive-kitty\tMascot radioactive-kitty", "ram\tMascot ram", "ren\tMascot ren", "rhino\tMascot rhino", "rook\tMascot rook", "rooster\tMascot rooster", "satanic\tMascot satanic", "sauron\tMascot sauron", "seahorse\tMascot seahorse", "seahorse-big\tMascot seahorse-big", "sheep\tMascot sheep", "shikato\tMascot shikato", "shrug\tMascot shrug", "skeleton\tMascot skeleton", "sloth\tMascot sloth", "small\tMascot small", "smiling-octopus\tMascot smiling-octopus", "snoopy\tMascot snoopy", "snoopyhouse\tMascot snoopyhouse", "snoopysleep\tMascot snoopysleep", "spidercow\tMascot spidercow", "squid\tMascot squid", "squirrel\tMascot squirrel", "stegosaurus\tMascot stegosaurus", "stimpy\tMascot stimpy", "supermilker\tMascot supermilker", "surgery\tMascot surgery", "telebears\tMascot telebears", "three-eyes\tMascot three-eyes", "tiger\tMascot tiger", "tortoise\tMascot tortoise", "turkey\tMascot turkey", "turtle\tMascot turtle", "tux\tLinux penguin", "tux-big\tMascot tux-big", "tweety-bird\tMascot tweety-bird", "unipony\tMascot unipony", "vader\tMascot vader", "viper\tMascot viper", "vulpix\tMascot vulpix", "walrus\tMascot walrus", "weeping-angel\tMascot weeping-angel", "whale\tMascot whale", "wizard\tMascot wizard", "wolf\tMascot wolf", "world\tMascot world", "yoda\tMascot yoda", "random\tPick random mascot"]
     effect: ["moonwalk\tLegendary reverse-glide moonwalk with sliding hooves", "walk\tNatural bovine walking animation", "breathe\tGentle breathing idle animation", "float\tDrifting levitation animation", "fly\tFlying creature animation", "talk\tConversational speech animation", "sway\tSwaying pendulum animation", "pulse\tPulsing scale animation", "glitch\tDigital cyberpunk glitch animation", "particles\tAmbient particle emitter animation", "dissolve\tDissolve and materialize animation", "animal_natural\tPer-creature natural kinetic animation", "natural\tAlias for animal_natural"]
@@ -1223,7 +1270,7 @@ from xonsh.completers.tools import *
 def _forgum_completer(command):
     opts = {
         "--animal", "--cow", "-a", "--effect", "-e", "--mountain", "--road",
-        "--environment", "--color-mode", "--text", "--duration", "-d",
+        "--environment", "--color-mode", "--colorblind", "--cvd", "--text", "--duration", "-d",
         "--fps", "--thought-interval", "--eyes", "--tongue", "--palette",
         "--think", "--background", "-b", "--banner", "-B", "--split-scroll",
         "--reserve-rows", "--reserve-cols", "--split-ratio",
@@ -1250,6 +1297,8 @@ complete forgum \
   'c/--road/(dirt cobblestone magma ice seabed sidewalk roof grid crypt savanna mud tracks checkerboard none)/' \
   'c/--environment/(pasture inferno ocean arctic city forest savanna swamp space cyber graveyard jurassic hive throne none)/' \
   'c/--color-mode/(default animal natural animal_natural rainbow lolcat solid none)/' \
+  'c/--colorblind/(none protanopia deuteranopia tritanopia achromatopsia protanopia_sim deuteranopia_sim tritanopia_sim)/' \
+  'c/--cvd/(none protanopia deuteranopia tritanopia achromatopsia protanopia_sim deuteranopia_sim tritanopia_sim)/' \
   'c/--accel/(auto dedicated integrated npu cpu)/' \
   'c/--shell-attach-mode/(startup prompt clear split pane)/' \
   'c/--aspect/(auto 21:9 16:9 16:10 4:3 1:1 narrow)/' \
@@ -1274,6 +1323,8 @@ complete -c forgum -l mountain -a "hills peaks volcano iceberg skyline seamount 
 complete -c forgum -l road -a "dirt cobblestone magma ice seabed sidewalk roof grid crypt savanna mud tracks checkerboard none"
 complete -c forgum -l environment -a "pasture inferno ocean arctic city forest savanna swamp space cyber graveyard jurassic hive throne none"
 complete -c forgum -l color-mode -a "default animal natural animal_natural rainbow lolcat solid none"
+complete -c forgum -l colorblind -a "none protanopia deuteranopia tritanopia achromatopsia protanopia_sim deuteranopia_sim tritanopia_sim"
+complete -c forgum -l cvd -a "none protanopia deuteranopia tritanopia achromatopsia protanopia_sim deuteranopia_sim tritanopia_sim"
 complete -c forgum -l accel -a "auto dedicated integrated npu cpu"
 complete -c forgum -l shell-attach-mode -a "startup prompt clear split pane"
 complete -c forgum -l aspect -a "auto 21:9 16:9 16:10 4:3 1:1 narrow"

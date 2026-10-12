@@ -310,6 +310,14 @@ impl SimState {
         // Render into back buffer on top of scenery.
         self.effect.render(&mut self.fb, self.elapsed);
 
+        // Apply Color Vision Deficiency (CVD) translation filter if configured
+        if let Some(ref cb_str) = self.config.colorblind_mode {
+            let mode = forgum_platform::ColorblindMode::from_str_loose(cb_str);
+            self.fb.apply_colorblind_filter(mode);
+        } else if let Some(global_mode) = forgum_platform::get_active_colorblind_mode() {
+            self.fb.apply_colorblind_filter(global_mode);
+        }
+
         // Compute damage against the previous front buffer (BEFORE swap clears it).
         // compute_full_damage() includes both newly modified cells and cells vacated/cleared
         // from the previous frame, ensuring AnsiRenderer writes spaces to erase them with zero ghost residue.

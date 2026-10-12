@@ -10,8 +10,7 @@ use crate::protocol::SceneConfig;
 /// and `PlatformError::Io` for I/O errors.
 pub fn read_config_file(path: &Path) -> Result<SceneConfig, PlatformError> {
     let bytes = fs::read(path).map_err(PlatformError::Io)?;
-    let text = std::str::from_utf8(&bytes)
-        .map_err(|_| PlatformError::ConfigEncoding(path.to_path_buf()))?;
+    let text = forgum_platform::decode_text_compatible(&bytes);
 
     let format = path
         .extension()
@@ -20,16 +19,16 @@ pub fn read_config_file(path: &Path) -> Result<SceneConfig, PlatformError> {
 
     let cfg = match format {
         Some(fmt) => {
-            SceneConfig::parse_with_format(text, fmt).map_err(|e| PlatformError::ConfigParse {
+            SceneConfig::parse_with_format(&text, fmt).map_err(|e| PlatformError::ConfigParse {
                 path: path.to_path_buf(),
                 message: e,
             })?
         }
         None => {
             // Try JSON -> YAML -> TOML as fallbacks
-            SceneConfig::parse_with_format(text, ConfigFormat::Json)
-                .or_else(|_| SceneConfig::parse_with_format(text, ConfigFormat::Yaml))
-                .or_else(|_| SceneConfig::parse_with_format(text, ConfigFormat::Toml))
+            SceneConfig::parse_with_format(&text, ConfigFormat::Json)
+                .or_else(|_| SceneConfig::parse_with_format(&text, ConfigFormat::Yaml))
+                .or_else(|_| SceneConfig::parse_with_format(&text, ConfigFormat::Toml))
                 .map_err(|e| PlatformError::ConfigParse {
                     path: path.to_path_buf(),
                     message: format!("failed to parse as JSON, YAML, or TOML: {e}"),
@@ -195,6 +194,7 @@ pub fn merge(base: SceneConfig, overlay: SceneConfig) -> SceneConfig {
         editor: overlay.editor.or(base.editor),
         random: overlay.random.or(base.random),
         contrast_mode: overlay.contrast_mode.or(base.contrast_mode),
+        colorblind_mode: overlay.colorblind_mode.or(base.colorblind_mode),
         accel_mode: overlay.accel_mode.or(base.accel_mode),
         reduce_motion: overlay.reduce_motion || base.reduce_motion,
         text_only: overlay.text_only || base.text_only,
