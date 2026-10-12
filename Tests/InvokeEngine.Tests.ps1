@@ -37,7 +37,7 @@ Describe 'Invoke-ForgumEngine (G10)' {
     }
 
     It 'returns exit code 65 (EX_DATAERR) for invalid JSON' {
-        '{"unknown_field": 42}' | Set-Content -LiteralPath $script:tmp -Encoding utf8
+        '{ not json' | Set-Content -LiteralPath $script:tmp -Encoding utf8
         $code = Invoke-ForgumEngine -EnginePath $env:FORGUM_ENGINE `
                                      -JsonFile $script:tmp `
                                      -TimeoutSeconds 5

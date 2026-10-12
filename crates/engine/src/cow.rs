@@ -920,6 +920,10 @@ pub fn default_cow_expanded(eyes: &str, tongue: &str, thoughts: &str) -> String 
 ///
 /// Returns the combined (bubble + cow) text ready for rendering.
 pub fn compose_scene_with_mode(cow_text: &str, bubble_text: &str, is_thought: bool) -> String {
+    if bubble_text.is_empty() {
+        return cow_text.to_string();
+    }
+
     let (term_w, term_h) = forgum_platform::terminal_size();
     let is_small_pane = term_w <= 35 || term_h <= 30;
     let line_count = cow_text.lines().count();
@@ -930,10 +934,6 @@ pub fn compose_scene_with_mode(cow_text: &str, bubble_text: &str, is_thought: bo
     } else {
         cow_text.to_string()
     };
-
-    if bubble_text.is_empty() {
-        return adapted_cow;
-    }
 
     let cow_lines: Vec<&str> = adapted_cow.lines().collect();
     let cow_width = cow_lines
