@@ -854,7 +854,7 @@ pub fn compact_mascot_for_viewport(
     let line_count = unindented.lines().count();
 
     // If within comfortable dimensions and not oversized, return unindented
-    if target_width > 35 && target_height > 25 && line_count <= target_height.saturating_sub(4) {
+    if target_width > 35 && target_height >= 20 && line_count <= target_height.saturating_sub(4) {
         return unindented;
     }
 
@@ -925,7 +925,7 @@ pub fn compose_scene_with_mode(cow_text: &str, bubble_text: &str, is_thought: bo
     }
 
     let (term_w, term_h) = forgum_platform::terminal_size();
-    let is_small_pane = term_w <= 35 || term_h <= 30;
+    let is_small_pane = term_w <= 35 || term_h <= 16;
     let line_count = cow_text.lines().count();
     let is_oversized = line_count > (term_h as usize).saturating_sub(4);
 
