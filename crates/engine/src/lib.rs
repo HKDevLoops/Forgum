@@ -49,6 +49,7 @@ pub mod shader;
 pub mod showcase;
 pub mod split_scroll;
 pub mod status_line;
+pub mod taunt;
 pub mod theme;
 pub mod timer;
 pub mod verlet;

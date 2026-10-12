@@ -680,6 +680,130 @@ impl std::str::FromStr for ReleaseChannel {
     }
 }
 
+/// Parse version field from raw Cargo.toml content.
+#[must_use]
+pub fn parse_version_from_cargo_toml(content: &str) -> Option<String> {
+    for line in content.lines() {
+        let trimmed = line.trim();
+        if trimmed.starts_with("version") {
+            if let Some(val) = trimmed.split('=').nth(1) {
+                let clean = val.trim().trim_matches('"').trim_matches('\'').trim();
+                if !clean.is_empty() {
+                    return Some(clean.to_string());
+                }
+            }
+        }
+    }
+    None
+}
+
+/// Parse release tag/version from GitHub release API JSON.
+#[must_use]
+pub fn parse_version_from_release_json(json_str: &str) -> Option<String> {
+    if let Ok(val) = serde_json::from_str::<serde_json::Value>(json_str) {
+        if let Some(tag) = val.get("tag_name").and_then(|t| t.as_str()) {
+            return Some(tag.trim_start_matches('v').to_string());
+        }
+    }
+    None
+}
+
+/// Fetch latest remote version string for the given release channel.
+pub fn fetch_remote_channel_version(channel: ReleaseChannel) -> Result<String, String> {
+    let ref_name = channel.git_ref();
+    let raw_url =
+        format!("https://raw.githubusercontent.com/HKDevLoops/Forgum/{ref_name}/Cargo.toml");
+
+    // 1. Try curl (universal across Linux, macOS, modern Windows 10/11)
+    if is_cmd_available("curl") {
+        if let Ok(out) = Command::new("curl")
+            .args([
+                "-4",
+                "-fsSL",
+                "--connect-timeout",
+                "4",
+                "--max-time",
+                "6",
+                &raw_url,
+            ])
+            .output()
+        {
+            if out.status.success() {
+                let body = String::from_utf8_lossy(&out.stdout);
+                if let Some(ver) = parse_version_from_cargo_toml(&body) {
+                    return Ok(ver);
+                }
+            }
+        }
+    }
+
+    // 2. Windows fallback using powershell if curl failed or is unavailable
+    #[cfg(windows)]
+    {
+        let ps_cmd = format!("(Invoke-RestMethod -Uri '{raw_url}' -TimeoutSec 5)");
+        if let Ok(out) = Command::new("powershell")
+            .args(["-NoProfile", "-Command", &ps_cmd])
+            .output()
+        {
+            if out.status.success() {
+                let body = String::from_utf8_lossy(&out.stdout);
+                if let Some(ver) = parse_version_from_cargo_toml(&body) {
+                    return Ok(ver);
+                }
+            }
+        }
+    }
+
+    // 3. Fallback for Stable channel via GitHub API
+    if channel == ReleaseChannel::Stable && is_cmd_available("curl") {
+        let api_url = "https://api.github.com/repos/HKDevLoops/Forgum/releases/latest";
+        if let Ok(out) = Command::new("curl")
+            .args([
+                "-4",
+                "-fsSL",
+                "-H",
+                "User-Agent: forgum",
+                "--connect-timeout",
+                "4",
+                "--max-time",
+                "6",
+                api_url,
+            ])
+            .output()
+        {
+            if out.status.success() {
+                let body = String::from_utf8_lossy(&out.stdout);
+                if let Some(ver) = parse_version_from_release_json(&body) {
+                    return Ok(ver);
+                }
+            }
+        }
+    }
+
+    Err("Could not retrieve remote version from GitHub (network timeout or offline)".to_string())
+}
+
+/// Returns a random funky celebration statement from Forgum when already on the latest version.
+#[must_use]
+pub fn get_funky_latest_version_quote() -> &'static str {
+    const QUOTES: &[&str] = &[
+        "🐄 The pasture is pristine, the cud is freshly chewed, and your ASCII mascots are running at peak celestial performance! Touch some grass or go yeet a fortune! ✨",
+        "🚀 You're already flying at maximum warp speed! There's no newer code in the galaxy—go enjoy the view from orbit! 🌌",
+        "🕶️ Calm down, speedrunner! You're already rocking the freshest Forgum in town. Your terminal is certified dripping with swagger! 🗿",
+        "🌾 Even the sharpest steer doesn't graze twice in the same minute. Your installation is 100% bleeding-edge perfection!",
+        "🎉 Zero updates needed! The cows are vibing, the particles are sparkling, and your shell prompt has never looked cooler. Keep calm and moo on! 🐮💫",
+        "🕺 Smooth criminal detected! You're already moonwalking on the absolute latest release. Nothing to patch, nothing to fix!",
+        "🧘 Peak terminal enlightenment achieved. You possess the definitive Forgum binary known to humankind. Bask in the glory!",
+        "🌱 The grass has been touched, the bits have been flipped, and your binary is immaculate. Rest easy, hacker!",
+    ];
+    let idx = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs() as usize)
+        .unwrap_or(0)
+        % QUOTES.len();
+    QUOTES[idx]
+}
+
 /// Installation receipt recording installer source, channel, version, binary path, and timestamp.
 /// Persisted in `.config/forgum/install_receipt.json`.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]

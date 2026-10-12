@@ -60,7 +60,7 @@ flowchart TD
 | **Platform Docs** | `crates/platform/src/lib.rs` | `#![doc(html_root_url = ...)]` | `.../0.0.3-beta` | `.../0.0.5-beta` |
 | **Primary README** | `README.md` | Line 31 (Version badge) & Line 811 (TUI header) | `0.0.4-beta` | `0.0.5-beta` |
 | **Changelog** | `CHANGELOG.md` | Release header & release date | `## [0.0.4-beta]` | `## [0.0.5-beta] - 2026-10-12` |
-| **Defect Ledger** | `FIX_LOGS.md` | Line 3 (`Target Release`) & defect entries | `v0.0.4-beta` | `v0.0.5-beta` (BUG-027, BUG-028, FEATURE-029) |
+| **Defect Ledger** | `FIX_LOGS.md` | Line 3 (`Target Release`) & defect entries | `v0.0.4-beta` | `v0.0.5-beta` (BUG-027 through BUG-030, FEATURE-029, FEATURE-030) |
 | **Architecture Map** | `ARCHITECTURE_MAP.md` | Section 1.2 header & overview | `(0.0.4-beta)` | `(0.0.5-beta)` |
 | **Release SOP** | `RELEASE_SOP.md` | Lines 13, 67, 72–88, 96, 119, 152 | `0.0.4-beta` | `0.0.5-beta` |
 | **PowerShell Module** | `Forgum.psd1` | Line 3 (`ModuleVersion`) | `'0.0.3'` | `'0.0.5'` |
@@ -122,6 +122,14 @@ flowchart TD
 
 8. **Multi-Pane & Split-Mode Alignment Calibration (BUG-027)**:
    - Formally documented alignment calibration for multi-pane multiplexer environments in defect ledger for scheduled deep focus.
+
+9. **openSUSE WSL Shell Hook Integer Parsing Elimination (BUG-030)**:
+   - Replaced brittle `awk` field splits with portable POSIX `sed` regex for unquoted JSON integer parsing in daemon state files.
+   - Guarded integer evaluations with `${rows:-0}` parameter expansion, completely eliminating `-bash: [: : integer expression expected` on login, clear, and prompts.
+
+10. **Remote Channel Up-to-Date Synchronization & Brutal Mascot Disgrace Radar (FEATURE-030)**:
+    - Added release channel version checking against GitHub raw CDN: skips redundant upgrades with `Already on latest version of Forgum` and celebratory mascot quotes.
+    - Added the Mascot Disgrace Radar to taunt consecutive user syntax errors (>2 failures) with brutal meme disgrace statements and escalating ASCII mascot reaction faces.
 
 ---
 

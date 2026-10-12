@@ -35,6 +35,20 @@ fn is_list_query(s: &str) -> bool {
 }
 
 pub fn run() -> ExitCode {
+    let code = run_inner();
+    if code == ExitCode::SUCCESS {
+        crate::taunt::reset_failure_streak();
+    } else {
+        let streak = crate::taunt::record_and_get_failure_streak();
+        if streak > 2 {
+            eprintln!();
+            eprint!("{}", crate::taunt::render_brutal_taunt(streak));
+        }
+    }
+    code
+}
+
+fn run_inner() -> ExitCode {
     std::panic::set_hook(Box::new(|info| {
         let msg = match info.payload().downcast_ref::<&'static str>() {
             Some(s) => *s,
@@ -75,9 +89,9 @@ pub fn run() -> ExitCode {
         Err(e) => {
             if e.exit_code == 0 {
                 print!("{}", e.message);
-            } else {
-                eprintln!("{PROGRAM}: {}", e.message);
+                return ExitCode::SUCCESS;
             }
+            eprintln!("{PROGRAM}: {}", e.message);
             return ExitCode::from(e.exit_code);
         }
     };
@@ -208,7 +222,7 @@ pub fn run() -> ExitCode {
         }
     }
 
-    match command {
+    let code = match command {
         // ── fortune ──────────────────────────────────────────────────
         Some(cli::Commands::Fortune) => {
             let data = match data_dir() {
@@ -2040,9 +2054,9 @@ pub fn run() -> ExitCode {
             ExitCode::SUCCESS
         }
 
-        // ── render (default) ────────────────────────────────────────
         _ => render_subcommand(args),
-    }
+    };
+    code
 }
 
 struct PaneGuard {
@@ -2528,7 +2542,11 @@ fn handle_update_command(check: bool, channel_flag: Option<&str>) -> ExitCode {
                             Err(e) => eprintln!("\x1b[1;31m✗ Build failed:\x1b[0m {e}"),
                         }
                     } else {
-                        println!("\x1b[1;32m✓ Already on latest commit ({version}). No update required.\x1b[0m");
+                        println!("\x1b[1;32m✓ Already on latest version of Forgum ({version}). No update required.\x1b[0m");
+                        println!(
+                            "\x1b[1;36m{}\x1b[0m\n",
+                            forgum_platform::get_funky_latest_version_quote()
+                        );
                     }
                     return ExitCode::SUCCESS;
                 }
@@ -2575,6 +2593,39 @@ fn handle_update_command(check: bool, channel_flag: Option<&str>) -> ExitCode {
                     );
                 }
             }
+        }
+    }
+
+    let local_ver = env!("CARGO_PKG_VERSION").trim_start_matches('v');
+
+    print!(
+        "Checking latest version on channel \x1b[1;33m{}\x1b[0m... ",
+        channel.display_name()
+    );
+    let _ = std::io::Write::flush(&mut std::io::stdout());
+
+    match forgum_platform::fetch_remote_channel_version(channel) {
+        Ok(remote_ver) => {
+            let clean_remote = remote_ver.trim_start_matches('v');
+            println!("\x1b[1;32mv{}\x1b[0m", clean_remote);
+
+            if local_ver == clean_remote {
+                println!(
+                    "\n\x1b[1;32m✓ Already on latest version of Forgum (v{local_ver}) on channel '{}'.\x1b[0m\n\
+                     \x1b[1;36m{}\x1b[0m\n",
+                    channel.as_str(),
+                    forgum_platform::get_funky_latest_version_quote()
+                );
+                return ExitCode::SUCCESS;
+            } else {
+                println!(
+                    "  • Installed:  \x1b[1;33mv{local_ver}\x1b[0m\n\
+                     • Upstream:   \x1b[1;32mv{clean_remote}\x1b[0m (Update available!)\n"
+                );
+            }
+        }
+        Err(e) => {
+            println!("\x1b[90m(online check skipped: {e})\x1b[0m\n");
         }
     }
 

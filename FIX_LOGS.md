@@ -398,6 +398,37 @@ This document records the complete, immutable register of all bugs, defects, reg
 
 ---
 
+### BUG-030: openSUSE WSL Shell Hook Unquoted JSON Integer Parsing Failure
+- **Severity:** High / Shell Prompt Integration
+- **Component:** `crates/engine/src/init.rs` (`generate_bash_hook`, `generate_zsh_hook`, `generate_fish_hook`)
+- **Symptom:** Terminal displayed `-bash: [: : integer expression expected` on openSUSE WSL login, prompt rendering, or after executing `clear`.
+- **Root Cause:** In `crates/engine/src/init.rs`, the hook parsed daemon state using `awk -F'"' '/ob_y1/{print $4}' "$state"`. Because JSON numeric primitives are emitted unquoted (e.g. `"ob_y1": 10,`), field `$4` evaluated to an empty string `""`. In Bash, `[ "" -gt 0 ]` evaluates to syntax error `[: : integer expression expected`.
+- **Permanent Resolution:**
+  1. Replaced brittle `awk` delimiter splits with portable POSIX regex `sed -n 's/.*"ob_y1"[[:space:]]*:[[:space:]]*\([0-9]*\).*/\1/p' "$state" 2>/dev/null`.
+  2. Guarded integer comparisons across Bash, Zsh, and Fish hooks with `${rows:-0}` parameter expansion to ensure infallible integer defaulting even if daemon state is corrupted or empty.
+- **Verification:** Verified directly inside openSUSE Leap 16.0 WSL across login, prompt, and `clear` commands. `cargo test -p forgum-engine --test init_shell` (22/22 passed).
+- **Invariant Enforced:** Mandate G (Universal Shell Integrity) & Mandate L (The 5 Universal Shell Integration Modes).
+
+---
+
+### FEATURE-030: Remote Channel Up-To-Date Synchronization & Brutal Mascot Disgrace Radar
+- **Severity:** High / User Experience & Update Governance
+- **Component:** `crates/platform/src/package_manager.rs`, `crates/engine/src/taunt.rs`, `crates/engine/src/runner.rs`
+- **Specification:**
+  1. **Update Channel Idempotency & Celebration:**
+     - `forgum update` checks the active release channel before performing updates.
+     - Direct raw GitHub CDN checking (`raw.githubusercontent.com/.../Cargo.toml`) eliminates GitHub API rate limits.
+     - When local version equals remote channel version, skips update, confirms `Already on latest version of Forgum`, and outputs a funky mascot quote.
+  2. **Brutal Mascot Disgrace Radar (Failure Streak Engine):**
+     - When a user enters invalid subcommands, misspelled arguments, or invalid configuration keys consecutively for more than 2 times (3+ strikes), activates the Mascot Disgrace Radar.
+     - Emits honest, brutal, meme-worthy disgrace statements (e.g., monkey on Commodore 64, CPU second-hand embarrassment, brainrot recovery tips).
+     - Renders ASCII mascot reaction faces scaled to failure severity (`(==)` deadpan contempt, `(><)` visceral agony, `(xx)` total brainrot, `(oO)` circus clown).
+     - Any successful command (exit code 0) resets the failure streak immediately.
+- **Verification:** `taunt::tests::test_failure_streak_lifecycle`, manual stress testing on Windows PowerShell, and live execution in openSUSE Leap WSL.
+- **Invariant Enforced:** Mandate H (Strictly `forgum`), Mandate J (Human Versioning Authority), and Mandate I (<100MB RAM, zero allocation).
+
+---
+
 ## 3. Verification & Quality Gate Record
 
 Every fix in this ledger has been validated against the following automated gates:

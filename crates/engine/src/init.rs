@@ -168,7 +168,7 @@ forgum-init() {{
 __forgum_exit() {{
   local state="$__FORGUM_RUNTIME/daemon.json"
   if [ -f "$state" ]; then
-    local pid; pid=$(awk -F'"' '/pid/{{print $4}}' "$state" 2>/dev/null)
+    local pid; pid=$(sed -n 's/.*"pid"[[:space:]]*:[[:space:]]*\([0-9]*\).*/\1/p' "$state" 2>/dev/null)
     [ -n "$pid" ] && kill "$pid" 2>/dev/null
     rm -f "$state"
   fi
@@ -179,8 +179,8 @@ trap '__forgum_exit' EXIT 2>/dev/null
 __forgum_clear() {{
   local state="$__FORGUM_RUNTIME/daemon.json"
   if [ -f "$state" ]; then
-    local rows; rows=$(awk -F'"' '/ob_y1/{{print $4}}' "$state" 2>/dev/null || echo 0)
-    if [ "$rows" -gt 0 ]; then
+    local rows; rows=$(sed -n 's/.*"ob_y1"[[:space:]]*:[[:space:]]*\([0-9]*\).*/\1/p' "$state" 2>/dev/null)
+    if [ "${{rows:-0}}" -gt 0 ]; then
       local top=$((rows + 1))
       local total=${{LINES:-$(tput lines 2>/dev/null || echo 24)}}
       printf '\x1b[%d;%dr\x1b[%d;1H\x1b[J' "$top" "$total" "$top"
@@ -206,9 +206,9 @@ __forgum_preexec() {{
   __forgum_in_prompt=
   local state="$__FORGUM_RUNTIME/daemon.json"
   if [ -f "$state" ]; then
-    local rows; rows=$(awk -F'"' '/ob_y1/{{print $4}}' "$state" 2>/dev/null || echo 0)
-    if [ "$rows" -eq 0 ]; then
-      local pid; pid=$(awk -F'"' '/pid/{{print $4}}' "$state" 2>/dev/null)
+    local rows; rows=$(sed -n 's/.*"ob_y1"[[:space:]]*:[[:space:]]*\([0-9]*\).*/\1/p' "$state" 2>/dev/null)
+    if [ "${{rows:-0}}" -eq 0 ]; then
+      local pid; pid=$(sed -n 's/.*"pid"[[:space:]]*:[[:space:]]*\([0-9]*\).*/\1/p' "$state" 2>/dev/null)
       if [ -n "$pid" ]; then
         kill "$pid" 2>/dev/null
       fi
@@ -224,12 +224,12 @@ __forgum_precmd() {{
   [ -z "$__FORGUM_ENGINE" ] && return
   local state="$__FORGUM_RUNTIME/daemon.json"
   if [ -f "$state" ]; then
-    local pid; pid=$(awk -F'"' '/pid/{{print $4}}' "$state" 2>/dev/null)
+    local pid; pid=$(sed -n 's/.*"pid"[[:space:]]*:[[:space:]]*\([0-9]*\).*/\1/p' "$state" 2>/dev/null)
     if [ -n "$pid" ] && ! kill -0 "$pid" 2>/dev/null; then
-      local rows; rows=$(awk -F'"' '/ob_y1/{{print $4}}' "$state" 2>/dev/null || echo 0)
+      local rows; rows=$(sed -n 's/.*"ob_y1"[[:space:]]*:[[:space:]]*\([0-9]*\).*/\1/p' "$state" 2>/dev/null)
       local cols=${{COLUMNS:-80}}
-      local y=1; while [ "$y" -le "$rows" ]; do printf '\x1b[%d;1H%*s' "$y" "$cols" ''; y=$((y+1)); done
-      local next_row=$((rows + 1))
+      local y=1; while [ "$y" -le "${{rows:-0}}" ]; do printf '\x1b[%d;1H%*s' "$y" "$cols" ''; y=$((y+1)); done
+      local next_row=$(( ${{rows:-0}} + 1 ))
       printf '\x1b[r'
       printf '\x1b[?6l\x1b[?69l\x1b[0m\x1b[?25h\x1b[%d;1H\x1b[J' "$next_row"
       rm -f "$state"
@@ -327,7 +327,7 @@ forgum-init() {{
 TRAPEXIT() {{
   local state="$__FORGUM_RUNTIME/daemon.json"
   if [ -f "$state" ]; then
-    local pid; pid=$(awk -F'"' '/pid/{{print $4}}' "$state" 2>/dev/null)
+    local pid; pid=$(sed -n 's/.*"pid"[[:space:]]*:[[:space:]]*\([0-9]*\).*/\1/p' "$state" 2>/dev/null)
     [ -n "$pid" ] && kill "$pid" 2>/dev/null
     rm -f "$state"
   fi
@@ -337,8 +337,8 @@ TRAPEXIT() {{
 __forgum_clear() {{
   local state="$__FORGUM_RUNTIME/daemon.json"
   if [ -f "$state" ]; then
-    local rows; rows=$(awk -F'"' '/ob_y1/{{print $4}}' "$state" 2>/dev/null || echo 0)
-    if [ "$rows" -gt 0 ]; then
+    local rows; rows=$(sed -n 's/.*"ob_y1"[[:space:]]*:[[:space:]]*\([0-9]*\).*/\1/p' "$state" 2>/dev/null)
+    if [ "${{rows:-0}}" -gt 0 ]; then
       local top=$((rows + 1))
       local total=${{LINES:-$(tput lines 2>/dev/null || echo 24)}}
       printf '\x1b[%d;%dr\x1b[%d;1H\x1b[J' "$top" "$total" "$top"
@@ -359,12 +359,12 @@ __forgum_precmd() {{
   [ -z "$__FORGUM_ENGINE" ] && return
   local state="$__FORGUM_RUNTIME/daemon.json"
   if [ -f "$state" ]; then
-    local pid; pid=$(awk -F'"' '/pid/{{print $4}}' "$state" 2>/dev/null)
+    local pid; pid=$(sed -n 's/.*"pid"[[:space:]]*:[[:space:]]*\([0-9]*\).*/\1/p' "$state" 2>/dev/null)
     if [ -n "$pid" ] && ! kill -0 "$pid" 2>/dev/null; then
-      local rows; rows=$(awk -F'"' '/ob_y1/{{print $4}}' "$state" 2>/dev/null || echo 0)
+      local rows; rows=$(sed -n 's/.*"ob_y1"[[:space:]]*:[[:space:]]*\([0-9]*\).*/\1/p' "$state" 2>/dev/null)
       local cols=${{COLUMNS:-80}}
-      local y=1; while [ "$y" -le "$rows" ]; do printf '\x1b[%d;1H%*s' "$y" "$cols" ''; y=$((y+1)); done
-      local next_row=$((rows + 1))
+      local y=1; while [ "$y" -le "${{rows:-0}}" ]; do printf '\x1b[%d;1H%*s' "$y" "$cols" ''; y=$((y+1)); done
+      local next_row=$(( ${{rows:-0}} + 1 ))
       printf '\x1b[r'
       printf '\x1b[?6l\x1b[?69l\x1b[0m\x1b[?25h\x1b[%d;1H\x1b[J' "$next_row"
       rm -f "$state"
@@ -398,9 +398,9 @@ precmd_functions+=(__forgum_precmd)
 __forgum_preexec() {{
   local state="$__FORGUM_RUNTIME/daemon.json"
   if [ -f "$state" ]; then
-    local rows; rows=$(awk -F'"' '/ob_y1/{{print $4}}' "$state" 2>/dev/null || echo 0)
-    if [ "$rows" -eq 0 ]; then
-      local pid; pid=$(awk -F'"' '/pid/{{print $4}}' "$state" 2>/dev/null)
+    local rows; rows=$(sed -n 's/.*"ob_y1"[[:space:]]*:[[:space:]]*\([0-9]*\).*/\1/p' "$state" 2>/dev/null)
+    if [ "${{rows:-0}}" -eq 0 ]; then
+      local pid; pid=$(sed -n 's/.*"pid"[[:space:]]*:[[:space:]]*\([0-9]*\).*/\1/p' "$state" 2>/dev/null)
       if [ -n "$pid" ]; then
         kill "$pid" 2>/dev/null
       fi
@@ -475,7 +475,7 @@ end
 function __forgum_exit --on-event fish_exit
     set -l state $__forgum_runtime/daemon.json
     if test -f $state
-        set -l pid (awk -F'"' '/pid/{{print $4}}' $state 2>/dev/null)
+        set -l pid (sed -n 's/.*"pid"[[:space:]]*:[[:space:]]*\([0-9]*\).*/\1/p' $state 2>/dev/null)
         if test -n "$pid"
             kill $pid 2>/dev/null
         end
@@ -487,7 +487,8 @@ end
 function clear
     set -l state $__forgum_runtime/daemon.json
     if test -f $state
-        set -l rows (awk -F'"' '/ob_y1/{{print $4}}' $state 2>/dev/null; or echo 0)
+        set -l rows (sed -n 's/.*"ob_y1"[[:space:]]*:[[:space:]]*\([0-9]*\).*/\1/p' $state 2>/dev/null)
+        test -z "$rows"; and set rows 0
         if test "$rows" -gt 0
             set -l top (math $rows + 1)
             set -l total (tput lines 2>/dev/null; or echo $LINES)
@@ -507,9 +508,10 @@ end
 function __forgum_preexec --on-event fish_preexec
     set -l state $__forgum_runtime/daemon.json
     if test -f $state
-        set -l rows (awk -F'"' '/ob_y1/{{print $4}}' $state 2>/dev/null; or echo 0)
+        set -l rows (sed -n 's/.*"ob_y1"[[:space:]]*:[[:space:]]*\([0-9]*\).*/\1/p' $state 2>/dev/null)
+        test -z "$rows"; and set rows 0
         if test "$rows" -eq 0
-            set -l pid (awk -F'"' '/pid/{{print $4}}' $state 2>/dev/null)
+            set -l pid (sed -n 's/.*"pid"[[:space:]]*:[[:space:]]*\([0-9]*\).*/\1/p' $state 2>/dev/null)
             if test -n "$pid"
                 kill $pid 2>/dev/null
             end
@@ -523,11 +525,14 @@ function __forgum_sweep --on-event fish_prompt
     set -q __forgum_engine; or return
     set state $__forgum_runtime/daemon.json
     if test -f $state
-        set pid (awk -F'"' '/pid/{{print $4}}' $state 2>/dev/null)
+        set pid (sed -n 's/.*"pid"[[:space:]]*:[[:space:]]*\([0-9]*\).*/\1/p' $state 2>/dev/null)
         if test -n "$pid"; and not kill -0 $pid 2>/dev/null
-            set rows (awk -F'"' '/ob_y1/{{print $4}}' $state 2>/dev/null; or echo 0)
+            set rows (sed -n 's/.*"ob_y1"[[:space:]]*:[[:space:]]*\([0-9]*\).*/\1/p' $state 2>/dev/null)
+            test -z "$rows"; and set rows 0
             set cols $COLUMNS
-            for y in (seq 1 $rows); printf '\x1b[%d;1H%*s' $y $cols ''; end
+            if test "$rows" -gt 0
+                for y in (seq 1 $rows); printf '\x1b[%d;1H%*s' $y $cols ''; end
+            end
             set -l next_row (math $rows + 1)
             printf '\x1b[r'
             printf '\x1b[?6l\x1b[?69l\x1b[0m\x1b[?25h\x1b[%d;1H\x1b[J' $next_row
