@@ -547,6 +547,48 @@ pub fn calculate_mountain_peaks_aspect(
     peak_count.max(1)
 }
 
+/// Calculate the tectonic macro-range envelope factor E_range(x_world) in [0.0, 1.0].
+/// Models natural plate tectonics: mountain ranges are finite geological belts that
+/// rise through rolling foothills, peak majestically across the crest, slope down,
+/// and terminate into open valleys/passes (elevation 0.0) where the sky and horizon
+/// open up completely before a new mountain range emerges.
+pub fn calculate_mountain_range_envelope(x_world: f32, style: MountainStyle) -> f32 {
+    if style == MountainStyle::None {
+        return 0.0;
+    }
+    let lambda_macro = match style {
+        MountainStyle::Peaks | MountainStyle::Iceberg | MountainStyle::Gothic => 120.0_f32,
+        MountainStyle::Hills | MountainStyle::Garden => 135.0_f32,
+        MountainStyle::Volcano | MountainStyle::Plateau => 140.0_f32,
+        MountainStyle::Skyline | MountainStyle::Castle => 110.0_f32,
+        MountainStyle::Seamount | MountainStyle::Crater => 130.0_f32,
+        MountainStyle::None => 1.0_f32,
+    };
+
+    let norm_x = ((x_world % lambda_macro) + lambda_macro) % lambda_macro;
+    let tau = norm_x / lambda_macro; // in [0.0, 1.0)
+
+    let range_idx = (x_world / lambda_macro).floor() as i32;
+    let range_seed = ((((range_idx as u32).wrapping_mul(2654435761_u32)) as f32) * PHI_RECIPROCAL)
+        .fract()
+        .abs();
+    let range_amplitude_scale = 0.85 + 0.30 * range_seed;
+
+    let base_envelope = if tau < 0.15 {
+        let u = tau / 0.15;
+        u * u * (3.0 - 2.0 * u) // smoothstep foothills rise
+    } else if tau < 0.62 {
+        1.0 - 0.10 * ((tau - 0.15) * 4.0 * std::f32::consts::PI).sin().abs() // high crest
+    } else if tau < 0.76 {
+        let u = (tau - 0.62) / 0.14;
+        1.0 - u * u * (3.0 - 2.0 * u) // smoothstep foothills descent
+    } else {
+        0.0 // True natural gap: mountain range has ended! Open sky & valley!
+    };
+
+    (base_envelope * range_amplitude_scale).clamp(0.0, 1.25)
+}
+
 /// Mathematical mountain height function using multi-harmonic Fourier synthesis.
 /// Determines continuous elevation at column x incorporating erosion pinching and natural geomorphology.
 pub fn calculate_mountain_height(
@@ -598,7 +640,7 @@ pub fn calculate_mountain_height_aspect(
     let t_offset = time * 1.2;
     let x_world = x + t_offset;
 
-    match style {
+    let raw_h = match style {
         MountainStyle::Peaks | MountainStyle::Iceberg | MountainStyle::Gothic => {
             // Glacial horn erosion: power-pinched acute peaks with broad cirque valleys
             let theta1 = omega * x_world;
@@ -606,13 +648,13 @@ pub fn calculate_mountain_height_aspect(
             let theta3 = omega * 3.618 * x_world + 2.4;
             let h1 = theta1.sin().abs().powf(1.85) * scaled_max_var;
             let h2 = (theta2.sin() * 0.35 + theta3.cos() * 0.20) * scaled_max_var;
-            (scaled_base_h + h1 + h2).clamp(1.0, max_allowed)
+            scaled_base_h + h1 + h2
         }
         MountainStyle::Plateau => {
             // Mesa plateau: hyperbolic tangent cliff saturation produces sheer flat-topped mesas
             let theta = omega * x_world;
             let h1 = (theta.sin() * 3.0).tanh() * scaled_max_var;
-            (scaled_base_h + h1).clamp(1.0, max_allowed)
+            scaled_base_h + h1
         }
         MountainStyle::Volcano => {
             // Volcanic caldera: Lorentzian cone with central crater depression
@@ -625,7 +667,7 @@ pub fn calculate_mountain_height_aspect(
             } else {
                 0.0
             };
-            (scaled_base_h + cone - crater).clamp(1.0, max_allowed)
+            scaled_base_h + cone - crater
         }
         MountainStyle::Skyline => {
             // Stepped building heights across urban skyline
@@ -633,7 +675,7 @@ pub fn calculate_mountain_height_aspect(
             let theta2 = omega * 2.23 * x_world + 0.8;
             let raw = theta1.sin() * 0.65 + theta2.sin() * 0.35;
             let steps = (raw * 4.0).floor() / 4.0;
-            (scaled_base_h + steps * scaled_max_var).clamp(1.0, max_allowed)
+            scaled_base_h + steps * scaled_max_var
         }
         _ => {
             // Natural rolling terrain: multi-harmonic smooth superposition
@@ -643,9 +685,15 @@ pub fn calculate_mountain_height_aspect(
             let h1 = theta1.sin() * (scaled_max_var * 0.60);
             let h2 = theta2.sin() * (scaled_max_var * 0.30);
             let h3 = theta3.cos() * (scaled_max_var * 0.20);
-            (scaled_base_h + h1 + h2 + h3).clamp(1.0, max_allowed)
+            scaled_base_h + h1 + h2 + h3
         }
+    };
+
+    let envelope = calculate_mountain_range_envelope(x_world, style);
+    if envelope <= 0.02 {
+        return 0.0;
     }
+    (raw_h * envelope).clamp(0.0, max_allowed)
 }
 
 /// Render mountain / horizon layer directly behind the creature, anchored to the horizon above the road.
@@ -699,6 +747,9 @@ pub fn render_mountain(
         for i in 0..chunk_len {
             let x = chunk_start + i;
             let h_curr = heights[i];
+            if h_curr < 0.5 {
+                continue;
+            }
             let h_prev = if i > 0 {
                 heights[i - 1]
             } else if x > 0 {
@@ -960,18 +1011,20 @@ pub const PHI_RECIPROCAL: f32 = 0.618_033_988_7;
 /// Models biological root exclusion and natural tree clumping (alternating stands and clearings).
 pub fn calculate_inter_tree_distance(k: usize, min_dist: f32, var_dist: f32) -> f32 {
     let phi_fract = ((k as f32) * PHI_RECIPROCAL).fract();
-    let phi_sq_fract = ((k as f32) * (PHI_RECIPROCAL * PHI_RECIPROCAL)).fract();
-    // Grove clustering factor: alternates between tighter tree clusters (stands) and open clearings
-    let cluster_modulation = (phi_sq_fract * 2.0 * std::f32::consts::PI).cos() * (var_dist * 0.25);
-    (min_dist + phi_fract * var_dist + cluster_modulation).max(min_dist * 0.7)
+    // Stand clustering cycle: groups trees in natural copse stands of 2-3 trees alternating with open glades
+    let stand_phase = ((k as f32) * 0.785398).sin();
+    let cluster_modulation = stand_phase * (var_dist * 0.28);
+    (min_dist + phi_fract * var_dist * 0.60 + cluster_modulation)
+        .clamp(min_dist * 0.70, min_dist + var_dist * 1.10)
 }
 
 /// Cumulative world coordinate of tree index n based on integrated Fibonacci distance.
 pub fn calculate_tree_position(n: usize, min_dist: f32, var_dist: f32) -> usize {
-    let avg_stride = min_dist + var_dist * 0.5;
+    let avg_stride = min_dist + var_dist * 0.45;
     let phi_fract = ((n as f32) * PHI_RECIPROCAL).fract();
-    let harmonic_drift = ((n as f32) * 0.381966).sin() * (var_dist * 0.35);
-    let pos = (n as f32) * avg_stride + (phi_fract - 0.5) * var_dist + harmonic_drift;
+    let stand_drift = ((n as f32) * 0.785398).sin() * (var_dist * 0.35);
+    let micro_jitter = (phi_fract - 0.5) * (var_dist * 0.20);
+    let pos = (n as f32) * avg_stride + stand_drift + micro_jitter;
     pos.max(0.0).round() as usize
 }
 
@@ -1001,10 +1054,10 @@ pub fn calculate_tree_count(width: usize, env: EnvironmentStyle, animal_height: 
         EnvironmentStyle::Hive => 0.85_f32,
         EnvironmentStyle::Swamp => 0.90_f32,
         EnvironmentStyle::Ocean => 0.55_f32,
-        EnvironmentStyle::City
-        | EnvironmentStyle::Space
-        | EnvironmentStyle::Cyber
-        | EnvironmentStyle::None => return 0,
+        EnvironmentStyle::City => 0.75_f32,
+        EnvironmentStyle::Cyber => 0.70_f32,
+        EnvironmentStyle::Space => 0.50_f32,
+        EnvironmentStyle::None => return 0,
         _ => 0.90_f32,
     };
 
@@ -1169,6 +1222,31 @@ pub fn get_biome_species_pool(env: EnvironmentStyle) -> &'static [TreeSpecies] {
             TreeSpecies::Bonsai,
             TreeSpecies::Oak,
             TreeSpecies::BloomingShrub,
+        ],
+        // City: Urban street plane trees, boulevard maples, park birches, formal cypresses, cherry avenues
+        EnvironmentStyle::City => &[
+            TreeSpecies::Birch,
+            TreeSpecies::Oak,
+            TreeSpecies::Maple,
+            TreeSpecies::Cypress,
+            TreeSpecies::CherryBlossom,
+            TreeSpecies::Bonsai,
+        ],
+        // Cyber: Holographic data palms, circuit willows, neon grid pines, digital bamboo matrices
+        EnvironmentStyle::Cyber => &[
+            TreeSpecies::Palm,
+            TreeSpecies::Pine,
+            TreeSpecies::WeepingWillow,
+            TreeSpecies::Bamboo,
+            TreeSpecies::Bonsai,
+        ],
+        // Space: Prismatic crystal spires, starlight monoliths, alien xenoflora
+        EnvironmentStyle::Space => &[
+            TreeSpecies::Cypress,
+            TreeSpecies::Pine,
+            TreeSpecies::Fern,
+            TreeSpecies::Bonsai,
+            TreeSpecies::HerbalCluster,
         ],
         // Forest / Pasture (and default): Oak, Maple, Birch, Pine, CherryBlossom, BerryShrub, BloomingShrub, HerbalCluster.
         _ => &[
@@ -1487,12 +1565,139 @@ pub fn calculate_tree_height(
         _ => 1.20_f32,
     };
 
-    let idx_f = tree_idx as f32;
-    let variation = 1.0 + 0.22 * (idx_f * 2.39996).sin() + 0.12 * (idx_f * 1.61803).cos();
+    // Biological maturity distribution using Golden Ratio sequence:
+    // Produces genuine forest diversity from ancient monarch giants to young saplings
+    let maturity_hash = (((tree_idx as f32 + 1.0) * PHI_GOLDEN).fract() * 100.0) as usize;
+    let maturity_scale = match maturity_hash % 10 {
+        0 => 1.45_f32,     // Ancient Colossal Monarch
+        1..=3 => 1.15_f32, // Stately Mature Tree
+        4 | 5 => 0.85_f32, // Slender Adolescent Tree
+        6 | 7 => 0.55_f32, // Young Understory Sapling
+        8 => 1.35_f32,     // Giant Canopy Tree
+        _ => 0.40_f32,     // Sprout / Dwarf Bush
+    };
 
-    let computed_h = base_animal_h * anim_mult * variation;
+    let idx_f = tree_idx as f32;
+    let micro_var = 1.0 + 0.12 * (idx_f * 2.39996).sin();
+
+    let computed_h = base_animal_h * anim_mult * maturity_scale * micro_var;
     let max_h = ((tree_base_y as f32) * 0.90).max(2.0);
     computed_h.clamp(2.0, max_h).round() as usize
+}
+
+/// Procedural organic dynamic foliage color generator.
+/// Evaluates authentic per-tree genetic hue shifts, Da Vinci atmospheric sunlit/shade vertical depth gradients,
+/// and environmental biome lighting harmony.
+pub fn get_tree_foliage_color(
+    species: TreeSpecies,
+    tree_idx: usize,
+    dy_from_crown_top: usize,
+    total_crown_h: usize,
+    env: EnvironmentStyle,
+) -> Color {
+    // 1. Botanical signature base color
+    let base = match species {
+        TreeSpecies::Oak => Color::rgb(68, 138, 86),
+        TreeSpecies::Pine => Color::rgb(42, 92, 60),
+        TreeSpecies::Acacia => Color::rgb(142, 158, 84),
+        TreeSpecies::SnowFir => Color::rgb(205, 222, 226),
+        TreeSpecies::DeadTree => Color::rgb(92, 92, 92),
+        TreeSpecies::Birch => Color::rgb(118, 162, 120),
+        TreeSpecies::Palm => Color::rgb(64, 150, 92),
+        TreeSpecies::WeepingWillow => Color::rgb(108, 142, 88),
+        TreeSpecies::Bonsai => Color::rgb(58, 112, 74),
+        TreeSpecies::Bamboo => Color::rgb(112, 154, 98),
+        TreeSpecies::Mangrove => Color::rgb(54, 104, 72),
+        TreeSpecies::Cactus => Color::rgb(82, 132, 92),
+        TreeSpecies::Fern => Color::rgb(92, 136, 76),
+        TreeSpecies::CreeperVine => Color::rgb(108, 142, 88),
+        TreeSpecies::BerryShrub => Color::rgb(64, 118, 76),
+        TreeSpecies::BloomingShrub => Color::rgb(96, 148, 104),
+        TreeSpecies::HerbalCluster => Color::rgb(120, 146, 88),
+        TreeSpecies::Cypress => Color::rgb(34, 76, 52),
+        TreeSpecies::Maple => Color::rgb(188, 96, 76),
+        TreeSpecies::CherryBlossom => Color::rgb(232, 178, 192),
+        TreeSpecies::Baobab => Color::rgb(130, 156, 96),
+        TreeSpecies::Redwood => Color::rgb(48, 96, 68),
+    };
+
+    // 2. Per-tree genetic micro-variation (ensures no two trees share identical flat hex)
+    let hash = tree_idx.wrapping_mul(2654435761);
+    let shift_r = (((hash % 29) as i32) - 14) * 2 / 3;
+    let shift_g = ((((hash >> 8) % 27) as i32) - 13) * 2 / 3;
+    let shift_b = ((((hash >> 16) % 25) as i32) - 12) * 2 / 3;
+
+    let gen_r = (base.r as i32 + shift_r).clamp(10, 250) as u8;
+    let gen_g = (base.g as i32 + shift_g).clamp(10, 250) as u8;
+    let gen_b = (base.b as i32 + shift_b).clamp(10, 250) as u8;
+
+    // 3. Vertical sunlit-to-shade depth gradient (Leonardo da Vinci sfumato lighting):
+    // Top crown apex row catches direct golden sun; lower canopy rows sit in deep forest understory shadow.
+    let crown_h = total_crown_h.max(1) as f32;
+    let t_sun = 1.0 - (dy_from_crown_top as f32 / crown_h).clamp(0.0, 1.0); // 1.0 at apex, 0.0 at base
+
+    let (sun_dr, sun_dg, sun_db) = if t_sun > 0.65 {
+        // Direct sunlit highlight on top leaves
+        (26, 32, 18)
+    } else if t_sun > 0.35 {
+        // Mid-canopy ambient
+        (0, 0, 0)
+    } else {
+        // Deep shaded understory boughs
+        (-22, -26, -18)
+    };
+
+    let lit_r = (gen_r as i32 + sun_dr).clamp(10, 255) as u8;
+    let lit_g = (gen_g as i32 + sun_dg).clamp(10, 255) as u8;
+    let lit_b = (gen_b as i32 + sun_db).clamp(10, 255) as u8;
+
+    // 4. Environmental biome atmospheric color adaptation
+    match env {
+        EnvironmentStyle::Savanna => Color::rgb(
+            lit_r.saturating_add(18),
+            lit_g.saturating_add(12),
+            lit_b.saturating_sub(10),
+        ),
+        EnvironmentStyle::Arctic => Color::rgb(
+            lit_r.saturating_sub(8),
+            lit_g.saturating_add(14),
+            lit_b.saturating_add(26),
+        ),
+        EnvironmentStyle::Graveyard => Color::rgb(
+            lit_r.saturating_sub(18),
+            lit_g.saturating_sub(14),
+            lit_b.saturating_add(4),
+        ),
+        EnvironmentStyle::Inferno => Color::rgb(
+            lit_r.saturating_add(32),
+            lit_g.saturating_add(10),
+            lit_b.saturating_sub(20),
+        ),
+        EnvironmentStyle::Jurassic => Color::rgb(
+            lit_r.saturating_sub(6),
+            lit_g.saturating_add(22),
+            lit_b.saturating_sub(6),
+        ),
+        EnvironmentStyle::Cyber => {
+            // High-voltage holographic neon cyber tinting
+            let cyber_mode = tree_idx % 3;
+            match cyber_mode {
+                0 => Color::rgb(0, 229, 255),  // Cyber Electric Cyan
+                1 => Color::rgb(0, 255, 128),  // Cyber Matrix Emerald
+                _ => Color::rgb(255, 64, 180), // Cyber Neon Magenta
+            }
+        }
+        EnvironmentStyle::Space => {
+            // Prismatic cosmic crystal shimmer
+            let space_mode = tree_idx % 3;
+            match space_mode {
+                0 => Color::rgb(186, 104, 200), // Nebula Amethyst
+                1 => Color::rgb(100, 220, 240), // Starlight Cyan
+                _ => Color::rgb(255, 200, 100), // Solar Amber
+            }
+        }
+        _ => Color::rgb(lit_r, lit_g, lit_b),
+    }
 }
 
 /// Render procedural midground trees and flora layer.
@@ -1532,16 +1737,7 @@ pub fn render_trees_with_animal(
     animal_height: Option<usize>,
     base_anim: Option<BaseAnim>,
 ) {
-    if tree_base_y >= fb.height
-        || width == 0
-        || matches!(
-            env,
-            EnvironmentStyle::None
-                | EnvironmentStyle::City
-                | EnvironmentStyle::Space
-                | EnvironmentStyle::Cyber
-        )
-    {
+    if tree_base_y >= fb.height || width == 0 || env == EnvironmentStyle::None {
         return;
     }
 
@@ -1559,28 +1755,6 @@ pub fn render_trees_with_animal(
     let scroll_x = (time * 2.4) as usize;
     let min_dist = 16.0_f32;
     let var_dist = 12.0_f32;
-
-    let tree_green = Color::rgb(68, 138, 86); // Calibrated woodland sage
-    let snow_white = Color::rgb(205, 222, 226); // Frosty morning mist
-    let acacia_gold = Color::rgb(142, 158, 84); // Savanna olive gold
-    let birch_leaves = Color::rgb(118, 162, 120); // Gentle meadow birch
-    let dark_wood = Color::rgb(92, 92, 92); // Weathered timber
-    let pine_green = Color::rgb(42, 92, 60); // Calming deep spruce
-    let willow_green = Color::rgb(108, 142, 88); // Serene weeping willow sage
-    let bonsai_green = Color::rgb(58, 112, 74); // Refined juniper
-    let bamboo_green = Color::rgb(112, 154, 98); // Gentle bamboo jade
-    let mangrove_green = Color::rgb(54, 104, 72); // Tidal mangrove olive
-    let cactus_green = Color::rgb(82, 132, 92); // Succulent sage green
-    let fern_green = Color::rgb(92, 136, 76); // Temperate forest fern
-    let vine_green = Color::rgb(108, 142, 88); // Climbing ivy olive
-    let shrub_green = Color::rgb(64, 118, 76); // Boxwood green
-    let blooming_green = Color::rgb(96, 148, 104); // Delicate spring leaf
-    let herb_green = Color::rgb(120, 146, 88); // Herbal tea green
-    let cypress_green = Color::rgb(34, 76, 52); // Muted Mediterranean evergreen
-    let maple_red = Color::rgb(188, 96, 76); // Warm autumnal amber (zero harsh glare)
-    let cherry_pink = Color::rgb(232, 178, 192); // Delicate sakura blossom pink
-    let baobab_green = Color::rgb(130, 156, 96); // Warm arid savanna canopy
-    let redwood_green = Color::rgb(48, 96, 68); // Ancient redwood deep canopy
 
     // Natural Fibonacci phyllotaxis tree range across the visible span
     let avg_stride = min_dist + var_dist * 0.5;
@@ -1681,420 +1855,749 @@ pub fn render_trees_with_animal(
             }
         };
 
+        let fol_col = |dy_from_top: usize, total_crown_h: usize| {
+            get_tree_foliage_color(species, t_idx, dy_from_top, total_crown_h, env)
+        };
+        let crown_var = t_idx % 2;
+
         match species {
             TreeSpecies::Oak => {
-                if target_tree_h >= 8 {
-                    plot_row(0, -8, "   .---.   ", tree_green);
-                    plot_row(0, -7, " .'     '. ", tree_green);
-                    plot_row(0, -6, "/  (@)    \\", tree_green);
-                    plot_row(0, -5, "|  (@)  (@)|", tree_green);
-                    plot_row(0, -4, "|    (@)   |", tree_green);
-                    plot_row(0, -3, " \\  _____ / ", tree_green);
-                    draw_trunk(5, -2, trunk_w);
-                } else if target_tree_h >= 4 {
-                    plot_row(0, -4, " .---. ", tree_green);
-                    plot_row(0, -3, "( @ @ )", tree_green);
-                    plot_row(0, -2, " \\___/ ", tree_green);
-                    draw_trunk(3, -1, trunk_w.min(2));
+                if target_tree_h >= 10 {
+                    plot_row(-1, -11, "     .-----.     ", fol_col(0, 8));
+                    plot_row(-1, -10, "   .'  (o)  '.   ", fol_col(1, 8));
+                    plot_row(-1, -9, "  /  (@)   (@)\\  ", fol_col(2, 8));
+                    plot_row(-1, -8, " / (@)  (@)  (@)\\ ", fol_col(3, 8));
+                    plot_row(-1, -7, "| (@)  (@)  (@)  |", fol_col(4, 8));
+                    plot_row(-1, -6, " \\  /|\\   /|\\   / ", fol_col(5, 8));
+                    plot_row(-1, -5, "  \\/_|____|_\\_/  ", fol_col(6, 8));
+                    plot_row(-1, -4, "     \\ ||| /     ", fol_col(7, 8));
+                    draw_trunk(6, -3, trunk_w.max(2));
+                } else if target_tree_h >= 7 {
+                    if crown_var == 0 {
+                        plot_row(0, -8, "   .---.   ", fol_col(0, 6));
+                        plot_row(0, -7, " .'     '. ", fol_col(1, 6));
+                        plot_row(0, -6, "/  (@)    \\", fol_col(2, 6));
+                        plot_row(0, -5, "|  (@)  (@)|", fol_col(3, 6));
+                        plot_row(0, -4, "|    (@)   |", fol_col(4, 6));
+                        plot_row(0, -3, " \\  _____ / ", fol_col(5, 6));
+                        draw_trunk(5, -2, trunk_w);
+                    } else {
+                        plot_row(0, -8, " .---. .---. ", fol_col(0, 6));
+                        plot_row(0, -7, "(  @  V  @  )", fol_col(1, 6));
+                        plot_row(0, -6, " \\  (@)   /  ", fol_col(2, 6));
+                        plot_row(0, -5, "  |  (@) |   ", fol_col(3, 6));
+                        plot_row(0, -4, "   \\____/    ", fol_col(4, 6));
+                        plot_row(0, -3, "    \\  /     ", fol_col(5, 6));
+                        draw_trunk(5, -2, trunk_w);
+                    }
+                } else if target_tree_h >= 5 {
+                    plot_row(0, -5, "  .---.  ", fol_col(0, 4));
+                    plot_row(0, -4, " ( @ @ ) ", fol_col(1, 4));
+                    plot_row(0, -3, "  \\___/  ", fol_col(2, 4));
+                    plot_row(0, -2, "   \\|/   ", fol_col(3, 4));
+                    draw_trunk(4, -1, trunk_w.min(2));
+                } else if target_tree_h >= 3 {
+                    plot_row(0, -3, " .---. ", fol_col(0, 2));
+                    plot_row(0, -2, " ( @ ) ", fol_col(1, 2));
+                    draw_trunk(3, -1, 1);
                 } else {
-                    plot_row(0, -2, "(@)", tree_green);
-                    plot_row(0, -1, "(_)", tree_green);
-                    draw_trunk(1, 0, 1);
+                    plot_row(0, -2, "(@)", fol_col(0, 1));
+                    draw_trunk(1, -1, 1);
                 }
             }
             TreeSpecies::Pine => {
-                if target_tree_h >= 8 {
-                    plot_row(0, -8, "    ^    ", pine_green);
-                    plot_row(0, -7, "   /|\\   ", pine_green);
-                    plot_row(0, -6, "  /*|*\\  ", pine_green);
-                    plot_row(0, -5, " /* | *\\ ", pine_green);
-                    plot_row(0, -4, "/ * | * \\", pine_green);
-                    plot_row(0, -3, " /__|__\\ ", pine_green);
-                    draw_trunk(4, -2, trunk_w);
-                } else if target_tree_h >= 4 {
-                    plot_row(0, -4, "  ^  ", pine_green);
-                    plot_row(0, -3, " /|\\ ", pine_green);
-                    plot_row(0, -2, "//|\\\\", pine_green);
+                if target_tree_h >= 10 {
+                    plot_row(0, -11, "     ^     ", fol_col(0, 9));
+                    plot_row(0, -10, "    /|\\    ", fol_col(1, 9));
+                    plot_row(0, -9, "   /*|*\\   ", fol_col(2, 9));
+                    plot_row(0, -8, "  /* | *\\  ", fol_col(3, 9));
+                    plot_row(0, -7, " /*  |  *\\ ", fol_col(4, 9));
+                    plot_row(0, -6, "/ *  |  * \\", fol_col(5, 9));
+                    plot_row(0, -5, "/*   |   *\\", fol_col(6, 9));
+                    plot_row(0, -4, "/____|____\\", fol_col(7, 9));
+                    plot_row(0, -3, "    /|\\    ", fol_col(8, 9));
+                    draw_trunk(5, -2, trunk_w.max(2));
+                } else if target_tree_h >= 7 {
+                    if crown_var == 0 {
+                        plot_row(0, -8, "    ^    ", fol_col(0, 6));
+                        plot_row(0, -7, "   /|\\   ", fol_col(1, 6));
+                        plot_row(0, -6, "  /*|*\\  ", fol_col(2, 6));
+                        plot_row(0, -5, " /* | *\\ ", fol_col(3, 6));
+                        plot_row(0, -4, "/ * | * \\", fol_col(4, 6));
+                        plot_row(0, -3, " /__|__\\ ", fol_col(5, 6));
+                        draw_trunk(4, -2, trunk_w);
+                    } else {
+                        plot_row(0, -8, "   /|\\   ", fol_col(0, 6));
+                        plot_row(0, -7, "  /*|*\\  ", fol_col(1, 6));
+                        plot_row(0, -6, "  /\\|/\\  ", fol_col(2, 6));
+                        plot_row(0, -5, " /* | *\\ ", fol_col(3, 6));
+                        plot_row(0, -4, "/*  |  *\\", fol_col(4, 6));
+                        plot_row(0, -3, "/___|___\\", fol_col(5, 6));
+                        draw_trunk(4, -2, trunk_w);
+                    }
+                } else if target_tree_h >= 5 {
+                    plot_row(0, -5, "  ^  ", fol_col(0, 4));
+                    plot_row(0, -4, " /|\\ ", fol_col(1, 4));
+                    plot_row(0, -3, "//|\\\\", fol_col(2, 4));
+                    plot_row(0, -2, "/_|_\\", fol_col(3, 4));
                     draw_trunk(2, -1, 1);
+                } else if target_tree_h >= 3 {
+                    plot_row(0, -3, " ^ ", fol_col(0, 2));
+                    plot_row(0, -2, "/*\\", fol_col(1, 2));
+                    draw_trunk(1, -1, 1);
                 } else {
-                    plot_row(0, -2, " ^ ", pine_green);
-                    plot_row(0, -1, "/*\\", pine_green);
-                    draw_trunk(1, 0, 1);
+                    plot_row(0, -2, "^", fol_col(0, 1));
+                    draw_trunk(0, -1, 1);
                 }
             }
             TreeSpecies::Acacia => {
-                if target_tree_h >= 8 {
-                    plot_row(0, -7, "  .-----------.  ", acacia_gold);
-                    plot_row(0, -6, " (_____________) ", acacia_gold);
-                    plot_row(0, -5, "   \\   |   /   ", acacia_gold);
-                    plot_row(0, -4, "    \\  |  /    ", acacia_gold);
+                if target_tree_h >= 10 {
+                    plot_row(0, -11, "   .-------------.   ", fol_col(0, 4));
+                    plot_row(0, -10, "  (_______________)  ", fol_col(1, 4));
+                    plot_row(0, -9, "    \\   \\ | /   /    ", fol_col(2, 4));
+                    plot_row(0, -8, "     \\   \\|/   /     ", fol_col(3, 4));
+                    plot_row(0, -7, "      \\   |   /      ", fol_col(4, 4));
+                    plot_row(0, -6, "       \\  |  /       ", fol_col(5, 4));
+                    draw_trunk(10, -5, trunk_w.max(2));
+                } else if target_tree_h >= 7 {
+                    plot_row(0, -7, "  .-----------.  ", fol_col(0, 4));
+                    plot_row(0, -6, " (_____________) ", fol_col(1, 4));
+                    plot_row(0, -5, "   \\   |   /   ", fol_col(2, 4));
+                    plot_row(0, -4, "    \\  |  /    ", fol_col(3, 4));
                     draw_trunk(8, -3, trunk_w);
-                } else if target_tree_h >= 4 {
-                    plot_row(0, -3, " _.~---~._ ", acacia_gold);
-                    plot_row(0, -2, "   \\ | /   ", acacia_gold);
-                    draw_trunk(5, -1, 1);
-                } else {
-                    plot_row(0, -1, "__~---~__", acacia_gold);
-                    draw_trunk(4, 0, 1);
-                }
-            }
-            TreeSpecies::SnowFir => {
-                if target_tree_h >= 8 {
-                    plot_row(0, -8, "    ^    ", snow_white);
-                    plot_row(0, -7, "   /|\\   ", snow_white);
-                    plot_row(0, -6, "  /*|*\\  ", snow_white);
-                    plot_row(0, -5, " /* | *\\ ", snow_white);
-                    plot_row(0, -4, "/ * | * \\", snow_white);
-                    plot_row(0, -3, " /__|__\\ ", snow_white);
-                    draw_trunk(4, -2, trunk_w);
-                } else if target_tree_h >= 4 {
-                    plot_row(0, -4, "  ^  ", snow_white);
-                    plot_row(0, -3, " /|\\ ", snow_white);
-                    plot_row(0, -2, "/*|*\\", snow_white);
-                    draw_trunk(2, -1, 1);
-                } else {
-                    plot_row(0, -2, " ^ ", snow_white);
-                    plot_row(0, -1, "/*\\", snow_white);
-                    draw_trunk(1, 0, 1);
-                }
-            }
-            TreeSpecies::DeadTree => {
-                if target_tree_h >= 8 {
-                    plot_row(0, -8, "\\   /   \\", dark_wood);
-                    plot_row(0, -7, " \\ / \\ / ", dark_wood);
-                    plot_row(0, -6, "  \\ | /  ", dark_wood);
-                    plot_row(0, -5, "   \\|/   ", dark_wood);
-                    draw_trunk(4, -4, trunk_w);
-                } else if target_tree_h >= 4 {
-                    plot_row(0, -4, "\\ / \\", dark_wood);
-                    plot_row(0, -3, " \\|/ ", dark_wood);
-                    draw_trunk(2, -2, 1);
-                } else {
-                    plot_row(0, -2, "\\ /", dark_wood);
-                    plot_row(0, -1, " | ", dark_wood);
-                    draw_trunk(1, 0, 1);
-                }
-            }
-            TreeSpecies::Birch => {
-                if target_tree_h >= 8 {
-                    plot_row(0, -8, "   .---.   ", birch_leaves);
-                    plot_row(0, -7, " .(* * *). ", birch_leaves);
-                    plot_row(0, -6, "(* * * * *)", birch_leaves);
-                    plot_row(0, -5, " (* * * *) ", birch_leaves);
-                    plot_row(0, -4, "  \\  |  /  ", birch_leaves);
-                    draw_trunk(5, -3, trunk_w);
-                } else if target_tree_h >= 4 {
-                    plot_row(0, -4, " .(*). ", birch_leaves);
-                    plot_row(0, -3, "(* * *)", birch_leaves);
-                    plot_row(0, -2, " \\_|_/ ", birch_leaves);
+                } else if target_tree_h >= 5 {
+                    plot_row(0, -5, " _.~---~._ ", fol_col(0, 3));
+                    plot_row(0, -4, "   \\ | /   ", fol_col(1, 3));
+                    plot_row(0, -3, "    \\|/    ", fol_col(2, 3));
+                    draw_trunk(5, -2, 1);
+                } else if target_tree_h >= 3 {
+                    plot_row(0, -3, "_~---~_", fol_col(0, 2));
+                    plot_row(0, -2, "  \\|/  ", fol_col(1, 2));
                     draw_trunk(3, -1, 1);
                 } else {
-                    plot_row(0, -2, "(*)", birch_leaves);
-                    plot_row(0, -1, "/*\\", birch_leaves);
-                    draw_trunk(1, 0, 1);
-                }
-            }
-            TreeSpecies::Palm => {
-                if target_tree_h >= 8 {
-                    plot_row(0, -8, "  \\  |  /  ", tree_green);
-                    plot_row(0, -7, " --( * )-- ", tree_green);
-                    plot_row(0, -6, "  /  |  \\  ", tree_green);
-                    plot_row(0, -5, "    (o)    ", tree_green);
-                    draw_trunk(5, -4, trunk_w);
-                } else if target_tree_h >= 4 {
-                    plot_row(0, -4, " \\ | / ", tree_green);
-                    plot_row(0, -3, "--(*)--", tree_green);
-                    plot_row(0, -2, "  (o)  ", tree_green);
-                    draw_trunk(3, -1, 1);
-                } else {
-                    plot_row(0, -2, "\\|/", tree_green);
-                    plot_row(0, -1, "(*)", tree_green);
-                    draw_trunk(1, 0, 1);
-                }
-            }
-            TreeSpecies::WeepingWillow => {
-                if target_tree_h >= 8 {
-                    plot_row(0, -8, "   .---.   ", willow_green);
-                    plot_row(0, -7, " .( ;;; ). ", willow_green);
-                    plot_row(0, -6, "(: | : | :)", willow_green);
-                    plot_row(0, -5, " | : | : | ", willow_green);
-                    plot_row(0, -4, " : | : | : ", willow_green);
-                    plot_row(0, -3, " :   |   : ", willow_green);
-                    draw_trunk(5, -2, trunk_w);
-                } else if target_tree_h >= 4 {
-                    plot_row(0, -4, " .---. ", willow_green);
-                    plot_row(0, -3, "(:|:|:)", willow_green);
-                    plot_row(0, -2, " : | : ", willow_green);
-                    draw_trunk(3, -1, 1);
-                } else {
-                    plot_row(0, -2, "(;:;)", willow_green);
-                    plot_row(0, -1, " :|: ", willow_green);
+                    plot_row(0, -1, "~---~", fol_col(0, 1));
                     draw_trunk(2, 0, 1);
                 }
             }
-            TreeSpecies::Bonsai => {
-                if target_tree_h >= 8 {
-                    plot_row(0, -7, "    (~~)    ", bonsai_green);
-                    plot_row(0, -6, "   _/-'     ", bonsai_green);
-                    plot_row(0, -5, " (~~~)  (~) ", bonsai_green);
-                    plot_row(0, -4, "  /.-/  /   ", bonsai_green);
-                    plot_row(0, -3, "    \\_./    ", bonsai_green);
-                    draw_trunk(6, -2, 1);
-                } else if target_tree_h >= 4 {
-                    plot_row(0, -4, "  (~~) ", bonsai_green);
-                    plot_row(0, -3, " ~/ -' ", bonsai_green);
-                    plot_row(0, -2, "(~~) | ", bonsai_green);
-                    draw_trunk(5, -1, 1);
+            TreeSpecies::SnowFir => {
+                if target_tree_h >= 10 {
+                    plot_row(0, -11, "     ^     ", fol_col(0, 9));
+                    plot_row(0, -10, "    /|\\    ", fol_col(1, 9));
+                    plot_row(0, -9, "   /*|*\\   ", fol_col(2, 9));
+                    plot_row(0, -8, "  /* | *\\  ", fol_col(3, 9));
+                    plot_row(0, -7, " /*  |  *\\ ", fol_col(4, 9));
+                    plot_row(0, -6, "/ *  |  * \\", fol_col(5, 9));
+                    plot_row(0, -5, "/*   |   *\\", fol_col(6, 9));
+                    plot_row(0, -4, "/____|____\\", fol_col(7, 9));
+                    draw_trunk(5, -3, trunk_w.max(2));
+                } else if target_tree_h >= 7 {
+                    plot_row(0, -8, "    ^    ", fol_col(0, 6));
+                    plot_row(0, -7, "   /|\\   ", fol_col(1, 6));
+                    plot_row(0, -6, "  /*|*\\  ", fol_col(2, 6));
+                    plot_row(0, -5, " /* | *\\ ", fol_col(3, 6));
+                    plot_row(0, -4, "/ * | * \\", fol_col(4, 6));
+                    plot_row(0, -3, " /__|__\\ ", fol_col(5, 6));
+                    draw_trunk(4, -2, trunk_w);
+                } else if target_tree_h >= 5 {
+                    plot_row(0, -5, "  ^  ", fol_col(0, 4));
+                    plot_row(0, -4, " /|\\ ", fol_col(1, 4));
+                    plot_row(0, -3, "/*|*\\", fol_col(2, 4));
+                    plot_row(0, -2, "/_|_\\", fol_col(3, 4));
+                    draw_trunk(2, -1, 1);
+                } else if target_tree_h >= 3 {
+                    plot_row(0, -3, " ^ ", fol_col(0, 2));
+                    plot_row(0, -2, "/*\\", fol_col(1, 2));
+                    draw_trunk(1, -1, 1);
                 } else {
-                    plot_row(0, -2, " (~) ", bonsai_green);
-                    plot_row(0, -1, " _/| ", bonsai_green);
+                    plot_row(0, -2, "^", fol_col(0, 1));
+                    draw_trunk(0, -1, 1);
+                }
+            }
+            TreeSpecies::DeadTree => {
+                if target_tree_h >= 10 {
+                    plot_row(0, -11, " \\   /   \\   / ", fol_col(0, 6));
+                    plot_row(0, -10, "  \\ / \\ / \\ /  ", fol_col(1, 6));
+                    plot_row(0, -9, "   \\ |   | /   ", fol_col(2, 6));
+                    plot_row(0, -8, "    \\ \\ / /    ", fol_col(3, 6));
+                    plot_row(0, -7, "     \\ | /     ", fol_col(4, 6));
+                    plot_row(0, -6, "      \\|/      ", fol_col(5, 6));
+                    draw_trunk(6, -5, trunk_w.max(2));
+                } else if target_tree_h >= 7 {
+                    plot_row(0, -8, "\\   /   \\", fol_col(0, 4));
+                    plot_row(0, -7, " \\ / \\ / ", fol_col(1, 4));
+                    plot_row(0, -6, "  \\ | /  ", fol_col(2, 4));
+                    plot_row(0, -5, "   \\|/   ", fol_col(3, 4));
+                    draw_trunk(4, -4, trunk_w);
+                } else if target_tree_h >= 5 {
+                    plot_row(0, -4, "\\ / \\", fol_col(0, 2));
+                    plot_row(0, -3, " \\|/ ", fol_col(1, 2));
+                    draw_trunk(2, -2, 1);
+                } else if target_tree_h >= 3 {
+                    plot_row(0, -2, "\\ /", fol_col(0, 1));
+                    plot_row(0, -1, " | ", fol_col(0, 1));
+                    draw_trunk(1, 0, 1);
+                } else {
+                    plot_row(0, -1, "\\/", fol_col(0, 1));
+                    draw_trunk(0, 0, 1);
+                }
+            }
+            TreeSpecies::Birch => {
+                if target_tree_h >= 10 {
+                    plot_row(0, -11, "     .---.     ", fol_col(0, 8));
+                    plot_row(0, -10, "   .(* * *).   ", fol_col(1, 8));
+                    plot_row(0, -9, " .(* * * * *). ", fol_col(2, 8));
+                    plot_row(0, -8, "(* * * * * * *)", fol_col(3, 8));
+                    plot_row(0, -7, " (* * * * * *) ", fol_col(4, 8));
+                    plot_row(0, -6, "  \\(* * * *)/  ", fol_col(5, 8));
+                    plot_row(0, -5, "   \\  | |  /   ", fol_col(6, 8));
+                    plot_row(0, -4, "    \\_|_|_/    ", fol_col(7, 8));
+                    draw_trunk(7, -3, trunk_w.max(2));
+                } else if target_tree_h >= 7 {
+                    plot_row(0, -8, "   .---.   ", fol_col(0, 5));
+                    plot_row(0, -7, " .(* * *). ", fol_col(1, 5));
+                    plot_row(0, -6, "(* * * * *)", fol_col(2, 5));
+                    plot_row(0, -5, " (* * * *) ", fol_col(3, 5));
+                    plot_row(0, -4, "  \\  |  /  ", fol_col(4, 5));
+                    draw_trunk(5, -3, trunk_w);
+                } else if target_tree_h >= 5 {
+                    plot_row(0, -5, "  .---.  ", fol_col(0, 3));
+                    plot_row(0, -4, " .(* *). ", fol_col(1, 3));
+                    plot_row(0, -3, "  \\_|_/  ", fol_col(2, 3));
+                    draw_trunk(4, -2, 1);
+                } else if target_tree_h >= 3 {
+                    plot_row(0, -3, " .(*). ", fol_col(0, 2));
+                    plot_row(0, -2, "(* * *)", fol_col(1, 2));
+                    draw_trunk(3, -1, 1);
+                } else {
+                    plot_row(0, -2, "(*)", fol_col(0, 1));
+                    draw_trunk(1, -1, 1);
+                }
+            }
+            TreeSpecies::Palm => {
+                if target_tree_h >= 10 {
+                    plot_row(0, -11, "   \\\\  ||  //   ", fol_col(0, 6));
+                    plot_row(0, -10, "  ---\\( * )/--- ", fol_col(1, 6));
+                    plot_row(0, -9, "    // || \\\\    ", fol_col(2, 6));
+                    plot_row(0, -8, "   -- (o o) --  ", fol_col(3, 6));
+                    plot_row(0, -7, "     / || \\     ", fol_col(4, 6));
+                    plot_row(0, -6, "       ||       ", fol_col(5, 6));
+                    draw_trunk(7, -5, trunk_w.max(2));
+                } else if target_tree_h >= 7 {
+                    plot_row(0, -8, "  \\  |  /  ", fol_col(0, 4));
+                    plot_row(0, -7, " --( * )-- ", fol_col(1, 4));
+                    plot_row(0, -6, "  /  |  \\  ", fol_col(2, 4));
+                    plot_row(0, -5, "    (o)    ", fol_col(3, 4));
+                    draw_trunk(5, -4, trunk_w);
+                } else if target_tree_h >= 5 {
+                    plot_row(0, -5, " \\ | / ", fol_col(0, 3));
+                    plot_row(0, -4, "--(*)--", fol_col(1, 3));
+                    plot_row(0, -3, "  (o)  ", fol_col(2, 3));
+                    draw_trunk(3, -2, 1);
+                } else if target_tree_h >= 3 {
+                    plot_row(0, -3, "\\|/", fol_col(0, 2));
+                    plot_row(0, -2, "(*)", fol_col(1, 2));
+                    draw_trunk(1, -1, 1);
+                } else {
+                    plot_row(0, -2, "\\|/", fol_col(0, 1));
+                    draw_trunk(1, -1, 1);
+                }
+            }
+            TreeSpecies::WeepingWillow => {
+                if target_tree_h >= 10 {
+                    plot_row(0, -11, "     .-----.     ", fol_col(0, 9));
+                    plot_row(0, -10, "   .( ;;;;; ).   ", fol_col(1, 9));
+                    plot_row(0, -9, " .(: | : | : | :). ", fol_col(2, 9));
+                    plot_row(0, -8, "(: | : | : | : | :)", fol_col(3, 9));
+                    plot_row(0, -7, " | : | : | : | : | ", fol_col(4, 9));
+                    plot_row(0, -6, " : | : | : | : | : ", fol_col(5, 9));
+                    plot_row(0, -5, " : :   | | |   : : ", fol_col(6, 9));
+                    plot_row(0, -4, " :     | | |     : ", fol_col(7, 9));
+                    plot_row(0, -3, "       \\_|_/       ", fol_col(8, 9));
+                    draw_trunk(9, -2, trunk_w.max(2));
+                } else if target_tree_h >= 7 {
+                    plot_row(0, -8, "   .---.   ", fol_col(0, 6));
+                    plot_row(0, -7, " .( ;;; ). ", fol_col(1, 6));
+                    plot_row(0, -6, "(: | : | :)", fol_col(2, 6));
+                    plot_row(0, -5, " | : | : | ", fol_col(3, 6));
+                    plot_row(0, -4, " : | : | : ", fol_col(4, 6));
+                    plot_row(0, -3, " :   |   : ", fol_col(5, 6));
+                    draw_trunk(5, -2, trunk_w);
+                } else if target_tree_h >= 5 {
+                    plot_row(0, -5, " .---. ", fol_col(0, 4));
+                    plot_row(0, -4, "(:|:|:)", fol_col(1, 4));
+                    plot_row(0, -3, " : | : ", fol_col(2, 4));
+                    plot_row(0, -2, " :   : ", fol_col(3, 4));
+                    draw_trunk(3, -1, 1);
+                } else if target_tree_h >= 3 {
+                    plot_row(0, -3, "(;:;)", fol_col(0, 2));
+                    plot_row(0, -2, " :|: ", fol_col(1, 2));
+                    draw_trunk(2, -1, 1);
+                } else {
+                    plot_row(0, -2, ";|;", fol_col(0, 1));
+                    draw_trunk(1, -1, 1);
+                }
+            }
+            TreeSpecies::Bonsai => {
+                if target_tree_h >= 10 {
+                    plot_row(0, -11, "     (~~~~)     ", fol_col(0, 8));
+                    plot_row(0, -10, "    _/-'  `--_  ", fol_col(1, 8));
+                    plot_row(0, -9, "  (~~~)    (~~) ", fol_col(2, 8));
+                    plot_row(0, -8, "   /.-/    /    ", fol_col(3, 8));
+                    plot_row(0, -7, " (~)  \\_._/     ", fol_col(4, 8));
+                    plot_row(0, -6, "  /.-/  |       ", fol_col(5, 8));
+                    plot_row(0, -5, "    \\_./        ", fol_col(6, 8));
+                    draw_trunk(6, -4, 1);
+                } else if target_tree_h >= 7 {
+                    plot_row(0, -7, "    (~~)    ", fol_col(0, 5));
+                    plot_row(0, -6, "   _/-'     ", fol_col(1, 5));
+                    plot_row(0, -5, " (~~~)  (~) ", fol_col(2, 5));
+                    plot_row(0, -4, "  /.-/  /   ", fol_col(3, 5));
+                    plot_row(0, -3, "    \\_./    ", fol_col(4, 5));
+                    draw_trunk(6, -2, 1);
+                } else if target_tree_h >= 5 {
+                    plot_row(0, -4, "  (~~) ", fol_col(0, 3));
+                    plot_row(0, -3, " ~/ -' ", fol_col(1, 3));
+                    plot_row(0, -2, "(~~) | ", fol_col(2, 3));
+                    draw_trunk(5, -1, 1);
+                } else if target_tree_h >= 3 {
+                    plot_row(0, -2, " (~) ", fol_col(0, 2));
+                    plot_row(0, -1, " _/| ", fol_col(1, 2));
                     draw_trunk(3, 0, 1);
+                } else {
+                    plot_row(0, -1, "(~)", fol_col(0, 1));
+                    draw_trunk(1, 0, 1);
                 }
             }
             TreeSpecies::Bamboo => {
-                if target_tree_h >= 8 {
-                    plot_row(0, -8, "  ~^~  ~^~  ", bamboo_green);
-                    plot_row(0, -7, " //|\\\\ //|\\\\ ", bamboo_green);
-                    plot_row(0, -6, "   |-|   |-|   ", bamboo_green);
-                    plot_row(0, -5, "   | |   | |   ", bamboo_green);
-                    plot_row(0, -4, " \\ |-| / |-| \\ ", bamboo_green);
-                    plot_row(0, -3, "   | |   | |   ", bamboo_green);
-                    plot_row(0, -2, "   |-|   |-|   ", bamboo_green);
-                    plot_row(0, -1, "   | |   | |   ", bamboo_green);
-                    plot_row(0, 0, "   |-|   |-|   ", bamboo_green);
-                } else if target_tree_h >= 4 {
-                    plot_row(0, -4, " ~^~ ", bamboo_green);
-                    plot_row(0, -3, "//|\\\\", bamboo_green);
-                    plot_row(0, -2, " |-| ", bamboo_green);
-                    plot_row(0, -1, " | | ", bamboo_green);
-                    plot_row(0, 0, " |-| ", bamboo_green);
+                if target_tree_h >= 10 {
+                    plot_row(0, -11, "  ~^~   ~^~   ~^~  ", fol_col(0, 11));
+                    plot_row(0, -10, " //|\\\\ //|\\\\ //|\\\\ ", fol_col(1, 11));
+                    plot_row(0, -9, "   |-|   |-|   |-|   ", fol_col(2, 11));
+                    plot_row(0, -8, "   | |   | |   | |   ", fol_col(3, 11));
+                    plot_row(0, -7, " \\ |-| / |-| \\ |-| / ", fol_col(4, 11));
+                    plot_row(0, -6, "   | |   | |   | |   ", fol_col(5, 11));
+                    plot_row(0, -5, "   |-|   |-|   |-|   ", fol_col(6, 11));
+                    plot_row(0, -4, "   | |   | |   | |   ", fol_col(7, 11));
+                    plot_row(0, -3, "   |-|   |-|   |-|   ", fol_col(8, 11));
+                    plot_row(0, -2, "   | |   | |   | |   ", fol_col(9, 11));
+                    plot_row(0, -1, "   |-|   |-|   |-|   ", fol_col(10, 11));
+                    plot_row(0, 0, "   | |   | |   | |   ", fol_col(11, 11));
+                } else if target_tree_h >= 7 {
+                    plot_row(0, -8, "  ~^~  ~^~  ", fol_col(0, 8));
+                    plot_row(0, -7, " //|\\\\ //|\\\\ ", fol_col(1, 8));
+                    plot_row(0, -6, "   |-|   |-|   ", fol_col(2, 8));
+                    plot_row(0, -5, "   | |   | |   ", fol_col(3, 8));
+                    plot_row(0, -4, " \\ |-| / |-| \\ ", fol_col(4, 8));
+                    plot_row(0, -3, "   | |   | |   ", fol_col(5, 8));
+                    plot_row(0, -2, "   |-|   |-|   ", fol_col(6, 8));
+                    plot_row(0, -1, "   | |   | |   ", fol_col(7, 8));
+                    plot_row(0, 0, "   |-|   |-|   ", fol_col(8, 8));
+                } else if target_tree_h >= 5 {
+                    plot_row(0, -5, " ~^~ ", fol_col(0, 5));
+                    plot_row(0, -4, "//|\\\\", fol_col(1, 5));
+                    plot_row(0, -3, " |-| ", fol_col(2, 5));
+                    plot_row(0, -2, " | | ", fol_col(3, 5));
+                    plot_row(0, -1, " |-| ", fol_col(4, 5));
+                    plot_row(0, 0, " | | ", fol_col(5, 5));
+                } else if target_tree_h >= 3 {
+                    plot_row(0, -3, " ~^~ ", fol_col(0, 3));
+                    plot_row(0, -2, " |-| ", fol_col(1, 3));
+                    plot_row(0, -1, " | | ", fol_col(2, 3));
+                    plot_row(0, 0, " |-| ", fol_col(3, 3));
                 } else {
-                    plot_row(0, -2, " ~^~ ", bamboo_green);
-                    plot_row(0, -1, " |-| ", bamboo_green);
-                    plot_row(0, 0, " | | ", bamboo_green);
+                    plot_row(0, -2, "~^~", fol_col(0, 2));
+                    plot_row(0, -1, "|-|", fol_col(1, 2));
+                    plot_row(0, 0, "| |", fol_col(2, 2));
                 }
             }
             TreeSpecies::Mangrove => {
-                if target_tree_h >= 8 {
-                    plot_row(0, -8, "  .-----.  ", mangrove_green);
-                    plot_row(0, -7, " (_______) ", mangrove_green);
-                    plot_row(0, -6, " (/ @ @ \\) ", mangrove_green);
-                    plot_row(0, -5, "  \\_____/  ", mangrove_green);
+                if target_tree_h >= 10 {
+                    plot_row(0, -11, "   .-------.   ", fol_col(0, 5));
+                    plot_row(0, -10, "  (_________)  ", fol_col(1, 5));
+                    plot_row(0, -9, "  (/ @ @ @ \\)  ", fol_col(2, 5));
+                    plot_row(0, -8, "   \\_______/   ", fol_col(3, 5));
+                    plot_row(0, -7, "     |||||     ", BARK_RAW_UMBER);
+                    plot_row(0, -6, "    / ||| \\    ", BARK_RAW_UMBER);
+                    plot_row(0, -5, "   / / | \\ \\   ", BARK_RAW_UMBER);
+                    plot_row(0, -4, "  / /  |  \\ \\  ", BARK_RAW_UMBER);
+                    plot_row(0, -3, " / /   |   \\ \\ ", BARK_RAW_UMBER);
+                    plot_row(0, -2, "/ /    |    \\ \\", BARK_RAW_UMBER);
+                    plot_row(0, -1, "/ /         \\ \\", BARK_RAW_UMBER);
+                    plot_row(0, 0, "/ /           \\ \\", BARK_RAW_UMBER);
+                } else if target_tree_h >= 7 {
+                    plot_row(0, -8, "  .-----.  ", fol_col(0, 4));
+                    plot_row(0, -7, " (_______) ", fol_col(1, 4));
+                    plot_row(0, -6, " (/ @ @ \\) ", fol_col(2, 4));
+                    plot_row(0, -5, "  \\_____/  ", fol_col(3, 4));
                     plot_row(0, -4, "    |||    ", BARK_RAW_UMBER);
                     plot_row(0, -3, "   / | \\   ", BARK_RAW_UMBER);
                     plot_row(0, -2, "  / / \\ \\  ", BARK_RAW_UMBER);
                     plot_row(0, -1, " / /   \\ \\ ", BARK_RAW_UMBER);
                     plot_row(0, 0, "/ /     \\ \\", BARK_RAW_UMBER);
-                } else if target_tree_h >= 4 {
-                    plot_row(0, -4, " (____) ", mangrove_green);
+                } else if target_tree_h >= 5 {
+                    plot_row(0, -4, " (____) ", fol_col(0, 2));
                     plot_row(0, -3, "  /||\\  ", BARK_RAW_UMBER);
                     plot_row(0, -2, " / || \\ ", BARK_RAW_UMBER);
                     plot_row(0, -1, "/  ||  \\", BARK_RAW_UMBER);
                     plot_row(0, 0, "/        \\", BARK_RAW_UMBER);
-                } else {
-                    plot_row(0, -2, " (__) ", mangrove_green);
+                } else if target_tree_h >= 3 {
+                    plot_row(0, -2, " (__) ", fol_col(0, 1));
                     plot_row(0, -1, " /||\\ ", BARK_RAW_UMBER);
                     plot_row(0, 0, "/    \\", BARK_RAW_UMBER);
+                } else {
+                    plot_row(0, -1, "(_)", fol_col(0, 1));
+                    plot_row(0, 0, "/ \\", BARK_RAW_UMBER);
                 }
             }
             TreeSpecies::Cactus => {
-                if target_tree_h >= 8 {
-                    plot_row(0, -7, "   _     _   ", cactus_green);
-                    plot_row(0, -6, "  | |   | |  ", cactus_green);
-                    plot_row(0, -5, "  | |_._| |  ", cactus_green);
-                    plot_row(0, -4, "  |_   _  |  ", cactus_green);
-                    plot_row(0, -3, "    | | |    ", cactus_green);
-                    plot_row(0, -2, "    | : |    ", cactus_green);
-                    plot_row(0, -1, "    | : |    ", cactus_green);
-                    plot_row(0, 0, "    | : |    ", cactus_green);
-                } else if target_tree_h >= 4 {
-                    plot_row(0, -4, " _._ ", cactus_green);
-                    plot_row(0, -3, "|_:_|", cactus_green);
-                    plot_row(0, -2, " |:| ", cactus_green);
-                    plot_row(0, -1, " |:| ", cactus_green);
-                    plot_row(0, 0, " |:| ", cactus_green);
+                if target_tree_h >= 10 {
+                    plot_row(0, -11, "   _       _   ", fol_col(0, 8));
+                    plot_row(0, -10, "  | |  _  | |  ", fol_col(1, 8));
+                    plot_row(0, -9, "  | | | | | |  ", fol_col(2, 8));
+                    plot_row(0, -8, "  | |_| |_| |  ", fol_col(3, 8));
+                    plot_row(0, -7, "  |_   _   _|  ", fol_col(4, 8));
+                    plot_row(0, -6, "    | | | |    ", fol_col(5, 8));
+                    plot_row(0, -5, "    | : : |    ", fol_col(6, 8));
+                    plot_row(0, -4, "    | : : |    ", fol_col(7, 8));
+                    plot_row(0, -3, "    | : : |    ", fol_col(7, 8));
+                    plot_row(0, -2, "    | : : |    ", fol_col(7, 8));
+                    plot_row(0, -1, "    | : : |    ", fol_col(7, 8));
+                    plot_row(0, 0, "    | : : |    ", fol_col(7, 8));
+                } else if target_tree_h >= 7 {
+                    plot_row(0, -7, "   _     _   ", fol_col(0, 5));
+                    plot_row(0, -6, "  | |   | |  ", fol_col(1, 5));
+                    plot_row(0, -5, "  | |_._| |  ", fol_col(2, 5));
+                    plot_row(0, -4, "  |_   _  |  ", fol_col(3, 5));
+                    plot_row(0, -3, "    | | |    ", fol_col(4, 5));
+                    plot_row(0, -2, "    | : |    ", fol_col(4, 5));
+                    plot_row(0, -1, "    | : |    ", fol_col(4, 5));
+                    plot_row(0, 0, "    | : |    ", fol_col(4, 5));
+                } else if target_tree_h >= 5 {
+                    plot_row(0, -4, " _._ ", fol_col(0, 3));
+                    plot_row(0, -3, "|_:_|", fol_col(1, 3));
+                    plot_row(0, -2, " |:| ", fol_col(2, 3));
+                    plot_row(0, -1, " |:| ", fol_col(2, 3));
+                    plot_row(0, 0, " |:| ", fol_col(2, 3));
+                } else if target_tree_h >= 3 {
+                    plot_row(0, -2, "(_)", fol_col(0, 2));
+                    plot_row(0, -1, "|:|", fol_col(1, 2));
+                    plot_row(0, 0, "|:|", fol_col(1, 2));
                 } else {
-                    plot_row(0, -2, "(_)", cactus_green);
-                    plot_row(0, -1, "|:|", cactus_green);
-                    plot_row(0, 0, "|:|", cactus_green);
+                    plot_row(0, -1, "o", fol_col(0, 1));
+                    plot_row(0, 0, ":", fol_col(0, 1));
                 }
             }
             TreeSpecies::Fern => {
-                if target_tree_h >= 8 {
-                    plot_row(0, -8, " \\\\  |  // ", fern_green);
-                    plot_row(0, -7, "  \\\\ | //  ", fern_green);
-                    plot_row(0, -6, "===~*~====", fern_green);
-                    plot_row(0, -5, " (/ | \\)  ", fern_green);
+                if target_tree_h >= 10 {
+                    plot_row(0, -11, " \\\\\\   ||   /// ", fol_col(0, 5));
+                    plot_row(0, -10, "  \\\\\\  ||  ///  ", fol_col(1, 5));
+                    plot_row(0, -9, "   \\\\\\ || ///   ", fol_col(2, 5));
+                    plot_row(0, -8, "====~*~~*~======", fol_col(3, 5));
+                    plot_row(0, -7, "  (//  ||  \\\\)  ", fol_col(4, 5));
+                    plot_row(0, -6, "      ||||      ", BARK_RAW_UMBER);
+                    plot_row(0, -5, "      ||||      ", BARK_RAW_UMBER);
+                    plot_row(0, -4, "      ||||      ", BARK_RAW_UMBER);
+                    plot_row(0, -3, "      ||||      ", BARK_RAW_UMBER);
+                    plot_row(0, -2, "      ||||      ", BARK_RAW_UMBER);
+                    plot_row(0, -1, "      ||||      ", BARK_RAW_UMBER);
+                    plot_row(0, 0, "      ||||      ", BARK_RAW_UMBER);
+                } else if target_tree_h >= 7 {
+                    plot_row(0, -8, " \\\\  |  // ", fol_col(0, 4));
+                    plot_row(0, -7, "  \\\\ | //  ", fol_col(1, 4));
+                    plot_row(0, -6, "===~*~====", fol_col(2, 4));
+                    plot_row(0, -5, " (/ | \\)  ", fol_col(3, 4));
                     plot_row(0, -4, "    ||    ", BARK_RAW_UMBER);
                     plot_row(0, -3, "    ||    ", BARK_RAW_UMBER);
                     plot_row(0, -2, "    ||    ", BARK_RAW_UMBER);
                     plot_row(0, -1, "    ||    ", BARK_RAW_UMBER);
                     plot_row(0, 0, "    ||    ", BARK_RAW_UMBER);
-                } else if target_tree_h >= 4 {
-                    plot_row(0, -4, " \\ | / ", fern_green);
-                    plot_row(0, -3, "({%*})", fern_green);
-                    plot_row(0, -2, "  / \\  ", fern_green);
+                } else if target_tree_h >= 5 {
+                    plot_row(0, -4, " \\ | / ", fol_col(0, 3));
+                    plot_row(0, -3, "({%*})", fol_col(1, 3));
+                    plot_row(0, -2, "  / \\  ", fol_col(2, 3));
                     plot_row(0, -1, "  |||  ", BARK_RAW_UMBER);
                     plot_row(0, 0, "  |||  ", BARK_RAW_UMBER);
-                } else {
-                    plot_row(0, -2, " ,\\|/, ", fern_green);
-                    plot_row(0, -1, "  %%%  ", fern_green);
+                } else if target_tree_h >= 3 {
+                    plot_row(0, -2, " ,\\|/, ", fol_col(0, 2));
+                    plot_row(0, -1, "  %%%  ", fol_col(1, 2));
                     plot_row(0, 0, "  |||  ", BARK_RAW_UMBER);
+                } else {
+                    plot_row(0, -1, "\\|/", fol_col(0, 1));
+                    plot_row(0, 0, " | ", BARK_RAW_UMBER);
                 }
             }
             TreeSpecies::CreeperVine => {
-                if target_tree_h >= 8 {
-                    plot_row(0, -8, "   ~@~   ", vine_green);
-                    plot_row(0, -7, "  ~/|/~  ", vine_green);
-                    plot_row(0, -6, " ~/ | ~  ", vine_green);
-                    plot_row(0, -5, " ~ \\|/~  ", vine_green);
-                    plot_row(0, -4, "  ~/|~   ", vine_green);
-                    plot_row(0, -3, " ~/ | ~  ", vine_green);
-                    plot_row(0, -2, " ~ \\|/~  ", vine_green);
-                    plot_row(0, -1, "  ~/|~   ", vine_green);
-                    plot_row(0, 0, "   |~    ", vine_green);
-                } else if target_tree_h >= 4 {
-                    plot_row(0, -4, " ~@~ ", vine_green);
-                    plot_row(0, -3, "~/|/~", vine_green);
-                    plot_row(0, -2, " ~|~ ", vine_green);
-                    plot_row(0, -1, "~/|~ ", vine_green);
-                    plot_row(0, 0, " |~  ", vine_green);
+                if target_tree_h >= 10 {
+                    plot_row(0, -11, "    ~@~    ", fol_col(0, 11));
+                    plot_row(0, -10, "   ~/|/~   ", fol_col(1, 11));
+                    plot_row(0, -9, "  ~/ | ~   ", fol_col(2, 11));
+                    plot_row(0, -8, "  ~ \\|/~   ", fol_col(3, 11));
+                    plot_row(0, -7, "   ~/|~    ", fol_col(4, 11));
+                    plot_row(0, -6, "  ~/ | ~   ", fol_col(5, 11));
+                    plot_row(0, -5, "  ~ \\|/~   ", fol_col(6, 11));
+                    plot_row(0, -4, "   ~/|~    ", fol_col(7, 11));
+                    plot_row(0, -3, "  ~/ | ~   ", fol_col(8, 11));
+                    plot_row(0, -2, "  ~ \\|/~   ", fol_col(9, 11));
+                    plot_row(0, -1, "   ~/|~    ", fol_col(10, 11));
+                    plot_row(0, 0, "    |~     ", fol_col(11, 11));
+                } else if target_tree_h >= 7 {
+                    plot_row(0, -8, "   ~@~   ", fol_col(0, 8));
+                    plot_row(0, -7, "  ~/|/~  ", fol_col(1, 8));
+                    plot_row(0, -6, " ~/ | ~  ", fol_col(2, 8));
+                    plot_row(0, -5, " ~ \\|/~  ", fol_col(3, 8));
+                    plot_row(0, -4, "  ~/|~   ", fol_col(4, 8));
+                    plot_row(0, -3, " ~/ | ~  ", fol_col(5, 8));
+                    plot_row(0, -2, " ~ \\|/~  ", fol_col(6, 8));
+                    plot_row(0, -1, "  ~/|~   ", fol_col(7, 8));
+                    plot_row(0, 0, "   |~    ", fol_col(8, 8));
+                } else if target_tree_h >= 5 {
+                    plot_row(0, -4, " ~@~ ", fol_col(0, 4));
+                    plot_row(0, -3, "~/|/~", fol_col(1, 4));
+                    plot_row(0, -2, " ~|~ ", fol_col(2, 4));
+                    plot_row(0, -1, "~/|~ ", fol_col(3, 4));
+                    plot_row(0, 0, " |~  ", fol_col(4, 4));
+                } else if target_tree_h >= 3 {
+                    plot_row(0, -2, " ~@ ", fol_col(0, 2));
+                    plot_row(0, -1, "~/|~", fol_col(1, 2));
+                    plot_row(0, 0, " |  ", fol_col(2, 2));
                 } else {
-                    plot_row(0, -2, " ~@ ", vine_green);
-                    plot_row(0, -1, "~/|~", vine_green);
-                    plot_row(0, 0, " |  ", vine_green);
+                    plot_row(0, -1, "~@", fol_col(0, 1));
+                    plot_row(0, 0, "| ", fol_col(0, 1));
                 }
             }
             TreeSpecies::BerryShrub => {
-                if target_tree_h >= 8 {
-                    plot_row(0, -7, "   .---.   ", shrub_green);
-                    plot_row(0, -6, " .( *o* ). ", shrub_green);
-                    plot_row(0, -5, "(* o * o *)", shrub_green);
-                    plot_row(0, -4, "( o * o * )", shrub_green);
-                    plot_row(0, -3, " (_______) ", shrub_green);
+                if target_tree_h >= 10 {
+                    plot_row(0, -11, "     .-----.     ", fol_col(0, 7));
+                    plot_row(0, -10, "   .( *o*o* ).   ", fol_col(1, 7));
+                    plot_row(0, -9, " .(* o * o * o). ", fol_col(2, 7));
+                    plot_row(0, -8, "(* o * o * o * *)", fol_col(3, 7));
+                    plot_row(0, -7, "( o * o * o * o )", fol_col(4, 7));
+                    plot_row(0, -6, " (_____________) ", fol_col(5, 7));
+                    plot_row(0, -5, "   /  | | |  \\   ", BARK_RAW_UMBER);
+                    plot_row(0, -4, "   \\  | | |  /   ", BARK_RAW_UMBER);
+                    plot_row(0, -3, "    \\_|_|_|_/    ", BARK_RAW_UMBER);
+                    plot_row(0, -2, "       |||       ", BARK_RAW_UMBER);
+                    plot_row(0, -1, "       |||       ", BARK_RAW_UMBER);
+                    plot_row(0, 0, "       |||       ", BARK_RAW_UMBER);
+                } else if target_tree_h >= 7 {
+                    plot_row(0, -7, "   .---.   ", fol_col(0, 5));
+                    plot_row(0, -6, " .( *o* ). ", fol_col(1, 5));
+                    plot_row(0, -5, "(* o * o *)", fol_col(2, 5));
+                    plot_row(0, -4, "( o * o * )", fol_col(3, 5));
+                    plot_row(0, -3, " (_______) ", fol_col(4, 5));
                     plot_row(0, -2, "   / | \\   ", BARK_RAW_UMBER);
                     plot_row(0, -1, "   \\ | /   ", BARK_RAW_UMBER);
                     plot_row(0, 0, "    |||    ", BARK_RAW_UMBER);
-                } else if target_tree_h >= 4 {
-                    plot_row(0, -4, " .(o*o). ", shrub_green);
-                    plot_row(0, -3, "(* o * o)", shrub_green);
-                    plot_row(0, -2, " (_____) ", shrub_green);
+                } else if target_tree_h >= 5 {
+                    plot_row(0, -4, " .(o*o). ", fol_col(0, 3));
+                    plot_row(0, -3, "(* o * o)", fol_col(1, 3));
+                    plot_row(0, -2, " (_____) ", fol_col(2, 3));
                     plot_row(0, -1, "   |||   ", BARK_RAW_UMBER);
                     plot_row(0, 0, "   |||   ", BARK_RAW_UMBER);
-                } else {
-                    plot_row(0, -2, " (o*o) ", shrub_green);
-                    plot_row(0, -1, " (___) ", shrub_green);
+                } else if target_tree_h >= 3 {
+                    plot_row(0, -2, " (o*o) ", fol_col(0, 2));
+                    plot_row(0, -1, " (___) ", fol_col(1, 2));
                     plot_row(0, 0, "  |||  ", BARK_RAW_UMBER);
+                } else {
+                    plot_row(0, -1, "(o)", fol_col(0, 1));
+                    plot_row(0, 0, " | ", BARK_RAW_UMBER);
                 }
             }
             TreeSpecies::BloomingShrub => {
-                if target_tree_h >= 8 {
-                    plot_row(0, -7, "   .---.   ", blooming_green);
-                    plot_row(0, -6, " .(@ % *). ", blooming_green);
-                    plot_row(0, -5, "(* % @ * %)", blooming_green);
-                    plot_row(0, -4, "(% * % @ *)", blooming_green);
-                    plot_row(0, -3, " (_______) ", blooming_green);
+                if target_tree_h >= 10 {
+                    plot_row(0, -11, "     .-----.     ", fol_col(0, 7));
+                    plot_row(0, -10, "   .(@ % * @).   ", fol_col(1, 7));
+                    plot_row(0, -9, " .(* % @ * % @). ", fol_col(2, 7));
+                    plot_row(0, -8, "(* % @ * % @ * %)", fol_col(3, 7));
+                    plot_row(0, -7, "(% * % @ * % @ *)", fol_col(4, 7));
+                    plot_row(0, -6, " (_____________) ", fol_col(5, 7));
+                    plot_row(0, -5, "   /  | | |  \\   ", BARK_RAW_UMBER);
+                    plot_row(0, -4, "   \\  | | |  /   ", BARK_RAW_UMBER);
+                    plot_row(0, -3, "    \\_|_|_|_/    ", BARK_RAW_UMBER);
+                    plot_row(0, -2, "       |||       ", BARK_RAW_UMBER);
+                    plot_row(0, -1, "       |||       ", BARK_RAW_UMBER);
+                    plot_row(0, 0, "       |||       ", BARK_RAW_UMBER);
+                } else if target_tree_h >= 7 {
+                    plot_row(0, -7, "   .---.   ", fol_col(0, 5));
+                    plot_row(0, -6, " .(@ % *). ", fol_col(1, 5));
+                    plot_row(0, -5, "(* % @ * %)", fol_col(2, 5));
+                    plot_row(0, -4, "(% * % @ *)", fol_col(3, 5));
+                    plot_row(0, -3, " (_______) ", fol_col(4, 5));
                     plot_row(0, -2, "   / | \\   ", BARK_RAW_UMBER);
                     plot_row(0, -1, "   \\ | /   ", BARK_RAW_UMBER);
                     plot_row(0, 0, "    |||    ", BARK_RAW_UMBER);
-                } else if target_tree_h >= 4 {
-                    plot_row(0, -4, " .(*%*). ", blooming_green);
-                    plot_row(0, -3, "(@ * % @)", blooming_green);
-                    plot_row(0, -2, " (_____) ", blooming_green);
+                } else if target_tree_h >= 5 {
+                    plot_row(0, -4, " .(*%*). ", fol_col(0, 3));
+                    plot_row(0, -3, "(@ * % @)", fol_col(1, 3));
+                    plot_row(0, -2, " (_____) ", fol_col(2, 3));
                     plot_row(0, -1, "   |||   ", BARK_RAW_UMBER);
                     plot_row(0, 0, "   |||   ", BARK_RAW_UMBER);
-                } else {
-                    plot_row(0, -2, " (*%*) ", blooming_green);
-                    plot_row(0, -1, " (___) ", blooming_green);
+                } else if target_tree_h >= 3 {
+                    plot_row(0, -2, " (*%*) ", fol_col(0, 2));
+                    plot_row(0, -1, " (___) ", fol_col(1, 2));
                     plot_row(0, 0, "  |||  ", BARK_RAW_UMBER);
+                } else {
+                    plot_row(0, -1, "(*)", fol_col(0, 1));
+                    plot_row(0, 0, " | ", BARK_RAW_UMBER);
                 }
             }
             TreeSpecies::HerbalCluster => {
-                if target_tree_h >= 8 {
-                    plot_row(0, -7, " |  |  | ", herb_green);
-                    plot_row(0, -6, " |i |i |i", herb_green);
-                    plot_row(0, -5, " |i |i |i", herb_green);
-                    plot_row(0, -4, " \\||/||/ ", herb_green);
-                    plot_row(0, -3, "  \\ || / ", herb_green);
-                    plot_row(0, -2, "   \\||/  ", herb_green);
-                    plot_row(0, -1, "   /||\\  ", herb_green);
-                    plot_row(0, 0, "   \"\"\"  ", herb_green);
-                } else if target_tree_h >= 4 {
-                    plot_row(0, -4, " i | i ", herb_green);
-                    plot_row(0, -3, " |i|i|i", herb_green);
-                    plot_row(0, -2, " \\|/|/ ", herb_green);
-                    plot_row(0, -1, "  \\|/  ", herb_green);
-                    plot_row(0, 0, "  \"\"\"  ", herb_green);
+                if target_tree_h >= 10 {
+                    plot_row(0, -11, "  |   |   |   |  ", fol_col(0, 11));
+                    plot_row(0, -10, "  |i  |i  |i  |i ", fol_col(1, 11));
+                    plot_row(0, -9, "  |i  |i  |i  |i ", fol_col(2, 11));
+                    plot_row(0, -8, "  |i  |i  |i  |i ", fol_col(3, 11));
+                    plot_row(0, -7, "  \\||/||/||/||/  ", fol_col(4, 11));
+                    plot_row(0, -6, "   \\ ||| ||| /   ", fol_col(5, 11));
+                    plot_row(0, -5, "    \\|||/|||/    ", fol_col(6, 11));
+                    plot_row(0, -4, "     \\ ||| /     ", fol_col(7, 11));
+                    plot_row(0, -3, "      \\||/      ", fol_col(8, 11));
+                    plot_row(0, -2, "      /||\\      ", fol_col(9, 11));
+                    plot_row(0, -1, "      /||\\      ", fol_col(10, 11));
+                    plot_row(0, 0, "      \"\"\"\"      ", fol_col(11, 11));
+                } else if target_tree_h >= 7 {
+                    plot_row(0, -7, " |  |  | ", fol_col(0, 8));
+                    plot_row(0, -6, " |i |i |i", fol_col(1, 8));
+                    plot_row(0, -5, " |i |i |i", fol_col(2, 8));
+                    plot_row(0, -4, " \\||/||/ ", fol_col(3, 8));
+                    plot_row(0, -3, "  \\ || / ", fol_col(4, 8));
+                    plot_row(0, -2, "   \\||/  ", fol_col(5, 8));
+                    plot_row(0, -1, "   /||\\  ", fol_col(6, 8));
+                    plot_row(0, 0, "   \"\"\"  ", fol_col(7, 8));
+                } else if target_tree_h >= 5 {
+                    plot_row(0, -4, " i | i ", fol_col(0, 5));
+                    plot_row(0, -3, " |i|i|i", fol_col(1, 5));
+                    plot_row(0, -2, " \\|/|/ ", fol_col(2, 5));
+                    plot_row(0, -1, "  \\|/  ", fol_col(3, 5));
+                    plot_row(0, 0, "  \"\"\"  ", fol_col(4, 5));
+                } else if target_tree_h >= 3 {
+                    plot_row(0, -2, " \\|/ ", fol_col(0, 3));
+                    plot_row(0, -1, " |i| ", fol_col(1, 3));
+                    plot_row(0, 0, " \"\"  ", fol_col(2, 3));
                 } else {
-                    plot_row(0, -2, " \\|/ ", herb_green);
-                    plot_row(0, -1, " |i| ", herb_green);
-                    plot_row(0, 0, " \"\"  ", herb_green);
+                    plot_row(0, -1, "\\|/", fol_col(0, 2));
+                    plot_row(0, 0, "\"\"", fol_col(1, 2));
                 }
             }
             TreeSpecies::Cypress => {
-                if target_tree_h >= 8 {
-                    plot_row(0, -8, "   ^   ", cypress_green);
-                    plot_row(0, -7, "  /|\\  ", cypress_green);
-                    plot_row(0, -6, " (| |) ", cypress_green);
-                    plot_row(0, -5, " (| |) ", cypress_green);
-                    plot_row(0, -4, " (| |) ", cypress_green);
-                    plot_row(0, -3, " (| |) ", cypress_green);
-                    plot_row(0, -2, "  \\|/  ", cypress_green);
+                if target_tree_h >= 10 {
+                    plot_row(0, -11, "   ^   ", fol_col(0, 10));
+                    plot_row(0, -10, "  /|\\  ", fol_col(1, 10));
+                    plot_row(0, -9, " (| |) ", fol_col(2, 10));
+                    plot_row(0, -8, " (| |) ", fol_col(3, 10));
+                    plot_row(0, -7, " (| |) ", fol_col(4, 10));
+                    plot_row(0, -6, " (| |) ", fol_col(5, 10));
+                    plot_row(0, -5, " (| |) ", fol_col(6, 10));
+                    plot_row(0, -4, " (| |) ", fol_col(7, 10));
+                    plot_row(0, -3, " (| |) ", fol_col(8, 10));
+                    plot_row(0, -2, "  \\|/  ", fol_col(9, 10));
+                    draw_trunk(3, -1, trunk_w.max(2));
+                } else if target_tree_h >= 7 {
+                    plot_row(0, -8, "   ^   ", fol_col(0, 7));
+                    plot_row(0, -7, "  /|\\  ", fol_col(1, 7));
+                    plot_row(0, -6, " (| |) ", fol_col(2, 7));
+                    plot_row(0, -5, " (| |) ", fol_col(3, 7));
+                    plot_row(0, -4, " (| |) ", fol_col(4, 7));
+                    plot_row(0, -3, " (| |) ", fol_col(5, 7));
+                    plot_row(0, -2, "  \\|/  ", fol_col(6, 7));
                     draw_trunk(3, -1, trunk_w);
-                } else if target_tree_h >= 4 {
-                    plot_row(0, -4, "  ^  ", cypress_green);
-                    plot_row(0, -3, " /|\\ ", cypress_green);
-                    plot_row(0, -2, " (| |) ", cypress_green);
+                } else if target_tree_h >= 5 {
+                    plot_row(0, -5, "  ^  ", fol_col(0, 4));
+                    plot_row(0, -4, " /|\\ ", fol_col(1, 4));
+                    plot_row(0, -3, " (| |) ", fol_col(2, 4));
+                    plot_row(0, -2, "  \\|/  ", fol_col(3, 4));
                     draw_trunk(3, -1, 1);
+                } else if target_tree_h >= 3 {
+                    plot_row(0, -3, " ^ ", fol_col(0, 2));
+                    plot_row(0, -2, "(|)", fol_col(1, 2));
+                    draw_trunk(1, -1, 1);
                 } else {
-                    plot_row(0, -2, " ^ ", cypress_green);
-                    plot_row(0, -1, "(|)", cypress_green);
-                    draw_trunk(1, 0, 1);
+                    plot_row(0, -2, "^", fol_col(0, 1));
+                    draw_trunk(0, -1, 1);
                 }
             }
             TreeSpecies::Maple => {
-                if target_tree_h >= 8 {
-                    plot_row(0, -8, "   .---.   ", maple_red);
-                    plot_row(0, -7, " ./{% %}\\. ", maple_red);
-                    plot_row(0, -6, "/{% % % %}\\", maple_red);
-                    plot_row(0, -5, "|% % % % %|", maple_red);
-                    plot_row(0, -4, " \\{% % %}/ ", maple_red);
-                    plot_row(0, -3, "  \\_____/  ", maple_red);
+                if target_tree_h >= 10 {
+                    plot_row(0, -11, "     .---.     ", fol_col(0, 8));
+                    plot_row(0, -10, "   ./{% %}\\.   ", fol_col(1, 8));
+                    plot_row(0, -9, " ./{% % % %}\\. ", fol_col(2, 8));
+                    plot_row(0, -8, "/{% % % % % %}\\", fol_col(3, 8));
+                    plot_row(0, -7, "|% % % % % % %|", fol_col(4, 8));
+                    plot_row(0, -6, " \\{% % % % %}/ ", fol_col(5, 8));
+                    plot_row(0, -5, "  \\{% % % %}/  ", fol_col(6, 8));
+                    plot_row(0, -4, "   \\_______/   ", fol_col(7, 8));
+                    draw_trunk(7, -3, trunk_w.max(2));
+                } else if target_tree_h >= 7 {
+                    plot_row(0, -8, "   .---.   ", fol_col(0, 6));
+                    plot_row(0, -7, " ./{% %}\\. ", fol_col(1, 6));
+                    plot_row(0, -6, "/{% % % %}\\", fol_col(2, 6));
+                    plot_row(0, -5, "|% % % % %|", fol_col(3, 6));
+                    plot_row(0, -4, " \\{% % %}/ ", fol_col(4, 6));
+                    plot_row(0, -3, "  \\_____/  ", fol_col(5, 6));
                     draw_trunk(5, -2, trunk_w);
-                } else if target_tree_h >= 4 {
-                    plot_row(0, -4, " .{%}\\. ", maple_red);
-                    plot_row(0, -3, "({% %})", maple_red);
-                    plot_row(0, -2, " \\___/ ", maple_red);
-                    draw_trunk(3, -1, 1);
+                } else if target_tree_h >= 5 {
+                    plot_row(0, -5, " .{%}\\. ", fol_col(0, 3));
+                    plot_row(0, -4, "({% %})", fol_col(1, 3));
+                    plot_row(0, -3, " \\___/ ", fol_col(2, 3));
+                    draw_trunk(3, -2, 1);
+                } else if target_tree_h >= 3 {
+                    plot_row(0, -3, "({%})", fol_col(0, 2));
+                    plot_row(0, -2, " \\_/ ", fol_col(1, 2));
+                    draw_trunk(2, -1, 1);
                 } else {
-                    plot_row(0, -2, "({%})", maple_red);
-                    plot_row(0, -1, " \\_/ ", maple_red);
-                    draw_trunk(2, 0, 1);
+                    plot_row(0, -2, "{%}", fol_col(0, 1));
+                    draw_trunk(1, -1, 1);
                 }
             }
             TreeSpecies::CherryBlossom => {
-                if target_tree_h >= 8 {
-                    plot_row(0, -8, "   .---.   ", cherry_pink);
-                    plot_row(0, -7, " .(* @ *). ", cherry_pink);
-                    plot_row(0, -6, "(* @ * @ *)", cherry_pink);
-                    plot_row(0, -5, "(* \\   / *)", cherry_pink);
-                    plot_row(0, -4, " \\  \\_/  / ", cherry_pink);
+                if target_tree_h >= 10 {
+                    plot_row(0, -11, "     .---.     ", fol_col(0, 8));
+                    plot_row(0, -10, "   .(* @ *).   ", fol_col(1, 8));
+                    plot_row(0, -9, " .(* @ * @ *). ", fol_col(2, 8));
+                    plot_row(0, -8, "(* @ * @ * @ *)", fol_col(3, 8));
+                    plot_row(0, -7, "(* \\   |   / *)", fol_col(4, 8));
+                    plot_row(0, -6, " \\  \\_/ \\_/  / ", fol_col(5, 8));
+                    plot_row(0, -5, "  \\   /|\\   /  ", fol_col(6, 8));
+                    plot_row(0, -4, "   \\___|___/   ", fol_col(7, 8));
+                    draw_trunk(7, -3, trunk_w.max(2));
+                } else if target_tree_h >= 7 {
+                    plot_row(0, -8, "   .---.   ", fol_col(0, 5));
+                    plot_row(0, -7, " .(* @ *). ", fol_col(1, 5));
+                    plot_row(0, -6, "(* @ * @ *)", fol_col(2, 5));
+                    plot_row(0, -5, "(* \\   / *)", fol_col(3, 5));
+                    plot_row(0, -4, " \\  \\_/  / ", fol_col(4, 5));
                     draw_trunk(5, -3, trunk_w);
-                } else if target_tree_h >= 4 {
-                    plot_row(0, -4, " .(*@*). ", cherry_pink);
-                    plot_row(0, -3, "(* @ * *)", cherry_pink);
-                    plot_row(0, -2, "  \\_|_/  ", cherry_pink);
-                    draw_trunk(4, -1, 1);
+                } else if target_tree_h >= 5 {
+                    plot_row(0, -5, " .(*@*). ", fol_col(0, 3));
+                    plot_row(0, -4, "(* @ * *)", fol_col(1, 3));
+                    plot_row(0, -3, "  \\_|_/  ", fol_col(2, 3));
+                    draw_trunk(4, -2, 1);
+                } else if target_tree_h >= 3 {
+                    plot_row(0, -3, " (*@*) ", fol_col(0, 2));
+                    plot_row(0, -2, "  \\|/  ", fol_col(1, 2));
+                    draw_trunk(3, -1, 1);
                 } else {
-                    plot_row(0, -2, " (*@*) ", cherry_pink);
-                    plot_row(0, -1, "  \\|/  ", cherry_pink);
-                    draw_trunk(3, 0, 1);
+                    plot_row(0, -2, "(*)", fol_col(0, 1));
+                    draw_trunk(1, -1, 1);
                 }
             }
             TreeSpecies::Baobab => {
-                if target_tree_h >= 8 {
-                    plot_row(0, -8, "  \\ | /  ", baobab_green);
-                    plot_row(0, -7, " (_____) ", baobab_green);
+                if target_tree_h >= 10 {
+                    plot_row(0, -11, "   \\\\ || //   ", fol_col(0, 3));
+                    plot_row(0, -10, "  (_________)  ", fol_col(1, 3));
+                    plot_row(0, -9, "   /-------/   ", BARK_RAW_UMBER);
+                    plot_row(0, -8, "  |  :::::  |  ", BARK_RAW_UMBER);
+                    plot_row(0, -7, "  |  :::::  |  ", BARK_RAW_UMBER);
+                    plot_row(0, -6, "  |  :::::  |  ", BARK_RAW_UMBER);
+                    plot_row(0, -5, "  |  :::::  |  ", BARK_RAW_UMBER);
+                    plot_row(0, -4, "  |  :::::  |  ", BARK_RAW_UMBER);
+                    plot_row(0, -3, "  |  :::::  |  ", BARK_RAW_UMBER);
+                    plot_row(0, -2, "  |  :::::  |  ", BARK_RAW_UMBER);
+                    plot_row(0, -1, "   \\-------/   ", BARK_RAW_UMBER);
+                    draw_trunk(6, 0, 3);
+                } else if target_tree_h >= 7 {
+                    plot_row(0, -8, "  \\ | /  ", fol_col(0, 2));
+                    plot_row(0, -7, " (_____) ", fol_col(1, 2));
                     plot_row(0, -6, "  /---\\  ", BARK_RAW_UMBER);
                     plot_row(0, -5, " | ::: | ", BARK_RAW_UMBER);
                     plot_row(0, -4, " | ::: | ", BARK_RAW_UMBER);
@@ -2102,34 +2605,55 @@ pub fn render_trees_with_animal(
                     plot_row(0, -2, " | ::: | ", BARK_RAW_UMBER);
                     plot_row(0, -1, " | ::: | ", BARK_RAW_UMBER);
                     plot_row(0, 0, "  \\---/  ", BARK_RAW_UMBER);
-                } else if target_tree_h >= 4 {
-                    plot_row(0, -4, " \\ | / ", baobab_green);
-                    plot_row(0, -3, " (___) ", baobab_green);
+                } else if target_tree_h >= 5 {
+                    plot_row(0, -5, " \\ | / ", fol_col(0, 2));
+                    plot_row(0, -4, " (___) ", fol_col(1, 2));
+                    plot_row(0, -3, " |:::| ", BARK_RAW_UMBER);
                     plot_row(0, -2, " |:::| ", BARK_RAW_UMBER);
                     plot_row(0, -1, " |:::| ", BARK_RAW_UMBER);
                     plot_row(0, 0, " \\---/ ", BARK_RAW_UMBER);
+                } else if target_tree_h >= 3 {
+                    plot_row(0, -3, " \\|/ ", fol_col(0, 2));
+                    plot_row(0, -2, "(___)", fol_col(1, 2));
+                    plot_row(0, -1, " |:| ", BARK_RAW_UMBER);
+                    plot_row(0, 0, " \\-/ ", BARK_RAW_UMBER);
                 } else {
-                    plot_row(0, -2, "  \\|/  ", baobab_green);
+                    plot_row(0, -2, "  \\|/  ", fol_col(0, 1));
                     plot_row(0, -1, " |:::| ", BARK_RAW_UMBER);
                     plot_row(0, 0, " \\---/ ", BARK_RAW_UMBER);
                 }
             }
             TreeSpecies::Redwood => {
-                if target_tree_h >= 8 {
-                    plot_row(0, -8, "     ^     ", redwood_green);
-                    plot_row(0, -7, "    /|\\    ", redwood_green);
-                    plot_row(0, -6, "   //|\\\\   ", redwood_green);
-                    plot_row(0, -5, "  ///|\\\\\\  ", redwood_green);
-                    plot_row(0, -4, "   //|\\\\   ", redwood_green);
+                if target_tree_h >= 10 {
+                    plot_row(0, -11, "      ^      ", fol_col(0, 9));
+                    plot_row(0, -10, "     /|\\     ", fol_col(1, 9));
+                    plot_row(0, -9, "    //|\\\\    ", fol_col(2, 9));
+                    plot_row(0, -8, "   ///|\\\\\\   ", fol_col(3, 9));
+                    plot_row(0, -7, "  ////|\\\\\\\\  ", fol_col(4, 9));
+                    plot_row(0, -6, "   ///|\\\\\\   ", fol_col(5, 9));
+                    plot_row(0, -5, "    //|\\\\    ", fol_col(6, 9));
+                    plot_row(0, -4, "     /|\\     ", fol_col(7, 9));
+                    plot_row(0, -3, "    //|\\\\    ", fol_col(8, 9));
+                    draw_trunk(6, -2, trunk_w.max(3));
+                } else if target_tree_h >= 7 {
+                    plot_row(0, -8, "     ^     ", fol_col(0, 6));
+                    plot_row(0, -7, "    /|\\    ", fol_col(1, 6));
+                    plot_row(0, -6, "   //|\\\\   ", fol_col(2, 6));
+                    plot_row(0, -5, "  ///|\\\\\\  ", fol_col(3, 6));
+                    plot_row(0, -4, "   //|\\\\   ", fol_col(4, 6));
                     draw_trunk(5, -3, trunk_w);
-                } else if target_tree_h >= 4 {
-                    plot_row(0, -4, "   ^   ", redwood_green);
-                    plot_row(0, -3, "  /|\\  ", redwood_green);
-                    plot_row(0, -2, " //|\\\\ ", redwood_green);
-                    draw_trunk(3, -1, trunk_w.min(2));
+                } else if target_tree_h >= 5 {
+                    plot_row(0, -5, "   ^   ", fol_col(0, 4));
+                    plot_row(0, -4, "  /|\\  ", fol_col(1, 4));
+                    plot_row(0, -3, " //|\\\\ ", fol_col(2, 4));
+                    draw_trunk(3, -2, trunk_w.min(2));
+                } else if target_tree_h >= 3 {
+                    plot_row(0, -3, "  ^  ", fol_col(0, 2));
+                    plot_row(0, -2, " /|\\ ", fol_col(1, 2));
+                    draw_trunk(2, -1, 1);
                 } else {
-                    plot_row(0, -2, "  ^  ", redwood_green);
-                    plot_row(0, -1, " /|\\ ", redwood_green);
+                    plot_row(0, -2, "  ^  ", fol_col(0, 1));
+                    plot_row(0, -1, " /|\\ ", fol_col(0, 1));
                     draw_trunk(2, 0, 1);
                 }
             }
@@ -2857,6 +3381,17 @@ mod tests {
         let h2 = calculate_mountain_height(20.0, 80, 15, MountainStyle::Peaks, 0.0);
         assert!(h1 > 0.0 && h1 <= 15.0);
         assert!(h2 > 0.0 && h2 <= 15.0);
+
+        // Active crest elevation vs natural geological valley gap (elevation 0.0)
+        let h_crest = calculate_mountain_height(30.0, 80, 15, MountainStyle::Peaks, 0.0);
+        let h_gap = calculate_mountain_height(100.0, 80, 15, MountainStyle::Peaks, 0.0);
+        assert!(h_crest > 0.0);
+        assert_eq!(h_gap, 0.0);
+
+        let env_crest = calculate_mountain_range_envelope(30.0, MountainStyle::Peaks);
+        let env_gap = calculate_mountain_range_envelope(100.0, MountainStyle::Peaks);
+        assert!(env_crest > 0.0);
+        assert_eq!(env_gap, 0.0);
     }
 
     #[test]
@@ -2884,13 +3419,35 @@ mod tests {
         let forest_trees = calculate_tree_count(100, EnvironmentStyle::Forest, 8);
         let savanna_trees = calculate_tree_count(100, EnvironmentStyle::Savanna, 8);
         let city_trees = calculate_tree_count(100, EnvironmentStyle::City, 8);
+        let none_trees = calculate_tree_count(100, EnvironmentStyle::None, 8);
         assert!(forest_trees > savanna_trees);
-        assert_eq!(city_trees, 0);
+        assert!(city_trees > 0);
+        assert_eq!(none_trees, 0);
 
         // Colossal mascot vs tiny mascot scale factor
         let colossal_trees = calculate_tree_count(100, EnvironmentStyle::Pasture, 16);
         let tiny_trees = calculate_tree_count(100, EnvironmentStyle::Pasture, 3);
         assert!(tiny_trees >= colossal_trees);
+    }
+
+    #[test]
+    fn test_procedural_tree_foliage_colors_and_sfumato() {
+        // Genetic variation between different tree indices
+        let c0 = get_tree_foliage_color(TreeSpecies::Oak, 0, 0, 8, EnvironmentStyle::Forest);
+        let c1 = get_tree_foliage_color(TreeSpecies::Oak, 1, 0, 8, EnvironmentStyle::Forest);
+        let c2 = get_tree_foliage_color(TreeSpecies::Oak, 2, 0, 8, EnvironmentStyle::Forest);
+        // Not all trees share identical color
+        assert!(c0 != c1 || c1 != c2);
+
+        // Vertical da Vinci Sfumato gradient: apex (dy = 0) is brighter than deep base (dy = crown_h)
+        let c_apex = get_tree_foliage_color(TreeSpecies::Oak, 0, 0, 8, EnvironmentStyle::Forest);
+        let c_base = get_tree_foliage_color(TreeSpecies::Oak, 0, 7, 8, EnvironmentStyle::Forest);
+        let lum_apex = c_apex.r as u32 + c_apex.g as u32 + c_apex.b as u32;
+        let lum_base = c_base.r as u32 + c_base.g as u32 + c_base.b as u32;
+        assert!(
+            lum_apex > lum_base,
+            "Apex highlights must be brighter than shaded base"
+        );
     }
 
     #[test]

@@ -185,6 +185,8 @@ fn nature_mathematics_invariants() {
     let forest_count = calculate_tree_count(100, EnvironmentStyle::Forest, 8);
     let savanna_count = calculate_tree_count(100, EnvironmentStyle::Savanna, 8);
     let city_count = calculate_tree_count(100, EnvironmentStyle::City, 8);
+    let none_count = calculate_tree_count(100, EnvironmentStyle::None, 8);
     assert!(forest_count > savanna_count);
-    assert_eq!(city_count, 0);
+    assert!(city_count > 0);
+    assert_eq!(none_count, 0);
 }

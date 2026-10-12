@@ -425,7 +425,28 @@ This document records the complete, immutable register of all bugs, defects, reg
      - Renders ASCII mascot reaction faces scaled to failure severity (`(==)` deadpan contempt, `(><)` visceral agony, `(xx)` total brainrot, `(oO)` circus clown).
      - Any successful command (exit code 0) resets the failure streak immediately.
 - **Verification:** `taunt::tests::test_failure_streak_lifecycle`, manual stress testing on Windows PowerShell, and live execution in openSUSE Leap WSL.
-- **Invariant Enforced:** Mandate H (Strictly `forgum`), Mandate J (Human Versioning Authority), and Mandate I (<100MB RAM, zero allocation).
+---
+
+### FEATURE-031: Procedural Dynamic Flora Ecosystem & Tectonic Mountain Macro-Range Envelopes
+- **Severity:** High / Visual Rendering & Nature Mathematics
+- **Component:** `crates/engine/src/scenery.rs`, `crates/engine/tests/render_correctness.rs`
+- **Specification:**
+  1. **Tectonic Mountain Macro-Range Envelopes:**
+     - Replaced infinite repeating mountain wallpaper with geological plate tectonics modeling macro-wavelength belts ($\Lambda_{\text{macro}} \in [110.0, 140.0]$ cols).
+     - Divided each mountain belt into: smoothstep foothills rise ($\tau \in [0.0, 0.15)$), undulating crest ($\tau \in [0.15, 0.62)$), foothills descent ($\tau \in [0.62, 0.76)$), and true open valley passes/gaps ($\tau \ge 0.76$, elevation strictly 0.0) where the open sky and horizon breathe before a new range emerges.
+     - Inter-range altitude modulation $A_k \in [0.85, 1.25]$ via Knuth multiplicative hashing so consecutive ranges have distinct elevations.
+  2. **Multi-Tier Flora Maturity Distribution:**
+     - Low-discrepancy Golden Ratio distribution generating authentic forest stands: Ancient Colossal Monarchs (10–14 lines), Stately Mature Trees (7–9 lines), Slender Adolescents (5–6 lines), Young Understory Saplings (3–4 lines), and Sprouts/Bushes (2 lines).
+     - Distinct canopy silhouettes (`t_idx % 2`) across all 22 botanical species.
+  3. **Procedural Organic Foliage Colors & Da Vinci Sfumato Gradients:**
+     - Per-tree genetic micro-shifts ($\pm 10$ RGB) ensuring no two trees share identical hex codes.
+     - Da Vinci vertical depth gradients: Sunlit apex highlights fading into deep understory shadows.
+     - Biome atmospheric lighting harmony (`Cyber` neon cyan/matrix emerald/magenta, `Space` crystal amethyst/cyan/amber, `Arctic` frost, `Savanna` sun-bleached warmth).
+  4. **Universal Scenario Coverage & Glade Clumping:**
+     - Extended procedural flora to `City` (boulevard plane trees/elms), `Cyber` (holographic data palms/fiber-optic willows), and `Space` (prismatic crystal spires).
+     - Alternating copse stands (11–16 cols) and open meadow glades (24–29 cols) with strict monotonic positioning ($p_{n+1} > p_n$).
+- **Verification:** `scenery::tests::test_mountain_mathematics`, `scenery::tests::test_procedural_tree_foliage_colors_and_sfumato`, `scenery::tests::test_tree_count_and_density`, `render_correctness::nature_mathematics_invariants`.
+- **Invariant Enforced:** Mandate I (<100MB RAM, zero heap allocations in render loops), Mandate H (Strictly `forgum`), Mandate J (Human Versioning Authority).
 
 ---
 
