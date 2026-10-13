@@ -124,6 +124,9 @@ impl Renderer for AnsiRenderer {
         } else if self.mode == RenderMode::Overlay {
             // Atomically hide cursor, save cursor position/attributes, and ensure origin mode is OFF
             buf.extend_from_slice(b"\x1b[?25l\x1b7\x1b[?6l");
+        } else {
+            // Full-screen mode: hide cursor so it never flickers across drawn damage cells
+            buf.extend_from_slice(b"\x1b[?25l");
         }
 
         let mut cur_y = 0;
@@ -288,18 +291,21 @@ impl Renderer for TmuxPassthroughRenderer {
 #[derive(Debug, Default)]
 pub struct SyncAnsiRenderer {
     inner: AnsiRenderer,
+    buf: Vec<u8>,
 }
 
 impl SyncAnsiRenderer {
     pub fn new_banner() -> Self {
         Self {
             inner: AnsiRenderer::new_banner(),
+            buf: Vec::with_capacity(4096),
         }
     }
 
     pub fn new_overlay() -> Self {
         Self {
             inner: AnsiRenderer::new_overlay(),
+            buf: Vec::with_capacity(4096),
         }
     }
 }
@@ -315,9 +321,11 @@ impl Renderer for SyncAnsiRenderer {
         if damage.is_empty() {
             return Ok(());
         }
-        out.write_all(self.begin_sync().as_bytes())?;
-        self.inner.render_damage(out, cells, cols, damage)?;
-        out.write_all(self.end_sync().as_bytes())?;
+        self.buf.clear();
+        self.buf.extend_from_slice(self.begin_sync().as_bytes());
+        self.inner.render_damage(&mut self.buf, cells, cols, damage)?;
+        self.buf.extend_from_slice(self.end_sync().as_bytes());
+        out.write_all(&self.buf)?;
         out.flush()
     }
 
@@ -424,8 +432,8 @@ pub fn create_renderer() -> Box<dyn Renderer> {
     if is_tmux() {
         return Box::new(TmuxPassthroughRenderer::default());
     }
-    // Phase 4.7: prefer SyncAnsiRenderer when terminal supports DEC 2026.
-    if forgum_platform::terminal_supports_sync() {
+    // Phase 4.7: prefer SyncAnsiRenderer when terminal supports DEC 2026 or remote session is active.
+    if forgum_platform::terminal_supports_sync() || forgum_platform::is_remote_session() {
         return Box::new(SyncAnsiRenderer::default());
     }
     Box::new(AnsiRenderer::default())
@@ -437,7 +445,7 @@ pub fn create_banner_renderer() -> Box<dyn Renderer> {
     if is_tmux() {
         return Box::new(TmuxPassthroughRenderer::new_banner());
     }
-    if forgum_platform::terminal_supports_sync() {
+    if forgum_platform::terminal_supports_sync() || forgum_platform::is_remote_session() {
         return Box::new(SyncAnsiRenderer::new_banner());
     }
     Box::new(AnsiRenderer::new_banner())
@@ -449,7 +457,7 @@ pub fn create_overlay_renderer() -> Box<dyn Renderer> {
     if is_tmux() {
         return Box::new(TmuxPassthroughRenderer::new_overlay());
     }
-    if forgum_platform::terminal_supports_sync() {
+    if forgum_platform::terminal_supports_sync() || forgum_platform::is_remote_session() {
         return Box::new(SyncAnsiRenderer::new_overlay());
     }
     Box::new(AnsiRenderer::new_overlay())

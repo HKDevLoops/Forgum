@@ -169,6 +169,8 @@ _forgum_attach_modes="startup prompt clear split pane"
 _forgum_aspects="auto 21:9 16:9 16:10 4:3 1:1 narrow"
 _forgum_aspect_modes="preset dynamic auto"
 _forgum_colorblind="none protanopia deuteranopia tritanopia achromatopsia protanopia_sim deuteranopia_sim tritanopia_sim"
+_forgum_time_of_day="auto dawn day dusk night"
+_forgum_seasons="auto spring summer autumn winter"
 
 _forgum_custom_complete() {
     local prev="${COMP_WORDS[COMP_CWORD-1]}"
@@ -188,6 +190,14 @@ _forgum_custom_complete() {
             ;;
         --environment)
             COMPREPLY=( $(compgen -W "$_forgum_environments" -- "$cur") )
+            return 0
+            ;;
+        --time-of-day|--tod)
+            COMPREPLY=( $(compgen -W "$_forgum_time_of_day" -- "$cur") )
+            return 0
+            ;;
+        --season)
+            COMPREPLY=( $(compgen -W "$_forgum_seasons" -- "$cur") )
             return 0
             ;;
         --color-mode)
@@ -479,6 +489,20 @@ _forgum_colorblind=(
     'deuteranopia_sim:Deuteranopia LMS simulation filter (inspection mode)'
     'tritanopia_sim:Tritanopia LMS simulation filter (inspection mode)'
 )
+_forgum_time_of_day=(
+    'auto:Dynamic clock synchronization with local system time'
+    'dawn:Early morning sunrise with warm low-angle golden light'
+    'day:High-noon solar brilliance and full daylight exposure'
+    'dusk:Deep crimson twilight sunset and purple horizon gradients'
+    'night:Midnight lunar glow with deep navy indigo shadows'
+)
+_forgum_seasons=(
+    'auto:Dynamic calendar synchronization based on local system month'
+    'spring:Vernal awakening with blooming sakura petals and fresh lime buds'
+    'summer:Lush peak chlorophyll synthesis with rich deep emerald canopy'
+    'autumn:Golden senescence and deciduous transition to fiery amber and scarlet'
+    'winter:Skeletal defoliation of broadleaf trees and frosted evergreen needles'
+)
 "#;
     script.push_str(zsh_extra);
     script
@@ -544,6 +568,9 @@ complete -c forgum -l accel -d 'Hardware acceleration mode' -x -a 'auto	"Auto GP
 complete -c forgum -l shell-attach-mode -d 'Shell integration attach mode' -x -a 'startup	"Static Fastfetch banner on launch" prompt	"Interactive hook every command" clear	"Re-render only after clear/cls" split	"Hardware DECSTBM top margin" pane	"Multiplexer split pane or daemon"'
 complete -c forgum -l aspect -d 'Viewport aspect ratio preset' -x -a 'auto	"Auto-detect from terminal" 21:9	"Ultrawide panoramic (AR>=2.10)" 16:9	"Widescreen standard (16:9)" 16:10	"Golden tall ratio (16:10)" 4:3	"Classic standard (4:3)" 1:1	"Square display (1:1)" narrow	"Vertical mobile/split pane"'
 complete -c forgum -l aspect-mode -d 'Aspect ratio adaptation mode' -x -a 'preset	"Fixed aspect math" dynamic	"Live resize recalculation" auto	"Context-aware adaptation"'
+complete -c forgum -l time-of-day -d 'Atmospheric solar illumination mode' -x -a 'auto	"Dynamic clock synchronization with local time" dawn	"Sunrise with warm low-angle golden light" day	"High-noon solar brilliance and daylight" dusk	"Crimson twilight sunset and purple horizon" night	"Midnight lunar glow with deep indigo shadows"'
+complete -c forgum -l tod -d 'Atmospheric solar illumination mode' -x -a 'auto	"Dynamic clock synchronization with local time" dawn	"Sunrise with warm low-angle golden light" day	"High-noon solar brilliance and daylight" dusk	"Crimson twilight sunset and purple horizon" night	"Midnight lunar glow with deep indigo shadows"'
+complete -c forgum -l season -d 'Phenological seasonal foliage mode' -x -a 'auto	"Dynamic calendar synchronization" spring	"Vernal awakening with blooming sakura petals" summer	"Lush peak chlorophyll synthesis" autumn	"Golden senescence with amber and scarlet" winter	"Skeletal defoliation and frosty conifer needles"'
 "#.to_string()
 }
 
@@ -811,12 +838,30 @@ Register-ArgumentCompleter -Native -CommandName 'forgum' -ScriptBlock {
         'tritanopia_sim' = 'Tritanopia LMS simulation filter (inspection mode)'
     }
 
+    $timeOfDayModes = @{
+        'auto' = 'Dynamic clock synchronization with local system time'
+        'dawn' = 'Early morning sunrise with warm low-angle golden light'
+        'day' = 'High-noon solar brilliance and full daylight exposure'
+        'dusk' = 'Deep crimson twilight sunset and purple horizon gradients'
+        'night' = 'Midnight lunar glow with deep navy indigo shadows'
+    }
+
+    $seasons = @{
+        'auto' = 'Dynamic calendar synchronization with local month'
+        'spring' = 'Vernal awakening with blooming sakura petals and lime buds'
+        'summer' = 'Lush peak chlorophyll synthesis with rich deep emerald canopy'
+        'autumn' = 'Golden senescence with amber and scarlet deciduous foliage'
+        'winter' = 'Skeletal defoliation and frosty conifer needles'
+    }
+
     $targetMap = $null
     switch ($prevWord) {
         { $_ -in '--effect', '-e' } { $targetMap = $effects }
         '--mountain' { $targetMap = $mountains }
         '--road' { $targetMap = $roads }
         '--environment' { $targetMap = $environments }
+        { $_ -in '--time-of-day', '--tod' } { $targetMap = $timeOfDayModes }
+        '--season' { $targetMap = $seasons }
         '--color-mode' { $targetMap = $colors }
         { $_ -in '--colorblind', '--cvd' } { $targetMap = $colorblindModes }
         { $_ -in '--cow', '--animal', '-a' } { $targetMap = $animals }
@@ -835,6 +880,7 @@ Register-ArgumentCompleter -Native -CommandName 'forgum' -ScriptBlock {
 
     $flags = @(
         '--cow', '--animal', '--effect', '--mountain', '--road', '--environment',
+        '--time-of-day', '--tod', '--season',
         '--color-mode', '--colorblind', '--cvd', '--text', '--think', '--background', '--banner',
         '--duration', '--fps', '--thought-interval', '--split-scroll',
         '--reserve-rows', '--reserve-cols', '--split-ratio',
@@ -894,7 +940,30 @@ export extern "forgum" [
     --aspect-mode: string@"nu_forgum_aspect_modes"     # Aspect ratio adaptation mode
     --colorblind: string@"nu_forgum_colorblind"        # Color vision deficiency mode
     --cvd: string@"nu_forgum_colorblind"               # Alias for colorblind mode
+    --time-of-day: string@"nu_forgum_time_of_day"      # Atmospheric solar illumination mode
+    --tod: string@"nu_forgum_time_of_day"              # Atmospheric solar illumination mode
+    --season: string@"nu_forgum_season"                # Phenological seasonal foliage mode
 ]
+
+def "nu_forgum_season" [] {
+    [
+        { value: "auto", description: "Dynamic calendar synchronization with local month" },
+        { value: "spring", description: "Vernal awakening with blooming sakura petals" },
+        { value: "summer", description: "Lush peak chlorophyll synthesis and emerald canopy" },
+        { value: "autumn", description: "Golden senescence with amber and scarlet foliage" },
+        { value: "winter", description: "Skeletal defoliation and frosty conifer needles" }
+    ]
+}
+
+def "nu_forgum_time_of_day" [] {
+    [
+        { value: "auto", description: "Dynamic clock synchronization with local time" },
+        { value: "dawn", description: "Early morning sunrise with warm golden light" },
+        { value: "day", description: "High-noon solar brilliance and full daylight" },
+        { value: "dusk", description: "Deep crimson twilight sunset and purple horizon" },
+        { value: "night", description: "Midnight lunar glow with deep indigo shadows" }
+    ]
+}
 
 def "nu_forgum_colorblind" [] {
     [
@@ -1209,8 +1278,14 @@ flags:
   --aspect-mode=: Aspect ratio adaptation mode (preset, dynamic, auto)
   --colorblind=: Color vision deficiency accessibility mode (none, protanopia, deuteranopia, tritanopia, achromatopsia, protanopia_sim, deuteranopia_sim, tritanopia_sim)
   --cvd=: Color vision deficiency accessibility mode
+  --time-of-day=: Atmospheric solar illumination mode (auto, dawn, day, dusk, night)
+  --tod=: Atmospheric solar illumination mode (auto, dawn, day, dusk, night)
+  --season=: Phenological seasonal foliage mode (auto, spring, summer, autumn, winter)
 completion:
   flag:
+    time-of-day: ["auto\tDynamic local clock sync", "dawn\tGolden morning sunrise", "day\tBrilliant high-noon daylight", "dusk\tCrimson evening twilight", "night\tMidnight lunar glow"]
+    tod: ["auto\tDynamic local clock sync", "dawn\tGolden morning sunrise", "day\tBrilliant high-noon daylight", "dusk\tCrimson evening twilight", "night\tMidnight lunar glow"]
+    season: ["auto\tDynamic calendar sync", "spring\tVernal sakura awakening", "summer\tLush emerald chlorophyll", "autumn\tGolden and scarlet senescence", "winter\tFrosty conifer defoliation"]
     accel: ["auto\tAutomatic GPU detection with CPU fallback", "dedicated\tPrefer dedicated GPU", "integrated\tPrefer internal APU", "npu\tPrefer neural NPU", "cpu\tForce pure CPU"]
     shell-attach-mode: ["startup\tFastfetch launch banner", "prompt\tInteractive hook on prompt", "clear\tRe-render only after clear/cls", "split\tDECSTBM top margin", "pane\tMultiplexer pane or daemon"]
     aspect: ["auto\tAuto-detect from terminal", "21:9\tUltrawide panoramic", "16:9\tWidescreen standard", "16:10\tGolden tall ratio", "4:3\tClassic standard", "1:1\tSquare display", "narrow\tVertical mobile/split pane"]

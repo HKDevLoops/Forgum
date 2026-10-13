@@ -14,7 +14,7 @@
 (define-public forgum
   (package
     (name "forgum")
-    (version "0.0.7-beta")
+    (version "0.0.8-beta")
     (source
       (origin
         (method git-fetch)

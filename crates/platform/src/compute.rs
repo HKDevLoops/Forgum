@@ -499,6 +499,120 @@ impl ComputeEngine {
             }
         }
     }
+
+    /// Evaluates continuous celestial trajectory arc (Sun / Moon) across sky horizon:
+    /// Returns (screen_x, screen_y) within terminal bounds [0..cols, 0..sky_horizon].
+    /// Mode: 0 = Dawn, 1 = Day, 2 = Dusk, 3 = Night.
+    #[must_use]
+    pub fn compute_celestial_trajectory(
+        &self,
+        mode: u8,
+        time: f32,
+        cols: usize,
+        sky_horizon: usize,
+    ) -> (usize, usize) {
+        let (u_base, u_scale, time_scale, arc_factor_scale) = match mode {
+            0 => (0.12f32, 0.14f32, 0.05f32, 0.65f32), // Dawn
+            1 => (0.28, 0.44, 0.035, 0.70),             // Day
+            2 => (0.74, 0.14, 0.05, 0.65),              // Dusk
+            _ => (0.35, 0.35, 0.025, 0.55),             // Night (Moon)
+        };
+        let u = u_base + u_scale * ((time * time_scale).fract());
+        let sun_x = (u * (cols.saturating_sub(6) as f32) + 3.0).round() as usize;
+        let arc_factor = (std::f32::consts::PI * u).sin();
+        let sky_y = ((sky_horizon as f32) * (1.0 - arc_factor_scale * arc_factor)).round() as usize;
+        (
+            sun_x.min(cols.saturating_sub(1)),
+            sky_y.clamp(1, sky_horizon.max(1)),
+        )
+    }
+
+    /// Multi-threaded batch evaluation of tree swaying lever arms and aerodynamic gusts.
+    /// Evaluates `out_sways` in parallel with zero heap allocation.
+    pub fn compute_tree_sway_batch(
+        &self,
+        height_fractions: &[f32],
+        is_small_shrubs: &[bool],
+        species_is_willow: &[bool],
+        tree_seeds: &[f32],
+        time: f32,
+        out_sways: &mut [isize],
+    ) {
+        let n = height_fractions
+            .len()
+            .min(is_small_shrubs.len())
+            .min(species_is_willow.len())
+            .min(tree_seeds.len())
+            .min(out_sways.len());
+        if n == 0 {
+            return;
+        }
+
+        let threads = std::thread::available_parallelism()
+            .map(|p| p.get().min(8))
+            .unwrap_or(2);
+
+        if n <= 32 || threads <= 1 {
+            for i in 0..n {
+                out_sways[i] = Self::eval_single_tree_sway(
+                    height_fractions[i],
+                    is_small_shrubs[i],
+                    species_is_willow[i],
+                    tree_seeds[i],
+                    time,
+                );
+            }
+        } else {
+            let chunk_size = n.div_ceil(threads);
+            std::thread::scope(|s| {
+                for (chunk_idx, out_chunk) in out_sways[..n].chunks_mut(chunk_size).enumerate() {
+                    let start = chunk_idx * chunk_size;
+                    let end = (start + out_chunk.len()).min(n);
+                    let h_slice = &height_fractions[start..end];
+                    let shrub_slice = &is_small_shrubs[start..end];
+                    let willow_slice = &species_is_willow[start..end];
+                    let seed_slice = &tree_seeds[start..end];
+                    s.spawn(move || {
+                        for i in 0..out_chunk.len() {
+                            out_chunk[i] = Self::eval_single_tree_sway(
+                                h_slice[i],
+                                shrub_slice[i],
+                                willow_slice[i],
+                                seed_slice[i],
+                                time,
+                            );
+                        }
+                    });
+                }
+            });
+        }
+    }
+
+    #[inline]
+    fn eval_single_tree_sway(
+        h_norm: f32,
+        is_small_shrub: bool,
+        is_willow: bool,
+        seed: f32,
+        time: f32,
+    ) -> isize {
+        let h_norm = h_norm.clamp(0.0, 1.0);
+        if is_small_shrub {
+            let flutter_phase = time * 4.8 + seed * 2.1;
+            let flutter_wave =
+                (flutter_phase.sin() * 0.65) + ((flutter_phase * 1.83).cos() * 0.35);
+            let flutter_amt = h_norm * flutter_wave * 1.1;
+            flutter_amt.round() as isize
+        } else {
+            let gust_slow = (time * 1.35 + seed).sin() * 0.75;
+            let gust_medium = (time * 2.70 + seed * 1.618).cos() * 0.35;
+            let gust_combined = gust_slow + gust_medium;
+            let lever_arm = h_norm.powf(1.35);
+            let max_amp = if is_willow { 1.85 } else { 1.35 };
+            let sway_f = lever_arm * gust_combined * max_amp;
+            sway_f.round() as isize
+        }
+    }
 }
 
 #[cfg(test)]
@@ -669,4 +783,36 @@ mod tests {
         assert!(lives[0] < 1.0); // Life decreased
         assert_eq!(ys[1], 18.0); // Expired bubble untouched
     }
+
+    #[test]
+    fn test_celestial_trajectory_clamped() {
+        let engine = ComputeEngine::init(AccelerationMode::Cpu);
+        for mode in 0..4 {
+            for t in [0.0, 5.0, 15.0, 100.0] {
+                let (cx, cy) = engine.compute_celestial_trajectory(mode, t, 80, 24);
+                assert!(cx < 80, "Celestial x within cols: {cx}");
+                assert!(cy <= 24 && cy >= 1, "Celestial y within sky horizon: {cy}");
+            }
+        }
+    }
+
+    #[test]
+    fn test_tree_sway_batch_multithreaded() {
+        let engine = ComputeEngine::init(AccelerationMode::Cpu);
+        let h_norms = [0.0f32, 0.25, 0.5, 0.75, 1.0, 0.5, 0.8];
+        let is_shrub = [false, false, false, false, false, true, true];
+        let is_willow = [false, false, true, false, false, false, false];
+        let seeds = [0.0f32, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
+        let mut sways = [0isize; 7];
+
+        engine.compute_tree_sway_batch(&h_norms, &is_shrub, &is_willow, &seeds, 2.5, &mut sways);
+
+        // Base height norm 0.0 must have zero sway
+        assert_eq!(sways[0], 0);
+        // All sway values should be within realistic aerodynamic limits [-3, 3]
+        for &s in &sways {
+            assert!((-3..=3).contains(&s), "Sway within realistic bounds: {s}");
+        }
+    }
 }
+

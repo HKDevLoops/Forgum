@@ -181,7 +181,13 @@ impl SimState {
             env_override,
         );
 
-        let mut scheduler = Scheduler::new(config.fps);
+        // Clamp default FPS to 30 over remote sessions (SSH, RDP) to eliminate network lag and bufferbloat
+        let effective_fps = if forgum_platform::is_remote_session() && (config.fps == 0 || config.fps == 60) {
+            30
+        } else {
+            config.fps
+        };
+        let mut scheduler = Scheduler::new(effective_fps);
         let has_scenery_motion = scenery.0 != crate::scenery::MountainStyle::None
             || scenery.1 != crate::scenery::RoadStyle::None
             || scenery.2 != crate::scenery::EnvironmentStyle::None;
@@ -298,7 +304,21 @@ impl SimState {
             (self.cow_foot_y + 1).min(max_road)
         };
         let animal_h = self.cow_foot_y.min(self.fb.height.saturating_sub(2)).max(1);
-        crate::scenery::render_scenery_full(
+        let tod = self
+            .config
+            .time_of_day
+            .as_deref()
+            .map(crate::scenery::TimeOfDay::parse)
+            .unwrap_or(crate::scenery::TimeOfDay::Auto)
+            .resolve();
+        let season = self
+            .config
+            .season
+            .as_deref()
+            .map(crate::scenery::Season::parse)
+            .unwrap_or(crate::scenery::Season::Auto)
+            .resolve();
+        crate::scenery::render_scenery_full_with_tod_and_season(
             &mut self.fb,
             mtn_style,
             road_style,
@@ -308,6 +328,8 @@ impl SimState {
             Some(&self.config.cow),
             Some(animal_h),
             Some(self.cow_dna.base),
+            Some(tod),
+            Some(season),
         );
 
         // Update effect.
@@ -637,6 +659,7 @@ fn sim_thread(
         None
     };
     let mut last_frame = Instant::now();
+    let mut target_next_tick = Instant::now();
     let mut last_battery_check = Instant::now();
     let mut user_speed: f32 = 1.0;
     let mut battery_throttled = false;
@@ -741,44 +764,46 @@ fn sim_thread(
             if !period.is_zero() {
                 std::thread::sleep(period);
             }
+            target_next_tick = Instant::now();
             continue;
         }
 
-        // Fixed-timestep simulation with elapsed compute compensation.
-        let now = Instant::now();
-        let raw_dt = now.duration_since(last_frame);
-        // Clamp dt to [100µs, 100ms] to preserve sub-millisecond precision for high frame rates (e.g. 144–240 FPS)
-        // without artificial physics acceleration or freeze on window drag.
-        let dt = raw_dt.clamp(Duration::from_micros(100), Duration::from_millis(100));
-        last_frame = now;
+        // Fixed-timestep simulation with nominal delta for active tier to eliminate timing jitter.
+        let period = sim.scheduler.frame_period();
+        let effective_dt = if sim.scheduler.tier() == crate::scheduler::SchedulerTier::Active && !period.is_zero() {
+            period
+        } else {
+            let now = Instant::now();
+            let raw_dt = now.duration_since(last_frame);
+            raw_dt.clamp(Duration::from_micros(100), Duration::from_millis(100))
+        };
+        last_frame = Instant::now();
 
-        let frame = sim.tick(dt, raw_dt);
+        let frame = sim.tick(effective_dt, effective_dt);
 
-        // Send to render thread (non-blocking so slow terminal I/O doesn't throttle simulation FPS).
-        match frame_tx.try_send(frame) {
-            Ok(()) => {}
-            Err(crossbeam_channel::TrySendError::Full(_)) => {}
-            Err(crossbeam_channel::TrySendError::Disconnected(_)) => {
-                crate::log_warn!(
-                    "engine",
-                    "SIM thread: render thread dropped receiver, exiting"
-                );
-                break;
-            }
+        // Send to render thread with bounded backpressure so zero frames are dropped.
+        if frame_tx.send(frame).is_err() {
+            crate::log_warn!(
+                "engine",
+                "SIM thread: render thread dropped receiver, exiting"
+            );
+            break;
         }
 
-        // Calibrated hybrid sleep: sub-millisecond precision frame pacing for 60/120/144/240 FPS
-        let period = sim.scheduler.frame_period();
+        // Anchored hybrid sleep: sub-millisecond precision frame pacing for 60/120/144/240 FPS
         if !period.is_zero() {
-            let work_time = now.elapsed();
-            if period > work_time {
-                let remaining = period - work_time;
+            target_next_tick += period;
+            let current = Instant::now();
+            if current < target_next_tick {
+                let remaining = target_next_tick - current;
                 if remaining > Duration::from_micros(2500) {
                     std::thread::sleep(remaining - Duration::from_micros(1200));
                 }
-                while now.elapsed() < period {
+                while Instant::now() < target_next_tick {
                     std::hint::spin_loop();
                 }
+            } else if current > target_next_tick + period.mul_f32(2.0) {
+                target_next_tick = current;
             }
         }
     }
@@ -907,18 +932,8 @@ impl RenderState {
         let damage = &frame.damage;
 
         if !damage.is_empty() {
-            // Wrap in synchronized update if supported.
-            if cfg!(feature = "synchronized-update") && forgum_platform::terminal_supports_sync() {
-                let begin = self.renderer.begin_sync();
-                let _ = self.out.write_all(begin.as_bytes());
-                self.renderer
-                    .render_damage(&mut self.out, &frame.cells, frame.cols, damage)?;
-                let end = self.renderer.end_sync();
-                let _ = self.out.write_all(end.as_bytes());
-            } else {
-                self.renderer
-                    .render_damage(&mut self.out, &frame.cells, frame.cols, damage)?;
-            }
+            self.renderer
+                .render_damage(&mut self.out, &frame.cells, frame.cols, damage)?;
             let _ = self.out.flush();
         }
 
@@ -1092,8 +1107,19 @@ pub fn run_engine(
     // Dual resize detection: crossterm Event::Resize + proactive terminal::size() polling every 30-50ms.
     let mut cur_cols = cols;
     let mut cur_rows = rows;
+    let deadline = if config.duration > 0 {
+        Some(Instant::now() + Duration::from_secs(config.duration as u64))
+    } else {
+        None
+    };
 
     while !shutdown.is_shutdown() {
+        if let Some(dl) = deadline {
+            if Instant::now() >= dl {
+                shutdown.trigger();
+                break;
+            }
+        }
         if !config.background {
             if let Ok(true) = crossterm::event::poll(Duration::from_millis(30)) {
                 match crossterm::event::read() {
@@ -1258,7 +1284,19 @@ pub fn run_engine_banner(
     // In banner mode, strictly no tty reads — wait for frames or signal
     let mut cur_cols = cols;
     let cur_rows = rows;
+    let deadline = if config.duration > 0 {
+        Some(Instant::now() + Duration::from_secs(config.duration as u64))
+    } else {
+        None
+    };
+
     while !shutdown.is_shutdown() {
+        if let Some(dl) = deadline {
+            if Instant::now() >= dl {
+                shutdown.trigger();
+                break;
+            }
+        }
         let (w_u16, _) = forgum_platform::terminal_size();
         let w = (w_u16.max(20)) as usize;
         if w != cur_cols {
@@ -1410,7 +1448,19 @@ pub fn run_engine_overlay(
         .max()
         .unwrap_or(0);
 
+    let deadline = if config.duration > 0 {
+        Some(Instant::now() + Duration::from_secs(config.duration as u64))
+    } else {
+        None
+    };
+
     while !shutdown.is_shutdown() {
+        if let Some(dl) = deadline {
+            if Instant::now() >= dl {
+                shutdown.trigger();
+                break;
+            }
+        }
         let (w_u16, h_u16) = forgum_platform::terminal_size();
         let w = (w_u16.max(20)) as usize;
         let h = (h_u16.max(1)) as usize;

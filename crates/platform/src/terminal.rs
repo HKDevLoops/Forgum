@@ -181,6 +181,7 @@ impl TerminalEmulator {
                 | Self::ITerm2
                 | Self::Foot
                 | Self::Alacritty
+                | Self::ConHost
         )
     }
 
@@ -586,6 +587,61 @@ pub fn detect_terminal_emulator() -> TerminalEmulator {
     }
 
     TerminalEmulator::GenericVt
+}
+
+/// Detected remote session transport (SSH, RDP, Mosh, etc.)
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RemoteSessionType {
+    None,
+    Ssh,
+    Rdp,
+    Mosh,
+}
+
+impl RemoteSessionType {
+    #[must_use]
+    pub const fn is_remote(self) -> bool {
+        !matches!(self, Self::None)
+    }
+
+    #[must_use]
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::None => "Local Console",
+            Self::Ssh => "SSH Remote Session",
+            Self::Rdp => "RDP / Remote Desktop",
+            Self::Mosh => "Mosh Remote Session",
+        }
+    }
+}
+
+/// Detect if current process is running in a remote session (SSH, RDP/RDC, Mosh).
+#[must_use]
+pub fn detect_remote_session() -> RemoteSessionType {
+    if std::env::var_os("SSH_CLIENT").is_some()
+        || std::env::var_os("SSH_TTY").is_some()
+        || std::env::var_os("SSH_CONNECTION").is_some()
+    {
+        return RemoteSessionType::Ssh;
+    }
+    if std::env::var_os("MOSH_SERVER").is_some() {
+        return RemoteSessionType::Mosh;
+    }
+    if let Ok(session) = std::env::var("SESSIONNAME") {
+        if session.starts_with("RDP-") || session.to_uppercase().contains("RDP") {
+            return RemoteSessionType::Rdp;
+        }
+    }
+    if std::env::var_os("CLIENTNAME").is_some() || std::env::var_os("XRDP_SESSION").is_some() {
+        return RemoteSessionType::Rdp;
+    }
+    RemoteSessionType::None
+}
+
+#[must_use]
+pub fn is_remote_session() -> bool {
+    detect_remote_session().is_remote()
 }
 
 /// Standard terminal display aspect ratios based on visual proportion (1 char cell ≈ 1:2 w:h).

@@ -170,6 +170,16 @@ pub fn render_options(category: &str) -> String {
     let show_roads = show_all || show_scenery || cat == "roads" || cat == "road";
     let show_environments =
         show_all || show_scenery || cat == "environments" || cat == "environment" || cat == "env";
+    let show_tod = show_all
+        || show_scenery
+        || cat == "tod"
+        || cat == "time-of-day"
+        || cat == "time_of_day"
+        || cat == "time";
+    let show_season = show_all
+        || show_scenery
+        || cat == "season"
+        || cat == "seasons";
     let show_colors = show_all
         || cat == "colors"
         || cat == "color"
@@ -213,6 +223,8 @@ pub fn render_options(category: &str) -> String {
         && !show_mountains
         && !show_roads
         && !show_environments
+        && !show_tod
+        && !show_season
         && !show_colors
         && !show_shells
         && !show_config
@@ -232,6 +244,8 @@ pub fn render_options(category: &str) -> String {
               • \x1b[1mmountains\x1b[0m      - Procedural mountain horizons (--mountain)\n\
               • \x1b[1mroads\x1b[0m          - Ground and terrain surface styles (--road)\n\
               • \x1b[1menvironments\x1b[0m   - Atmospheric particle emitter themes (--env / --environment)\n\
+              • \x1b[1mtod\x1b[0m            - Atmospheric solar illumination (--time-of-day / --tod)\n\
+              • \x1b[1mseason\x1b[0m         - Phenological seasonal foliage (--season)\n\
               • \x1b[1maspects\x1b[0m        - Viewport aspect ratio formats (--aspect)\n\
               • \x1b[1mcolors\x1b[0m         - Chromatic color modes and hex palettes (--color-mode)\n\
               • \x1b[1mshells\x1b[0m         - Supported shells, config paths, and tab completion\n\
@@ -616,6 +630,80 @@ pub fn render_options(category: &str) -> String {
             ],
         ];
         out.push_str(&format_table(&e_headers, &e_rows));
+    }
+
+    if show_tod {
+        out.push_str("\n\x1b[1;35m━━━ Atmospheric Solar Illumination (--time-of-day / --tod) ━━━\x1b[0m\n");
+        let tod_headers = [
+            "Time of Day",
+            "Solar & Lunar Lighting Condition",
+            "Atmospheric Chromatic Palette",
+        ];
+        let tod_rows = vec![
+            vec![
+                "auto",
+                "Dynamic clock synchronization based on local system time",
+                "Automatically shifts between Dawn, Day, Dusk, and Night based on the current hour",
+            ],
+            vec![
+                "dawn",
+                "Early morning sunrise with warm low-angle golden light",
+                "Amber solar orb, soft pink clouds, and warm golden foliage highlights",
+            ],
+            vec![
+                "day",
+                "High-noon solar brilliance and full daylight exposure",
+                "Luminous yellow sun, crystalline white clouds, and vibrant chlorophyll foliage",
+            ],
+            vec![
+                "dusk",
+                "Deep crimson twilight sunset and purple horizon gradients",
+                "Coral sun dipping westward, mauve clouds, and early twilight starfield",
+            ],
+            vec![
+                "night",
+                "Midnight lunar glow with deep navy indigo shadows",
+                "Crescent moon, glittering star constellations, and cool silvery flora reflections",
+            ],
+        ];
+        out.push_str(&format_table(&tod_headers, &tod_rows));
+    }
+
+    if show_season {
+        out.push_str("\n\x1b[1;35m━━━ Phenological Seasonal Foliage (--season) ━━━\x1b[0m\n");
+        let season_headers = [
+            "Season",
+            "Phenological Botanical Condition",
+            "Foliage & Canopy Chromatic Palette",
+        ];
+        let season_rows = vec![
+            vec![
+                "auto",
+                "Dynamic calendar synchronization based on local system month",
+                "Automatically shifts between Spring, Summer, Autumn, and Winter based on calendar",
+            ],
+            vec![
+                "spring",
+                "Vernal awakening with blooming sakura petals and fresh lime buds",
+                "Blossoming cherry petals, pastel floral shrubs, and light chartreuse leafy crowns",
+            ],
+            vec![
+                "summer",
+                "Lush peak chlorophyll synthesis with rich deep emerald canopy",
+                "Deep forest greens, viridian woodland canopies, and dense understory shade",
+            ],
+            vec![
+                "autumn",
+                "Golden senescence and deciduous transition to fiery amber and scarlet",
+                "Scarlet red maples, golden birch canopies, russet oaks, and warm amber forest crowns",
+            ],
+            vec![
+                "winter",
+                "Skeletal defoliation of broadleaf trees and frosted evergreen needles",
+                "Bare skeletal twigs, crystalline frost sparkles, and snowy evergreen conifer crowns",
+            ],
+        ];
+        out.push_str(&format_table(&season_headers, &season_rows));
     }
 
     if show_aspects {
@@ -1144,6 +1232,348 @@ pub fn render_options(category: &str) -> String {
     out
 }
 
+/// Render structured, categorized help tables for `forgum --help` and `forgum help [category]`.
+/// Segregates commands and option flags side-by-side with dual representation,
+/// syntax highlighting, adaptive Unicode borders, word wrapping, and documentation links.
+pub fn render_help(category: Option<&str>) -> String {
+    let cat = category.map(|c| c.trim().to_ascii_lowercase());
+    let mut out = String::new();
+
+    let show_all = cat.is_none() || cat.as_deref() == Some("all");
+    let show_core = show_all
+        || matches!(
+            cat.as_deref(),
+            Some("core" | "commands" | "basic" | "general" | "render" | "think" | "tui")
+        );
+    let show_mascots = show_all
+        || matches!(
+            cat.as_deref(),
+            Some("mascots" | "mascot" | "cows" | "cow" | "animals" | "animal" | "kinematics" | "effects" | "effect")
+        );
+    let show_scenery = show_all
+        || matches!(
+            cat.as_deref(),
+            Some("scenery" | "nature" | "mountains" | "mountain" | "roads" | "road" | "env" | "environment" | "biome")
+        );
+    let show_colors = show_all
+        || matches!(
+            cat.as_deref(),
+            Some("colors" | "color" | "palettes" | "palette" | "contrast" | "accessibility" | "colorblind")
+        );
+    let show_display = show_all
+        || matches!(
+            cat.as_deref(),
+            Some("display" | "timing" | "performance" | "fps" | "duration" | "accel" | "gpu" | "aspect" | "split" | "banner")
+        );
+    let show_system = show_all
+        || matches!(
+            cat.as_deref(),
+            Some("system" | "config" | "update" | "logs" | "diagnose" | "checkhealth" | "doctor" | "shell" | "init" | "completions" | "daemons" | "daemon" | "battle")
+        );
+
+    out.push_str("\x1b[1;35m━━━ Forgum Universal Terminal Engine ━━━\x1b[0m\n");
+    out.push_str("\x1b[1;37mUsage:\x1b[0m \x1b[1;32mforgum [SUBCOMMAND] [OPTIONS] [MESSAGE]\x1b[0m\n");
+    out.push_str("\x1b[90mDual Representation: Actions can be invoked via subcommands (e.g. 'forgum cow tux') or CLI flags (e.g. 'forgum --cow tux').\x1b[0m\n");
+    out.push_str("\x1b[1;34mDocumentation:\x1b[0m \x1b[4mhttps://github.com/HKDevLoops/Forgum#configuration\x1b[0m\n\n");
+
+    let headers = ["Subcommand", "Equivalent Flag", "Example", "Description"];
+
+    if show_core {
+        out.push_str("\x1b[1;36m▶ Core Commands & Execution Modes\x1b[0m\n");
+        let rows = vec![
+            vec![
+                "render [msg]",
+                "--text / -t <msg>",
+                "forgum cow tux \"Hello\"",
+                "Render mascot speech bubble with animated procedural scenery and natural physics.",
+            ],
+            vec![
+                "think [thought]",
+                "--think / -T",
+                "forgum think \"Pondering\"",
+                "Render mascot thought bubble (circles: 'o') instead of speech bubble lines.",
+            ],
+            vec![
+                "fortune",
+                "n/a",
+                "forgum fortune",
+                "Print an inspirational terminal fortune cookie directly to stdout.",
+            ],
+            vec![
+                "tui / menu",
+                "config --tui",
+                "forgum tui",
+                "Launch interactive Terminal UI dashboard (LazyGit & Zellij modeless navigation).",
+            ],
+            vec![
+                "help [category]",
+                "--help / -h",
+                "forgum help scenery",
+                "Display structured ANSI help tables with word wrapping and dual representation.",
+            ],
+            vec![
+                "list [category]",
+                "--list / -l",
+                "forgum list animals",
+                "Inspect available options for animals, effects, scenery, colors, or shells.",
+            ],
+        ];
+        out.push_str(&format_table(&headers, &rows));
+        out.push('\n');
+    }
+
+    if show_mascots {
+        out.push_str("\x1b[1;36m▶ Mascot & Kinematics Control\x1b[0m\n");
+        let rows = vec![
+            vec![
+                "cow <name>",
+                "--cow / -c <name>",
+                "forgum cow dragon",
+                "Select animal mascot from 106 creatures (default, tux, dragon, corgi, etc.).",
+            ],
+            vec![
+                "cows / animals",
+                "list animals",
+                "forgum cows",
+                "List all available animal mascots, habitat profiles, and base kinematics.",
+            ],
+            vec![
+                "effect <name>",
+                "--effect / -e <name>",
+                "forgum effect walk",
+                "Select motion kinematic: animal_natural, walk, breathe, float, swim, fly, pulse.",
+            ],
+            vec![
+                "effects",
+                "list effects",
+                "forgum effects",
+                "List all animation kinematics, physical equations, and habitat permissions.",
+            ],
+            vec![
+                "eyes <glyphs>",
+                "--eyes <glyphs>",
+                "forgum --eyes '$$'",
+                "Custom eye glyphs (e.g. 'oo', '$$', '@@', 'xx', '==', '--') with eye blinking.",
+            ],
+            vec![
+                "tongue <glyph>",
+                "--tongue <glyph>",
+                "forgum --tongue 'U'",
+                "Custom tongue glyph for mascot muzzle/mouth (e.g. 'U', 'V', 'p').",
+            ],
+            vec![
+                "random [target]",
+                "--random / -r",
+                "forgum --random all",
+                "Randomize creature mascot, scenery biome/road/mountain, and fortunes on launch.",
+            ],
+        ];
+        out.push_str(&format_table(&headers, &rows));
+        out.push('\n');
+    }
+
+    if show_scenery {
+        out.push_str("\x1b[1;36m▶ Procedural Scenery & Nature Mathematics\x1b[0m\n");
+        let rows = vec![
+            vec![
+                "scenery <env>",
+                "--environment <env>",
+                "forgum scenery savanna",
+                "Atmospheric environment: pasture, inferno, ocean, arctic, savanna, forest, etc.",
+            ],
+            vec![
+                "mountain <style>",
+                "--mountain <style>",
+                "forgum mountain peaks",
+                "Procedural harmonic mountains: hills, peaks, volcano, iceberg, skyline, plateau.",
+            ],
+            vec![
+                "road <style>",
+                "--road <style>",
+                "forgum road magma",
+                "Ground & terrain surface style: dirt, cobblestone, magma, ice, seabed, sidewalk.",
+            ],
+            vec![
+                "sceneries",
+                "list scenery",
+                "forgum scenery",
+                "List all procedural biomes, mountain harmonics, and road terrain styles.",
+            ],
+        ];
+        out.push_str(&format_table(&headers, &rows));
+        out.push('\n');
+    }
+
+    if show_colors {
+        out.push_str("\x1b[1;36m▶ Color Palettes & Accessibility\x1b[0m\n");
+        let rows = vec![
+            vec![
+                "color <mode>",
+                "--color-mode <mode>",
+                "forgum color natural",
+                "Color mode: natural (authentic coat morphs), animal, rainbow, solid, none.",
+            ],
+            vec![
+                "colors",
+                "list colors",
+                "forgum colors",
+                "List all 132 mascot natural coat morphs and built-in palettes.",
+            ],
+            vec![
+                "palette <hex,...>",
+                "--palette <hex,...>",
+                "forgum palette '#ff007f,#00f0ff'",
+                "Custom 24-bit TrueColor hex gradient palette interpolation.",
+            ],
+            vec![
+                "contrast <mode>",
+                "--contrast-mode <mode>",
+                "forgum contrast acrylic_glass",
+                "Contrast profile for acrylic/transparent terminals (acrylic_glass, high_contrast).",
+            ],
+            vec![
+                "colorblind <mode>",
+                "--colorblind <mode>",
+                "forgum colorblind deuteranopia",
+                "Color Vision Deficiency (CVD) filter: protanopia, deuteranopia, tritanopia, etc.",
+            ],
+        ];
+        out.push_str(&format_table(&headers, &rows));
+        out.push('\n');
+    }
+
+    if show_display {
+        out.push_str("\x1b[1;36m▶ Display, Timing & Hardware Acceleration\x1b[0m\n");
+        let rows = vec![
+            vec![
+                "fps <rate>",
+                "--fps <rate>",
+                "forgum fps 60",
+                "Target frame rate (1-240, default: 30). Decoupled delta-time physics: smooth motion!",
+            ],
+            vec![
+                "duration <sec>",
+                "--duration / -d <sec>",
+                "forgum duration 5",
+                "Playback duration in seconds (0 = infinite in background). Hard deadline guard.",
+            ],
+            vec![
+                "accel <mode>",
+                "--accel <mode>",
+                "forgum accel auto",
+                "Hardware acceleration: auto, dedicated, integrated, npu, cpu (<0.1ms fallback).",
+            ],
+            vec![
+                "aspect <ratio>",
+                "--aspect <ratio>",
+                "forgum aspect 16:9",
+                "Viewport aspect ratio preset: auto, 21:9, 16:9, 16:10, 4:3, 1:1, narrow.",
+            ],
+            vec![
+                "aspect-mode <m>",
+                "--aspect-mode <m>",
+                "forgum aspect-mode dynamic",
+                "Aspect ratio adaptation strategy: preset, dynamic (recomputes on resize), auto.",
+            ],
+            vec![
+                "banner",
+                "--banner / -B",
+                "forgum --banner",
+                "Render inline animated banner without switching to alternate screen buffer.",
+            ],
+            vec![
+                "background",
+                "--background / -b",
+                "forgum --background",
+                "Run continuous background animation above shell prompt without blocking input.",
+            ],
+            vec![
+                "split",
+                "--split-scroll",
+                "forgum --split-scroll",
+                "Hardware DECSTBM top margin reservation with zero prompt latency.",
+            ],
+        ];
+        out.push_str(&format_table(&headers, &rows));
+        out.push('\n');
+    }
+
+    if show_system {
+        out.push_str("\x1b[1;36m▶ System, Diagnostics, Shell & Daemons\x1b[0m\n");
+        let rows = vec![
+            vec![
+                "config [action]",
+                "--config <file>",
+                "forgum config set fps 60",
+                "View, edit, or migrate JSON/TOML/YAML configuration values.",
+            ],
+            vec![
+                "update [--check]",
+                "--check-updates",
+                "forgum update --check",
+                "Check for updates or atomically upgrade Forgum binary via detected package manager.",
+            ],
+            vec![
+                "channel <name>",
+                "--channel <name>",
+                "forgum channel dev",
+                "View or switch release channel (stable, alpha, nightly, dev).",
+            ],
+            vec![
+                "checkhealth",
+                "doctor",
+                "forgum checkhealth",
+                "Comprehensive 8-section system, terminal, shell, and GPU diagnostics.",
+            ],
+            vec![
+                "logs [flags]",
+                "diagnose",
+                "forgum logs -D",
+                "Inspect structured logs (-w watch, -o open) or run automated bug radar triage.",
+            ],
+            vec![
+                "init <shell>",
+                "n/a",
+                "forgum init zsh --install",
+                "Generate & install universal shell hook for 15 supported shells.",
+            ],
+            vec![
+                "completions <sh>",
+                "n/a",
+                "forgum completions fish",
+                "Generate & install shell tab completion scripts for 15 supported shells.",
+            ],
+            vec![
+                "uninstall",
+                "n/a",
+                "forgum uninstall --method soft",
+                "Clean uninstallation: soft (keep configs) or purge (complete removal).",
+            ],
+            vec![
+                "battle",
+                "arena",
+                "forgum battle tux dragon",
+                "Turn-based ASCII mascot jousting combat simulation.",
+            ],
+            vec![
+                "stop / sweep",
+                "n/a",
+                "forgum stop",
+                "Gracefully terminate running background daemons and clear scroll margins.",
+            ],
+        ];
+        out.push_str(&format_table(&headers, &rows));
+        out.push('\n');
+    }
+
+    out.push_str("\x1b[1;36m💡 Tips:\x1b[0m\n");
+    out.push_str("  • Run \x1b[1;33mforgum list\x1b[0m to browse all available mascots, effects, sceneries, and colors.\n");
+    out.push_str("  • Run \x1b[1;33mforgum help <category>\x1b[0m (e.g. 'forgum help scenery') for focused guidance.\n");
+    out.push_str("  • Read full documentation and configuration guides at: \x1b[1;34m\x1b[4mhttps://github.com/HKDevLoops/Forgum#configuration\x1b[0m\n");
+
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1243,5 +1673,33 @@ mod tests {
 
         let text_all = render_options("all");
         assert!(text_all.contains("Viewport Aspect Ratios"));
+    }
+
+    #[test]
+    fn render_help_all_contains_categories_and_docs_link() {
+        let help = render_help(None);
+        assert!(help.contains("Core Commands & Execution Modes"));
+        assert!(help.contains("Mascot & Kinematics Control"));
+        assert!(help.contains("Procedural Scenery & Nature Mathematics"));
+        assert!(help.contains("Color Palettes & Accessibility"));
+        assert!(help.contains("Display, Timing & Hardware Acceleration"));
+        assert!(help.contains("System, Diagnostics, Shell & Daemons"));
+        assert!(help.contains("https://github.com/HKDevLoops/Forgum#configuration"));
+        assert!(help.contains("Dual Representation"));
+        assert!(help.contains("forgum cow dragon"));
+        assert!(help.contains("fps 60"));
+        assert!(help.contains("┌"));
+        assert!(help.contains("└"));
+    }
+
+    #[test]
+    fn render_help_specific_category() {
+        let help_scenery = render_help(Some("scenery"));
+        assert!(help_scenery.contains("Procedural Scenery & Nature Mathematics"));
+        assert!(!help_scenery.contains("Core Commands & Execution Modes"));
+
+        let help_mascots = render_help(Some("mascots"));
+        assert!(help_mascots.contains("Mascot & Kinematics Control"));
+        assert!(!help_mascots.contains("Display, Timing & Hardware Acceleration"));
     }
 }

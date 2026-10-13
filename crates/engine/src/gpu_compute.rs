@@ -340,6 +340,42 @@ impl GpuComputeEngine {
             rise_speeds,
         );
     }
+
+    /// Evaluates continuous celestial trajectory arc (Sun / Moon) across sky horizon:
+    /// Returns (screen_x, screen_y) within terminal bounds [0..cols, 0..sky_horizon].
+    /// Mode: 0 = Dawn, 1 = Day, 2 = Dusk, 3 = Night.
+    #[must_use]
+    pub fn compute_celestial_trajectory(
+        &self,
+        mode: u8,
+        time: f32,
+        cols: usize,
+        sky_horizon: usize,
+    ) -> (usize, usize) {
+        self.platform_engine
+            .compute_celestial_trajectory(mode, time, cols, sky_horizon)
+    }
+
+    /// Multi-threaded batch evaluation of tree swaying lever arms and aerodynamic gusts.
+    /// Evaluates `out_sways` in parallel with zero heap allocation.
+    pub fn compute_tree_sway_batch(
+        &self,
+        height_fractions: &[f32],
+        is_small_shrubs: &[bool],
+        species_is_willow: &[bool],
+        tree_seeds: &[f32],
+        time: f32,
+        out_sways: &mut [isize],
+    ) {
+        self.platform_engine.compute_tree_sway_batch(
+            height_fractions,
+            is_small_shrubs,
+            species_is_willow,
+            tree_seeds,
+            time,
+            out_sways,
+        );
+    }
 }
 
 #[cfg(test)]
@@ -477,4 +513,31 @@ mod tests {
         assert!((0.0..=60.0).contains(&x));
         assert!((0.0..=14.0).contains(&y));
     }
+
+    #[test]
+    fn test_celestial_trajectory_gpu_compute() {
+        let engine = GpuComputeEngine::init(AccelerationMode::Cpu);
+        for mode in 0..4 {
+            let (cx, cy) = engine.compute_celestial_trajectory(mode, 10.0, 100, 30);
+            assert!(cx < 100);
+            assert!(cy <= 30 && cy >= 1);
+        }
+    }
+
+    #[test]
+    fn test_tree_sway_batch_gpu_compute() {
+        let engine = GpuComputeEngine::init(AccelerationMode::Cpu);
+        let h_norms = [0.0f32, 0.5, 1.0];
+        let is_shrub = [false, false, true];
+        let is_willow = [false, true, false];
+        let seeds = [0.0f32, 1.0, 2.0];
+        let mut sways = [0isize; 3];
+
+        engine.compute_tree_sway_batch(&h_norms, &is_shrub, &is_willow, &seeds, 1.0, &mut sways);
+        assert_eq!(sways[0], 0);
+        for &s in &sways {
+            assert!((-3..=3).contains(&s));
+        }
+    }
 }
+

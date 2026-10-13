@@ -732,12 +732,22 @@ pub fn parse_version_from_cargo_toml(content: &str) -> Option<String> {
     None
 }
 
-/// Parse release tag/version from GitHub release API JSON.
+/// Parse release tag/version from GitHub release API JSON (single release object or list).
 #[must_use]
 pub fn parse_version_from_release_json(json_str: &str) -> Option<String> {
     if let Ok(val) = serde_json::from_str::<serde_json::Value>(json_str) {
         if let Some(tag) = val.get("tag_name").and_then(|t| t.as_str()) {
             return Some(tag.trim_start_matches('v').to_string());
+        }
+        if let Some(arr) = val.as_array() {
+            for item in arr {
+                if let Some(tag) = item.get("tag_name").and_then(|t| t.as_str()) {
+                    let clean = tag.trim_start_matches('v').trim();
+                    if !clean.is_empty() {
+                        return Some(clean.to_string());
+                    }
+                }
+            }
         }
     }
     None
@@ -789,9 +799,13 @@ pub fn fetch_remote_channel_version(channel: ReleaseChannel) -> Result<String, S
         }
     }
 
-    // 3. Fallback for Stable channel via GitHub API
-    if channel == ReleaseChannel::Stable && is_cmd_available("curl") {
-        let api_url = "https://api.github.com/repos/HKDevLoops/Forgum/releases/latest";
+    // 3. Fallback via GitHub API (releases endpoint)
+    if is_cmd_available("curl") {
+        let api_url = if channel == ReleaseChannel::Stable {
+            "https://api.github.com/repos/HKDevLoops/Forgum/releases/latest"
+        } else {
+            "https://api.github.com/repos/HKDevLoops/Forgum/releases"
+        };
         if let Ok(out) = Command::new("curl")
             .args([
                 "-4",

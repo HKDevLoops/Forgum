@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.0.8-beta] - 2026-10-13
+
+### Added
+- **Dynamic Procedural Tree Species Diversity & Anti-Repetition (`crates/engine/src/scenery.rs`)**:
+  - Implemented Golden Ratio Weyl sequence PRNG (`splitmix64_hash`) with maximal period $2^{64}$ and incommensurate phase offsets across 22 botanical species.
+  - Strict adjacent neighbor exclusion ensuring `calculate_tree_species_with_width(n) != calculate_tree_species_with_width(n - 1)`.
+  - Active viewport sliding-window quota strictly enforcing $\le 3$ instances of any species across columns $[0, \text{width})$.
+  - Dynamic clearing expansion (`get_effective_tree_distances`) widening glades on ultra-wide viewports so total trees never exceed $3 \times \text{pool.len()}$.
+- **Seasonal Foliage Phenology & Dynamic Celestial Arcs (`crates/engine/src/scenery.rs`, `crates/platform/src/protocol.rs`, `crates/engine/src/cli.rs`)**:
+  - Botanical seasonal variations via `--season <auto|spring|summer|autumn|winter>`: cherry blossom petals in Spring, chlorophyll emerald in Summer, scarlet maples and golden birches in Autumn, bare frosted boughs and snow in Winter.
+  - Solar illumination and celestial kinematics via `--time-of-day <auto|dawn|day|dusk|night>` with parabolic orbital paths for Sun and Moon transit across the sky horizon.
+  - Added CLI options discovery table (`forgum options season`, `forgum options tod`) and tab completions across Bash, Zsh, Fish, PowerShell, Nushell, and Carapace.
+- **Hardware Acceleration Compute Offload & Multi-Threading (`crates/platform/src/compute.rs`, `crates/engine/src/gpu_compute.rs`)**:
+  - Multi-threaded batch evaluation for tree swaying kinematics (`compute_tree_sway_batch`) and celestial trajectory calculation (`compute_celestial_trajectory`).
+  - Strict zero-allocation execution operating exclusively on pre-allocated framebuffers and stack primitives, guaranteeing resident memory consumption $<100$MB RAM.
+  - Infallible fallback hierarchy across Dedicated GPU $\to$ Integrated APU $\to$ NPU $\to$ Multi-Threaded SIMD CPU.
+
+---
+
 ## [0.0.7-beta] - 2026-10-12
 
 ### Added

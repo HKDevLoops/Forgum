@@ -178,6 +178,8 @@ pub fn merge(base: SceneConfig, overlay: SceneConfig) -> SceneConfig {
         road: overlay.road.or(base.road),
         mountain: overlay.mountain.or(base.mountain),
         palette: overlay.palette.or(base.palette),
+        time_of_day: overlay.time_of_day.or(base.time_of_day),
+        season: overlay.season.or(base.season),
         thought_interval: if overlay.thought_interval == 0 {
             base.thought_interval
         } else {

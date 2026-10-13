@@ -31,7 +31,7 @@
 //! cfg_windows! { /* windows-only code */ }
 //! ```
 
-#![doc(html_root_url = "https://docs.rs/forgum-platform/0.0.7-beta")]
+#![doc(html_root_url = "https://docs.rs/forgum-platform/0.0.8-beta")]
 
 pub mod biome;
 pub mod compute;
@@ -157,9 +157,10 @@ pub fn stdin_has_data() -> bool {
     }
 }
 pub use terminal::{
-    detect_capabilities, detect_terminal_emulator, is_stdin_tty, is_stdout_tty, is_wsl,
-    plan_native_split, terminal_size, terminal_supports_sync, AspectRatioFormat, ColorLevel,
-    GraphicsCaps, NativeSplitPlan, SplitMode, TerminalCapabilities, TerminalEmulator,
+    detect_capabilities, detect_remote_session, detect_terminal_emulator, is_remote_session,
+    is_stdin_tty, is_stdout_tty, is_wsl, plan_native_split, terminal_size, terminal_supports_sync,
+    AspectRatioFormat, ColorLevel, GraphicsCaps, NativeSplitPlan, RemoteSessionType, SplitMode,
+    TerminalCapabilities, TerminalEmulator,
 };
 pub use terminal_theme::{
     apply_colorblind_transform, boost_saturation, calculate_luminance, detect_terminal_theme,

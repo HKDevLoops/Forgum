@@ -158,6 +158,27 @@ pub struct Cli {
     )]
     pub palette: Option<String>,
 
+    /// Atmospheric time-of-day solar illumination (auto, dawn, day, dusk, night).
+    #[arg(
+        long = "time-of-day",
+        visible_alias = "tod",
+        global = true,
+        value_name = "TIME_OF_DAY",
+        help = "Solar illumination mode (auto, dawn, day, dusk, night)",
+        long_help = "Atmospheric time-of-day solar illumination: 'auto' (detect from system clock), 'dawn' (warm pink/gold sunrise), 'day' (crisp golden daylight), 'dusk' (rich amber/purple twilight), or 'night' (cool celestial moonlight)."
+    )]
+    pub time_of_day: Option<String>,
+
+    /// Seasonal foliage phenology (auto, spring, summer, autumn, winter).
+    #[arg(
+        long = "season",
+        global = true,
+        value_name = "SEASON",
+        help = "Seasonal foliage phenology (auto, spring, summer, autumn, winter)",
+        long_help = "Seasonal foliage phenology: 'auto' (detect from calendar month), 'spring' (lime buds and pink blossom florets), 'summer' (lush chlorophyll greens), 'autumn' (fiery scarlet maples and golden oaks), or 'winter' (bare skeletal boughs with frost and snowy evergreen needles)."
+    )]
+    pub season: Option<String>,
+
     /// Interval in seconds for thought rotation in background mode (0 = infinite).
     #[arg(
         long,
@@ -1117,6 +1138,8 @@ pub struct Args {
     pub mountain: Option<String>,
     pub color_mode: Option<String>,
     pub palette: Option<String>,
+    pub time_of_day: Option<String>,
+    pub season: Option<String>,
     pub thought_interval: Option<u32>,
     pub split_scroll: bool,
     pub reserve_rows: Option<u16>,
@@ -1156,27 +1179,163 @@ pub struct CliError {
     pub message: String,
 }
 
+/// Normalize CLI tokens so subcommands without '--' (e.g. `forgum cow tux`, `forgum cows`,
+/// Normalize command-line arguments so subcommands and options passed without '--' (e.g.
+/// `forgum cow tux`, `forgum effect walk`, `forgum fps 60`, `forgum duration 5`)
+/// are cleanly mapped to option flags while preserving subcommand values and typo suggestions.
+pub fn normalize_argv(argv: &[String]) -> Vec<String> {
+    if argv.is_empty() {
+        return Vec::new();
+    }
+    let mut normalized = Vec::with_capacity(argv.len() + 4);
+    normalized.push(argv[0].clone());
+
+    let mut i = 1;
+    while i < argv.len() {
+        let token = &argv[i];
+        let token_lower = token.to_ascii_lowercase();
+
+        // If the preceding token was an option or command expecting an argument, keep this token as-is!
+        if let Some(prev) = normalized.last() {
+            if prev == "list" || prev == "--list" || prev == "-l" || prev.starts_with('-') {
+                normalized.push(token.clone());
+                i += 1;
+                continue;
+            }
+        }
+
+        // Keyword followed by value without '--'
+        if !token.starts_with('-') {
+            let next_val = argv.get(i + 1);
+            let has_next = next_val.is_some() && !next_val.unwrap().starts_with('-');
+
+            if has_next {
+                let val = next_val.unwrap().clone();
+                match token_lower.as_str() {
+                    "cow" | "animal" | "mascot" => {
+                        normalized.push("--cow".to_string());
+                        normalized.push(val);
+                        i += 2;
+                        continue;
+                    }
+                    "effect" | "fx" | "anim" | "animation" => {
+                        normalized.push("--effect".to_string());
+                        normalized.push(val);
+                        i += 2;
+                        continue;
+                    }
+                    "scenery" | "env" | "environment" => {
+                        normalized.push("--environment".to_string());
+                        normalized.push(val);
+                        i += 2;
+                        continue;
+                    }
+                    "mountain" | "mountains" => {
+                        normalized.push("--mountain".to_string());
+                        normalized.push(val);
+                        i += 2;
+                        continue;
+                    }
+                    "road" | "roads" => {
+                        normalized.push("--road".to_string());
+                        normalized.push(val);
+                        i += 2;
+                        continue;
+                    }
+                    "color" | "color-mode" => {
+                        normalized.push("--color-mode".to_string());
+                        normalized.push(val);
+                        i += 2;
+                        continue;
+                    }
+                    "palette" => {
+                        normalized.push("--palette".to_string());
+                        normalized.push(val);
+                        i += 2;
+                        continue;
+                    }
+                    "fps" => {
+                        normalized.push("--fps".to_string());
+                        normalized.push(val);
+                        i += 2;
+                        continue;
+                    }
+                    "duration" => {
+                        normalized.push("--duration".to_string());
+                        normalized.push(val);
+                        i += 2;
+                        continue;
+                    }
+                    "accel" => {
+                        normalized.push("--accel".to_string());
+                        normalized.push(val);
+                        i += 2;
+                        continue;
+                    }
+                    "aspect" => {
+                        normalized.push("--aspect".to_string());
+                        normalized.push(val);
+                        i += 2;
+                        continue;
+                    }
+                    "contrast" => {
+                        normalized.push("--contrast-mode".to_string());
+                        normalized.push(val);
+                        i += 2;
+                        continue;
+                    }
+                    _ => {}
+                }
+            }
+        }
+
+        normalized.push(token.clone());
+        i += 1;
+    }
+
+    normalized
+}
+
 /// Parse CLI args (backward-compatible wrapper around clap).
 pub fn parse_args(argv: Vec<String>) -> Result<(Args, Option<Commands>), CliError> {
-    let cli = match Cli::try_parse_from(&argv) {
+    if argv.len() > 1 && argv[1].eq_ignore_ascii_case("help") {
+        let cat = argv.get(2).map(|s| s.as_str());
+        return Err(CliError {
+            exit_code: 0,
+            message: crate::options_table::render_help(cat),
+        });
+    }
+
+    let normalized_argv = normalize_argv(&argv);
+
+    let cli = match Cli::try_parse_from(&normalized_argv) {
         Ok(c) => c,
         Err(e) => {
-            // clap prints help/version itself and wants to exit 0; real parse
-            // errors (UnknownArgument, etc.) should exit 64 (EX_USAGE).
-            let exit_code = match e.kind() {
+            // Intercept clap help requests and display the responsive categorized table
+            match e.kind() {
                 clap::error::ErrorKind::DisplayHelp
-                | clap::error::ErrorKind::DisplayVersion
-                | clap::error::ErrorKind::DisplayHelpOnMissingArgumentOrSubcommand => 0,
-                _ => 64,
-            };
+                | clap::error::ErrorKind::DisplayHelpOnMissingArgumentOrSubcommand => {
+                    return Err(CliError {
+                        exit_code: 0,
+                        message: crate::options_table::render_help(None),
+                    });
+                }
+                clap::error::ErrorKind::DisplayVersion => {
+                    return Err(CliError {
+                        exit_code: 0,
+                        message: e.to_string(),
+                    });
+                }
+                _ => {}
+            }
+
+            let exit_code = 64;
             let mut message = e.to_string();
-            if exit_code != 0 {
-                for arg in argv.iter().skip(1) {
-                    if let Some(suggestion) = generate_command_suggestion(arg) {
-                        message.push_str("\n\n");
-                        message.push_str(&suggestion);
-                        break;
-                    }
+            for arg in argv.iter().skip(1) {
+                if let Some(suggestion) = generate_command_suggestion(arg) {
+                    message.push_str("\n\n");
+                    message.push_str(&suggestion);
+                    break;
                 }
             }
             return Err(CliError { exit_code, message });
@@ -1226,7 +1385,7 @@ pub fn parse_args(argv: Vec<String>) -> Result<(Args, Option<Commands>), CliErro
             }
         }
         None => {
-            if cli.message.len() == 1 {
+            if !cli.message.is_empty() {
                 if let Some(suggestion) = is_command_typo(&cli.message[0]) {
                     return Err(CliError {
                         exit_code: 64,
@@ -1355,6 +1514,11 @@ pub fn parse_args(argv: Vec<String>) -> Result<(Args, Option<Commands>), CliErro
     let text = cli.text.or(extra_text);
     let think = cli.think || is_think;
     let cow = cli.cow.or(sub_cow);
+    let sub_list = match &cli.command {
+        Some(Commands::List { category }) => Some(category.clone()),
+        _ => None,
+    };
+    let list = cli.list.or(sub_list);
 
     let args = Args {
         command,
@@ -1373,6 +1537,8 @@ pub fn parse_args(argv: Vec<String>) -> Result<(Args, Option<Commands>), CliErro
         mountain: cli.mountain,
         color_mode: cli.color_mode,
         palette: cli.palette,
+        time_of_day: cli.time_of_day,
+        season: cli.season,
         thought_interval: cli.thought_interval,
         split_scroll: cli.split_scroll,
         reserve_rows: cli.reserve_rows,
@@ -1391,7 +1557,7 @@ pub fn parse_args(argv: Vec<String>) -> Result<(Args, Option<Commands>), CliErro
         text_only: cli.text_only,
         think,
         speech: cli.speech,
-        list: cli.list,
+        list,
         random: cli.random,
         accel: cli.accel,
         aspect: cli.aspect,
@@ -1538,6 +1704,12 @@ pub fn build_scene_config(args: &Args) -> Result<SceneConfig, String> {
     }
     if let Some(p) = &args.palette {
         cfg.palette = Some(p.clone());
+    }
+    if let Some(tod) = &args.time_of_day {
+        cfg.time_of_day = Some(tod.clone());
+    }
+    if let Some(s) = &args.season {
+        cfg.season = Some(s.clone());
     }
     if let Some(r) = &args.random {
         cfg.random = Some(forgum_platform::protocol::RandomSetting::String(r.clone()));
@@ -2186,5 +2358,47 @@ mod tests {
         assert_eq!(cfg2.environment, Some("ocean".to_string()));
         assert_eq!(cfg2.mountain, Some("seamount".to_string()));
         assert_eq!(cfg2.road, Some("magma".to_string()));
+    }
+
+    #[test]
+    fn test_normalize_argv_subcommand_dispatch() {
+        let (a1, _) = parse(&["forgum", "cow", "tux"]);
+        assert_eq!(a1.cow, Some("tux".to_string()));
+
+        let (a2, _) = parse(&["forgum", "cow", "dragon", "fps", "60", "duration", "5"]);
+        assert_eq!(a2.cow, Some("dragon".to_string()));
+        assert_eq!(a2.fps, Some(60));
+        assert_eq!(a2.duration, Some(5));
+
+        let (a3, _) = parse(&["forgum", "list", "animals"]);
+        assert_eq!(a3.command, Command::List);
+        assert_eq!(a3.list, Some("animals".to_string()));
+
+        let (a4, _) = parse(&["forgum", "list", "effects"]);
+        assert_eq!(a4.command, Command::List);
+        assert_eq!(a4.list, Some("effects".to_string()));
+
+        let (a5, _) = parse(&["forgum", "scenery", "savanna"]);
+        assert_eq!(a5.environment, Some("savanna".to_string()));
+
+        let (a6, _) = parse(&["forgum", "effect", "walk"]);
+        assert_eq!(a6.effect, Some("walk".to_string()));
+    }
+
+    #[test]
+    fn test_help_table_interception() {
+        let err_help = parse_args(vec!["forgum".to_string(), "help".to_string()]).unwrap_err();
+        assert_eq!(err_help.exit_code, 0);
+        assert!(err_help.message.contains("Core Commands & Execution Modes"));
+        assert!(err_help.message.contains("Dual Representation"));
+
+        let err_help_cat = parse_args(vec![
+            "forgum".to_string(),
+            "help".to_string(),
+            "scenery".to_string(),
+        ])
+        .unwrap_err();
+        assert_eq!(err_help_cat.exit_code, 0);
+        assert!(err_help_cat.message.contains("Procedural Scenery & Nature Mathematics"));
     }
 }

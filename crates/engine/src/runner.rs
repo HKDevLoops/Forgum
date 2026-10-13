@@ -653,6 +653,12 @@ fn run_inner() -> ExitCode {
                             println!("{}", cfg.mountain.as_deref().unwrap_or("none"))
                         }
                         "palette" => println!("{}", cfg.palette.as_deref().unwrap_or("none")),
+                        "time_of_day" | "tod" => {
+                            println!("{}", cfg.time_of_day.as_deref().unwrap_or("auto"))
+                        }
+                        "season" => {
+                            println!("{}", cfg.season.as_deref().unwrap_or("auto"))
+                        }
                         "thought_interval" => println!("{}", cfg.thought_interval),
                         "split_scroll" => println!("{}", cfg.split_scroll),
                         "reserve_rows" => println!(
@@ -814,6 +820,22 @@ fn run_inner() -> ExitCode {
                         }
                         "palette" => {
                             cfg.palette = if v.is_empty() || v == "none" {
+                                None
+                            } else {
+                                Some(v)
+                            };
+                            None
+                        }
+                        "time_of_day" | "tod" => {
+                            cfg.time_of_day = if v.is_empty() || v == "auto" {
+                                None
+                            } else {
+                                Some(v)
+                            };
+                            None
+                        }
+                        "season" => {
+                            cfg.season = if v.is_empty() || v == "auto" {
                                 None
                             } else {
                                 Some(v)
@@ -2732,13 +2754,22 @@ fn handle_update_command(
                 };
                 let _ = forgum_platform::write_update_cache(&cache);
 
-                if !has_update && local_ver == clean_remote {
-                    println!(
-                        "\n\x1b[1;32m✓ Already on latest version of Forgum (v{local_ver}) on channel '{}'.\x1b[0m\n\
-                         \x1b[1;36m{}\x1b[0m\n",
-                        channel.as_str(),
-                        forgum_platform::get_funky_latest_version_quote()
-                    );
+                if !has_update {
+                    if local_ver == clean_remote {
+                        println!(
+                            "\n\x1b[1;32m✓ Already on latest version of Forgum (v{local_ver}) on channel '{}'.\x1b[0m\n\
+                             \x1b[1;36m{}\x1b[0m\n",
+                            channel.as_str(),
+                            forgum_platform::get_funky_latest_version_quote()
+                        );
+                    } else {
+                        println!(
+                            "\n\x1b[1;32m✓ Running ahead-of-upstream build of Forgum (v{local_ver} >= upstream v{clean_remote}) on channel '{}'.\x1b[0m\n\
+                             \x1b[1;36m{}\x1b[0m\n",
+                            channel.as_str(),
+                            forgum_platform::get_funky_latest_version_quote()
+                        );
+                    }
                 } else {
                     println!(
                         "  • Installed:  \x1b[1;33mv{local_ver}\x1b[0m\n\
@@ -3712,7 +3743,7 @@ fn render_subcommand_with_scene(
 
             // If an explicit duration was requested or foreground animation is running,
             // terminate the old background instance so the user's animation takes the pane.
-            if args.duration.is_some() || !scene.background {
+            if args.duration.is_some() || scene.duration > 0 || !scene.background {
                 let _ = forgum_platform::kill_process(st.pid);
                 let _ = std::fs::remove_file(&state_path);
                 if let Ok(rt) = forgum_platform::runtime_dir() {

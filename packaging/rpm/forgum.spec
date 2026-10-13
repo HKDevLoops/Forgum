@@ -1,5 +1,5 @@
 Name:           forgum
-Version:        0.0.7
+Version:        0.0.8
 Release:        1%{?dist}
 Summary:        Cross-platform ANSI animation mascot and shell integration engine
 
@@ -21,6 +21,8 @@ install -m 755 forgum %{buildroot}%{_bindir}/forgum
 %{_bindir}/forgum
 
 %changelog
+* Tue Oct 13 2026 harish2222 <harish2222@users.noreply.github.com> - 0.0.8-1
+- Release 0.0.8 beta: Procedural tree species diversity, seasonal phenology, celestial arcs, and multi-threaded compute
 * Mon Oct 12 2026 harish2222 <harish2222@users.noreply.github.com> - 0.0.7-1
 - Release 0.0.7 beta: Interactive update method selector, zero-alloc render damage pipeline, security overhaul, and packaging parity
 * Mon Oct 12 2026 harish2222 <harish2222@users.noreply.github.com> - 0.0.6-1

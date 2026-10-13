@@ -284,6 +284,261 @@ impl std::str::FromStr for EnvironmentStyle {
     }
 }
 
+/// Atmospheric time-of-day solar illumination states.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum TimeOfDay {
+    #[default]
+    Auto,
+    Dawn,
+    Day,
+    Dusk,
+    Night,
+}
+
+impl TimeOfDay {
+    pub const ALL: &'static [TimeOfDay] = &[
+        Self::Auto,
+        Self::Dawn,
+        Self::Day,
+        Self::Dusk,
+        Self::Night,
+    ];
+
+    pub fn parse(s: &str) -> Self {
+        match s.trim().to_ascii_lowercase().as_str() {
+            "dawn" | "sunrise" | "morning" => Self::Dawn,
+            "day" | "noon" | "midday" | "daylight" => Self::Day,
+            "dusk" | "sunset" | "evening" | "twilight" => Self::Dusk,
+            "night" | "midnight" | "moon" | "dark" => Self::Night,
+            "auto" | "" => Self::Auto,
+            _ => Self::Auto,
+        }
+    }
+
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Auto => "auto",
+            Self::Dawn => "dawn",
+            Self::Day => "day",
+            Self::Dusk => "dusk",
+            Self::Night => "night",
+        }
+    }
+
+    pub fn resolve(&self) -> Self {
+        match self {
+            Self::Auto => {
+                use chrono::Timelike;
+                let hour = chrono::Local::now().hour();
+                match hour {
+                    5..=8 => Self::Dawn,
+                    9..=17 => Self::Day,
+                    18..=20 => Self::Dusk,
+                    _ => Self::Night,
+                }
+            }
+            resolved => *resolved,
+        }
+    }
+
+    /// Color adjustment filter for foliage, terrain, and horizons under solar illumination.
+    pub fn apply_lighting(&self, color: Color) -> Color {
+        match self {
+            Self::Dawn => {
+                // Warm pink-gold sunrise light: boost R, soft ambient
+                let r = (color.r as f32 * 1.08 + 12.0).clamp(0.0, 255.0) as u8;
+                let g = (color.g as f32 * 0.98 + 4.0).clamp(0.0, 255.0) as u8;
+                let b = (color.b as f32 * 0.92).clamp(0.0, 255.0) as u8;
+                Color::rgb(r, g, b)
+            }
+            Self::Day | Self::Auto => color, // Full radiant natural daylight
+            Self::Dusk => {
+                // Golden hour amber/twilight: rich warm vermilion tint
+                let r = (color.r as f32 * 1.15 + 18.0).clamp(0.0, 255.0) as u8;
+                let g = (color.g as f32 * 0.95 + 6.0).clamp(0.0, 255.0) as u8;
+                let b = (color.b as f32 * 0.82).clamp(0.0, 255.0) as u8;
+                Color::rgb(r, g, b)
+            }
+            Self::Night => {
+                // Cool lunar moonlight: desaturate warm tones, boost cool lunar blue/silver
+                let r = (color.r as f32 * 0.65).clamp(0.0, 255.0) as u8;
+                let g = (color.g as f32 * 0.72).clamp(0.0, 255.0) as u8;
+                let b = (color.b as f32 * 0.95 + 16.0).clamp(0.0, 255.0) as u8;
+                Color::rgb(r, g, b)
+            }
+        }
+    }
+}
+
+impl std::str::FromStr for TimeOfDay {
+    type Err = std::convert::Infallible;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(Self::parse(s))
+    }
+}
+
+/// Phenological seasonal cycle for natural foliage and ground cover.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum Season {
+    #[default]
+    Auto,
+    Spring,
+    Summer,
+    Autumn,
+    Winter,
+}
+
+impl Season {
+    pub const ALL: &'static [Season] = &[
+        Self::Auto,
+        Self::Spring,
+        Self::Summer,
+        Self::Autumn,
+        Self::Winter,
+    ];
+
+    pub fn parse(s: &str) -> Self {
+        match s.trim().to_ascii_lowercase().as_str() {
+            "spring" | "blossom" | "bloom" => Self::Spring,
+            "summer" | "lush" => Self::Summer,
+            "autumn" | "fall" | "amber" | "foliage" => Self::Autumn,
+            "winter" | "frost" | "snow" | "bare" => Self::Winter,
+            "auto" | "" => Self::Auto,
+            _ => Self::Auto,
+        }
+    }
+
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Auto => "auto",
+            Self::Spring => "spring",
+            Self::Summer => "summer",
+            Self::Autumn => "autumn",
+            Self::Winter => "winter",
+        }
+    }
+
+    pub fn resolve(&self) -> Self {
+        match self {
+            Self::Auto => {
+                use chrono::Datelike;
+                let month = chrono::Local::now().month();
+                match month {
+                    3..=5 => Self::Spring,
+                    6..=8 => Self::Summer,
+                    9..=11 => Self::Autumn,
+                    _ => Self::Winter,
+                }
+            }
+            resolved => *resolved,
+        }
+    }
+
+    /// Phenological foliage color and character adjustment.
+    pub fn apply_foliage_phenology(
+        &self,
+        species: TreeSpecies,
+        base_color: Color,
+        ch: char,
+        tree_idx: usize,
+    ) -> (char, Color) {
+        match self {
+            Self::Spring => match species {
+                TreeSpecies::CherryBlossom | TreeSpecies::BloomingShrub => {
+                    ('*', FRUIT_CHERRY_BLOSSOM)
+                }
+                TreeSpecies::Oak | TreeSpecies::Birch | TreeSpecies::Maple | TreeSpecies::Bonsai => (
+                    ch,
+                    Color::rgb(
+                        base_color.r.saturating_add(18),
+                        base_color.g.saturating_add(32),
+                        base_color.b.saturating_sub(10),
+                    ),
+                ),
+                _ => (ch, base_color),
+            },
+            Self::Summer => (
+                ch,
+                Color::rgb(
+                    base_color.r.saturating_sub(12),
+                    base_color.g.saturating_add(16),
+                    base_color.b.saturating_sub(6),
+                ),
+            ),
+            Self::Autumn => {
+                let hash = tree_idx.wrapping_mul(2654435761);
+                match species {
+                    TreeSpecies::Maple => {
+                        let scarlet = match hash % 3 {
+                            0 => Color::rgb(228, 62, 42),
+                            1 => Color::rgb(240, 92, 38),
+                            _ => Color::rgb(212, 48, 52),
+                        };
+                        (ch, scarlet)
+                    }
+                    TreeSpecies::Birch => (ch, Color::rgb(246, 212, 54)),
+                    TreeSpecies::Oak => {
+                        let russet = if (hash & 1) == 0 {
+                            Color::rgb(216, 134, 46)
+                        } else {
+                            Color::rgb(188, 108, 42)
+                        };
+                        (ch, russet)
+                    }
+                    TreeSpecies::Pine
+                    | TreeSpecies::SnowFir
+                    | TreeSpecies::Cypress
+                    | TreeSpecies::Redwood
+                    | TreeSpecies::DeadTree => (ch, base_color),
+                    _ => (
+                        ch,
+                        Color::rgb(
+                            base_color.r.saturating_add(45),
+                            base_color.g.saturating_sub(8),
+                            base_color.b.saturating_sub(25),
+                        ),
+                    ),
+                }
+            }
+            Self::Winter => match species {
+                TreeSpecies::Pine
+                | TreeSpecies::SnowFir
+                | TreeSpecies::Cypress
+                | TreeSpecies::Redwood => {
+                    if ch == '^' || ch == '*' || ch == '~' {
+                        ('*', Color::rgb(245, 248, 255))
+                    } else {
+                        (ch, Color::rgb(42, 82, 60))
+                    }
+                }
+                TreeSpecies::DeadTree => (ch, Color::rgb(140, 145, 150)),
+                _ => {
+                    let is_frost = matches!(ch, '*' | '.' | '\'' | '`');
+                    if is_frost {
+                        ('*', Color::rgb(230, 240, 255))
+                    } else {
+                        let twig = if ch == '@' || ch == '%' || ch == '#' {
+                            ':'
+                        } else {
+                            ch
+                        };
+                        (twig, Color::rgb(120, 126, 134))
+                    }
+                }
+            },
+            Self::Auto => (ch, base_color),
+        }
+    }
+}
+
+impl std::str::FromStr for Season {
+    type Err = std::convert::Infallible;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(Self::parse(s))
+    }
+}
+
+
 /// The complete biological and thematic identity profile for any mascot.
 #[derive(Debug, Clone)]
 pub struct AnimalProfile {
@@ -628,11 +883,11 @@ pub fn calculate_mountain_height_aspect(
     let amp_mult = aspect
         .map(|a| a.mountain_amplitude_multiplier())
         .unwrap_or(1.0);
-    let scale = ((mountain_base_y as f32) * 0.45).clamp(2.5, 14.0);
+    let scale = ((mountain_base_y as f32) * 0.28).clamp(1.8, 8.0);
     let scale_mult = (scale / 2.5) * amp_mult;
     let scaled_base_h = base_h * scale_mult;
     let scaled_max_var = max_var * scale_mult;
-    let max_allowed = (mountain_base_y as f32 * 0.85).max(3.0);
+    let max_allowed = (mountain_base_y as f32 * 0.38).max(2.5);
 
     let n_peaks = calculate_mountain_peaks_aspect(width, style, aspect).max(1) as f32;
     let w_f = (width.max(20)) as f32;
@@ -706,6 +961,18 @@ pub fn render_mountain(
     mountain_base_y: usize,
     width: usize,
     time: f32,
+) {
+    render_mountain_with_tod(fb, style, mountain_base_y, width, time, TimeOfDay::Auto);
+}
+
+/// Render mountain / horizon layer with explicit time-of-day solar illumination.
+pub fn render_mountain_with_tod(
+    fb: &mut FrameBuffer,
+    style: MountainStyle,
+    mountain_base_y: usize,
+    width: usize,
+    time: f32,
+    tod: TimeOfDay,
 ) {
     if style == MountainStyle::None || fb.height < 2 || width == 0 {
         return;
@@ -806,7 +1073,7 @@ pub fn render_mountain(
                 );
 
                 if ch != ' ' {
-                    let _ = fb.set(x, y, Cell::new(ch, col));
+                    let _ = fb.set(x, y, Cell::new(ch, tod.apply_lighting(col)));
                 }
             }
         }
@@ -1007,6 +1274,22 @@ pub const PHI_GOLDEN: f32 = 1.618_033_988_7;
 /// Fibonacci / Golden Ratio reciprocal constant for optimal low-discrepancy flora dispersion.
 pub const PHI_RECIPROCAL: f32 = 0.618_033_988_7;
 
+/// SplitMix64 hash for non-repeating, high-entropy procedural generation with maximal period 2^64.
+#[inline]
+pub fn splitmix64_hash(mut x: u64) -> u64 {
+    x = x.wrapping_add(0x9E3779B97F4A7C15);
+    x = (x ^ (x >> 30)).wrapping_mul(0xBF58476D1CE4E5B9);
+    x = (x ^ (x >> 27)).wrapping_mul(0x94D049BB133111EB);
+    x ^ (x >> 31)
+}
+
+/// Generate a non-repeating pseudo-random float in [0.0, 1.0) with zero short-cycle collapse.
+#[inline]
+pub fn non_repeating_unit_f32(seed: u64, idx: usize) -> f32 {
+    let h = splitmix64_hash(seed.wrapping_add((idx as u64).wrapping_mul(0x517CC1B727220A95)));
+    ((h >> 11) as f64 / ((1u64 << 53) as f64)) as f32
+}
+
 /// Mathematical distance between tree k and tree k+1 using Fibonacci phyllotaxis and grove clustering.
 /// Models biological root exclusion and natural tree clumping (alternating stands and clearings).
 pub fn calculate_inter_tree_distance(k: usize, min_dist: f32, var_dist: f32) -> f32 {
@@ -1018,14 +1301,67 @@ pub fn calculate_inter_tree_distance(k: usize, min_dist: f32, var_dist: f32) -> 
         .clamp(min_dist * 0.70, min_dist + var_dist * 1.10)
 }
 
-/// Cumulative world coordinate of tree index n based on integrated Fibonacci distance.
+/// Procedural grove parameters for grove index g: (cluster_size [1..=3], intra_spacing, clearing_width).
+/// Models natural forest copse clustering and open meadow clearings.
+pub fn get_grove_parameters(grove_idx: usize, min_dist: f32, var_dist: f32) -> (usize, f32, f32) {
+    let r_size = non_repeating_unit_f32(0x9E37_79B9_CAFE_BABE, grove_idx);
+    let r_intra = non_repeating_unit_f32(0x1234_5678_9ABC_DEF0, grove_idx);
+    let r_clear = non_repeating_unit_f32(0xDEAD_BEEF_FEED_FACE, grove_idx);
+
+    let cluster_size = if min_dist >= 70.0 {
+        // Sparse biomes (Savanna, Pasture, Arctic, Inferno): mostly solitary, occasional pairs
+        if r_size < 0.65 {
+            1
+        } else if r_size < 0.92 {
+            2
+        } else {
+            3
+        }
+    } else if min_dist <= 55.0 {
+        // Wooded biomes (Forest, Jurassic, Swamp): clusters of 2-3 trees with glades
+        if r_size < 0.25 {
+            1
+        } else if r_size < 0.70 {
+            2
+        } else {
+            3
+        }
+    } else {
+        if r_size < 0.50 {
+            1
+        } else if r_size < 0.85 {
+            2
+        } else {
+            3
+        }
+    };
+
+    let intra_spacing = (min_dist * 0.28 + r_intra * var_dist * 0.25).clamp(18.0, 32.0);
+    let clearing_width = min_dist + r_clear * var_dist;
+    (cluster_size, intra_spacing, clearing_width)
+}
+
+/// Cumulative world coordinate of tree index n based on natural adaptive groves and open clearings.
+/// Ensures trees form organic copse clusters of 1-3 trees followed by open meadow clearings,
+/// with strictly monotonic, non-repeating spacing across the world.
 pub fn calculate_tree_position(n: usize, min_dist: f32, var_dist: f32) -> usize {
-    let avg_stride = min_dist + var_dist * 0.45;
-    let phi_fract = ((n as f32) * PHI_RECIPROCAL).fract();
-    let stand_drift = ((n as f32) * 0.785398).sin() * (var_dist * 0.35);
-    let micro_jitter = (phi_fract - 0.5) * (var_dist * 0.20);
-    let pos = (n as f32) * avg_stride + stand_drift + micro_jitter;
-    pos.max(0.0).round() as usize
+    if n == 0 {
+        return 12;
+    }
+    let mut accumulated_x = 12.0_f32;
+    let mut tree_count = 0;
+    let mut g = 0;
+    loop {
+        let (sz, intra, clear) = get_grove_parameters(g, min_dist, var_dist);
+        if tree_count + sz > n {
+            let offset_in_grove = n - tree_count;
+            let pos = accumulated_x + (offset_in_grove as f32) * intra;
+            return pos.round() as usize;
+        }
+        accumulated_x += ((sz.saturating_sub(1)) as f32) * intra + clear;
+        tree_count += sz;
+        g += 1;
+    }
 }
 
 /// Calculate the distance across multiple trees (from tree `from` to tree `to`).
@@ -1069,7 +1405,7 @@ pub fn calculate_tree_count(width: usize, env: EnvironmentStyle, animal_height: 
         1.00_f32
     };
 
-    let avg_stride = 22.0_f32;
+    let avg_stride = 55.0_f32;
     let count =
         ((width as f32 / avg_stride) * density_factor * animal_scale_occupancy).round() as usize;
     count.max(1)
@@ -1248,6 +1584,15 @@ pub fn get_biome_species_pool(env: EnvironmentStyle) -> &'static [TreeSpecies] {
             TreeSpecies::Bonsai,
             TreeSpecies::HerbalCluster,
         ],
+        // Pasture: Open meadow shade trees and pastoral flowering shrubs (no deep-forest ferns or dark pines)
+        EnvironmentStyle::Pasture => &[
+            TreeSpecies::Oak,
+            TreeSpecies::Birch,
+            TreeSpecies::Maple,
+            TreeSpecies::BerryShrub,
+            TreeSpecies::BloomingShrub,
+            TreeSpecies::HerbalCluster,
+        ],
         // Forest / Pasture (and default): Oak, Maple, Birch, Pine, CherryBlossom, BerryShrub, BloomingShrub, HerbalCluster.
         _ => &[
             TreeSpecies::Oak,
@@ -1262,15 +1607,102 @@ pub fn get_biome_species_pool(env: EnvironmentStyle) -> &'static [TreeSpecies] {
     }
 }
 
-/// Determine the mathematical tree species / order for tree index n within an environment biome.
-/// Uses a low-discrepancy Weyl sequence with Golden Ratio Phi (1.6180339887) and animal seed
-/// to guarantee non-repetitive, natural mixed flora distribution across the viewport width.
-pub fn calculate_tree_species(n: usize, env: EnvironmentStyle, animal_seed: u32) -> TreeSpecies {
+/// Compute effective base distances (min_dist, var_dist) for an environment,
+/// dynamically widening glades and open clearings on wide viewports or sparse biomes
+/// so the visible tree count never exceeds 3x the species pool length, preserving open vistas.
+pub fn get_effective_tree_distances(env: EnvironmentStyle, width: usize) -> (f32, f32) {
+    let (min_dist, var_dist) = match env {
+        EnvironmentStyle::Savanna | EnvironmentStyle::Inferno => (110.0_f32, 65.0_f32),
+        EnvironmentStyle::Arctic => (95.0_f32, 55.0_f32),
+        EnvironmentStyle::Pasture => (85.0_f32, 50.0_f32),
+        EnvironmentStyle::City
+        | EnvironmentStyle::Graveyard
+        | EnvironmentStyle::Cyber => (80.0_f32, 45.0_f32),
+        EnvironmentStyle::Forest => (48.0_f32, 28.0_f32),
+        EnvironmentStyle::Hive | EnvironmentStyle::Throne => (56.0_f32, 32.0_f32),
+        EnvironmentStyle::Swamp | EnvironmentStyle::Jurassic => (54.0_f32, 32.0_f32),
+        _ => (85.0_f32, 50.0_f32),
+    };
     let pool = get_biome_species_pool(env);
-    let seed_offset = ((animal_seed as f32 * PHI_RECIPROCAL).fract() * 0.77).abs();
-    let weyl = ((n as f32 + 1.0) * PHI_RECIPROCAL + seed_offset).fract();
-    let idx = ((weyl * pool.len() as f32).floor() as usize) % pool.len();
-    pool[idx]
+    let pool_len = pool.len().max(1);
+    let max_trees_on_screen = (pool_len * 3) as f32;
+    let min_stride_needed = (width as f32) / max_trees_on_screen;
+    if min_stride_needed > min_dist {
+        let expansion_scale = min_stride_needed / min_dist;
+        (min_dist * expansion_scale, var_dist * expansion_scale)
+    } else {
+        (min_dist, var_dist)
+    }
+}
+
+/// Determine the tree species for tree index n within an environment biome,
+/// strictly enforcing the ecological constraint that no same type of tree
+/// is present more than 3 times within the same screen width window.
+pub fn calculate_tree_species_with_width(
+    n: usize,
+    env: EnvironmentStyle,
+    animal_seed: u32,
+    _window_width: usize,
+) -> TreeSpecies {
+    let pool = get_biome_species_pool(env);
+    if pool.is_empty() {
+        return TreeSpecies::Oak;
+    }
+    if pool.len() == 1 {
+        return pool[0];
+    }
+
+    let p_len = pool.len();
+    let round = n / p_len;
+    let pos_in_round = n % p_len;
+
+    // Deterministic stack-allocated Fisher-Yates permutation of the biome species pool
+    let mut perm = [0usize; 16];
+    for (i, val) in perm.iter_mut().enumerate().take(p_len) {
+        *val = i;
+    }
+
+    // High-entropy 64-bit SplitMix64 seed for this round
+    let round_seed = (animal_seed as u64)
+        .wrapping_add((round as u64).wrapping_mul(0x9E3779B97F4A7C15))
+        .wrapping_add(0xCAFE_F00D);
+    let mut rng_state = splitmix64_hash(round_seed);
+
+    for i in (1..p_len).rev() {
+        rng_state = splitmix64_hash(rng_state);
+        let j = (rng_state % ((i + 1) as u64)) as usize;
+        perm.swap(i, j);
+    }
+
+    // Boundary smoothing: ensure the first element of this round doesn't match
+    // the last element of the previous round to prevent back-to-back duplicates
+    if round > 0 {
+        let prev_seed = (animal_seed as u64)
+            .wrapping_add(((round - 1) as u64).wrapping_mul(0x9E3779B97F4A7C15))
+            .wrapping_add(0xCAFE_F00D);
+        let mut prev_rng = splitmix64_hash(prev_seed);
+        let mut prev_perm = [0usize; 16];
+        for (i, val) in prev_perm.iter_mut().enumerate().take(p_len) {
+            *val = i;
+        }
+        for i in (1..p_len).rev() {
+            prev_rng = splitmix64_hash(prev_rng);
+            let j = (prev_rng % ((i + 1) as u64)) as usize;
+            prev_perm.swap(i, j);
+        }
+        let last_prev = prev_perm[p_len - 1];
+        if perm[0] == last_prev && p_len > 1 {
+            perm.swap(0, 1);
+        }
+    }
+
+    pool[perm[pos_in_round]]
+}
+
+/// Determine the mathematical tree species for tree index n within an environment biome.
+/// Guaranteed to never exceed 3 instances of any species within a screen width window.
+pub fn calculate_tree_species(n: usize, env: EnvironmentStyle, animal_seed: u32) -> TreeSpecies {
+    calculate_tree_species_with_width(n, env, animal_seed, 160)
 }
 
 /// Allometric dynamic trunk width scaling (1, 2, or 3 columns) based on species allometry,
@@ -1565,10 +1997,10 @@ pub fn calculate_tree_height(
         _ => 1.20_f32,
     };
 
-    // Biological maturity distribution using Golden Ratio sequence:
+    // Biological maturity distribution using SplitMix64 Weyl non-repeating sequence:
     // Produces genuine forest diversity from ancient monarch giants to young saplings
-    let maturity_hash = (((tree_idx as f32 + 1.0) * PHI_GOLDEN).fract() * 100.0) as usize;
-    let maturity_scale = match maturity_hash % 10 {
+    let r_maturity = non_repeating_unit_f32(0xA076_1D64_78BD_642F, tree_idx);
+    let maturity_scale = match (r_maturity * 10.0) as usize {
         0 => 1.45_f32,     // Ancient Colossal Monarch
         1..=3 => 1.15_f32, // Stately Mature Tree
         4 | 5 => 0.85_f32, // Slender Adolescent Tree
@@ -1577,8 +2009,8 @@ pub fn calculate_tree_height(
         _ => 0.40_f32,     // Sprout / Dwarf Bush
     };
 
-    let idx_f = tree_idx as f32;
-    let micro_var = 1.0 + 0.12 * (idx_f * 2.39996).sin();
+    let r_micro = non_repeating_unit_f32(0x517C_C1B7_2722_0A95, tree_idx);
+    let micro_var = 0.90 + 0.20 * r_micro;
 
     let computed_h = base_animal_h * anim_mult * maturity_scale * micro_var;
     let max_h = ((tree_base_y as f32) * 0.90).max(2.0);
@@ -1700,6 +2132,50 @@ pub fn get_tree_foliage_color(
     }
 }
 
+/// Multi-harmonic wind gust and tree inertia sway calculation.
+/// - Taller trees (e.g. Oak, Pine, Redwood, Baobab, Cypress, WeepingWillow) possess high physical inertia:
+///   they sway with slow resonant frequency (~1.35 rad/s) and larger apex deflection, while anchored firmly at the base.
+/// - Smaller shrubs, bushes, herbs, and bonsai possess low mass:
+///   they flutter rapidly with high-frequency aerodynamic micro-turbulence (~4.8 rad/s).
+pub fn calculate_tree_sway_offset(
+    species: TreeSpecies,
+    target_tree_h: usize,
+    dy_from_base: usize,
+    total_tree_h: usize,
+    time: f32,
+    tree_idx: usize,
+) -> isize {
+    if dy_from_base == 0 || total_tree_h == 0 {
+        return 0; // The root base is firmly anchored in the earth; zero sway
+    }
+
+    let h_norm = (dy_from_base as f32 / total_tree_h as f32).clamp(0.0, 1.0);
+    let seed = (tree_idx as f32) * 0.73;
+
+    let is_small_shrub = matches!(
+        species,
+        TreeSpecies::BerryShrub
+            | TreeSpecies::BloomingShrub
+            | TreeSpecies::HerbalCluster
+            | TreeSpecies::Bonsai
+            | TreeSpecies::Fern
+            | TreeSpecies::Cactus
+    ) || target_tree_h <= 4;
+    let is_willow = species == TreeSpecies::WeepingWillow;
+
+    let compute = crate::gpu_compute::get_compute_engine(None);
+    let mut out = [0isize; 1];
+    compute.compute_tree_sway_batch(
+        &[h_norm],
+        &[is_small_shrub],
+        &[is_willow],
+        &[seed],
+        time,
+        &mut out,
+    );
+    out[0]
+}
+
 /// Render procedural midground trees and flora layer.
 /// Planted on the horizon line directly above the road (`tree_base_y = road_y.saturating_sub(1)`).
 /// Scrolls at midground speed `(time * 2.4)` between mountains and the road using Fibonacci spacing.
@@ -1728,7 +2204,7 @@ pub fn render_trees(
 #[allow(clippy::too_many_arguments)]
 pub fn render_trees_with_animal(
     fb: &mut FrameBuffer,
-    _mountain: MountainStyle,
+    mountain: MountainStyle,
     env: EnvironmentStyle,
     tree_base_y: usize,
     width: usize,
@@ -1737,10 +2213,70 @@ pub fn render_trees_with_animal(
     animal_height: Option<usize>,
     base_anim: Option<BaseAnim>,
 ) {
+    render_trees_with_animal_and_tod(
+        fb,
+        mountain,
+        env,
+        tree_base_y,
+        width,
+        time,
+        animal_name,
+        animal_height,
+        base_anim,
+        None,
+    );
+}
+
+/// Render procedural midground trees and flora layer with explicit animal kinematics and solar illumination.
+#[allow(clippy::too_many_arguments)]
+pub fn render_trees_with_animal_and_tod(
+    fb: &mut FrameBuffer,
+    mountain: MountainStyle,
+    env: EnvironmentStyle,
+    tree_base_y: usize,
+    width: usize,
+    time: f32,
+    animal_name: Option<&str>,
+    animal_height: Option<usize>,
+    base_anim: Option<BaseAnim>,
+    time_of_day: Option<TimeOfDay>,
+) {
+    render_trees_with_animal_and_tod_and_season(
+        fb,
+        mountain,
+        env,
+        tree_base_y,
+        width,
+        time,
+        animal_name,
+        animal_height,
+        base_anim,
+        time_of_day,
+        None,
+    );
+}
+
+/// Render procedural midground trees and flora layer with explicit animal kinematics, solar illumination, and seasonal phenology.
+#[allow(clippy::too_many_arguments)]
+pub fn render_trees_with_animal_and_tod_and_season(
+    fb: &mut FrameBuffer,
+    _mountain: MountainStyle,
+    env: EnvironmentStyle,
+    tree_base_y: usize,
+    width: usize,
+    time: f32,
+    animal_name: Option<&str>,
+    animal_height: Option<usize>,
+    base_anim: Option<BaseAnim>,
+    time_of_day: Option<TimeOfDay>,
+    season: Option<Season>,
+) {
     if tree_base_y >= fb.height || width == 0 || env == EnvironmentStyle::None {
         return;
     }
 
+    let tod = time_of_day.unwrap_or_default().resolve();
+    let current_season = season.unwrap_or_default().resolve();
     let animal_h = animal_height.unwrap_or(8);
     let anim = base_anim.unwrap_or_else(|| {
         if let Some(name) = animal_name {
@@ -1754,52 +2290,137 @@ pub fn render_trees_with_animal(
     // Continuous midground parallax motion: smooth floating-point progression for high refresh rates (120/144/240Hz)
     let scroll_speed = 7.5_f32;
     let scroll_xf = time * scroll_speed;
-    let min_dist = 16.0_f32;
-    let var_dist = 12.0_f32;
+    let (min_dist, var_dist) = get_effective_tree_distances(env, width);
+    if matches!(
+        env,
+        EnvironmentStyle::Ocean | EnvironmentStyle::Space | EnvironmentStyle::None
+    ) {
+        return;
+    }
 
-    // Natural Fibonacci phyllotaxis tree range across the visible span
-    let avg_stride = min_dist + var_dist * 0.5;
-    let start_tree = (((scroll_xf - 35.0).max(0.0)) / (avg_stride + var_dist)).floor() as usize;
-    // Start 6 trees earlier so wide canopies exiting on the left screen boundary do not clip prematurely
-    let start_tree = start_tree.saturating_sub(6);
-    let end_tree = (((scroll_xf + (width as f32) + 40.0) / min_dist).ceil() as usize) + 4;
+    // Natural grove and clearing range across the visible span
+    let avg_tree_stride = (min_dist * 0.70).max(30.0);
+    let min_world_x = (scroll_xf - 45.0).max(0.0);
+    let start_tree = ((min_world_x / (avg_tree_stride * 1.5)).floor() as usize).saturating_sub(4);
+    let max_world_x = scroll_xf + (width as f32) + 45.0;
+    let end_tree = (((max_world_x / (min_dist * 0.65)).ceil() as usize) + 6).max(start_tree + 2);
     let fb_cell = std::cell::RefCell::new(fb);
+
+    // Track visible species counts on the active screen viewport
+    // Strictly enforces the invariant: <= 3 instances of any species per screen width
+    // AND consecutive neighbor exclusion (adjacent trees never share identical species)
+    let pool = get_biome_species_pool(env);
+    let mut visible_species_counts = [0u8; 32];
+    let mut last_rendered_species: Option<TreeSpecies> = None;
 
     for t_idx in start_tree..=end_tree {
         let world_x = calculate_tree_position(t_idx, min_dist, var_dist);
         let screen_xf = (world_x as f32) - scroll_xf;
         let screen_x = screen_xf.round() as isize;
-        if screen_x < -35 || screen_x >= (width as isize) + 20 {
+        if screen_x < -35 {
             continue;
         }
+        if screen_x >= (width as isize) + 25 {
+            break;
+        }
+
+        // Active viewport visibility test: does tree canopy/trunk span touch the screen [0, width)?
+        let is_in_viewport = screen_x >= -14 && screen_x < (width as isize) + 14;
+
+        let preferred_species = calculate_tree_species_with_width(t_idx, env, animal_seed, width);
+        let mut species = preferred_species;
+
+        if is_in_viewport && !pool.is_empty() {
+            // If the entire pool is saturated at >= 3 instances on screen, no more trees can be placed
+            if visible_species_counts.iter().take(pool.len()).all(|&cnt| cnt >= 3) {
+                continue;
+            }
+
+            // Find an eligible species with count < 3 and != last_rendered_species
+            let pref_idx = pool.iter().position(|&s| s == preferred_species).unwrap_or(0);
+            let mut chosen_idx = None;
+
+            // First check if preferred species satisfies both constraints
+            if visible_species_counts[pref_idx] < 3
+                && (pool.len() == 1 || Some(pool[pref_idx]) != last_rendered_species)
+            {
+                chosen_idx = Some(pref_idx);
+            } else {
+                // Cyclically search for an alternative candidate in the pool satisfying both
+                for step in 1..pool.len() {
+                    let cand_idx = (pref_idx + step) % pool.len();
+                    if visible_species_counts[cand_idx] < 3
+                        && (pool.len() == 1 || Some(pool[cand_idx]) != last_rendered_species)
+                    {
+                        chosen_idx = Some(cand_idx);
+                        break;
+                    }
+                }
+                // Fallback: if all candidate checks failed because of neighbor clash, take any with count < 3
+                if chosen_idx.is_none() {
+                    for step in 0..pool.len() {
+                        let cand_idx = (pref_idx + step) % pool.len();
+                        if visible_species_counts[cand_idx] < 3 {
+                            chosen_idx = Some(cand_idx);
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if let Some(idx) = chosen_idx {
+                species = pool[idx];
+                visible_species_counts[idx] += 1;
+                last_rendered_species = Some(species);
+            } else {
+                continue;
+            }
+        }
+
+        // Continuous sub-pixel parallax lighting interpolation in [-0.5, 0.5] (liquid smooth motion)
+        let subpixel_fract = screen_xf - (screen_x as f32);
+        let subpixel_lum = (1.0 + subpixel_fract * 0.16).clamp(0.80, 1.25);
 
         let target_tree_h = calculate_tree_height(t_idx, animal_h, anim, tree_base_y);
-        let species = calculate_tree_species(t_idx, env, animal_seed);
         let trunk_w = calculate_trunk_width(species, target_tree_h, t_idx);
 
         let plot_row = |dx_start: isize, dy: isize, s: &str, col: Color| {
+            let y_from_base = (-dy).max(0) as usize;
+            let sway = calculate_tree_sway_offset(
+                species,
+                target_tree_h,
+                y_from_base,
+                target_tree_h,
+                time,
+                t_idx,
+            );
             let mut fb_guard = fb_cell.borrow_mut();
             for (i, c) in s.chars().enumerate() {
                 if c == ' ' {
                     continue;
                 }
-                let px = screen_x + dx_start + (i as isize);
+                let px = screen_x + dx_start + sway + (i as isize);
                 if px >= 0 && (px as usize) < width {
                     let py = (tree_base_y as isize) + dy;
                     if py >= 0 && (py as usize) < fb_guard.height {
-                        let (final_ch, final_col) = if !matches!(
+                        let is_foliage = !matches!(
                             c,
                             '|' | '/' | '\\' | '-' | '_' | '=' | '#' | ' ' | '[' | ']' | '!' | '+'
-                        ) {
+                        );
+                        let (final_ch, final_col) = if is_foliage {
+                            let (pheno_c, pheno_col) =
+                                current_season.apply_foliage_phenology(species, col, c, t_idx);
                             if let Some((orn_ch, orn_col)) =
-                                get_foliage_ornament(species, t_idx, dx_start + (i as isize), dy, c)
+                                get_foliage_ornament(species, t_idx, dx_start + (i as isize), dy, pheno_c)
                             {
-                                (orn_ch, orn_col)
+                                let (orn_pheno_ch, orn_pheno_col) =
+                                    current_season.apply_foliage_phenology(species, orn_col, orn_ch, t_idx);
+                                (orn_pheno_ch, tod.apply_lighting(orn_pheno_col).scale_luminance(subpixel_lum))
                             } else {
-                                (c, col)
+                                (pheno_c, tod.apply_lighting(pheno_col).scale_luminance(subpixel_lum))
                             }
                         } else {
-                            (c, col)
+                            (c, tod.apply_lighting(col).scale_luminance(subpixel_lum))
                         };
                         let _ =
                             fb_guard.set(px as usize, py as usize, Cell::new(final_ch, final_col));
@@ -1810,32 +2431,45 @@ pub fn render_trees_with_animal(
 
         let draw_trunk = |trunk_center: isize, top_dy: isize, width_cols: usize| {
             let mut fb_guard = fb_cell.borrow_mut();
-            let mut plot_cell = |dx: isize, dy: isize, ch: char, col: Color| {
-                if ch == ' ' {
-                    return;
-                }
-                let px = screen_x + dx;
-                if px >= 0 && (px as usize) < width {
-                    let py = (tree_base_y as isize) + dy;
-                    if py >= 0 && (py as usize) < fb_guard.height {
-                        let _ = fb_guard.set(px as usize, py as usize, Cell::new(ch, col));
-                    }
-                }
-            };
             for dy in top_dy..=0 {
                 let y_from_base = (-dy) as usize;
+                let sway = calculate_tree_sway_offset(
+                    species,
+                    target_tree_h,
+                    y_from_base,
+                    target_tree_h,
+                    time,
+                    t_idx,
+                );
+                let center = trunk_center + sway;
+                let mut plot_cell = |dx: isize, dy: isize, ch: char, col: Color| {
+                    if ch == ' ' {
+                        return;
+                    }
+                    let px = screen_x + dx;
+                    if px >= 0 && (px as usize) < width {
+                        let py = (tree_base_y as isize) + dy;
+                        if py >= 0 && (py as usize) < fb_guard.height {
+                            let _ = fb_guard.set(
+                                px as usize,
+                                py as usize,
+                                Cell::new(ch, tod.apply_lighting(col).scale_luminance(subpixel_lum)),
+                            );
+                        }
+                    }
+                };
                 match width_cols {
                     1 => {
                         let (ch, col) = get_bark_glyph_and_color(species, 0, 1, y_from_base, t_idx);
-                        plot_cell(trunk_center, dy, ch, col);
+                        plot_cell(center, dy, ch, col);
                     }
                     2 => {
                         let (ch_l, col_l) =
                             get_bark_glyph_and_color(species, 0, 2, y_from_base, t_idx);
                         let (ch_r, col_r) =
                             get_bark_glyph_and_color(species, 1, 2, y_from_base, t_idx);
-                        plot_cell(trunk_center, dy, ch_l, col_l);
-                        plot_cell(trunk_center + 1, dy, ch_r, col_r);
+                        plot_cell(center, dy, ch_l, col_l);
+                        plot_cell(center + 1, dy, ch_r, col_r);
                     }
                     3 => {
                         let (ch_l, col_l) =
@@ -1844,20 +2478,20 @@ pub fn render_trees_with_animal(
                             get_bark_glyph_and_color(species, 1, 3, y_from_base, t_idx);
                         let (ch_r, col_r) =
                             get_bark_glyph_and_color(species, 2, 3, y_from_base, t_idx);
-                        plot_cell(trunk_center - 1, dy, ch_l, col_l);
-                        plot_cell(trunk_center, dy, ch_m, col_m);
-                        plot_cell(trunk_center + 1, dy, ch_r, col_r);
+                        plot_cell(center - 1, dy, ch_l, col_l);
+                        plot_cell(center, dy, ch_m, col_m);
+                        plot_cell(center + 1, dy, ch_r, col_r);
                     }
                     _ => {
                         let (ch, col) = get_bark_glyph_and_color(species, 0, 1, y_from_base, t_idx);
-                        plot_cell(trunk_center, dy, ch, col);
+                        plot_cell(center, dy, ch, col);
                     }
                 }
             }
         };
 
         let fol_col = |dy_from_top: usize, total_crown_h: usize| {
-            get_tree_foliage_color(species, t_idx, dy_from_top, total_crown_h, env)
+            tod.apply_lighting(get_tree_foliage_color(species, t_idx, dy_from_top, total_crown_h, env))
         };
         let crown_var = t_idx % 2;
 
@@ -2674,7 +3308,12 @@ pub fn calculate_road_texture(x: usize, style: RoadStyle, time: f32) -> (char, C
 
     match style {
         RoadStyle::Dirt => {
-            let fg = Color::rgb(141, 110, 99);
+            let light = (r1 * 0.35 + 0.65).clamp(0.4, 1.0);
+            let fg = Color::rgb(
+                (141.0 * light) as u8,
+                (110.0 * light) as u8,
+                (99.0 * light) as u8,
+            );
             let ch = if roughness > 0.82 {
                 'o' // small pebble
             } else if roughness > 0.55 {
@@ -2687,9 +3326,15 @@ pub fn calculate_road_texture(x: usize, style: RoadStyle, time: f32) -> (char, C
             (ch, fg)
         }
         RoadStyle::Cobblestone => {
-            let fg = Color::rgb(158, 158, 158);
-            // Paving stone geometry: periodic mortar joint with weathered surface variation
-            let stone_idx = (((x as f32 + time * 7.5) % 5.0 + 5.0) % 5.0).floor() as usize;
+            let p = ((x as f32 + time * 7.5) % 5.0 + 5.0) % 5.0;
+            let stone_idx = p.floor() as usize;
+            let light = (r2 * 0.25 + 0.85).clamp(0.6, 1.1);
+            let base_v = if stone_idx == 0 { 110.0 } else { 158.0 };
+            let fg = Color::rgb(
+                (base_v * light) as u8,
+                (base_v * light) as u8,
+                (base_v * light) as u8,
+            );
             let ch = if stone_idx == 0 {
                 '|' // mortar joint between pavers
             } else if roughness > 0.6 {
@@ -2700,10 +3345,11 @@ pub fn calculate_road_texture(x: usize, style: RoadStyle, time: f32) -> (char, C
             (ch, fg)
         }
         RoadStyle::Magma => {
+            let light = (r3 * 0.3 + 0.7).clamp(0.4, 1.0);
             let fg = if roughness > 0.65 {
-                Color::rgb(255, 171, 0) // incandescent magma vent
+                Color::rgb(255, (171.0 * light) as u8, 0) // incandescent magma vent
             } else {
-                Color::rgb(255, 87, 34) // cooling basalt crust
+                Color::rgb(255, (87.0 * light) as u8, (34.0 * light) as u8) // cooling basalt crust
             };
             let ch = if roughness > 0.75 {
                 '*' // bubbling magma fountain
@@ -2715,7 +3361,12 @@ pub fn calculate_road_texture(x: usize, style: RoadStyle, time: f32) -> (char, C
             (ch, fg)
         }
         RoadStyle::Ice => {
-            let fg = Color::rgb(224, 247, 250);
+            let light = (r1 * 0.2 + 0.8).clamp(0.6, 1.0);
+            let fg = Color::rgb(
+                (224.0 * light) as u8,
+                (247.0 * light) as u8,
+                (250.0 * light) as u8,
+            );
             let fissure = (((x as f32 + time * 4.5) % 9.0 + 9.0) % 9.0).floor() as usize;
             let ch = if fissure == 0 {
                 '/' // glacial fissure / crevasse
@@ -2727,7 +3378,12 @@ pub fn calculate_road_texture(x: usize, style: RoadStyle, time: f32) -> (char, C
             (ch, fg)
         }
         RoadStyle::Seabed => {
-            let fg = Color::rgb(255, 213, 79);
+            let light = (r2 * 0.25 + 0.75).clamp(0.5, 1.0);
+            let fg = Color::rgb(
+                (255.0 * light) as u8,
+                (213.0 * light) as u8,
+                (79.0 * light) as u8,
+            );
             let ch = if roughness > 0.70 {
                 '~' // ocean wave ripple in sand
             } else if roughness > 0.40 {
@@ -3054,6 +3710,18 @@ pub fn render_road(
     width: usize,
     time: f32,
 ) {
+    render_road_with_tod(fb, style, cow_bottom_y, width, time, TimeOfDay::Auto);
+}
+
+/// Render ground / road baseline with explicit solar illumination time of day.
+pub fn render_road_with_tod(
+    fb: &mut FrameBuffer,
+    style: RoadStyle,
+    cow_bottom_y: usize,
+    width: usize,
+    time: f32,
+    tod: TimeOfDay,
+) {
     if style == RoadStyle::None || cow_bottom_y >= fb.height || width == 0 {
         return;
     }
@@ -3077,7 +3745,7 @@ pub fn render_road(
             let x = chunk_start + i;
             let (ch, fg) = calculate_road_texture(x, style, time);
             if ch != ' ' {
-                let _ = fb.set(x, cow_bottom_y, Cell::new(ch, fg));
+                let _ = fb.set(x, cow_bottom_y, Cell::new(ch, tod.apply_lighting(fg)));
             }
         }
 
@@ -3088,7 +3756,7 @@ pub fn render_road(
                 let x = chunk_start + i;
                 let (ch, fg) = calculate_road_subsurface(x, style, time);
                 if ch != ' ' {
-                    let _ = fb.set(x, subsurface_y, Cell::new(ch, fg));
+                    let _ = fb.set(x, subsurface_y, Cell::new(ch, tod.apply_lighting(fg)));
                 }
             }
         }
@@ -3100,12 +3768,107 @@ pub fn render_road(
                 let x = chunk_start + i;
                 let (ch, fg) = calculate_road_curb_gutter(x, style, time);
                 if ch != ' ' {
-                    let _ = fb.set(x, curb_y, Cell::new(ch, fg));
+                    let _ = fb.set(x, curb_y, Cell::new(ch, tod.apply_lighting(fg)));
                 }
             }
         }
 
         chunk_start += chunk_len;
+    }
+}
+
+/// Render sparse procedural ground cover (grass tufts, clover patches, pebbles, wildflowers)
+/// in open clearings between tree groves using Golden Ratio Weyl sequence spacing.
+pub fn render_procedural_ground_cover(
+    fb: &mut FrameBuffer,
+    env: EnvironmentStyle,
+    road_y: usize,
+    width: usize,
+    time: f32,
+    tod: TimeOfDay,
+) {
+    if road_y == 0 || road_y >= fb.height || width == 0 {
+        return;
+    }
+    let verge_y = road_y.saturating_sub(1);
+    let scroll_x = time * 7.5;
+    let weyl_step = 23.0_f32;
+    let inv_phi = 0.618_033_988_7_f32;
+
+    let min_world = (scroll_x - 10.0).max(0.0);
+    let max_world = scroll_x + (width as f32) + 10.0;
+    let start_k = (min_world / weyl_step).floor() as usize;
+    let end_k = (max_world / weyl_step).ceil() as usize + 2;
+
+    for k in start_k..=end_k {
+        let k_f = k as f32;
+        let weyl_offset = ((k_f * inv_phi).fract()) * 19.0;
+        let world_x = k_f * weyl_step + weyl_offset;
+        let screen_x = ((world_x - scroll_x).round()) as isize;
+
+        if screen_x < 0 || screen_x as usize >= width {
+            continue;
+        }
+        let x = screen_x as usize;
+
+        let cell = fb.get_back(x, verge_y);
+        if cell.ch != ' ' && cell.alpha != 0 {
+            continue;
+        }
+
+        let hash = splitmix64_hash(k as u64 ^ 0xB529_7A4D);
+        let variant = (hash % 100) as usize;
+
+        let (ch, raw_col) = match env {
+            EnvironmentStyle::Pasture => {
+                if variant < 42 {
+                    let g_ch = if (hash & 1) == 0 { ',' } else { '\'' };
+                    (g_ch, Color::rgb(102, 187, 106)) // fresh meadow green grass tuft
+                } else if variant < 68 {
+                    ('%', Color::rgb(67, 160, 71)) // clover emerald patch
+                } else if variant < 84 {
+                    ('.', Color::rgb(176, 190, 197)) // smooth river pebble
+                } else if variant < 94 {
+                    ('*', Color::rgb(255, 235, 59)) // golden buttercup
+                } else {
+                    ('*', Color::rgb(186, 104, 200)) // lavender blossom
+                }
+            }
+            EnvironmentStyle::Forest => {
+                if variant < 50 {
+                    (',', Color::rgb(76, 140, 74)) // woodland moss tuft
+                } else if variant < 75 {
+                    ('~', Color::rgb(160, 110, 60)) // fallen woodland leaf
+                } else {
+                    ('.', Color::rgb(141, 110, 99)) // loam pebble
+                }
+            }
+            EnvironmentStyle::Savanna => {
+                if variant < 60 {
+                    (',', Color::rgb(218, 185, 107)) // dry steppe grass
+                } else {
+                    ('.', Color::rgb(188, 143, 100)) // arid desert stone
+                }
+            }
+            EnvironmentStyle::Arctic => {
+                if variant < 50 {
+                    ('*', Color::rgb(224, 247, 250)) // frost ice crystal
+                } else {
+                    ('.', Color::rgb(207, 216, 220)) // snow drift ridge
+                }
+            }
+            EnvironmentStyle::Graveyard => {
+                if variant < 60 {
+                    (';', Color::rgb(117, 117, 117)) // weathered dried grass
+                } else {
+                    ('.', Color::rgb(158, 158, 158)) // ancient gravestone chip
+                }
+            }
+            _ => continue,
+        };
+
+        let lit_col = tod.apply_lighting(raw_col);
+        let _ = fb.set(x, verge_y, Cell::new(ch, lit_col));
     }
 }
 
@@ -3119,41 +3882,124 @@ pub fn render_environment(
     height: usize,
     time: f32,
 ) {
+    render_environment_with_tod(fb, style, ground_y, width, height, time, TimeOfDay::Auto);
+}
+
+/// Render atmospheric environment particles with explicit time-of-day solar illumination.
+pub fn render_environment_with_tod(
+    fb: &mut FrameBuffer,
+    style: EnvironmentStyle,
+    ground_y: usize,
+    width: usize,
+    height: usize,
+    time: f32,
+    tod: TimeOfDay,
+) {
     if style == EnvironmentStyle::None || width == 0 || height == 0 {
         return;
     }
+    let tod_resolved = tod.resolve();
+    let compute = crate::gpu_compute::get_compute_engine(None);
 
     match style {
         EnvironmentStyle::Pasture => {
-            // A single glorious golden sun placed high in the daytime sky
-            let sun_fg = Color::rgb(255, 214, 0);
-            let sun_x = width.saturating_sub(10);
-            let sky_y = (ground_y / 5).clamp(1, fb.height.saturating_sub(1));
-            if sun_x < width && sky_y < fb.height {
-                let _ = fb.set(sun_x, sky_y, Cell::new('*', sun_fg));
-            }
-
-            // Gentle drifting white clouds (fluffy shapes that never split or look like duplicate orbs)
-            let cloud_fg = Color::rgb(240, 245, 255);
-            let cloud_pattern = ".--.";
-            let c_span = width + 8;
-            let c_pos = ((time * 4.0).round() as usize) % c_span.max(1);
-            if c_pos >= 4 {
-                let start_x = c_pos - 4;
-                let c_y = (ground_y / 4).clamp(1, fb.height.saturating_sub(1));
-                if c_y < fb.height && c_y != sky_y {
-                    for (i, ch) in cloud_pattern.chars().enumerate() {
-                        let x = start_x + i;
-                        if x < width && x != sun_x {
-                            let _ = fb.set(x, c_y, Cell::new(ch, cloud_fg));
+            let sky_horizon = (ground_y / 3).max(2).min(fb.height.saturating_sub(1));
+            match tod_resolved {
+                TimeOfDay::Dawn => {
+                    let sun_fg = Color::rgb(255, 167, 38);
+                    let (sun_x, sky_y) = compute.compute_celestial_trajectory(0, time, width, sky_horizon);
+                    if sun_x < width && sky_y < fb.height {
+                        let _ = fb.set(sun_x, sky_y, Cell::new('*', sun_fg));
+                    }
+                    let cloud_fg = Color::rgb(255, 224, 230);
+                    let cloud_pattern = ".--.";
+                    let c_span = width + 8;
+                    let c_pos = ((time * 3.5).round() as usize) % c_span.max(1);
+                    if c_pos >= 4 {
+                        let start_x = c_pos - 4;
+                        let c_y = (ground_y / 4).clamp(1, fb.height.saturating_sub(1));
+                        if c_y < fb.height && c_y != sky_y {
+                            for (i, ch) in cloud_pattern.chars().enumerate() {
+                                let x = start_x + i;
+                                if x < width && x != sun_x {
+                                    let _ = fb.set(x, c_y, Cell::new(ch, cloud_fg));
+                                }
+                            }
                         }
                     }
                 }
-            }
-            // Wildflowers blooming directly on the road / pasture ground
-            let flower_fg = Color::rgb(255, 235, 59);
-            for x in (5..width).step_by(18) {
-                let _ = fb.set(x, ground_y, Cell::new('*', flower_fg));
+                TimeOfDay::Day | TimeOfDay::Auto => {
+                    let sun_fg = Color::rgb(255, 214, 0);
+                    let (sun_x, sky_y) = compute.compute_celestial_trajectory(1, time, width, sky_horizon);
+                    if sun_x < width && sky_y < fb.height {
+                        let _ = fb.set(sun_x, sky_y, Cell::new('*', sun_fg));
+                    }
+                    let cloud_fg = Color::rgb(240, 245, 255);
+                    let cloud_pattern = ".--.";
+                    let c_span = width + 8;
+                    let c_pos = ((time * 4.0).round() as usize) % c_span.max(1);
+                    if c_pos >= 4 {
+                        let start_x = c_pos - 4;
+                        let c_y = (ground_y / 4).clamp(1, fb.height.saturating_sub(1));
+                        if c_y < fb.height && c_y != sky_y {
+                            for (i, ch) in cloud_pattern.chars().enumerate() {
+                                let x = start_x + i;
+                                if x < width && x != sun_x {
+                                    let _ = fb.set(x, c_y, Cell::new(ch, cloud_fg));
+                                }
+                            }
+                        }
+                    }
+                }
+                TimeOfDay::Dusk => {
+                    let sun_fg = Color::rgb(255, 110, 64);
+                    let (sun_x, sky_y) = compute.compute_celestial_trajectory(2, time, width, sky_horizon);
+                    if sun_x < width && sky_y < fb.height {
+                        let _ = fb.set(sun_x, sky_y, Cell::new('*', sun_fg));
+                    }
+                    let cloud_fg = Color::rgb(209, 196, 233);
+                    let cloud_pattern = ".~~.";
+                    let c_span = width + 8;
+                    let c_pos = ((time * 3.0).round() as usize) % c_span.max(1);
+                    if c_pos >= 4 {
+                        let start_x = c_pos - 4;
+                        let c_y = (ground_y / 4).clamp(1, fb.height.saturating_sub(1));
+                        if c_y < fb.height && c_y != sky_y {
+                            for (i, ch) in cloud_pattern.chars().enumerate() {
+                                let x = start_x + i;
+                                if x < width && x != sun_x {
+                                    let _ = fb.set(x, c_y, Cell::new(ch, cloud_fg));
+                                }
+                            }
+                        }
+                    }
+                    let star_fg = Color::rgb(255, 249, 196);
+                    for x in (width.saturating_sub(25)..width).step_by(12) {
+                        let _ = fb.set(x, 1, Cell::new('.', star_fg));
+                    }
+                }
+                TimeOfDay::Night => {
+                    let moon_fg = Color::rgb(255, 249, 196);
+                    let (mx, sky_y) = compute.compute_celestial_trajectory(3, time, width, sky_horizon);
+                    if mx + 1 < width && sky_y < fb.height {
+                        let _ = fb.set(mx, sky_y, Cell::new('(', moon_fg));
+                        let _ = fb.set(mx + 1, sky_y, Cell::new(')', moon_fg));
+                    }
+                    let star_fg_bright = Color::rgb(255, 255, 220);
+                    let star_fg_dim = Color::rgb(160, 180, 220);
+                    for (idx, x) in (3..width.saturating_sub(2)).step_by(12).enumerate() {
+                        let sy = (1 + (x * 7 + idx * 3) % 4).clamp(1, fb.height.saturating_sub(1));
+                        let twinkle = ((time * 2.8 + (x as f32) * 0.785).sin() * 0.5 + 0.5) > 0.5;
+                        let (ch, col) = if twinkle {
+                            ('*', star_fg_bright)
+                        } else {
+                            ('.', star_fg_dim)
+                        };
+                        if x != mx && x != mx + 1 {
+                            let _ = fb.set(x, sy, Cell::new(ch, col));
+                        }
+                    }
+                }
             }
         }
         EnvironmentStyle::Inferno => {
@@ -3341,15 +4187,75 @@ pub fn render_scenery_full(
     animal_height: Option<usize>,
     base_anim: Option<BaseAnim>,
 ) {
+    render_scenery_full_with_tod(
+        fb,
+        mountain,
+        road,
+        env,
+        road_y,
+        time,
+        animal_name,
+        animal_height,
+        base_anim,
+        None,
+    );
+}
+
+/// Composite full scenery with explicit animal kinematics, clearing ground cover, and solar illumination.
+#[allow(clippy::too_many_arguments)]
+pub fn render_scenery_full_with_tod(
+    fb: &mut FrameBuffer,
+    mountain: MountainStyle,
+    road: RoadStyle,
+    env: EnvironmentStyle,
+    road_y: usize,
+    time: f32,
+    animal_name: Option<&str>,
+    animal_height: Option<usize>,
+    base_anim: Option<BaseAnim>,
+    time_of_day: Option<TimeOfDay>,
+) {
+    render_scenery_full_with_tod_and_season(
+        fb,
+        mountain,
+        road,
+        env,
+        road_y,
+        time,
+        animal_name,
+        animal_height,
+        base_anim,
+        time_of_day,
+        None,
+    );
+}
+
+/// Composite full scenery with explicit animal kinematics, clearing ground cover, solar illumination, and seasonal phenology.
+#[allow(clippy::too_many_arguments)]
+pub fn render_scenery_full_with_tod_and_season(
+    fb: &mut FrameBuffer,
+    mountain: MountainStyle,
+    road: RoadStyle,
+    env: EnvironmentStyle,
+    road_y: usize,
+    time: f32,
+    animal_name: Option<&str>,
+    animal_height: Option<usize>,
+    base_anim: Option<BaseAnim>,
+    time_of_day: Option<TimeOfDay>,
+    season: Option<Season>,
+) {
     let w = fb.width;
     let h = fb.height;
     if w == 0 || h == 0 {
         return;
     }
 
+    let tod = time_of_day.unwrap_or_default().resolve();
+    let current_season = season.unwrap_or_default().resolve();
     let mountain_base_y = road_y.saturating_sub(1);
-    render_mountain(fb, mountain, mountain_base_y, w, time);
-    render_trees_with_animal(
+    render_mountain_with_tod(fb, mountain, mountain_base_y, w, time, tod);
+    render_trees_with_animal_and_tod_and_season(
         fb,
         mountain,
         env,
@@ -3359,9 +4265,12 @@ pub fn render_scenery_full(
         animal_name,
         animal_height,
         base_anim,
+        Some(tod),
+        Some(current_season),
     );
-    render_environment(fb, env, road_y, w, h, time);
-    render_road(fb, road, road_y, w, time);
+    render_procedural_ground_cover(fb, env, road_y, w, time, tod);
+    render_environment_with_tod(fb, env, road_y, w, h, time, tod);
+    render_road_with_tod(fb, road, road_y, w, time, tod);
 }
 
 #[cfg(test)]
@@ -3920,6 +4829,351 @@ mod tests {
                 width,
                 far_col
             );
+        }
+    }
+
+    #[test]
+    fn test_adaptive_groves_and_clearings_natural_flow() {
+        // 1. Verify monotonicity across 100 consecutive trees
+        let mut prev_pos = 0;
+        for t in 0..100 {
+            let pos = calculate_tree_position(t, 85.0, 50.0);
+            if t > 0 {
+                assert!(
+                    pos > prev_pos,
+                    "Tree positions must be strictly monotonically increasing (tree {t}: {pos} vs {prev_pos})"
+                );
+            }
+            prev_pos = pos;
+        }
+
+        // 2. Verify groves and open clearings in Pasture
+        // In pasture, intra-grove distances are <= 32 cols, while clearings are >= 70 cols
+        let mut intra_distances = Vec::new();
+        let mut clearing_distances = Vec::new();
+        for t in 0..20 {
+            let p0 = calculate_tree_position(t, 85.0, 50.0);
+            let p1 = calculate_tree_position(t + 1, 85.0, 50.0);
+            let delta = p1 - p0;
+            if delta <= 32 {
+                intra_distances.push(delta);
+            } else {
+                clearing_distances.push(delta);
+            }
+        }
+        // Must contain both clustered intra-grove steps and spacious open clearings
+        assert!(!clearing_distances.is_empty(), "Must feature spacious open clearings");
+        for &clear in &clearing_distances {
+            assert!(clear >= 70, "Clearing distance must be at least 70 cols, got {clear}");
+        }
+    }
+
+    #[test]
+    fn test_sliding_window_max_three_species_quota() {
+        // Test that across arbitrary screen widths and tree sequences,
+        // no single flora species appears more than 3 times in any window.
+        let biomes = [
+            EnvironmentStyle::Pasture,
+            EnvironmentStyle::Forest,
+            EnvironmentStyle::Arctic,
+            EnvironmentStyle::Savanna,
+            EnvironmentStyle::City,
+        ];
+
+        for &env in &biomes {
+            // Check sliding windows of size 10 consecutive trees across 50 trees
+            for start in 0..40 {
+                let mut species_counts = std::collections::HashMap::new();
+                for t in start..start + 10 {
+                    let sp = calculate_tree_species_with_width(t, env, 42, 160);
+                    *species_counts.entry(sp).or_insert(0) += 1;
+                }
+                for (sp, count) in species_counts {
+                    assert!(
+                        count <= 3,
+                        "Biome {:?}: Species {:?} appeared {} times in window {start}..{} (max allowed is 3)",
+                        env,
+                        sp,
+                        count,
+                        start + 10
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_active_screen_render_tree_species_quota() {
+        // Test that render_trees_with_animal strictly enforces <= 3 instances of any species
+        // across the visible screen width without panicking.
+        for width in [80, 120, 160, 200, 250] {
+            let mut fb = FrameBuffer::new(width, 24);
+            render_trees_with_animal(
+                &mut fb,
+                MountainStyle::Hills,
+                EnvironmentStyle::Pasture,
+                20,
+                width,
+                0.0,
+                Some("cow"),
+                Some(8),
+                Some(BaseAnim::Walk),
+            );
+            assert!(fb.back.iter().any(|c| c.alpha != 0 || c.ch != ' '));
+        }
+    }
+
+    #[test]
+    fn test_tree_sway_kinematics() {
+        // Ground base row (dy_from_base == 0) must strictly have 0 sway offset under all wind conditions
+        for time in [0.0, 0.5, 1.25, 2.7, 5.0, 10.0, 42.0] {
+            for height in [3, 5, 8, 12, 16] {
+                for tree_idx in 0..10 {
+                    let offset = calculate_tree_sway_offset(
+                        TreeSpecies::Oak,
+                        height,
+                        0,
+                        height,
+                        time,
+                        tree_idx,
+                    );
+                    assert_eq!(
+                        offset, 0,
+                        "Tree trunk root base at dy_from_base=0 must never detach or sway (got {offset} at t={time}, h={height})"
+                    );
+                }
+            }
+        }
+
+        // Canopy apex (dy_from_base == height) must stay within physically stable bounds (-2..=2)
+        for time in [0.0, 0.8, 1.6, 2.4, 3.2, 4.0] {
+            let offset_tall = calculate_tree_sway_offset(
+                TreeSpecies::Redwood,
+                14,
+                12,
+                14,
+                time,
+                1,
+            );
+            assert!(
+                (-2..=2).contains(&offset_tall),
+                "Canopy sway offset must be bounded in [-2, 2], got {offset_tall}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_procedural_ground_cover_distribution_and_verge() {
+        let width: usize = 120;
+        let road_y: usize = 18;
+        let mut fb = FrameBuffer::new(width, 24);
+
+        // Pre-populate an obstacle on the verge (e.g. tree trunk or mascot foot)
+        let obstacle_x: usize = 45;
+        let verge_y: usize = road_y.saturating_sub(1);
+        let _ = fb.set(obstacle_x, verge_y, Cell::new('|', Color::rgb(100, 50, 20)));
+
+        render_procedural_ground_cover(
+            &mut fb,
+            EnvironmentStyle::Pasture,
+            road_y,
+            width,
+            0.0,
+            TimeOfDay::Day,
+        );
+
+        // Verify obstacle was preserved and not overwritten
+        let obstacle_cell = fb.get_back(obstacle_x, verge_y);
+        assert_eq!(obstacle_cell.ch, '|');
+
+        // Verify ground cover items were placed on the meadow verge
+        let mut ground_items = 0;
+        for x in 0..width {
+            let c = fb.get_back(x, verge_y);
+            if matches!(c.ch, ',' | '\'' | '%' | '.' | '*') {
+                ground_items += 1;
+            }
+        }
+        assert!(
+            ground_items >= 2,
+            "Pasture meadow verge must feature sparse procedural ground cover items, found {ground_items}"
+        );
+    }
+
+    #[test]
+    fn test_time_of_day_illumination_and_parsing() {
+        // Parsing and string conversion
+        assert_eq!(TimeOfDay::parse("dawn"), TimeOfDay::Dawn);
+        assert_eq!(TimeOfDay::parse("sunrise"), TimeOfDay::Dawn);
+        assert_eq!(TimeOfDay::parse("day"), TimeOfDay::Day);
+        assert_eq!(TimeOfDay::parse("noon"), TimeOfDay::Day);
+        assert_eq!(TimeOfDay::parse("dusk"), TimeOfDay::Dusk);
+        assert_eq!(TimeOfDay::parse("sunset"), TimeOfDay::Dusk);
+        assert_eq!(TimeOfDay::parse("night"), TimeOfDay::Night);
+        assert_eq!(TimeOfDay::parse("midnight"), TimeOfDay::Night);
+        assert_eq!(TimeOfDay::parse("auto"), TimeOfDay::Auto);
+
+        assert_eq!(TimeOfDay::Dawn.as_str(), "dawn");
+        assert_eq!(TimeOfDay::Day.as_str(), "day");
+        assert_eq!(TimeOfDay::Dusk.as_str(), "dusk");
+        assert_eq!(TimeOfDay::Night.as_str(), "night");
+        assert_eq!(TimeOfDay::Auto.as_str(), "auto");
+
+        // Color lighting filters
+        let base_green = Color::rgb(60, 160, 60);
+
+        // Dawn warms red channel
+        let dawn_col = TimeOfDay::Dawn.apply_lighting(base_green);
+        assert!(dawn_col.r > base_green.r);
+
+        // Night cools and darkens foliage
+        let night_col = TimeOfDay::Night.apply_lighting(base_green);
+        assert!(night_col.g < base_green.g);
+        assert!(night_col.b >= (night_col.g / 2));
+
+        // Render scenery with each time of day
+        for tod in [
+            TimeOfDay::Dawn,
+            TimeOfDay::Day,
+            TimeOfDay::Dusk,
+            TimeOfDay::Night,
+        ] {
+            let mut fb = FrameBuffer::new(100, 24);
+            render_scenery_full_with_tod(
+                &mut fb,
+                MountainStyle::Hills,
+                RoadStyle::Dirt,
+                EnvironmentStyle::Pasture,
+                18,
+                1.0,
+                Some("cow"),
+                Some(6),
+                Some(BaseAnim::Walk),
+                Some(tod),
+            );
+            assert!(fb.back.iter().any(|c| c.alpha != 0 || c.ch != ' '));
+        }
+    }
+
+    #[test]
+    fn test_consecutive_trees_never_repeat_species() {
+        let biomes = [
+            EnvironmentStyle::Pasture,
+            EnvironmentStyle::Forest,
+            EnvironmentStyle::Arctic,
+            EnvironmentStyle::Savanna,
+            EnvironmentStyle::City,
+            EnvironmentStyle::Jurassic,
+            EnvironmentStyle::Swamp,
+            EnvironmentStyle::Inferno,
+            EnvironmentStyle::Hive,
+            EnvironmentStyle::Throne,
+            EnvironmentStyle::Cyber,
+        ];
+
+        for &env in &biomes {
+            let pool = get_biome_species_pool(env);
+            if pool.len() <= 1 {
+                continue;
+            }
+            for seed in [0u32, 42, 1337, 99999] {
+                let mut prev_species = calculate_tree_species_with_width(0, env, seed, 160);
+                for n in 1..80 {
+                    let cur_species = calculate_tree_species_with_width(n, env, seed, 160);
+                    assert_ne!(
+                        cur_species, prev_species,
+                        "Biome {:?}: Tree {} and {} must never share the same species ({:?})",
+                        env,
+                        n - 1,
+                        n,
+                        cur_species
+                    );
+                    prev_species = cur_species;
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_dynamic_clearing_expansion_ultra_wide() {
+        let (min_base, _var_base) = get_effective_tree_distances(EnvironmentStyle::Arctic, 80);
+        let (min_wide, _var_wide) = get_effective_tree_distances(EnvironmentStyle::Arctic, 1500);
+        // Arctic has 5 species -> max 15 trees on screen. At width 1500, min_stride must expand
+        assert!(
+            min_wide > min_base,
+            "Effective min_dist must expand on wide viewports (got {} vs base {})",
+            min_wide,
+            min_base
+        );
+        assert!(
+            min_wide >= 100.0,
+            "Expanded clearing distance must be >= 100 on 1500-column viewport"
+        );
+    }
+
+    #[test]
+    fn test_seasonal_phenology_and_rendering() {
+        assert_eq!(Season::parse("spring"), Season::Spring);
+        assert_eq!(Season::parse("summer"), Season::Summer);
+        assert_eq!(Season::parse("autumn"), Season::Autumn);
+        assert_eq!(Season::parse("winter"), Season::Winter);
+        assert_eq!(Season::parse("auto"), Season::Auto);
+
+        // Maple leaves turn scarlet in Autumn
+        let base_leaf = Color::rgb(50, 150, 50);
+        let (_ch_aut, col_aut) =
+            Season::Autumn.apply_foliage_phenology(TreeSpecies::Maple, base_leaf, '@', 0);
+        assert!(
+            col_aut.r > 200,
+            "Maple in Autumn must shift to vibrant scarlet, red channel was {}",
+            col_aut.r
+        );
+
+        // Cherry blossoms bloom in Spring
+        let (ch_spr, _col_spr) = Season::Spring.apply_foliage_phenology(
+            TreeSpecies::CherryBlossom,
+            base_leaf,
+            '@',
+            0,
+        );
+        assert_eq!(ch_spr, '*', "Cherry blossom in Spring must bloom with petal glyph '*'");
+
+        // Render full scenery with Season override
+        for season in [Season::Spring, Season::Summer, Season::Autumn, Season::Winter] {
+            let mut fb = FrameBuffer::new(120, 24);
+            render_scenery_full_with_tod_and_season(
+                &mut fb,
+                MountainStyle::Peaks,
+                RoadStyle::Cobblestone,
+                EnvironmentStyle::Forest,
+                18,
+                2.0,
+                Some("cow"),
+                Some(7),
+                Some(BaseAnim::Walk),
+                Some(TimeOfDay::Day),
+                Some(season),
+            );
+            assert!(fb.back.iter().any(|c| c.alpha != 0 || c.ch != ' '));
+        }
+    }
+
+    #[test]
+    fn test_celestial_arc_bounds() {
+        for time in [0.0, 1.0, 5.0, 12.5, 25.0, 48.0] {
+            let mut fb = FrameBuffer::new(100, 25);
+            render_environment_with_tod(
+                &mut fb,
+                EnvironmentStyle::Pasture,
+                18,
+                100,
+                25,
+                time,
+                TimeOfDay::Day,
+            );
+            // Ensure sun is rendered in upper sky region (y in 1..=6)
+            let has_sun = (1..=6).any(|y| (0..100).any(|x| fb.get_back(x, y).ch == '*'));
+            assert!(has_sun, "Sun must be visible in the sky at time {time}");
         }
     }
 }

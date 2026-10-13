@@ -651,37 +651,23 @@ impl CartoonRig {
         let mut dx_accum = 0.0f32;
         let mut dy_accum = 0.0f32;
         let alt_glyph = None;
-        let mut luminance_boost = 1.0f32;
 
-        if is_walking {
+        let luminance_boost = if is_walking {
             // Principle 1: Continuous Non-Tearing Vertical Pelvic Bounce
-            // \Delta y = A \sin(4\pi \cdot \text{stride})
             // Applied uniformly across the entire mascot body to strictly ELIMINATE integer rounding cell tearing.
             let pelvic_cycle = stride * 4.0 * std::f32::consts::PI;
             let pelvic_dy = pelvic_cycle.sin() * self.squash_amplitude;
             dy_accum += pelvic_dy;
 
-            // Width stretch: subtle flank expansion when squashing down
-            let x_from_center = (x as f32 - self.segments.width as f32 * 0.5)
-                / (self.segments.width as f32 * 0.5).max(1.0);
-            let horiz_stretch = -pelvic_dy * 0.35 * x_from_center;
-            dx_accum += horiz_stretch;
-
             // Principle 2: Spine Secondary Action Wave
             let spine_phase = self.elapsed * 4.0 - animal_y as f32 * 0.25;
             let spine_wave = spine_phase.sin() * self.spine_amplitude * 0.25;
-            dx_accum += spine_wave;
 
             // Principle 3: Cranial Zone (Head Bob with Inertia Lag)
-            // Head bobs with pendular phase lag (\Delta \phi \approx \pi/4), gently dipping on recoil and lifting on push-off.
-            if y <= self.segments.head_row.saturating_add(1) {
-                let head_lag = pelvic_cycle - std::f32::consts::FRAC_PI_4;
-                let head_nod = head_lag.sin() * (self.head_bob_amplitude * 0.7);
-                dx_accum += head_nod;
-            }
+            let head_lag = pelvic_cycle - std::f32::consts::FRAC_PI_4;
+            let head_nod = head_lag.sin() * (self.head_bob_amplitude * 0.5);
 
             // Principle 4: Caudal Zone (Tail Follow-Through)
-            // Pendular wave trailing body motion
             let is_near_tail = if self.segments.faces_right {
                 x <= self.segments.tail_col.saturating_add(3)
             } else {
@@ -694,26 +680,30 @@ impl CartoonRig {
                 let tail_sway = tail_wave_phase.sin() * self.tail_amplitude;
                 dx_accum += tail_sway;
             }
+
+            // Cohesive body integrity: in ASCII art, individual characters inside the animal body must NEVER
+            // shift horizontally relative to each other (which causes cell collisions and tearing gaps).
+            // Instead, secondary action is expressed through smooth continuous luminance modulation.
+            (1.0 + pelvic_dy * 0.25 + spine_wave + if y <= self.segments.head_row { head_nod * 0.25 } else { 0.0 }).clamp(0.65, 1.45)
         } else if is_floating || is_aquatic {
             // Fluid/Buoyant Locomotion:
             let wave_freq = if is_aquatic { 3.2 } else { 2.0 };
             let undulation = (time * wave_freq + animal_y as f32 * 0.4).sin() * 0.65;
-            dx_accum += undulation;
-
-            let float_bob = (time * (wave_freq * 0.8) + (x as f32 * 0.15)).cos() * 0.4;
+            let float_bob = (time * (wave_freq * 0.8)).cos() * 0.4;
             dy_accum += float_bob;
 
-            luminance_boost = 1.0 + (undulation.abs() * 0.25);
+            (1.0 + undulation * 0.25).clamp(0.7, 1.35)
         } else {
             // Breathing / Idle Keep-Alive:
             let breath_phase = time * 2.2;
             let is_chest = y >= self.segments.head_row && y <= self.segments.leg_row;
-            if is_chest {
-                let chest_swell = breath_phase.sin() * 0.4;
-                dx_accum += chest_swell * (1.0 - vertical_height_ratio * 0.5);
-                luminance_boost = 1.0 + (breath_phase.sin() * 0.15);
-            }
-        }
+            let chest_swell = if is_chest {
+                breath_phase.sin() * 0.3 * (1.0 - vertical_height_ratio * 0.5)
+            } else {
+                0.0
+            };
+            (1.0 + chest_swell + breath_phase.sin() * 0.15).clamp(0.8, 1.25)
+        };
 
         CellDeformation {
             dx: dx_accum.round() as i32,

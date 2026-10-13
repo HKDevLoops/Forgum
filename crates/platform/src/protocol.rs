@@ -83,6 +83,14 @@ pub struct SceneConfig {
     #[serde(default)]
     pub palette: Option<String>,
 
+    /// Time of day solar illumination ("auto", "dawn", "day", "dusk", "night").
+    #[serde(default)]
+    pub time_of_day: Option<String>,
+
+    /// Seasonal foliage phenology ("auto", "spring", "summer", "autumn", "winter").
+    #[serde(default)]
+    pub season: Option<String>,
+
     /// Interval in seconds for thought rotation in background mode. 0 = permanent until exit.
     #[serde(default = "default_thought_interval")]
     pub thought_interval: u32,
@@ -491,6 +499,8 @@ impl Default for SceneConfig {
             road: None,
             mountain: None,
             palette: None,
+            time_of_day: None,
+            season: None,
             thought_interval: default_thought_interval(),
             split_scroll: false,
             reserve_rows: None,
@@ -628,6 +638,8 @@ mod tests {
             road: Some("cobblestone".into()),
             mountain: Some("volcano".into()),
             palette: Some("#ffffff,#ff00ff,#00ffff".into()),
+            time_of_day: Some("dusk".into()),
+            season: Some("autumn".into()),
             thought_interval: 30,
             split_scroll: true,
             reserve_rows: Some(12),

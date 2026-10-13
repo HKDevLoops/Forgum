@@ -53,6 +53,18 @@ impl Color {
     pub const fn rgba(r: u8, g: u8, b: u8, a: u8) -> Self {
         Self { r, g, b, a }
     }
+
+    /// Scale RGB components by a luminance multiplier factor, clamping to [0, 255].
+    #[must_use]
+    pub fn scale_luminance(self, factor: f32) -> Self {
+        let f = factor.max(0.0);
+        Self {
+            r: ((self.r as f32) * f).round().min(255.0) as u8,
+            g: ((self.g as f32) * f).round().min(255.0) as u8,
+            b: ((self.b as f32) * f).round().min(255.0) as u8,
+            a: self.a,
+        }
+    }
 }
 
 /// One cell in the framebuffer.
