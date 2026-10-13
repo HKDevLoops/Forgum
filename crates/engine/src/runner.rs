@@ -2859,7 +2859,7 @@ fn handle_update_command(
             };
             let _ = forgum_platform::write_update_cache(&cache);
 
-            if !has_update && local_ver == clean_remote {
+            if !has_update {
                 println!(
                     "\n\x1b[1;32m✓ Already on latest version of Forgum (v{local_ver}) on channel '{}'.\x1b[0m\n\
                      \x1b[1;36m{}\x1b[0m\n",

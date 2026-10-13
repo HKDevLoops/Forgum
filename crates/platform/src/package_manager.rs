@@ -486,7 +486,7 @@ pub fn execute_standalone_update(channel: ReleaseChannel) -> Result<String, Stri
     #[cfg(not(windows))]
     {
         let cmd = format!(
-            "curl -4 -fsSL --connect-timeout 5 'https://raw.githubusercontent.com/HKDevLoops/Forgum/{ref_name}/install.sh' 2>/dev/null | bash -s -- --channel {channel_name} --headless -y || curl -4 -fsSL --connect-timeout 5 'https://raw.githubusercontent.com/HKDevLoops/Forgum/dev/install.sh' | bash -s -- --channel {channel_name} --headless -y"
+            "curl -4 -fsSL --connect-timeout 5 'https://raw.githubusercontent.com/HKDevLoops/Forgum/{ref_name}/install.sh' 2>/dev/null | tr -d '\\r' | bash -s -- --channel {channel_name} --headless -y || curl -4 -fsSL --connect-timeout 5 'https://raw.githubusercontent.com/HKDevLoops/Forgum/dev/install.sh' | tr -d '\\r' | bash -s -- --channel {channel_name} --headless -y"
         );
         let mut command = Command::new("bash");
         command.arg("-c").arg(cmd);
@@ -740,93 +740,121 @@ pub fn parse_version_from_release_json(json_str: &str) -> Option<String> {
             return Some(tag.trim_start_matches('v').to_string());
         }
         if let Some(arr) = val.as_array() {
+            let mut highest: Option<String> = None;
             for item in arr {
-                if let Some(tag) = item.get("tag_name").and_then(|t| t.as_str()) {
+                let tag_opt = item
+                    .get("tag_name")
+                    .or_else(|| item.get("name"))
+                    .and_then(|t| t.as_str());
+                if let Some(tag) = tag_opt {
                     let clean = tag.trim_start_matches('v').trim();
                     if !clean.is_empty() {
-                        return Some(clean.to_string());
+                        if let Some(ref cur) = highest {
+                            if is_newer_version(cur, clean) {
+                                highest = Some(clean.to_string());
+                            }
+                        } else {
+                            highest = Some(clean.to_string());
+                        }
                     }
                 }
             }
+            return highest;
         }
     }
     None
 }
 
 /// Fetch latest remote version string for the given release channel.
+/// Dynamically queries releases, tags, and branch manifests, taking the highest available semver.
 pub fn fetch_remote_channel_version(channel: ReleaseChannel) -> Result<String, String> {
+    let mut candidate_versions: Vec<String> = Vec::new();
+
+    // 1. Query GitHub releases endpoint and tags endpoint
+    if is_cmd_available("curl") {
+        for api_url in [
+            "https://api.github.com/repos/HKDevLoops/Forgum/releases",
+            "https://api.github.com/repos/HKDevLoops/Forgum/tags",
+        ] {
+            if let Ok(out) = Command::new("curl")
+                .args([
+                    "-4",
+                    "-fsSL",
+                    "-H",
+                    "User-Agent: forgum",
+                    "--connect-timeout",
+                    "4",
+                    "--max-time",
+                    "6",
+                    api_url,
+                ])
+                .output()
+            {
+                if out.status.success() {
+                    let body = String::from_utf8_lossy(&out.stdout);
+                    if let Some(ver) = parse_version_from_release_json(&body) {
+                        candidate_versions.push(ver);
+                    }
+                }
+            }
+        }
+    }
+
+    // 2. Query Cargo.toml from branch refs (dev and main branches)
     let ref_name = channel.git_ref();
-    let raw_url =
-        format!("https://raw.githubusercontent.com/HKDevLoops/Forgum/{ref_name}/Cargo.toml");
+    let branch_urls = if ref_name == "dev" {
+        vec!["https://raw.githubusercontent.com/HKDevLoops/Forgum/dev/Cargo.toml"]
+    } else {
+        vec![
+            "https://raw.githubusercontent.com/HKDevLoops/Forgum/dev/Cargo.toml",
+            "https://raw.githubusercontent.com/HKDevLoops/Forgum/main/Cargo.toml",
+        ]
+    };
 
-    // 1. Try curl (universal across Linux, macOS, modern Windows 10/11)
-    if is_cmd_available("curl") {
-        if let Ok(out) = Command::new("curl")
-            .args([
-                "-4",
-                "-fsSL",
-                "--connect-timeout",
-                "4",
-                "--max-time",
-                "6",
-                &raw_url,
-            ])
-            .output()
+    for raw_url in branch_urls {
+        if is_cmd_available("curl") {
+            if let Ok(out) = Command::new("curl")
+                .args([
+                    "-4",
+                    "-fsSL",
+                    "--connect-timeout",
+                    "4",
+                    "--max-time",
+                    "6",
+                    raw_url,
+                ])
+                .output()
+            {
+                if out.status.success() {
+                    let body = String::from_utf8_lossy(&out.stdout);
+                    if let Some(ver) = parse_version_from_cargo_toml(&body) {
+                        candidate_versions.push(ver);
+                    }
+                }
+            }
+        }
+
+        #[cfg(windows)]
         {
-            if out.status.success() {
-                let body = String::from_utf8_lossy(&out.stdout);
-                if let Some(ver) = parse_version_from_cargo_toml(&body) {
-                    return Ok(ver);
+            if candidate_versions.is_empty() {
+                let ps_cmd = format!("(Invoke-RestMethod -Uri '{raw_url}' -TimeoutSec 5)");
+                if let Ok(out) = Command::new("powershell")
+                    .args(["-NoProfile", "-Command", &ps_cmd])
+                    .output()
+                {
+                    if out.status.success() {
+                        let body = String::from_utf8_lossy(&out.stdout);
+                        if let Some(ver) = parse_version_from_cargo_toml(&body) {
+                            candidate_versions.push(ver);
+                        }
+                    }
                 }
             }
         }
     }
 
-    // 2. Windows fallback using powershell if curl failed or is unavailable
-    #[cfg(windows)]
-    {
-        let ps_cmd = format!("(Invoke-RestMethod -Uri '{raw_url}' -TimeoutSec 5)");
-        if let Ok(out) = Command::new("powershell")
-            .args(["-NoProfile", "-Command", &ps_cmd])
-            .output()
-        {
-            if out.status.success() {
-                let body = String::from_utf8_lossy(&out.stdout);
-                if let Some(ver) = parse_version_from_cargo_toml(&body) {
-                    return Ok(ver);
-                }
-            }
-        }
-    }
-
-    // 3. Fallback via GitHub API (releases endpoint)
-    if is_cmd_available("curl") {
-        let api_url = if channel == ReleaseChannel::Stable {
-            "https://api.github.com/repos/HKDevLoops/Forgum/releases/latest"
-        } else {
-            "https://api.github.com/repos/HKDevLoops/Forgum/releases"
-        };
-        if let Ok(out) = Command::new("curl")
-            .args([
-                "-4",
-                "-fsSL",
-                "-H",
-                "User-Agent: forgum",
-                "--connect-timeout",
-                "4",
-                "--max-time",
-                "6",
-                api_url,
-            ])
-            .output()
-        {
-            if out.status.success() {
-                let body = String::from_utf8_lossy(&out.stdout);
-                if let Some(ver) = parse_version_from_release_json(&body) {
-                    return Ok(ver);
-                }
-            }
-        }
+    if let Some(max_ver) = candidate_versions.into_iter().max_by(|a, b| compare_semver(a, b)) {
+        return Ok(max_ver);
     }
 
     Err("Could not retrieve remote version from GitHub (network timeout or offline)".to_string())
