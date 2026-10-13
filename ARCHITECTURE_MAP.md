@@ -331,6 +331,7 @@ stateDiagram-v2
 | :--- | :--- | :--- |
 | [`install.sh`](file:///Z:/Projects/Forgum/install.sh) | Celestial Unix installer: detects Linux/macOS/BSD/WSL, installs dependencies via Zypper/APT/DNF/Pacman/APK/Brew/Pkg, verifies MSRV, downloads or builds binary, manages PATH, records receipt. | `install.sh`, `installer`, `curl`, `unix_install` |
 | [`install.ps1`](file:///Z:/Projects/Forgum/install.ps1) | Celestial Windows installer: PowerShell-based download, unzipping, `%LOCALAPPDATA%\Programs\forgum` placement, environment PATH registration. | `install.ps1`, `powershell_install`, `windows_install` |
+| [`docs/RELEASE_AND_UPGRADE_AUDIT_MAP.md`](file:///Z:/Projects/Forgum/docs/RELEASE_AND_UPGRADE_AUDIT_MAP.md) | Definitive release, tagging & multi-channel upgrader audit map: 25 lookup locations, format requirements, CRLF guards, and 7-step release verification protocol. | `release_audit`, `upgrader_map`, `tags`, `packaging_locations` |
 | [`.github/workflows/ci.yml`](file:///Z:/Projects/Forgum/.github/workflows/ci.yml) | 32 CI validation jobs: MSRV 1.98.0, 15 shell hook validations, Pester tests, Rust toolchains on Ubuntu/Windows/macOS, Code Coverage, Contributor Gate. | `ci.yml`, `github_actions`, `validation_gates` |
 | [`.github/workflows/release.yml`](file:///Z:/Projects/Forgum/.github/workflows/release.yml) | Multi-channel release builder: 14 targets (Linux x86_64, aarch64, armv7, riscv64; Windows x64, arm64, i686; macOS x64, arm64; FreeBSD; DEB; RPM; MSI; Choco; Nix; Pacman). | `release.yml`, `artifacts`, `release_matrix` |
 
@@ -415,3 +416,4 @@ forgum config --tui
 3. **Hardware Acceleration Invariant**: Hardware acceleration must always provide seamless fallback to CPU with zero crashes.
 4. **Memory Constraint**: Any render loop modifications must strictly operate with zero heap allocations and maintain <100MB resident RAM.
 5. **No Autonomous Tagging**: AI agents must never autonomously bump versions or create Git tags without explicit user instructions.
+6. **Release & Upgrader Audit Invariant**: All releases, tag creation, script edits, and manifest synchronizations must strictly follow [`docs/RELEASE_AND_UPGRADE_AUDIT_MAP.md`](file:///Z:/Projects/Forgum/docs/RELEASE_AND_UPGRADE_AUDIT_MAP.md), verifying dual-branch push (`dev` + `main`), triplet tags (`vX.Y.Z-beta`, `X.Y.Z-beta`, `X.Y.Zbeta`), prebuilt asset availability, and 0 CRLF carriage returns.
