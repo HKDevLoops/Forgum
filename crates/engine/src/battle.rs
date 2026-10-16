@@ -43,11 +43,25 @@ pub fn resolve_fighter_mascot(name: &str, default_fallback: &str) -> String {
         "cpu" | "computer" => "dragon".to_string(),
         _ => {
             let champions = [
-                "dragon", "pegasus", "elephant", "tiger", "lion",
-                "default", "koala", "dolphin", "duck", "cat",
-                "doge", "bunny", "corgi", "armadillo", "goat"
+                "dragon",
+                "pegasus",
+                "elephant",
+                "tiger",
+                "lion",
+                "default",
+                "koala",
+                "dolphin",
+                "duck",
+                "cat",
+                "doge",
+                "bunny",
+                "corgi",
+                "armadillo",
+                "goat",
             ];
-            let hash = clean.bytes().fold(0usize, |acc, b| acc.wrapping_add(b as usize));
+            let hash = clean
+                .bytes()
+                .fold(0usize, |acc, b| acc.wrapping_add(b as usize));
             champions[hash % champions.len()].to_string()
         }
     }
@@ -373,7 +387,9 @@ impl Battle {
                         (self.cow2.mass, self.cow1.mass)
                     };
                     // Mass-based elastic recoil: heavy titans knock lighter mascots back further
-                    let recoil = ((winner_mass / loser_mass.max(0.1)) * 3.0).clamp(2.0, 9.0).round() as i32;
+                    let recoil = ((winner_mass / loser_mass.max(0.1)) * 3.0)
+                        .clamp(2.0, 9.0)
+                        .round() as i32;
 
                     if self.winner == 1 {
                         self.cow1.eyes = "^^".to_string();
@@ -562,15 +578,14 @@ impl Battle {
                 if self.phase_frames < self.collision_duration / 3 {
                     "  💥 *** THUNDEROUS CLASH! WEAPONS COLLIDE! *** 💥".to_string()
                 } else if self.phase_frames < (self.collision_duration * 2) / 3 {
-                    "  ⚡ *** ENERGY DISCHARGES! THE ARENA SHUDDERS UNDER IMPACT! *** ⚡".to_string()
+                    "  ⚡ *** ENERGY DISCHARGES! THE ARENA SHUDDERS UNDER IMPACT! *** ⚡"
+                        .to_string()
                 } else {
                     format!("  💥 {winner_name} delivers a devastating blow to {loser_name}!")
                 }
             }
             BattlePhase::Aftermath => {
-                format!(
-                    "  🏆 {loser_name} is unseated! {winner_name} claims supreme arena glory!"
-                )
+                format!("  🏆 {loser_name} is unseated! {winner_name} claims supreme arena glory!")
             }
             BattlePhase::Done => {
                 format!("  🏁 Tournament ended. All hail the Victor, {winner_name}!")
@@ -797,7 +812,13 @@ impl Battle {
         legs_frame: u32,
         lance_broken: bool,
     ) {
-        let art = species_fighter_art(&cow.species, &cow.eyes, is_left_cow, legs_frame, lance_broken);
+        let art = species_fighter_art(
+            &cow.species,
+            &cow.eyes,
+            is_left_cow,
+            legs_frame,
+            lance_broken,
+        );
 
         let lance_color = if is_left_cow {
             Color::rgb(0, 220, 255)
@@ -871,7 +892,11 @@ fn species_fighter_art(
     match species {
         "Dragon" => {
             let lance = if is_left {
-                if lance_broken { "== -  - " } else { "=======>" }
+                if lance_broken {
+                    "== -  - "
+                } else {
+                    "=======>"
+                }
             } else if lance_broken {
                 "-  - =="
             } else {
@@ -902,7 +927,11 @@ fn species_fighter_art(
         }
         "Pegasus" => {
             let lance = if is_left {
-                if lance_broken { "== -  - " } else { "=======>" }
+                if lance_broken {
+                    "== -  - "
+                } else {
+                    "=======>"
+                }
             } else if lance_broken {
                 "-  - =="
             } else {
@@ -933,7 +962,11 @@ fn species_fighter_art(
         }
         "Elephant" => {
             let lance = if is_left {
-                if lance_broken { "== -  - " } else { "=======>" }
+                if lance_broken {
+                    "== -  - "
+                } else {
+                    "=======>"
+                }
             } else if lance_broken {
                 "-  - =="
             } else {
@@ -964,7 +997,11 @@ fn species_fighter_art(
         }
         "Tiger" => {
             let lance = if is_left {
-                if lance_broken { "== -  - " } else { "=======>" }
+                if lance_broken {
+                    "== -  - "
+                } else {
+                    "=======>"
+                }
             } else if lance_broken {
                 "-  - =="
             } else {
@@ -995,7 +1032,11 @@ fn species_fighter_art(
         }
         "Dolphin" => {
             let lance = if is_left {
-                if lance_broken { "== -  - " } else { "=======>" }
+                if lance_broken {
+                    "== -  - "
+                } else {
+                    "=======>"
+                }
             } else if lance_broken {
                 "-  - =="
             } else {
@@ -1026,7 +1067,11 @@ fn species_fighter_art(
         }
         "Canine" => {
             let lance = if is_left {
-                if lance_broken { "== -  - " } else { "=======>" }
+                if lance_broken {
+                    "== -  - "
+                } else {
+                    "=======>"
+                }
             } else if lance_broken {
                 "-  - =="
             } else {
@@ -1057,7 +1102,11 @@ fn species_fighter_art(
         }
         "Feline" => {
             let lance = if is_left {
-                if lance_broken { "== -  - " } else { "=======>" }
+                if lance_broken {
+                    "== -  - "
+                } else {
+                    "=======>"
+                }
             } else if lance_broken {
                 "-  - =="
             } else {
@@ -1088,7 +1137,11 @@ fn species_fighter_art(
         }
         "Avian" => {
             let lance = if is_left {
-                if lance_broken { "== -  - " } else { "=======>" }
+                if lance_broken {
+                    "== -  - "
+                } else {
+                    "=======>"
+                }
             } else if lance_broken {
                 "-  - =="
             } else {
@@ -1119,7 +1172,11 @@ fn species_fighter_art(
         }
         "Marsupial" => {
             let lance = if is_left {
-                if lance_broken { "== -  - " } else { "=======>" }
+                if lance_broken {
+                    "== -  - "
+                } else {
+                    "=======>"
+                }
             } else if lance_broken {
                 "-  - =="
             } else {

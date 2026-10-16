@@ -17,9 +17,7 @@ pub fn report_shell_telemetry(
     elapsed_ms: Option<u64>,
     _command: Option<&str>,
 ) -> ExitCode {
-    let session = session
-        .map(String::from)
-        .unwrap_or_else(detect_session_id);
+    let session = session.map(String::from).unwrap_or_else(detect_session_id);
     let state_file = daemon_state_path(&session);
 
     // If no daemon state file exists for this session, exit immediately with zero latency.

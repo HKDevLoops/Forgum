@@ -20,8 +20,7 @@ pub fn is_kitty_graphics_supported() -> bool {
 }
 
 fn base64_encode(input: &[u8]) -> String {
-    const TABLE: &[u8; 64] =
-        b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    const TABLE: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
     let mut out = String::with_capacity(input.len().div_ceil(3) * 4);
     for chunk in input.chunks(3) {
         let b0 = chunk[0] as u32;
@@ -93,7 +92,11 @@ pub fn render_tmux_status(mascot: Option<&str>, effect: Option<&str>, fps: Optio
 }
 
 /// Render status line formatted specifically for Zellij status-bar widget.
-pub fn render_zellij_status(mascot: Option<&str>, effect: Option<&str>, fps: Option<u16>) -> String {
+pub fn render_zellij_status(
+    mascot: Option<&str>,
+    effect: Option<&str>,
+    fps: Option<u16>,
+) -> String {
     let mascot = mascot.unwrap_or("default");
     let effect = effect.unwrap_or("breathe");
     let fps = fps.unwrap_or(30);

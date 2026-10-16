@@ -1109,25 +1109,40 @@ fn run_inner() -> ExitCode {
         }
 
         // ── fetch ──────────────────────────────────────────────────
-        Some(cli::Commands::Fetch { live, cow, palette, .. }) => {
+        Some(cli::Commands::Fetch {
+            live, cow, palette, ..
+        }) => {
             if live {
                 forgum_engine::fetch::run_live_fetch(cow.as_deref(), palette.as_deref())
             } else {
-                let out = forgum_engine::fetch::render_instant_fetch(cow.as_deref(), palette.as_deref());
+                let out =
+                    forgum_engine::fetch::render_instant_fetch(cow.as_deref(), palette.as_deref());
                 println!("{out}");
                 ExitCode::SUCCESS
             }
         }
 
         // ── telemetry ──────────────────────────────────────────────
-        Some(cli::Commands::Telemetry { sub }) => {
-            match sub {
-                cli::TelemetrySub::Report { exit_code, elapsed_ms, command, session } => {
-                    let elapsed = if elapsed_ms > 0 { Some(elapsed_ms) } else { None };
-                    forgum_engine::telemetry_bus::report_shell_telemetry(session.as_deref(), exit_code, elapsed, command.as_deref())
-                }
+        Some(cli::Commands::Telemetry { sub }) => match sub {
+            cli::TelemetrySub::Report {
+                exit_code,
+                elapsed_ms,
+                command,
+                session,
+            } => {
+                let elapsed = if elapsed_ms > 0 {
+                    Some(elapsed_ms)
+                } else {
+                    None
+                };
+                forgum_engine::telemetry_bus::report_shell_telemetry(
+                    session.as_deref(),
+                    exit_code,
+                    elapsed,
+                    command.as_deref(),
+                )
             }
-        }
+        },
 
         // ── herd list ──────────────────────────────────────────────
         Some(cli::Commands::Herd {
@@ -1505,29 +1520,30 @@ fn run_inner() -> ExitCode {
             winner,
             fps,
         }) => {
-            let (n1, n2) = if fighter1.is_none() && fighter2.is_none() && name1 == "Alice" && name2 == "Bob" {
-                const CHAMPION_PAIRS: &[(&str, &str)] = &[
-                    ("Dragon", "Pegasus"),
-                    ("Tiger", "Lion"),
-                    ("Elephant", "Rhino"),
-                    ("Dolphin", "Orca"),
-                    ("Wolf", "Bear"),
-                    ("Falcon", "Dragon"),
-                    ("Canine", "Feline"),
-                    ("Koala", "Tiger"),
-                    ("Bessie", "Daisy"),
-                    ("Armadillo", "Goat"),
-                ];
-                let idx = (std::time::SystemTime::now()
-                    .duration_since(std::time::UNIX_EPOCH)
-                    .map(|d| d.as_millis() as usize)
-                    .unwrap_or(0))
-                    % CHAMPION_PAIRS.len();
-                let pair = CHAMPION_PAIRS[idx];
-                (pair.0.to_string(), pair.1.to_string())
-            } else {
-                (fighter1.unwrap_or(name1), fighter2.unwrap_or(name2))
-            };
+            let (n1, n2) =
+                if fighter1.is_none() && fighter2.is_none() && name1 == "Alice" && name2 == "Bob" {
+                    const CHAMPION_PAIRS: &[(&str, &str)] = &[
+                        ("Dragon", "Pegasus"),
+                        ("Tiger", "Lion"),
+                        ("Elephant", "Rhino"),
+                        ("Dolphin", "Orca"),
+                        ("Wolf", "Bear"),
+                        ("Falcon", "Dragon"),
+                        ("Canine", "Feline"),
+                        ("Koala", "Tiger"),
+                        ("Bessie", "Daisy"),
+                        ("Armadillo", "Goat"),
+                    ];
+                    let idx = (std::time::SystemTime::now()
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .map(|d| d.as_millis() as usize)
+                        .unwrap_or(0))
+                        % CHAMPION_PAIRS.len();
+                    let pair = CHAMPION_PAIRS[idx];
+                    (pair.0.to_string(), pair.1.to_string())
+                } else {
+                    (fighter1.unwrap_or(name1), fighter2.unwrap_or(name2))
+                };
             if !headless && forgum_platform::is_stdout_tty() {
                 forgum_engine::daemon::stop_session_daemon_and_reset_margins();
                 forgum_engine::battle::run_battle_live(&n1, &n2, winner, fps);
@@ -2421,7 +2437,9 @@ fn handle_update_command(
         } else if in_git_repo {
             // In non-interactive git workspace with no configured PM, perform git update
             if let Some(ref mut git_status) = git_status_opt {
-                println!("\x1b[1;36m━━━ Git Workspace (Non-Interactive Contributor Mode) ━━━\x1b[0m");
+                println!(
+                    "\x1b[1;36m━━━ Git Workspace (Non-Interactive Contributor Mode) ━━━\x1b[0m"
+                );
                 match forgum_platform::execute_git_update(git_status) {
                     Ok(msg) => {
                         println!("{msg}");
@@ -2446,7 +2464,10 @@ fn handle_update_command(
             }
             Ok(forgum_platform::UpdateActionChoice::Git) => {
                 if let Some(ref mut git_status) = git_status_opt {
-                    println!("\n\x1b[1;36m>> Pulling latest commits from origin/{}...\x1b[0m", git_status.remote_branch);
+                    println!(
+                        "\n\x1b[1;36m>> Pulling latest commits from origin/{}...\x1b[0m",
+                        git_status.remote_branch
+                    );
                     match forgum_platform::execute_git_update(git_status) {
                         Ok(msg) => {
                             println!("{msg}");
@@ -2465,7 +2486,10 @@ fn handle_update_command(
             }
             Ok(forgum_platform::UpdateActionChoice::PackageManager(pm)) => pm,
             Err(e) => {
-                eprintln!("\x1b[90m(selection error: {e}, defaulting to {})\x1b[0m", source.name());
+                eprintln!(
+                    "\x1b[90m(selection error: {e}, defaulting to {})\x1b[0m",
+                    source.name()
+                );
                 source
             }
         }
@@ -2565,17 +2589,25 @@ fn handle_update_command(
                 }
                 println!("\n\x1b[1;32m✓ Update completed successfully.\x1b[0m");
                 let _ = forgum_platform::clear_update_cache();
-                if let Ok(recon_msg) = forgum_platform::reconcile_package_manager_migration(chosen_pm) {
+                if let Ok(recon_msg) =
+                    forgum_platform::reconcile_package_manager_migration(chosen_pm)
+                {
                     println!("\x1b[36m>> {recon_msg}\x1b[0m");
                 }
                 ExitCode::SUCCESS
             }
             Err(err) => {
-                eprintln!("\x1b[1;33m⚠️  Package manager update (`{}`) failed: {}\x1b[0m", chosen_pm.name(), err);
+                eprintln!(
+                    "\x1b[1;33m⚠️  Package manager update (`{}`) failed: {}\x1b[0m",
+                    chosen_pm.name(),
+                    err
+                );
                 println!("\x1b[36m>> Automatically falling back to direct celestial binary installation...\x1b[0m\n");
                 match forgum_platform::execute_standalone_update(channel) {
                     Ok(msg) => {
-                        println!("\n\x1b[1;32m✓ Standalone fallback update succeeded: {msg}\x1b[0m");
+                        println!(
+                            "\n\x1b[1;32m✓ Standalone fallback update succeeded: {msg}\x1b[0m"
+                        );
                         let _ = forgum_platform::clear_update_cache();
                         ExitCode::SUCCESS
                     }
@@ -2604,7 +2636,10 @@ fn handle_prune_command(yes: bool, dry_run: bool) -> ExitCode {
         println!("\x1b[1;32m[Active Installation]\x1b[0m");
         println!("  • Path:    {}", act.path.display());
         println!("  • Manager: {}", act.source.name());
-        println!("  • Version: {}", act.version.as_deref().unwrap_or("unknown"));
+        println!(
+            "  • Version: {}",
+            act.version.as_deref().unwrap_or("unknown")
+        );
         println!();
     }
 
@@ -2613,14 +2648,20 @@ fn handle_prune_command(yes: bool, dry_run: bool) -> ExitCode {
         return ExitCode::SUCCESS;
     }
 
-    println!("\x1b[1;33m⚠️  Detected {} duplicate/shadowed installation(s):\x1b[0m", inactive.len());
+    println!(
+        "\x1b[1;33m⚠️  Detected {} duplicate/shadowed installation(s):\x1b[0m",
+        inactive.len()
+    );
     for (i, inst) in inactive.iter().enumerate() {
         println!(
             "  [{}] {} ({}, {})",
             i + 1,
             inst.path.display(),
             inst.source.name(),
-            inst.version.as_deref().map(|v| format!("v{v}")).unwrap_or_else(|| "unknown".into())
+            inst.version
+                .as_deref()
+                .map(|v| format!("v{v}"))
+                .unwrap_or_else(|| "unknown".into())
         );
     }
     println!();
@@ -2650,7 +2691,9 @@ fn handle_prune_command(yes: bool, dry_run: bool) -> ExitCode {
     };
 
     if !should_prune {
-        println!("\n\x1b[90mPruning cancelled. You can manually remove shadowed binaries using:\x1b[0m");
+        println!(
+            "\n\x1b[90mPruning cancelled. You can manually remove shadowed binaries using:\x1b[0m"
+        );
         for inst in &inactive {
             println!("  {}", inst.manual_removal_command());
         }
@@ -2665,7 +2708,10 @@ fn handle_prune_command(yes: bool, dry_run: bool) -> ExitCode {
             Ok(msg) => println!("  \x1b[1;32m✓\x1b[0m {msg}"),
             Err(e) => {
                 any_errors = true;
-                eprintln!("  \x1b[1;31m✗\x1b[0m Failed to prune '{}': {e}", inst.path.display());
+                eprintln!(
+                    "  \x1b[1;31m✗\x1b[0m Failed to prune '{}': {e}",
+                    inst.path.display()
+                );
                 println!("    Manual command: {}", inst.manual_removal_command());
             }
         }

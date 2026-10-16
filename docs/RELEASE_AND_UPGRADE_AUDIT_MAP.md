@@ -179,12 +179,19 @@ flowchart TD
   git push origin vX.Y.Z-beta X.Y.Z-beta X.Y.Zbeta
   ```
 
-#### Step 8: Post-Release CI/CD Smoke Test
+#### Step 8: Absolute GitHub Actions CI/CD Gate Verification (Mandate 2.S)
+* **Uncompromising Release Approval Rule**: A release tag is ONLY approved and finalized if it passes each and every test, CI, CD, and GitHub Actions workflow gate without exception.
+* **Release Halt Trigger**: If any single test, build target, package compilation, linter check, formatting check, or automated verification gate fails in GitHub Actions or local preflight, the release **MUST BE IMMEDIATELY STOPPED**.
+* When stopped:
+  1. The release assets must NOT be distributed, installed, or declared available.
+  2. The failing step must be investigated via `gh run view --log-failed`.
+  3. The issue must be corrected on `dev`, synchronized to `main`, and re-tested until 100% green.
 * Monitor GitHub Actions release workflow:
   ```bash
-  gh run list --limit 1
+  gh run list --limit 2
+  gh run watch
   ```
-* Verify prebuilt assets on GitHub Releases:
+* Verify prebuilt assets on GitHub Releases (only after 100% of pipeline jobs pass):
   - `forgum-x86_64-unknown-linux-gnu.tar.gz`
   - `forgum-aarch64-unknown-linux-gnu.tar.gz`
   - `forgum-x86_64-apple-darwin.tar.gz`

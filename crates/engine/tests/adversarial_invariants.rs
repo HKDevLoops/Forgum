@@ -696,7 +696,12 @@ fn invariant_uv_pinned_palette_zero_color_swimming() {
     let rig_frame2 = AsciiRigMap::build(mascot_art, 0, &segments);
 
     assert_eq!(rig_frame1.cells.len(), rig_frame2.cells.len());
-    for (i, (c1, c2)) in rig_frame1.cells.iter().zip(rig_frame2.cells.iter()).enumerate() {
+    for (i, (c1, c2)) in rig_frame1
+        .cells
+        .iter()
+        .zip(rig_frame2.cells.iter())
+        .enumerate()
+    {
         assert_eq!(
             c1.u, c2.u,
             "Cell {i}: U coordinate must remain strictly pinned across frames (zero swimming)"

@@ -213,7 +213,12 @@ pub fn probe_vulkan_runtime() -> VulkanRuntimeInfo {
         }
     }
 
-    #[cfg(any(target_os = "freebsd", target_os = "openbsd", target_os = "netbsd", target_os = "dragonfly"))]
+    #[cfg(any(
+        target_os = "freebsd",
+        target_os = "openbsd",
+        target_os = "netbsd",
+        target_os = "dragonfly"
+    ))]
     {
         let candidates = [
             "/usr/local/lib/libvulkan.so.1",
@@ -297,8 +302,11 @@ pub fn probe_metal_runtime() -> MetalRuntimeInfo {
     #[cfg(target_os = "macos")]
     {
         let metal_fw = Path::new("/System/Library/Frameworks/Metal.framework/Metal");
-        let mps_fw = Path::new("/System/Library/Frameworks/MetalPerformanceShaders.framework/MetalPerformanceShaders");
-        let is_available = metal_fw.exists() || Path::new("/System/Library/Frameworks/Metal.framework").exists();
+        let mps_fw = Path::new(
+            "/System/Library/Frameworks/MetalPerformanceShaders.framework/MetalPerformanceShaders",
+        );
+        let is_available =
+            metal_fw.exists() || Path::new("/System/Library/Frameworks/Metal.framework").exists();
         let moltenvk_path = [
             "/opt/homebrew/lib/libMoltenVK.dylib",
             "/usr/local/lib/libMoltenVK.dylib",
@@ -403,7 +411,10 @@ fn build_pipeline_capabilities(policy: AccelerationMode) -> ComputePipelineCapab
                 )
             } else if vulkan.is_available && dev_type.is_gpu() {
                 let ver = if crate::terminal::is_wsl() {
-                    format!("{} (WSL Direct3D 12 Paravirtualization)", vulkan.api_version)
+                    format!(
+                        "{} (WSL Direct3D 12 Paravirtualization)",
+                        vulkan.api_version
+                    )
                 } else {
                     vulkan.api_version
                 };

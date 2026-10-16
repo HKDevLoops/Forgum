@@ -119,6 +119,25 @@ graph TD
 
 ---
 
+## 1.4 LSP Context-Aware Autocompletion, Unified Config API & Liquid Motion Battles (0.0.9-beta)
+
+- **LSP-Like Context-Aware Autocompletion Engine (`forgum complete-context`)**:
+  - Syntactically aware completion evaluator processing full tokens, cursor index, active subcommands, and flags (`crates/engine/src/completions.rs`).
+  - Dynamic discovery and choice restriction: already-used flags are suppressed, choice values for enums (`--effect`, `--animal`, `--mountain`, `--road`, `--accel`) are strictly emitted with descriptive tooltips.
+  - Complete 36-key configuration scope: `forgum config <TAB>`, `forgum config set <TAB>`, and `forgum config set <key> <TAB>`.
+  - Shell scripts updated with dynamic context querying and static fallback across Bash, Zsh, Fish, PowerShell, and Nushell.
+- **Diagnostic Error Recovery & Rich CLI Feedback (`crates/engine/src/cli.rs`)**:
+  - Intercepts invalid subcommands, unknown flags, and invalid choice values with helpful diagnostics.
+  - Provides fuzzy suggestion matching using Levenshtein distance (`💡 Did you mean '<candidate>'?`).
+  - Enumerates all available subcommands or flags/values present under the specific failing scope.
+- **Unified Config File API & Validation Methods (`crates/engine/src/config.rs`)**:
+  - Implemented `get_config_value`, `set_config_value`, `validate_config`, and `supported_config_keys` covering all 36 `SceneConfig` fields.
+  - Comprehensive validation with bounds checking (`fps <= 240`, `split_ratio 0.1..0.8`), fuzzy suggestions on unknown keys or invalid values, and full choice listings.
+  - Refactored `forgum config get` and `forgum config set` in `runner.rs` to delegate directly to the unified API.
+- **Liquid Motion Fighting Kinematics & Multi-Mascot Battles (`crates/engine/src/battle.rs`, `crates/engine/src/rps.rs`)**:
+  - Implemented physical attack trajectories, dynamic hit recoil, particle impact sparks, and multi-mascot arena dynamics in `forgum battle` and `forgum rps`.
+
+---
 
 ## 2. Universal Hardware Acceleration Architecture (2006 to 2026)
 

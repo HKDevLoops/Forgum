@@ -185,7 +185,6 @@ impl GpuComputeEngine {
             out,
         );
     }
-
 }
 
 #[cfg(test)]
@@ -350,4 +349,3 @@ mod tests {
         }
     }
 }
-

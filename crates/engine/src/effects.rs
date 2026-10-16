@@ -998,7 +998,8 @@ impl Effect for FloatEffect {
                         time,
                         Color::WHITE,
                         ch,
-                    ).scale_luminance(def.luminance_mult);
+                    )
+                    .scale_luminance(def.luminance_mult);
                     draw_char_with_hull(fb, uxi, draw_y, x, hull, ch, cell_fg);
                 }
                 x += 1;
@@ -1467,7 +1468,7 @@ impl Effect for WalkEffect {
                             if yi >= 0 && xi >= 0 {
                                 let uxi = xi as usize;
                                 let uyi = yi as usize;
-                                 if uyi < fb.height && uxi < fb.width {
+                                if uyi < fb.height && uxi < fb.width {
                                     let cell_fg = resolve_fg_palette_char(
                                         &self.color_mode,
                                         &self.palette,
@@ -1476,7 +1477,8 @@ impl Effect for WalkEffect {
                                         time,
                                         Color::WHITE,
                                         sc,
-                                    ).scale_luminance(def.luminance_mult);
+                                    )
+                                    .scale_luminance(def.luminance_mult);
                                     draw_char_with_hull(fb, uxi, uyi, x + k, hull, sc, cell_fg);
                                 }
                             }
@@ -1510,7 +1512,8 @@ impl Effect for WalkEffect {
                             time,
                             Color::WHITE,
                             display_ch,
-                        ).scale_luminance(def.luminance_mult);
+                        )
+                        .scale_luminance(def.luminance_mult);
                         draw_char_with_hull(fb, uxi, uyi, x, hull, display_ch, cell_fg);
                     }
                 }

@@ -662,7 +662,8 @@ mod tests {
         let cow_field = lookup_config_schema("cow").expect("cow field must exist");
         assert_eq!(cow_field.category, "Scene");
 
-        let check_updates_field = lookup_config_schema("check_updates").expect("check_updates must exist");
+        let check_updates_field =
+            lookup_config_schema("check_updates").expect("check_updates must exist");
         assert_eq!(check_updates_field.category, "System");
 
         let accel_field = lookup_config_schema("accel_mode").expect("accel_mode must exist");

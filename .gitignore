@@ -63,9 +63,6 @@ docs/superpowers/
 .kilo/
 kilo.json
 .system_generated/
-AGENTS.md
-agent.md
-*.agent.md
 testsprite_tests/
 graphify-out/
 .planning/

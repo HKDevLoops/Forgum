@@ -1,21 +1,27 @@
 //! Comprehensive invariant tests for 240Hz liquid motion, decoupled simulation,
 //! 2D AsciiRigMap morphing, ambient occlusion moat, and security hardening.
 
-use std::time::Duration;
 use forgum_engine::engine_core::{LiquidFrameGovernor, FIXED_SIM_DT};
-use forgum_engine::kinematics::{
-    morph_ascii_glyph, apply_ambient_occlusion_moat, AsciiRigMap, CellMask,
-};
+use forgum_engine::image_ascii::{MAX_IMAGE_DIMENSION, MAX_IMAGE_FILE_SIZE};
 use forgum_engine::init::{shell_escape_arg, Shell};
-use forgum_engine::image_ascii::{MAX_IMAGE_FILE_SIZE, MAX_IMAGE_DIMENSION};
+use forgum_engine::kinematics::{
+    apply_ambient_occlusion_moat, morph_ascii_glyph, AsciiRigMap, CellMask,
+};
+use std::time::Duration;
 
 #[test]
 fn test_liquid_frame_governor_dt_independence() {
     let mut gov_60 = LiquidFrameGovernor::new(60);
-    assert_eq!(gov_60.target_period(), Duration::from_nanos(1_000_000_000 / 60));
+    assert_eq!(
+        gov_60.target_period(),
+        Duration::from_nanos(1_000_000_000 / 60)
+    );
 
     let mut gov_240 = LiquidFrameGovernor::new(240);
-    assert_eq!(gov_240.target_period(), Duration::from_nanos(1_000_000_000 / 240));
+    assert_eq!(
+        gov_240.target_period(),
+        Duration::from_nanos(1_000_000_000 / 240)
+    );
 
     let mut physics_steps_60 = 0usize;
     let _ = gov_60.step_simulation(|dt| {
@@ -94,16 +100,25 @@ fn test_ascii_rig_map_concavity_and_hull_preservation() {
     );
 
     // The glyphs must be glyph opaque
-    assert!(rig_map.cells.iter().any(|c| c.mask == CellMask::GlyphOpaque));
+    assert!(rig_map
+        .cells
+        .iter()
+        .any(|c| c.mask == CellMask::GlyphOpaque));
     // The enclosed interior torso cavity must be interior opaque
-    assert!(rig_map.cells.iter().any(|c| c.mask == CellMask::InteriorOpaque));
+    assert!(rig_map
+        .cells
+        .iter()
+        .any(|c| c.mask == CellMask::InteriorOpaque));
 }
 
 #[test]
 fn test_shell_escape_arg_security() {
     // Benign alphanumeric arguments are not modified
     assert_eq!(shell_escape_arg(Shell::Bash, "standard"), "standard");
-    assert_eq!(shell_escape_arg(Shell::Bash, "--flag=value"), "--flag=value");
+    assert_eq!(
+        shell_escape_arg(Shell::Bash, "--flag=value"),
+        "--flag=value"
+    );
 
     // Arguments with spaces or shell metacharacters are safely quoted
     let malicious = "hello; rm -rf /";

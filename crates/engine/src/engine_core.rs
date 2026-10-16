@@ -93,7 +93,7 @@ pub struct Frame {
 // ── 240Hz Liquid Frame Governor (ANIM-001 / ANIM-002) ──────────────
 
 pub const FIXED_SIM_DT: f64 = 1.0 / 120.0; // Fixed 120Hz physics integration step
-pub const MAX_FRAME_TIME: f64 = 0.25;      // Spiral-of-death clamp
+pub const MAX_FRAME_TIME: f64 = 0.25; // Spiral-of-death clamp
 pub const SPIN_WINDOW: Duration = Duration::from_micros(1500); // 1.5ms spin-wait margin
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -285,11 +285,12 @@ impl SimState {
         );
 
         // Clamp default FPS to 30 over remote sessions (SSH, RDP) to eliminate network lag and bufferbloat
-        let effective_fps = if forgum_platform::is_remote_session() && (config.fps == 0 || config.fps == 60) {
-            30
-        } else {
-            config.fps
-        };
+        let effective_fps =
+            if forgum_platform::is_remote_session() && (config.fps == 0 || config.fps == 60) {
+                30
+            } else {
+                config.fps
+            };
         let mut scheduler = Scheduler::new(effective_fps);
         let has_scenery_motion = scenery.0 != crate::scenery::MountainStyle::None
             || scenery.1 != crate::scenery::RoadStyle::None
@@ -532,8 +533,9 @@ impl SimState {
                 let has_scenery_motion = mtn_style != crate::scenery::MountainStyle::None
                     || road_style != crate::scenery::RoadStyle::None
                     || env_style != crate::scenery::EnvironmentStyle::None;
-                self.scheduler.is_dynamic =
-                    (self.config.effect != "static" && self.config.effect != "none") || has_scenery_motion;
+                self.scheduler.is_dynamic = (self.config.effect != "static"
+                    && self.config.effect != "none")
+                    || has_scenery_motion;
                 self.need_full_redraw = true;
             }
             ControlMsg::Cow(name) => {
@@ -772,13 +774,14 @@ fn sim_thread(
     } else {
         None
     };
-    let target_fps = if forgum_platform::is_remote_session() && (sim.config.fps == 0 || sim.config.fps == 60) {
-        30
-    } else if sim.config.fps == 0 {
-        60
-    } else {
-        sim.config.fps as u32
-    };
+    let target_fps =
+        if forgum_platform::is_remote_session() && (sim.config.fps == 0 || sim.config.fps == 60) {
+            30
+        } else if sim.config.fps == 0 {
+            60
+        } else {
+            sim.config.fps as u32
+        };
     let mut governor = LiquidFrameGovernor::new(target_fps);
     let mut last_battery_check = Instant::now();
     let mut user_speed: f32 = 1.0;
@@ -827,11 +830,16 @@ fn sim_thread(
             if let Some(pct) = forgum_platform::check_battery_percent() {
                 if pct < 20.0 && !battery_throttled {
                     sim.scheduler.set_speed(0.15);
-                    governor.set_fps(((target_fps as f32) * 0.15).round().clamp(1.0, 1000.0) as u32);
+                    governor
+                        .set_fps(((target_fps as f32) * 0.15).round().clamp(1.0, 1000.0) as u32);
                     battery_throttled = true;
                 } else if pct >= 30.0 && battery_throttled {
                     sim.scheduler.set_speed(user_speed);
-                    governor.set_fps(((target_fps as f32) * user_speed).round().clamp(1.0, 1000.0) as u32);
+                    governor.set_fps(
+                        ((target_fps as f32) * user_speed)
+                            .round()
+                            .clamp(1.0, 1000.0) as u32,
+                    );
                     battery_throttled = false;
                 }
             }
@@ -858,7 +866,8 @@ fn sim_thread(
                     user_speed = s;
                     if !battery_throttled {
                         sim.scheduler.set_speed(s);
-                        governor.set_fps(((target_fps as f32) * s).round().clamp(1.0, 1000.0) as u32);
+                        governor
+                            .set_fps(((target_fps as f32) * s).round().clamp(1.0, 1000.0) as u32);
                     }
                 }
                 ControlMsg::Resize { cols, rows } => {

@@ -296,13 +296,8 @@ pub enum TimeOfDay {
 }
 
 impl TimeOfDay {
-    pub const ALL: &'static [TimeOfDay] = &[
-        Self::Auto,
-        Self::Dawn,
-        Self::Day,
-        Self::Dusk,
-        Self::Night,
-    ];
+    pub const ALL: &'static [TimeOfDay] =
+        &[Self::Auto, Self::Dawn, Self::Day, Self::Dusk, Self::Night];
 
     pub fn parse(s: &str) -> Self {
         match s.trim().to_ascii_lowercase().as_str() {
@@ -447,7 +442,10 @@ impl Season {
                 TreeSpecies::CherryBlossom | TreeSpecies::BloomingShrub => {
                     ('*', FRUIT_CHERRY_BLOSSOM)
                 }
-                TreeSpecies::Oak | TreeSpecies::Birch | TreeSpecies::Maple | TreeSpecies::Bonsai => (
+                TreeSpecies::Oak
+                | TreeSpecies::Birch
+                | TreeSpecies::Maple
+                | TreeSpecies::Bonsai => (
                     ch,
                     Color::rgb(
                         base_color.r.saturating_add(18),
@@ -537,7 +535,6 @@ impl std::str::FromStr for Season {
         Ok(Self::parse(s))
     }
 }
-
 
 /// The complete biological and thematic identity profile for any mascot.
 #[derive(Debug, Clone)]
@@ -1615,9 +1612,9 @@ pub fn get_effective_tree_distances(env: EnvironmentStyle, width: usize) -> (f32
         EnvironmentStyle::Savanna | EnvironmentStyle::Inferno => (110.0_f32, 65.0_f32),
         EnvironmentStyle::Arctic => (95.0_f32, 55.0_f32),
         EnvironmentStyle::Pasture => (85.0_f32, 50.0_f32),
-        EnvironmentStyle::City
-        | EnvironmentStyle::Graveyard
-        | EnvironmentStyle::Cyber => (80.0_f32, 45.0_f32),
+        EnvironmentStyle::City | EnvironmentStyle::Graveyard | EnvironmentStyle::Cyber => {
+            (80.0_f32, 45.0_f32)
+        }
         EnvironmentStyle::Forest => (48.0_f32, 28.0_f32),
         EnvironmentStyle::Hive | EnvironmentStyle::Throne => (56.0_f32, 32.0_f32),
         EnvironmentStyle::Swamp | EnvironmentStyle::Jurassic => (54.0_f32, 32.0_f32),
@@ -2332,12 +2329,19 @@ pub fn render_trees_with_animal_and_tod_and_season(
 
         if is_in_viewport && !pool.is_empty() {
             // If the entire pool is saturated at >= 3 instances on screen, no more trees can be placed
-            if visible_species_counts.iter().take(pool.len()).all(|&cnt| cnt >= 3) {
+            if visible_species_counts
+                .iter()
+                .take(pool.len())
+                .all(|&cnt| cnt >= 3)
+            {
                 continue;
             }
 
             // Find an eligible species with count < 3 and != last_rendered_species
-            let pref_idx = pool.iter().position(|&s| s == preferred_species).unwrap_or(0);
+            let pref_idx = pool
+                .iter()
+                .position(|&s| s == preferred_species)
+                .unwrap_or(0);
             let mut chosen_idx = None;
 
             // First check if preferred species satisfies both constraints
@@ -2410,14 +2414,25 @@ pub fn render_trees_with_animal_and_tod_and_season(
                         let (final_ch, final_col) = if is_foliage {
                             let (pheno_c, pheno_col) =
                                 current_season.apply_foliage_phenology(species, col, c, t_idx);
-                            if let Some((orn_ch, orn_col)) =
-                                get_foliage_ornament(species, t_idx, dx_start + (i as isize), dy, pheno_c)
-                            {
-                                let (orn_pheno_ch, orn_pheno_col) =
-                                    current_season.apply_foliage_phenology(species, orn_col, orn_ch, t_idx);
-                                (orn_pheno_ch, tod.apply_lighting(orn_pheno_col).scale_luminance(subpixel_lum))
+                            if let Some((orn_ch, orn_col)) = get_foliage_ornament(
+                                species,
+                                t_idx,
+                                dx_start + (i as isize),
+                                dy,
+                                pheno_c,
+                            ) {
+                                let (orn_pheno_ch, orn_pheno_col) = current_season
+                                    .apply_foliage_phenology(species, orn_col, orn_ch, t_idx);
+                                (
+                                    orn_pheno_ch,
+                                    tod.apply_lighting(orn_pheno_col)
+                                        .scale_luminance(subpixel_lum),
+                                )
                             } else {
-                                (pheno_c, tod.apply_lighting(pheno_col).scale_luminance(subpixel_lum))
+                                (
+                                    pheno_c,
+                                    tod.apply_lighting(pheno_col).scale_luminance(subpixel_lum),
+                                )
                             }
                         } else {
                             (c, tod.apply_lighting(col).scale_luminance(subpixel_lum))
@@ -2453,7 +2468,10 @@ pub fn render_trees_with_animal_and_tod_and_season(
                             let _ = fb_guard.set(
                                 px as usize,
                                 py as usize,
-                                Cell::new(ch, tod.apply_lighting(col).scale_luminance(subpixel_lum)),
+                                Cell::new(
+                                    ch,
+                                    tod.apply_lighting(col).scale_luminance(subpixel_lum),
+                                ),
                             );
                         }
                     }
@@ -2491,7 +2509,13 @@ pub fn render_trees_with_animal_and_tod_and_season(
         };
 
         let fol_col = |dy_from_top: usize, total_crown_h: usize| {
-            tod.apply_lighting(get_tree_foliage_color(species, t_idx, dy_from_top, total_crown_h, env))
+            tod.apply_lighting(get_tree_foliage_color(
+                species,
+                t_idx,
+                dy_from_top,
+                total_crown_h,
+                env,
+            ))
         };
         let crown_var = t_idx % 2;
 
@@ -3907,7 +3931,8 @@ pub fn render_environment_with_tod(
             match tod_resolved {
                 TimeOfDay::Dawn => {
                     let sun_fg = Color::rgb(255, 167, 38);
-                    let (sun_x, sky_y) = compute.compute_celestial_trajectory(0, time, width, sky_horizon);
+                    let (sun_x, sky_y) =
+                        compute.compute_celestial_trajectory(0, time, width, sky_horizon);
                     if sun_x < width && sky_y < fb.height {
                         let _ = fb.set(sun_x, sky_y, Cell::new('*', sun_fg));
                     }
@@ -3930,7 +3955,8 @@ pub fn render_environment_with_tod(
                 }
                 TimeOfDay::Day | TimeOfDay::Auto => {
                     let sun_fg = Color::rgb(255, 214, 0);
-                    let (sun_x, sky_y) = compute.compute_celestial_trajectory(1, time, width, sky_horizon);
+                    let (sun_x, sky_y) =
+                        compute.compute_celestial_trajectory(1, time, width, sky_horizon);
                     if sun_x < width && sky_y < fb.height {
                         let _ = fb.set(sun_x, sky_y, Cell::new('*', sun_fg));
                     }
@@ -3953,7 +3979,8 @@ pub fn render_environment_with_tod(
                 }
                 TimeOfDay::Dusk => {
                     let sun_fg = Color::rgb(255, 110, 64);
-                    let (sun_x, sky_y) = compute.compute_celestial_trajectory(2, time, width, sky_horizon);
+                    let (sun_x, sky_y) =
+                        compute.compute_celestial_trajectory(2, time, width, sky_horizon);
                     if sun_x < width && sky_y < fb.height {
                         let _ = fb.set(sun_x, sky_y, Cell::new('*', sun_fg));
                     }
@@ -3980,7 +4007,8 @@ pub fn render_environment_with_tod(
                 }
                 TimeOfDay::Night => {
                     let moon_fg = Color::rgb(255, 249, 196);
-                    let (mx, sky_y) = compute.compute_celestial_trajectory(3, time, width, sky_horizon);
+                    let (mx, sky_y) =
+                        compute.compute_celestial_trajectory(3, time, width, sky_horizon);
                     if mx + 1 < width && sky_y < fb.height {
                         let _ = fb.set(mx, sky_y, Cell::new('(', moon_fg));
                         let _ = fb.set(mx + 1, sky_y, Cell::new(')', moon_fg));
@@ -4993,9 +5021,15 @@ mod tests {
             }
         }
         // Must contain both clustered intra-grove steps and spacious open clearings
-        assert!(!clearing_distances.is_empty(), "Must feature spacious open clearings");
+        assert!(
+            !clearing_distances.is_empty(),
+            "Must feature spacious open clearings"
+        );
         for &clear in &clearing_distances {
-            assert!(clear >= 70, "Clearing distance must be at least 70 cols, got {clear}");
+            assert!(
+                clear >= 70,
+                "Clearing distance must be at least 70 cols, got {clear}"
+            );
         }
     }
 
@@ -5078,14 +5112,7 @@ mod tests {
 
         // Canopy apex (dy_from_base == height) must stay within physically stable bounds (-2..=2)
         for time in [0.0, 0.8, 1.6, 2.4, 3.2, 4.0] {
-            let offset_tall = calculate_tree_sway_offset(
-                TreeSpecies::Redwood,
-                14,
-                12,
-                14,
-                time,
-                1,
-            );
+            let offset_tall = calculate_tree_sway_offset(TreeSpecies::Redwood, 14, 12, 14, time, 1);
             assert!(
                 (-2..=2).contains(&offset_tall),
                 "Canopy sway offset must be bounded in [-2, 2], got {offset_tall}"
@@ -5212,7 +5239,8 @@ mod tests {
                 for n in 1..80 {
                     let cur_species = calculate_tree_species_with_width(n, env, seed, 160);
                     assert_ne!(
-                        cur_species, prev_species,
+                        cur_species,
+                        prev_species,
                         "Biome {:?}: Tree {} and {} must never share the same species ({:?})",
                         env,
                         n - 1,
@@ -5261,16 +5289,20 @@ mod tests {
         );
 
         // Cherry blossoms bloom in Spring
-        let (ch_spr, _col_spr) = Season::Spring.apply_foliage_phenology(
-            TreeSpecies::CherryBlossom,
-            base_leaf,
-            '@',
-            0,
+        let (ch_spr, _col_spr) =
+            Season::Spring.apply_foliage_phenology(TreeSpecies::CherryBlossom, base_leaf, '@', 0);
+        assert_eq!(
+            ch_spr, '*',
+            "Cherry blossom in Spring must bloom with petal glyph '*'"
         );
-        assert_eq!(ch_spr, '*', "Cherry blossom in Spring must bloom with petal glyph '*'");
 
         // Render full scenery with Season override
-        for season in [Season::Spring, Season::Summer, Season::Autumn, Season::Winter] {
+        for season in [
+            Season::Spring,
+            Season::Summer,
+            Season::Autumn,
+            Season::Winter,
+        ] {
             let mut fb = FrameBuffer::new(120, 24);
             render_scenery_full_with_tod_and_season(
                 &mut fb,

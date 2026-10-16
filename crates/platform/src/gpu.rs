@@ -909,10 +909,7 @@ fn probe_wsl_gpus() -> Vec<GpuInfo> {
     let mut host_vendors_found = Vec::new();
     if let Ok(entries) = std::fs::read_dir("/usr/lib/wsl/drivers") {
         for entry in entries.flatten() {
-            let name_lower = entry
-                .file_name()
-                .to_string_lossy()
-                .to_ascii_lowercase();
+            let name_lower = entry.file_name().to_string_lossy().to_ascii_lowercase();
 
             let vendor = if name_lower.starts_with("nv") || name_lower.contains("nvidia") {
                 Some("NVIDIA")
@@ -1400,8 +1397,12 @@ mod tests {
             "NVIDIA",
             "dxg:nvidia",
         );
-        assert!(nv_arch.contains("Ampere") || nv_arch.contains("Blackwell") || nv_arch.contains("Ada"));
-        assert!(protos.iter().any(|p| p.contains("Vulkan") || p.contains("DirectX")));
+        assert!(
+            nv_arch.contains("Ampere") || nv_arch.contains("Blackwell") || nv_arch.contains("Ada")
+        );
+        assert!(protos
+            .iter()
+            .any(|p| p.contains("Vulkan") || p.contains("DirectX")));
         assert!(yr >= 2020);
 
         // AMD under WSL
@@ -1410,8 +1411,11 @@ mod tests {
         assert!(amd_arch.contains("RDNA") || amd_arch.contains("GCN"));
 
         // Intel under WSL
-        let (intel_arch, _, _) =
-            classify_gpu_architecture("WSL Intel Arc / Iris Xe GPU (Fedora Linux 41)", "Intel", "dxg:intel");
+        let (intel_arch, _, _) = classify_gpu_architecture(
+            "WSL Intel Arc / Iris Xe GPU (Fedora Linux 41)",
+            "Intel",
+            "dxg:intel",
+        );
         assert!(intel_arch.contains("Arc") || intel_arch.contains("Xe"));
 
         // DirectML NPU under WSL
@@ -1421,6 +1425,10 @@ mod tests {
             "directml",
         );
         assert!(dml_protos.iter().any(|p| p.contains("DirectML")));
-        assert!(dml_arch.contains("DirectML") || dml_arch.contains("NPU") || dml_arch.contains("DirectX"));
+        assert!(
+            dml_arch.contains("DirectML")
+                || dml_arch.contains("NPU")
+                || dml_arch.contains("DirectX")
+        );
     }
 }

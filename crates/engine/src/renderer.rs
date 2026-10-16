@@ -340,7 +340,8 @@ impl Renderer for SyncAnsiRenderer {
         }
         self.buf.clear();
         self.buf.extend_from_slice(self.begin_sync().as_bytes());
-        self.inner.render_damage(&mut self.buf, cells, cols, damage)?;
+        self.inner
+            .render_damage(&mut self.buf, cells, cols, damage)?;
         self.buf.extend_from_slice(self.end_sync().as_bytes());
         out.write_all(&self.buf)?;
         out.flush()

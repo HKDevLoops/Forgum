@@ -31,7 +31,7 @@
 //! cfg_windows! { /* windows-only code */ }
 //! ```
 
-#![doc(html_root_url = "https://docs.rs/forgum-platform/0.0.8-beta")]
+#![doc(html_root_url = "https://docs.rs/forgum-platform/0.0.9-beta")]
 
 pub mod biome;
 pub mod compute;
@@ -77,17 +77,19 @@ pub use guards::{AltScreenGuard, CursorShowGuard, RawModeGuard, TimerResolutionG
 pub use mux::{detect_mux, Mux};
 pub use output::{open_output, OutputHandle, OutputTarget};
 pub use package_manager::{
-    atomic_replace_binary, atomic_replace_binary_verified, check_for_updates_cached, check_git_updates, clear_update_cache,
-    compare_semver, detect_available_package_managers, detect_git_status,
-    detect_installation_source, detect_shadow_installations, detect_source_from_path,
-    execute_git_update, execute_package_manager_action, execute_standalone_update,
-    fetch_remote_channel_version, format_update_notice_box, get_funky_latest_version_quote,
-    is_newer_version, local_release_binary_path, parse_version_from_cargo_toml,
-    parse_version_from_release_json, prune_shadow_installation, read_receipt, read_update_cache, record_receipt,
-    reconcile_package_manager_migration, rollback_binary, select_update_action_interactive, select_update_method_interactive, should_spawn_background_check,
-    spawn_background_update_check, verify_binary_signature, write_receipt, write_update_cache,
-    GitRepoStatus, PackageManager, ParsedSemVer, Receipt, ReleaseChannel, ShadowInstallation,
-    UpdateActionChoice, UpdateCheckCache, UpdateNotice, FORGUM_RELEASE_PUBLIC_KEY,
+    atomic_replace_binary, atomic_replace_binary_verified, check_for_updates_cached,
+    check_git_updates, clear_update_cache, compare_semver, detect_available_package_managers,
+    detect_git_status, detect_installation_source, detect_shadow_installations,
+    detect_source_from_path, execute_git_update, execute_package_manager_action,
+    execute_standalone_update, fetch_remote_channel_version, format_update_notice_box,
+    get_funky_latest_version_quote, is_newer_version, local_release_binary_path,
+    parse_version_from_cargo_toml, parse_version_from_release_json, prune_shadow_installation,
+    read_receipt, read_update_cache, reconcile_package_manager_migration, record_receipt,
+    rollback_binary, select_update_action_interactive, select_update_method_interactive,
+    should_spawn_background_check, spawn_background_update_check, verify_binary_signature,
+    write_receipt, write_update_cache, GitRepoStatus, PackageManager, ParsedSemVer, Receipt,
+    ReleaseChannel, ShadowInstallation, UpdateActionChoice, UpdateCheckCache, UpdateNotice,
+    FORGUM_RELEASE_PUBLIC_KEY,
 };
 pub use paths::{
     config_dir, config_path, control_socket_path, daemon_state_path, data_dir, detect_config_file,

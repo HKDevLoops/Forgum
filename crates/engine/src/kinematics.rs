@@ -228,9 +228,9 @@ pub fn ascii_dimensions(text: &str) -> (usize, usize) {
 pub enum CellMask {
     #[default]
     ExteriorTransparent, // Between legs / under wings: background scenery shows through
-    ExteriorMoat,        // 1-cell perimeter halo: suppresses scenery / \ | strokes & dims RGB by 68%
-    InteriorOpaque,      // Enclosed torso/head whitespace: 100% opaque (Rule C)
-    GlyphOpaque,         // Active mascot ASCII stroke
+    ExteriorMoat, // 1-cell perimeter halo: suppresses scenery / \ | strokes & dims RGB by 68%
+    InteriorOpaque, // Enclosed torso/head whitespace: 100% opaque (Rule C)
+    GlyphOpaque,  // Active mascot ASCII stroke
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
@@ -368,7 +368,8 @@ impl AsciiRigMap {
                     } else {
                         RigPart::LimbHindLeft
                     }
-                } else if x == segments.tail_col || (x > segments.tail_col && segments.tail_col > 0) {
+                } else if x == segments.tail_col || (x > segments.tail_col && segments.tail_col > 0)
+                {
                     RigPart::Tail
                 } else {
                     RigPart::Torso
@@ -970,7 +971,14 @@ impl CartoonRig {
             // Cohesive body integrity: in ASCII art, individual characters inside the animal body must NEVER
             // shift horizontally relative to each other (which causes cell collisions and tearing gaps).
             // Instead, secondary action is expressed through smooth continuous luminance modulation.
-            (1.0 + pelvic_dy * 0.25 + spine_wave + if y <= self.segments.head_row { head_nod * 0.25 } else { 0.0 }).clamp(0.65, 1.45)
+            (1.0 + pelvic_dy * 0.25
+                + spine_wave
+                + if y <= self.segments.head_row {
+                    head_nod * 0.25
+                } else {
+                    0.0
+                })
+            .clamp(0.65, 1.45)
         } else if is_floating || is_aquatic {
             // Fluid/Buoyant Locomotion:
             let wave_freq = if is_aquatic { 3.2 } else { 2.0 };

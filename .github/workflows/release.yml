@@ -37,9 +37,26 @@ jobs:
 
           echo "Tag ${TAG} accepted for Cargo.toml version ${VERSION}"
 
+  test-and-lint:
+    name: Mandatory Test & Lint Suite Gate
+    needs: version-check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - name: Format Check
+        run: cargo fmt --all -- --check
+      - name: Clippy Audit
+        run: cargo clippy --workspace --all-targets -- -D warnings
+      - name: Comprehensive Test Suite
+        run: cargo test --workspace
+
   build:
     name: Build ${{ matrix.target }}
-    needs: version-check
+    needs: [version-check, test-and-lint]
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -398,7 +415,7 @@ jobs:
 
   release:
     name: Create GitHub Release
-    needs: [version-check, build, packages, packages-win, verify-release-artifacts]
+    needs: [version-check, test-and-lint, build, packages, packages-win, verify-release-artifacts]
     runs-on: ubuntu-latest
     permissions:
       contents: write

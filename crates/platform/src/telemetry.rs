@@ -317,17 +317,32 @@ mod tests {
         let default_url = resolve_telemetry_url(Metric::UsersTried);
         assert!(default_url.contains("hkdevloops_forgum_users_tried"));
 
-        std::env::set_var("FORGUM_TELEMETRY_ENDPOINT", "https://custom.worker.dev/pulse/{metric}");
+        std::env::set_var(
+            "FORGUM_TELEMETRY_ENDPOINT",
+            "https://custom.worker.dev/pulse/{metric}",
+        );
         let custom_interpolated = resolve_telemetry_url(Metric::ActiveUsers);
-        assert_eq!(custom_interpolated, "https://custom.worker.dev/pulse/active_users");
+        assert_eq!(
+            custom_interpolated,
+            "https://custom.worker.dev/pulse/active_users"
+        );
 
-        std::env::set_var("FORGUM_TELEMETRY_ENDPOINT", "https://custom.worker.dev/hit/");
+        std::env::set_var(
+            "FORGUM_TELEMETRY_ENDPOINT",
+            "https://custom.worker.dev/hit/",
+        );
         let custom_slash = resolve_telemetry_url(Metric::UsersInstalled);
-        assert_eq!(custom_slash, "https://custom.worker.dev/hit/users_installed");
+        assert_eq!(
+            custom_slash,
+            "https://custom.worker.dev/hit/users_installed"
+        );
 
         std::env::set_var("FORGUM_TELEMETRY_ENDPOINT", "https://custom.worker.dev/hit");
         let custom_no_slash = resolve_telemetry_url(Metric::UsersInstalled);
-        assert_eq!(custom_no_slash, "https://custom.worker.dev/hit/users_installed");
+        assert_eq!(
+            custom_no_slash,
+            "https://custom.worker.dev/hit/users_installed"
+        );
 
         std::env::remove_var("FORGUM_TELEMETRY_ENDPOINT");
     }

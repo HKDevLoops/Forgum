@@ -169,15 +169,21 @@ impl FetchInfo {
         let (resolved_type, info_opt) = resolve_acceleration(AccelerationMode::Auto);
         let accel = match resolved_type {
             GpuDeviceType::Dedicated => {
-                let name = info_opt.map(|i| i.name).unwrap_or_else(|| "GPU".to_string());
+                let name = info_opt
+                    .map(|i| i.name)
+                    .unwrap_or_else(|| "GPU".to_string());
                 format!("Vulkan 1.3 Compute (Dedicated: {name})")
             }
             GpuDeviceType::Integrated => {
-                let name = info_opt.map(|i| i.name).unwrap_or_else(|| "APU".to_string());
+                let name = info_opt
+                    .map(|i| i.name)
+                    .unwrap_or_else(|| "APU".to_string());
                 format!("Vulkan Compute (Integrated: {name})")
             }
             GpuDeviceType::Npu => {
-                let name = info_opt.map(|i| i.name).unwrap_or_else(|| "NPU".to_string());
+                let name = info_opt
+                    .map(|i| i.name)
+                    .unwrap_or_else(|| "NPU".to_string());
                 format!("Neural Processing Unit (NPU: {name})")
             }
             GpuDeviceType::Cpu => "SIMD Parallel CPU Kernel (<100MB RAM)".to_string(),
@@ -260,7 +266,9 @@ pub fn render_instant_fetch(cow_name: Option<&str>, palette_override: Option<&st
         label_color.0,
         label_color.1,
         label_color.2,
-        "─".repeat(info.user.len() + info.host.len() + 1).min("─".repeat(40))
+        "─"
+            .repeat(info.user.len() + info.host.len() + 1)
+            .min("─".repeat(40))
     );
 
     let mut cards: Vec<String> = Vec::new();
@@ -274,7 +282,12 @@ pub fn render_instant_fetch(cow_name: Option<&str>, palette_override: Option<&st
         ));
     };
 
-    add_item(&mut cards, "💻", "OS", &format!("{} ({})", info.os, info.arch));
+    add_item(
+        &mut cards,
+        "💻",
+        "OS",
+        &format!("{} ({})", info.os, info.arch),
+    );
     add_item(&mut cards, "🐧", "Kernel", &info.kernel);
     add_item(&mut cards, "⏱️", "Uptime", &info.uptime);
     add_item(&mut cards, "📦", "Packages", &info.packages);

@@ -176,10 +176,7 @@ pub fn render_options(category: &str) -> String {
         || cat == "time-of-day"
         || cat == "time_of_day"
         || cat == "time";
-    let show_season = show_all
-        || show_scenery
-        || cat == "season"
-        || cat == "seasons";
+    let show_season = show_all || show_scenery || cat == "season" || cat == "seasons";
     let show_colors = show_all
         || cat == "colors"
         || cat == "color"
@@ -633,7 +630,9 @@ pub fn render_options(category: &str) -> String {
     }
 
     if show_tod {
-        out.push_str("\n\x1b[1;35m━━━ Atmospheric Solar Illumination (--time-of-day / --tod) ━━━\x1b[0m\n");
+        out.push_str(
+            "\n\x1b[1;35m━━━ Atmospheric Solar Illumination (--time-of-day / --tod) ━━━\x1b[0m\n",
+        );
         let tod_headers = [
             "Time of Day",
             "Solar & Lunar Lighting Condition",
@@ -1248,31 +1247,86 @@ pub fn render_help(category: Option<&str>) -> String {
     let show_mascots = show_all
         || matches!(
             cat.as_deref(),
-            Some("mascots" | "mascot" | "cows" | "cow" | "animals" | "animal" | "kinematics" | "effects" | "effect")
+            Some(
+                "mascots"
+                    | "mascot"
+                    | "cows"
+                    | "cow"
+                    | "animals"
+                    | "animal"
+                    | "kinematics"
+                    | "effects"
+                    | "effect"
+            )
         );
     let show_scenery = show_all
         || matches!(
             cat.as_deref(),
-            Some("scenery" | "nature" | "mountains" | "mountain" | "roads" | "road" | "env" | "environment" | "biome")
+            Some(
+                "scenery"
+                    | "nature"
+                    | "mountains"
+                    | "mountain"
+                    | "roads"
+                    | "road"
+                    | "env"
+                    | "environment"
+                    | "biome"
+            )
         );
     let show_colors = show_all
         || matches!(
             cat.as_deref(),
-            Some("colors" | "color" | "palettes" | "palette" | "contrast" | "accessibility" | "colorblind")
+            Some(
+                "colors"
+                    | "color"
+                    | "palettes"
+                    | "palette"
+                    | "contrast"
+                    | "accessibility"
+                    | "colorblind"
+            )
         );
     let show_display = show_all
         || matches!(
             cat.as_deref(),
-            Some("display" | "timing" | "performance" | "fps" | "duration" | "accel" | "gpu" | "aspect" | "split" | "banner")
+            Some(
+                "display"
+                    | "timing"
+                    | "performance"
+                    | "fps"
+                    | "duration"
+                    | "accel"
+                    | "gpu"
+                    | "aspect"
+                    | "split"
+                    | "banner"
+            )
         );
     let show_system = show_all
         || matches!(
             cat.as_deref(),
-            Some("system" | "config" | "update" | "logs" | "diagnose" | "checkhealth" | "doctor" | "shell" | "init" | "completions" | "daemons" | "daemon" | "battle")
+            Some(
+                "system"
+                    | "config"
+                    | "update"
+                    | "logs"
+                    | "diagnose"
+                    | "checkhealth"
+                    | "doctor"
+                    | "shell"
+                    | "init"
+                    | "completions"
+                    | "daemons"
+                    | "daemon"
+                    | "battle"
+            )
         );
 
     out.push_str("\x1b[1;35m━━━ Forgum Universal Terminal Engine ━━━\x1b[0m\n");
-    out.push_str("\x1b[1;37mUsage:\x1b[0m \x1b[1;32mforgum [SUBCOMMAND] [OPTIONS] [MESSAGE]\x1b[0m\n");
+    out.push_str(
+        "\x1b[1;37mUsage:\x1b[0m \x1b[1;32mforgum [SUBCOMMAND] [OPTIONS] [MESSAGE]\x1b[0m\n",
+    );
     out.push_str("\x1b[90mDual Representation: Actions can be invoked via subcommands (e.g. 'forgum cow tux') or CLI flags (e.g. 'forgum --cow tux').\x1b[0m\n");
     out.push_str("\x1b[1;34mDocumentation:\x1b[0m \x1b[4mhttps://github.com/HKDevLoops/Forgum#configuration\x1b[0m\n\n");
 

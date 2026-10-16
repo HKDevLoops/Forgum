@@ -3407,7 +3407,11 @@ export extern "forgum" [
                 self.studio_debug_overlay = !self.studio_debug_overlay;
                 self.status_message = format!(
                     "Studio Hull/Moat Overlay: {}",
-                    if self.studio_debug_overlay { "ACTIVE" } else { "DISABLED" }
+                    if self.studio_debug_overlay {
+                        "ACTIVE"
+                    } else {
+                        "DISABLED"
+                    }
                 );
             }
             KeyCode::Left | KeyCode::Char('h') | KeyCode::Char('[') => {

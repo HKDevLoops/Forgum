@@ -680,8 +680,7 @@ pub fn run_liquid_showdown(
                         | crossterm::event::KeyCode::Esc => {
                             return;
                         }
-                        crossterm::event::KeyCode::Char(' ')
-                        | crossterm::event::KeyCode::Enter
+                        crossterm::event::KeyCode::Char(' ') | crossterm::event::KeyCode::Enter
                             if start_time.elapsed() < Duration::from_millis(1600) =>
                         {
                             start_time = Instant::now() - Duration::from_millis(1700);
@@ -914,20 +913,24 @@ mod tests {
         let outcome = RpsOutcome::PlayerWins;
 
         // Phase 1: Countdown pump
-        let frame_count1 = render_liquid_showdown_frame(p_name, c_name, p_move, c_move, outcome, 0.2);
+        let frame_count1 =
+            render_liquid_showdown_frame(p_name, c_name, p_move, c_move, outcome, 0.2);
         assert!(frame_count1.contains("ROCK • PAPER • SCISSORS SHOWDOWN"));
         assert!(frame_count1.contains("ROCK..."));
 
         // Phase 2: Shoot & thrust
-        let frame_shoot = render_liquid_showdown_frame(p_name, c_name, p_move, c_move, outcome, 1.2);
+        let frame_shoot =
+            render_liquid_showdown_frame(p_name, c_name, p_move, c_move, outcome, 1.2);
         assert!(frame_shoot.contains("SHOOT!"));
 
         // Phase 3: Impact & recoil
-        let frame_impact = render_liquid_showdown_frame(p_name, c_name, p_move, c_move, outcome, 1.6);
+        let frame_impact =
+            render_liquid_showdown_frame(p_name, c_name, p_move, c_move, outcome, 1.6);
         assert!(frame_impact.contains("CRITICAL IMPACT"));
 
         // Phase 4: Victorious fanfare
-        let frame_result = render_liquid_showdown_frame(p_name, c_name, p_move, c_move, outcome, 2.0);
+        let frame_result =
+            render_liquid_showdown_frame(p_name, c_name, p_move, c_move, outcome, 2.0);
         assert!(frame_result.contains("VICTORY"));
         assert!(frame_result.contains("CRUSHES"));
     }

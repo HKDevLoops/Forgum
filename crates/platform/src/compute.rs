@@ -525,9 +525,9 @@ impl ComputeEngine {
     ) -> (usize, usize) {
         let (u_base, u_scale, time_scale, arc_factor_scale) = match mode {
             0 => (0.12f32, 0.14f32, 0.05f32, 0.65f32), // Dawn
-            1 => (0.28, 0.44, 0.035, 0.70),             // Day
-            2 => (0.74, 0.14, 0.05, 0.65),              // Dusk
-            _ => (0.35, 0.35, 0.025, 0.55),             // Night (Moon)
+            1 => (0.28, 0.44, 0.035, 0.70),            // Day
+            2 => (0.74, 0.14, 0.05, 0.65),             // Dusk
+            _ => (0.35, 0.35, 0.025, 0.55),            // Night (Moon)
         };
         let u = u_base + u_scale * ((time * time_scale).fract());
         let sun_x = (u * (cols.saturating_sub(6) as f32) + 3.0).round() as usize;
@@ -611,8 +611,7 @@ impl ComputeEngine {
         let h_norm = h_norm.clamp(0.0, 1.0);
         if is_small_shrub {
             let flutter_phase = time * 4.8 + seed * 2.1;
-            let flutter_wave =
-                (flutter_phase.sin() * 0.65) + ((flutter_phase * 1.83).cos() * 0.35);
+            let flutter_wave = (flutter_phase.sin() * 0.65) + ((flutter_phase * 1.83).cos() * 0.35);
             let flutter_amt = h_norm * flutter_wave * 1.1;
             flutter_amt.round() as isize
         } else {
@@ -827,4 +826,3 @@ mod tests {
         }
     }
 }
-

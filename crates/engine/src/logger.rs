@@ -132,7 +132,9 @@ fn rotate_log_file(path: &std::path::Path, max_bytes: u64, max_generations: usiz
     if let Ok(meta) = fs::metadata(path) {
         if meta.len() > max_bytes {
             let Some(parent) = path.parent() else { return };
-            let Some(filename) = path.file_name().and_then(|f| f.to_str()) else { return };
+            let Some(filename) = path.file_name().and_then(|f| f.to_str()) else {
+                return;
+            };
 
             for gen in (1..max_generations).rev() {
                 let src = parent.join(format!("{filename}.{gen}"));
@@ -839,27 +841,50 @@ mod tests {
         rotate_log_file(&log_file, 50, 3);
         assert!(!log_file.exists());
         assert!(temp_dir.path().join("forgum.log.1").exists());
-        assert_eq!(fs::read(temp_dir.path().join("forgum.log.1")).unwrap().len(), 100);
+        assert_eq!(
+            fs::read(temp_dir.path().join("forgum.log.1"))
+                .unwrap()
+                .len(),
+            100
+        );
 
         // Write again to log_file
         fs::write(&log_file, vec![b'B'; 100]).expect("write B");
         rotate_log_file(&log_file, 50, 3);
         assert!(temp_dir.path().join("forgum.log.2").exists());
-        assert_eq!(fs::read(temp_dir.path().join("forgum.log.2")).unwrap()[0], b'A');
-        assert_eq!(fs::read(temp_dir.path().join("forgum.log.1")).unwrap()[0], b'B');
+        assert_eq!(
+            fs::read(temp_dir.path().join("forgum.log.2")).unwrap()[0],
+            b'A'
+        );
+        assert_eq!(
+            fs::read(temp_dir.path().join("forgum.log.1")).unwrap()[0],
+            b'B'
+        );
 
         // Write a 3rd time
         fs::write(&log_file, vec![b'C'; 100]).expect("write C");
         rotate_log_file(&log_file, 50, 3);
         assert!(temp_dir.path().join("forgum.log.3").exists());
-        assert_eq!(fs::read(temp_dir.path().join("forgum.log.3")).unwrap()[0], b'A');
+        assert_eq!(
+            fs::read(temp_dir.path().join("forgum.log.3")).unwrap()[0],
+            b'A'
+        );
 
         // Write a 4th time: .3 (original A) should be evicted because max_generations is 3
         fs::write(&log_file, vec![b'D'; 100]).expect("write D");
         rotate_log_file(&log_file, 50, 3);
         assert!(!temp_dir.path().join("forgum.log.4").exists());
-        assert_eq!(fs::read(temp_dir.path().join("forgum.log.1")).unwrap()[0], b'D');
-        assert_eq!(fs::read(temp_dir.path().join("forgum.log.2")).unwrap()[0], b'C');
-        assert_eq!(fs::read(temp_dir.path().join("forgum.log.3")).unwrap()[0], b'B');
+        assert_eq!(
+            fs::read(temp_dir.path().join("forgum.log.1")).unwrap()[0],
+            b'D'
+        );
+        assert_eq!(
+            fs::read(temp_dir.path().join("forgum.log.2")).unwrap()[0],
+            b'C'
+        );
+        assert_eq!(
+            fs::read(temp_dir.path().join("forgum.log.3")).unwrap()[0],
+            b'B'
+        );
     }
 }

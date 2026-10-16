@@ -878,7 +878,10 @@ pub fn fetch_remote_channel_version(channel: ReleaseChannel) -> Result<String, S
         }
     }
 
-    if let Some(max_ver) = candidate_versions.into_iter().max_by(|a, b| compare_semver(a, b)) {
+    if let Some(max_ver) = candidate_versions
+        .into_iter()
+        .max_by(|a, b| compare_semver(a, b))
+    {
         return Ok(max_ver);
     }
 
@@ -1637,7 +1640,11 @@ pub fn detect_shadow_installations() -> Vec<ShadowInstallation> {
                 let dir_str = dir.to_string_lossy();
                 // In WSL, Windows host paths are mounted under /mnt/ and shared into PATH.
                 // We MUST ignore Windows host paths in WSL per architecture mandate.
-                if is_wsl_env && (dir_str.starts_with("/mnt/") || dir_str.contains("/mnt/c/") || dir_str.contains("/mnt/d/")) {
+                if is_wsl_env
+                    && (dir_str.starts_with("/mnt/")
+                        || dir_str.contains("/mnt/c/")
+                        || dir_str.contains("/mnt/d/"))
+                {
                     continue;
                 }
                 let candidate = dir.join("forgum");
@@ -1735,7 +1742,11 @@ pub fn detect_shadow_installations() -> Vec<ShadowInstallation> {
         {
             if crate::terminal::is_wsl() {
                 let cand_str = candidate.to_string_lossy().to_ascii_lowercase();
-                if cand_str.starts_with("/mnt/") || cand_str.ends_with(".exe") || cand_str.ends_with(".cmd") || cand_str.ends_with(".bat") {
+                if cand_str.starts_with("/mnt/")
+                    || cand_str.ends_with(".exe")
+                    || cand_str.ends_with(".cmd")
+                    || cand_str.ends_with(".bat")
+                {
                     continue;
                 }
             }
@@ -1748,8 +1759,10 @@ pub fn detect_shadow_installations() -> Vec<ShadowInstallation> {
         // Skip in-tree developer build target artifacts (target/debug, target/release, target/debug/deps)
         // when they are not the active binary.
         let canon_str = canon.to_string_lossy();
-        if (canon_str.contains(r"target\debug") || canon_str.contains("target/debug")
-            || canon_str.contains(r"target\release") || canon_str.contains("target/release"))
+        if (canon_str.contains(r"target\debug")
+            || canon_str.contains("target/debug")
+            || canon_str.contains(r"target\release")
+            || canon_str.contains("target/release"))
             && current_canon.as_ref().map(|c| c != &canon).unwrap_or(true)
         {
             continue;
@@ -1800,12 +1813,17 @@ pub fn detect_shadow_installations() -> Vec<ShadowInstallation> {
 /// Prunes / removes an individual shadowed or duplicate Forgum installation from disk.
 pub fn prune_shadow_installation(path: &Path) -> Result<String, PlatformError> {
     if !path.exists() {
-        return Ok(format!("Path '{}' does not exist or was already removed.", path.display()));
+        return Ok(format!(
+            "Path '{}' does not exist or was already removed.",
+            path.display()
+        ));
     }
 
     // Protection: never prune the currently running executable via prune!
     if let Ok(cur_exe) = std::env::current_exe() {
-        if let (Ok(cur_canon), Ok(target_canon)) = (std::fs::canonicalize(&cur_exe), std::fs::canonicalize(path)) {
+        if let (Ok(cur_canon), Ok(target_canon)) =
+            (std::fs::canonicalize(&cur_exe), std::fs::canonicalize(path))
+        {
             if cur_canon == target_canon {
                 return Err(PlatformError::InvalidArgument(format!(
                     "Cannot prune active binary currently running at '{}'.",
@@ -1828,7 +1846,10 @@ pub fn prune_shadow_installation(path: &Path) -> Result<String, PlatformError> {
                     }
                 }
             }
-            Ok(format!("Successfully removed duplicate binary at '{}'.", path.display()))
+            Ok(format!(
+                "Successfully removed duplicate binary at '{}'.",
+                path.display()
+            ))
         }
         Err(e) if e.kind() == std::io::ErrorKind::PermissionDenied => {
             #[cfg(unix)]
@@ -1863,7 +1884,9 @@ pub fn prune_shadow_installation(path: &Path) -> Result<String, PlatformError> {
 ///
 /// Ensures the package-manager managed binary becomes authoritative in PATH and decommissions
 /// any shadowed standalone binary to prevent stale version execution.
-pub fn reconcile_package_manager_migration(target_pm: PackageManager) -> Result<String, PlatformError> {
+pub fn reconcile_package_manager_migration(
+    target_pm: PackageManager,
+) -> Result<String, PlatformError> {
     if target_pm == PackageManager::DirectBinary {
         return Ok("Standalone binary channel confirmed.".to_string());
     }
@@ -1880,7 +1903,9 @@ pub fn reconcile_package_manager_migration(target_pm: PackageManager) -> Result<
                 // If old standalone binary is present, rename or remove it so PM binary takes priority
                 let old_path = &inst.path;
                 let bak_path = old_path.with_extension("standalone.decommissioned");
-                if std::fs::rename(old_path, &bak_path).is_ok() || std::fs::remove_file(old_path).is_ok() {
+                if std::fs::rename(old_path, &bak_path).is_ok()
+                    || std::fs::remove_file(old_path).is_ok()
+                {
                     decommissioned.push(old_path.display().to_string());
                 }
             }
@@ -2648,16 +2673,16 @@ mod tests {
     #[test]
     fn test_format_update_notice_box_styling() {
         let notice = UpdateNotice {
-            current_version: "0.0.7-beta".to_string(),
-            latest_version: "0.0.8-beta".to_string(),
+            current_version: "0.0.8-beta".to_string(),
+            latest_version: "0.0.9-beta".to_string(),
             channel: ReleaseChannel::Stable,
             update_command: "forgum update".to_string(),
             pm_update_command: Some("sudo zypper update forgum".to_string()),
         };
 
         let box_str = format_update_notice_box(&notice);
-        assert!(box_str.contains("0.0.7-beta"));
         assert!(box_str.contains("0.0.8-beta"));
+        assert!(box_str.contains("0.0.9-beta"));
         assert!(box_str.contains("forgum update"));
         assert!(box_str.contains("sudo zypper update forgum"));
     }
@@ -2666,7 +2691,7 @@ mod tests {
     fn test_clear_update_cache_removes_file() {
         let cache = UpdateCheckCache {
             last_checked: 1700000000,
-            latest_version: "0.0.8-beta".to_string(),
+            latest_version: "0.0.9-beta".to_string(),
             channel: ReleaseChannel::Dev,
         };
         let _ = write_update_cache(&cache);

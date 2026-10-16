@@ -536,7 +536,12 @@ pub enum Commands {
         background_worker: bool,
     },
     /// Detect and prune duplicate or shadowed Forgum installations across package managers.
-    #[command(name = "prune", alias = "prune-duplicates", alias = "prune-shadows", alias = "clean-duplicates")]
+    #[command(
+        name = "prune",
+        alias = "prune-duplicates",
+        alias = "prune-shadows",
+        alias = "clean-duplicates"
+    )]
     Prune {
         /// Automatically confirm pruning without interactive prompts.
         #[arg(short = 'y', long, alias = "yes", alias = "force")]
@@ -878,7 +883,12 @@ pub enum Commands {
         message: Vec<String>,
     },
     /// Display beautiful terminal system telemetry with animated mascot (fastfetch/neofetch replacement).
-    #[command(alias = "sysinfo", alias = "info", alias = "neofetch", alias = "fastfetch")]
+    #[command(
+        alias = "sysinfo",
+        alias = "info",
+        alias = "neofetch",
+        alias = "fastfetch"
+    )]
     Fetch {
         /// Force single-frame instantaneous terminal output (default).
         #[arg(long, short = 'i')]
@@ -1419,14 +1429,17 @@ pub fn parse_args(argv: Vec<String>) -> Result<(Args, Option<Commands>), CliErro
                         .find(|arg| arg.starts_with('-'))
                         .map(|s| s.as_str())
                         .unwrap_or("unknown");
-                    let subcmd_opt = normalized_argv
-                        .iter()
-                        .skip(1)
-                        .find(|arg| !arg.starts_with('-') && SUBCOMMAND_CANDIDATES.contains(&arg.as_str()));
+                    let subcmd_opt = normalized_argv.iter().skip(1).find(|arg| {
+                        !arg.starts_with('-') && SUBCOMMAND_CANDIDATES.contains(&arg.as_str())
+                    });
                     if let Some(subcmd) = subcmd_opt {
-                        if let Some(valid_flags) = crate::completions::flags_for_subcommand(subcmd) {
-                            let mut flag_names: Vec<&str> = valid_flags.iter().map(|(f, _)| *f).collect();
-                            if let Some(metas) = crate::completions::flag_metas_for_subcommand(subcmd) {
+                        if let Some(valid_flags) = crate::completions::flags_for_subcommand(subcmd)
+                        {
+                            let mut flag_names: Vec<&str> =
+                                valid_flags.iter().map(|(f, _)| *f).collect();
+                            if let Some(metas) =
+                                crate::completions::flag_metas_for_subcommand(subcmd)
+                            {
                                 for f in metas {
                                     for alias in f.aliases {
                                         if alias.starts_with("--") {
@@ -2166,7 +2179,8 @@ pub fn validate_cli_values(cli: &Cli, command: &Option<Commands>) -> Result<(), 
     let eff_opt = cli.effect.as_deref().or(cli.animation_type.as_deref());
     if let Some(eff) = eff_opt {
         if !is_list_query(eff) && eff != "random" {
-            let valid_choices = crate::completions::choices_for_flag("--effect").unwrap_or_default();
+            let valid_choices =
+                crate::completions::choices_for_flag("--effect").unwrap_or_default();
             let valid_names: Vec<&str> = valid_choices.iter().map(|(n, _)| *n).collect();
             if !valid_names.iter().any(|v| v.eq_ignore_ascii_case(eff)) {
                 let closest = find_closest_match(eff, &valid_names);
@@ -2186,7 +2200,8 @@ pub fn validate_cli_values(cli: &Cli, command: &Option<Commands>) -> Result<(), 
     // 2. --color-mode
     if let Some(ref cm) = cli.color_mode {
         if !is_list_query(cm) {
-            let valid_choices = crate::completions::choices_for_flag("--color-mode").unwrap_or_default();
+            let valid_choices =
+                crate::completions::choices_for_flag("--color-mode").unwrap_or_default();
             let valid_names: Vec<&str> = valid_choices.iter().map(|(n, _)| *n).collect();
             if !valid_names.iter().any(|v| v.eq_ignore_ascii_case(cm)) {
                 let closest = find_closest_match(cm, &valid_names);
@@ -2206,7 +2221,8 @@ pub fn validate_cli_values(cli: &Cli, command: &Option<Commands>) -> Result<(), 
     // 3. --mountain
     if let Some(ref m) = cli.mountain {
         if !is_list_query(m) && m != "random" {
-            let valid_choices = crate::completions::choices_for_flag("--mountain").unwrap_or_default();
+            let valid_choices =
+                crate::completions::choices_for_flag("--mountain").unwrap_or_default();
             let valid_names: Vec<&str> = valid_choices.iter().map(|(n, _)| *n).collect();
             if !valid_names.iter().any(|v| v.eq_ignore_ascii_case(m)) {
                 let closest = find_closest_match(m, &valid_names);
@@ -2246,7 +2262,8 @@ pub fn validate_cli_values(cli: &Cli, command: &Option<Commands>) -> Result<(), 
     // 5. --environment
     if let Some(ref e) = cli.environment {
         if !is_list_query(e) && e != "random" {
-            let valid_choices = crate::completions::choices_for_flag("--environment").unwrap_or_default();
+            let valid_choices =
+                crate::completions::choices_for_flag("--environment").unwrap_or_default();
             let valid_names: Vec<&str> = valid_choices.iter().map(|(n, _)| *n).collect();
             if !valid_names.iter().any(|v| v.eq_ignore_ascii_case(e)) {
                 let closest = find_closest_match(e, &valid_names);
@@ -2283,7 +2300,8 @@ pub fn validate_cli_values(cli: &Cli, command: &Option<Commands>) -> Result<(), 
 
     // 7. --time-of-day
     if let Some(ref tod) = cli.time_of_day {
-        let valid_choices = crate::completions::choices_for_flag("--time-of-day").unwrap_or_default();
+        let valid_choices =
+            crate::completions::choices_for_flag("--time-of-day").unwrap_or_default();
         let valid_names: Vec<&str> = valid_choices.iter().map(|(n, _)| *n).collect();
         if !valid_names.iter().any(|v| v.eq_ignore_ascii_case(tod)) {
             let closest = find_closest_match(tod, &valid_names);
@@ -2337,7 +2355,8 @@ pub fn validate_cli_values(cli: &Cli, command: &Option<Commands>) -> Result<(), 
 
     // 10. --aspect-mode
     if let Some(ref am) = cli.aspect_mode {
-        let valid_choices = crate::completions::choices_for_flag("--aspect-mode").unwrap_or_default();
+        let valid_choices =
+            crate::completions::choices_for_flag("--aspect-mode").unwrap_or_default();
         let valid_names: Vec<&str> = valid_choices.iter().map(|(n, _)| *n).collect();
         if !valid_names.iter().any(|v| v.eq_ignore_ascii_case(am)) {
             let closest = find_closest_match(am, &valid_names);
@@ -2355,7 +2374,8 @@ pub fn validate_cli_values(cli: &Cli, command: &Option<Commands>) -> Result<(), 
 
     // 11. --colorblind
     if let Some(ref cb) = cli.colorblind {
-        let valid_choices = crate::completions::choices_for_flag("--colorblind").unwrap_or_default();
+        let valid_choices =
+            crate::completions::choices_for_flag("--colorblind").unwrap_or_default();
         let valid_names: Vec<&str> = valid_choices.iter().map(|(n, _)| *n).collect();
         if !valid_names.iter().any(|v| v.eq_ignore_ascii_case(cb)) {
             let closest = find_closest_match(cb, &valid_names);
@@ -2373,7 +2393,8 @@ pub fn validate_cli_values(cli: &Cli, command: &Option<Commands>) -> Result<(), 
 
     // 12. --split-mode
     if let Some(ref sm) = cli.split_mode {
-        let valid_choices = crate::completions::choices_for_flag("--split-mode").unwrap_or_default();
+        let valid_choices =
+            crate::completions::choices_for_flag("--split-mode").unwrap_or_default();
         let valid_names: Vec<&str> = valid_choices.iter().map(|(n, _)| *n).collect();
         if !valid_names.iter().any(|v| v.eq_ignore_ascii_case(sm)) {
             let closest = find_closest_match(sm, &valid_names);
@@ -2392,9 +2413,13 @@ pub fn validate_cli_values(cli: &Cli, command: &Option<Commands>) -> Result<(), 
     // 13. Subcommand specific validations
     if let Some(ref cmd) = command {
         match cmd {
-            Commands::Update { method: Some(ref m), .. } => {
+            Commands::Update {
+                method: Some(ref m),
+                ..
+            } => {
                 if !is_list_query(m) {
-                    let valid_choices = crate::completions::choices_for_flag("--method").unwrap_or_default();
+                    let valid_choices =
+                        crate::completions::choices_for_flag("--method").unwrap_or_default();
                     let valid_names: Vec<&str> = valid_choices.iter().map(|(n, _)| *n).collect();
                     if !valid_names.iter().any(|v| v.eq_ignore_ascii_case(m)) {
                         let closest = find_closest_match(m, &valid_names);
@@ -2410,9 +2435,13 @@ pub fn validate_cli_values(cli: &Cli, command: &Option<Commands>) -> Result<(), 
                     }
                 }
             }
-            Commands::Uninstall { method: Some(ref m), .. } => {
+            Commands::Uninstall {
+                method: Some(ref m),
+                ..
+            } => {
                 if !is_list_query(m) {
-                    let valid_choices = crate::completions::choices_for_flag("--method").unwrap_or_default();
+                    let valid_choices =
+                        crate::completions::choices_for_flag("--method").unwrap_or_default();
                     let valid_names: Vec<&str> = valid_choices.iter().map(|(n, _)| *n).collect();
                     if !valid_names.iter().any(|v| v.eq_ignore_ascii_case(m)) && m != "purge" {
                         let closest = find_closest_match(m, &valid_names);
@@ -2428,8 +2457,12 @@ pub fn validate_cli_values(cli: &Cli, command: &Option<Commands>) -> Result<(), 
                     }
                 }
             }
-            Commands::Config { migrate: Some(ref fmt), .. } => {
-                let valid_choices = crate::completions::choices_for_flag("--migrate").unwrap_or_default();
+            Commands::Config {
+                migrate: Some(ref fmt),
+                ..
+            } => {
+                let valid_choices =
+                    crate::completions::choices_for_flag("--migrate").unwrap_or_default();
                 let valid_names: Vec<&str> = valid_choices.iter().map(|(n, _)| *n).collect();
                 if !valid_names.iter().any(|v| v.eq_ignore_ascii_case(fmt)) {
                     let closest = find_closest_match(fmt, &valid_names);
@@ -2444,8 +2477,12 @@ pub fn validate_cli_values(cli: &Cli, command: &Option<Commands>) -> Result<(), 
                     });
                 }
             }
-            Commands::Logs { level: Some(ref lvl), .. } => {
-                let valid_choices = crate::completions::choices_for_flag("--level").unwrap_or_default();
+            Commands::Logs {
+                level: Some(ref lvl),
+                ..
+            } => {
+                let valid_choices =
+                    crate::completions::choices_for_flag("--level").unwrap_or_default();
                 let valid_names: Vec<&str> = valid_choices.iter().map(|(n, _)| *n).collect();
                 if !valid_names.iter().any(|v| v.eq_ignore_ascii_case(lvl)) {
                     let closest = find_closest_match(lvl, &valid_names);
@@ -2460,8 +2497,12 @@ pub fn validate_cli_values(cli: &Cli, command: &Option<Commands>) -> Result<(), 
                     });
                 }
             }
-            Commands::RpsBattle { choice: Some(ref ch), .. } => {
-                let valid_choices = crate::completions::choices_for_flag("--choice").unwrap_or_default();
+            Commands::RpsBattle {
+                choice: Some(ref ch),
+                ..
+            } => {
+                let valid_choices =
+                    crate::completions::choices_for_flag("--choice").unwrap_or_default();
                 let valid_names: Vec<&str> = valid_choices.iter().map(|(n, _)| *n).collect();
                 if !valid_names.iter().any(|v| v.eq_ignore_ascii_case(ch)) {
                     let closest = find_closest_match(ch, &valid_names);
@@ -2477,17 +2518,31 @@ pub fn validate_cli_values(cli: &Cli, command: &Option<Commands>) -> Result<(), 
                 }
             }
             Commands::List { ref category } => {
-                let valid_cats = &["all", "animals", "effects", "scenery", "colors", "shells", "mountains", "roads", "environments", "config", "multiplexers", "eyes", "tongue"];
+                let valid_cats = &[
+                    "all",
+                    "animals",
+                    "effects",
+                    "scenery",
+                    "colors",
+                    "shells",
+                    "mountains",
+                    "roads",
+                    "environments",
+                    "config",
+                    "multiplexers",
+                    "eyes",
+                    "tongue",
+                ];
                 if !valid_cats.iter().any(|c| c.eq_ignore_ascii_case(category)) {
                     let closest = find_closest_match(category, valid_cats);
-                    let choices: Vec<(&str, &str)> = crate::completions::LIST_CATEGORY_CHOICES.iter().map(|c| (c.value, c.description)).collect();
+                    let choices: Vec<(&str, &str)> = crate::completions::LIST_CATEGORY_CHOICES
+                        .iter()
+                        .map(|c| (c.value, c.description))
+                        .collect();
                     return Err(CliError {
                         exit_code: 64,
                         message: crate::completions::format_invalid_value_error(
-                            "category",
-                            category,
-                            closest,
-                            &choices,
+                            "category", category, closest, &choices,
                         ),
                     });
                 }
@@ -2669,7 +2724,10 @@ mod tests {
         let (a, cmd) = parse(&["forgum", "status-line"]);
         assert_eq!(a.command, Command::StatusLine);
         assert_eq!(a.max_len, Some(70));
-        assert!(matches!(cmd, Some(Commands::StatusLine { max_len: 70, .. })));
+        assert!(matches!(
+            cmd,
+            Some(Commands::StatusLine { max_len: 70, .. })
+        ));
     }
 
     #[test]
@@ -2935,6 +2993,8 @@ mod tests {
         ])
         .unwrap_err();
         assert_eq!(err_help_cat.exit_code, 0);
-        assert!(err_help_cat.message.contains("Procedural Scenery & Nature Mathematics"));
+        assert!(err_help_cat
+            .message
+            .contains("Procedural Scenery & Nature Mathematics"));
     }
 }
