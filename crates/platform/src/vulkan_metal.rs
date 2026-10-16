@@ -151,11 +151,32 @@ pub fn probe_vulkan_runtime() -> VulkanRuntimeInfo {
     #[cfg(target_os = "linux")]
     {
         let candidates = [
-            "/usr/lib/libvulkan.so.1",
-            "/usr/lib64/libvulkan.so.1",
+            // WSL Microsoft Host Pass-Through (Ubuntu, Debian, Fedora, Arch, Alpine, openSUSE, Void, Gentoo, NixOS)
+            "/usr/lib/wsl/lib/libvulkan.so.1",
+            "/usr/lib/wsl/lib/libvulkan.so",
+            "/mnt/c/Windows/System32/lxss/lib/libvulkan.so.1",
+            // Mesa Direct3D 12 (Dozen) Vulkan drivers for WSL across all Linux distros
+            "/usr/lib/x86_64-linux-gnu/libvulkan_dzn.so",
+            "/usr/lib/aarch64-linux-gnu/libvulkan_dzn.so",
+            "/usr/lib/libvulkan_dzn.so",
+            "/usr/lib64/libvulkan_dzn.so",
+            // Multiarch (Debian, Ubuntu, Pop!_OS, Linux Mint)
             "/usr/lib/x86_64-linux-gnu/libvulkan.so.1",
+            "/usr/lib/x86_64-linux-gnu/libvulkan.so",
             "/usr/lib/aarch64-linux-gnu/libvulkan.so.1",
+            "/usr/lib/aarch64-linux-gnu/libvulkan.so",
+            // Single-arch: Arch Linux, Alpine Linux (musl libc), Void Linux, Debian single-arch
+            "/usr/lib/libvulkan.so.1",
+            "/usr/lib/libvulkan.so",
+            // Red Hat, Fedora, CentOS, AlmaLinux, Rocky Linux, openSUSE, Gentoo
+            "/usr/lib64/libvulkan.so.1",
+            "/usr/lib64/libvulkan.so",
+            // NixOS
+            "/run/current-system/sw/lib/libvulkan.so.1",
+            "/run/opengl-driver/lib/libvulkan.so.1",
+            // Standard / local fallbacks
             "/usr/local/lib/libvulkan.so.1",
+            "/usr/local/lib/libvulkan.so",
             "/lib/libvulkan.so.1",
             "/lib64/libvulkan.so.1",
         ];
@@ -164,6 +185,68 @@ pub fn probe_vulkan_runtime() -> VulkanRuntimeInfo {
             if p.exists() {
                 loader_path = Some(p.to_path_buf());
                 break;
+            }
+        }
+
+        // Automatic Vulkan ICD Manifest discovery across Linux & WSL
+        let icd_dirs = [
+            "/usr/share/vulkan/icd.d",
+            "/etc/vulkan/icd.d",
+            "/usr/lib/wsl/lib",
+            "/etc/vulkan/implicit_layer.d",
+            "/usr/share/vulkan/implicit_layer.d",
+        ];
+        for dir in icd_dirs {
+            if let Ok(entries) = std::fs::read_dir(dir) {
+                for entry in entries.flatten() {
+                    let path = entry.path();
+                    if let Some(ext) = path.extension() {
+                        if ext == "json" {
+                            let path_str = path.display().to_string();
+                            if !icd_filenames.contains(&path_str) {
+                                icd_filenames.push(path_str);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    #[cfg(any(target_os = "freebsd", target_os = "openbsd", target_os = "netbsd", target_os = "dragonfly"))]
+    {
+        let candidates = [
+            "/usr/local/lib/libvulkan.so.1",
+            "/usr/local/lib/libvulkan.so",
+            "/usr/lib/libvulkan.so.1",
+            "/usr/lib/libvulkan.so",
+        ];
+        for cand in candidates {
+            let p = Path::new(cand);
+            if p.exists() {
+                loader_path = Some(p.to_path_buf());
+                break;
+            }
+        }
+
+        let icd_dirs = [
+            "/usr/local/share/vulkan/icd.d",
+            "/usr/share/vulkan/icd.d",
+            "/etc/vulkan/icd.d",
+        ];
+        for dir in icd_dirs {
+            if let Ok(entries) = std::fs::read_dir(dir) {
+                for entry in entries.flatten() {
+                    let path = entry.path();
+                    if let Some(ext) = path.extension() {
+                        if ext == "json" {
+                            let path_str = path.display().to_string();
+                            if !icd_filenames.contains(&path_str) {
+                                icd_filenames.push(path_str);
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -214,9 +297,26 @@ pub fn probe_metal_runtime() -> MetalRuntimeInfo {
     #[cfg(target_os = "macos")]
     {
         let metal_fw = Path::new("/System/Library/Frameworks/Metal.framework/Metal");
-        let is_available = metal_fw.exists();
-        let moltenvk_path = Path::new("/opt/homebrew/lib/libMoltenVK.dylib").exists()
-            || Path::new("/usr/local/lib/libMoltenVK.dylib").exists();
+        let mps_fw = Path::new("/System/Library/Frameworks/MetalPerformanceShaders.framework/MetalPerformanceShaders");
+        let is_available = metal_fw.exists() || Path::new("/System/Library/Frameworks/Metal.framework").exists();
+        let moltenvk_path = [
+            "/opt/homebrew/lib/libMoltenVK.dylib",
+            "/usr/local/lib/libMoltenVK.dylib",
+            "/opt/local/lib/libMoltenVK.dylib",
+            "/Library/Frameworks/MoltenVK.framework/MoltenVK",
+        ]
+        .iter()
+        .any(|p| Path::new(p).exists());
+
+        let version = if is_available {
+            if mps_fw.exists() {
+                "Apple Metal 3.1 / MetalPerformanceShaders (MSL 3.0)".to_string()
+            } else {
+                "Apple Metal 3.1 / MSL 3.0".to_string()
+            }
+        } else {
+            "Metal Framework Not Found".to_string()
+        };
 
         MetalRuntimeInfo {
             is_available,
@@ -225,11 +325,7 @@ pub fn probe_metal_runtime() -> MetalRuntimeInfo {
             } else {
                 None
             },
-            metal_version: if is_available {
-                "Apple Metal 3.1 / MSL 3.0".to_string()
-            } else {
-                "Metal Framework Not Found".to_string()
-            },
+            metal_version: version,
             moltenvk_available: moltenvk_path,
             unified_memory: true,
         }
@@ -306,12 +402,22 @@ fn build_pipeline_capabilities(policy: AccelerationMode) -> ComputePipelineCapab
                     true,
                 )
             } else if vulkan.is_available && dev_type.is_gpu() {
-                (ComputeBackend::Vulkan, vulkan.api_version, false, true)
+                let ver = if crate::terminal::is_wsl() {
+                    format!("{} (WSL Direct3D 12 Paravirtualization)", vulkan.api_version)
+                } else {
+                    vulkan.api_version
+                };
+                (ComputeBackend::Vulkan, ver, false, true)
             } else if dev_type.is_gpu() {
                 // Direct kernel/registry GPU detected without separate loader
+                let ver = if crate::terminal::is_wsl() {
+                    "Vulkan 1.3 / WSL Direct3D 12 Compute".to_string()
+                } else {
+                    "Vulkan Direct Compute Dispatch".to_string()
+                };
                 (
                     ComputeBackend::Vulkan,
-                    "Vulkan Direct Compute Dispatch".to_string(),
+                    ver,
                     matches!(dev_type, GpuDeviceType::Integrated),
                     true,
                 )

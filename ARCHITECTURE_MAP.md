@@ -19,7 +19,10 @@ graph TD
         RUNNER -->|status| STATUS["runner::handle_status_command"]
         RUNNER -->|checkhealth| HEALTH["crates/engine/src/checkhealth.rs"]
         RUNNER -->|init <shell>| SHELL["crates/engine/src/shell.rs"]
-        RUNNER -->|config --tui| TUI["crates/tui/src/app.rs"]
+        RUNNER -->|config --tui| TUI["crates/tui/src/app.rs (Tabs 1-6)"]
+        RUNNER -->|fetch| FETCH["crates/engine/src/fetch.rs (Instant & 240Hz Live Metrics)"]
+        RUNNER -->|telemetry report| TELEM["crates/engine/src/telemetry_bus.rs (Shell Event Bus)"]
+        RUNNER -->|status-line| MUX_WIDGET["crates/engine/src/kitty.rs & status_line.rs (Tmux/Zellij)"]
         RUNNER -->|battle / rps-battle| BATTLE["crates/engine/src/battle.rs & rps.rs"]
         RUNNER -->|stop / sweep| STOP["runner::handle_stop_command"]
     end
@@ -93,6 +96,26 @@ graph TD
 - **High-Entropy SplitMix64 PRNG & Box-Muller Gaussian Sampling**: `crates/engine/src/particles.rs` implements 64-bit SplitMix64 with Golden Ratio Weyl sequence ($\Phi = \text{0x9E3779B97F4A7C15}$), eliminating 0 fixed-point collapses, and Box-Muller sampling `rand_normal(mean, std_dev)` for natural atmospheric dispersion.
 - **Incommensurate Particle Showering Dynamics**: Dual incommensurate harmonic turbulence ($\omega_2 = \omega_1 \cdot 1.6180339887$) and independent per-particle glyph selection eliminate artificial cyclic repetitions in fire, bubble, star, and zzz emitters. Lateral aerodynamic micro-turbulence is applied directly in `eval_particle_chunk`.
 - **Richard Williams Gait Articulation**: Eliminated alphabetic characters (`'J'`, `'L'`, `'d'`, `'b'`) in `articulated_leg_glyph` in favor of authentic limb strokes (`'/'`, `'\\'`, `'|'`, `')'`, `'('`), verified by tests across all 16 walk stages and partitions.
+
+---
+
+## 1.3 True 240Hz Liquid Motion, Decoupled Simulation & Zero-Tear Atomic ANSI Terminal Engine (0.0.8-beta)
+
+- **Decoupled 120Hz Fixed-Timestep Physics Simulation**: `LiquidFrameGovernor` (`crates/engine/src/engine_core.rs`) integrates kinematics and particle dynamics at a strict, decoupled 120Hz fixed timestep (`FIXED_SIM_DT = 1.0 / 120.0`), eliminating frame-rate-dependent acceleration (ANIM-001) and simulation timing stutter (ANIM-002).
+- **True 240Hz Liquid Motion Frame Pacing**: Microsecond-precision hybrid frame pacing combines `ShutdownFlag::sleep_interruptible` for large sleep intervals with a sub-millisecond spin-wait window (`SPIN_WINDOW = 1500µs`), delivering ultra-smooth 240 FPS liquid motion with <0.05ms frame jitter.
+- **Atomic ANSI Terminal Output & DEC Mode 2026 Sync**: Expanded `OutputHandle` and `AnsiRenderer` scratch buffers to 64KB (`64 * 1024`). Wrapped damage rendering passes in DEC Mode 2026 synchronized updates (`\x1b[?2026h` / `\x1b[?2026l`) to ensure zero visual tearing and unified atomic flushes across all modern terminal emulators.
+- **2D Boundary Flood-Fill Rig Map (`AsciiRigMap`)**: `AsciiRigMap` (`crates/engine/src/kinematics.rs`) uses 2D flood-fill exploration to distinguish exterior transparent whitespace, 1-cell ambient occlusion moat (`CellMask::ExteriorMoat`), interior opaque hull cavities (Mandate Rule C), and glyph boundaries. Preserves natural anatomical concavities between limbs and under wings.
+- **Dynamic ASCII Glyph-Slope Morphing & Aerodynamic Shear**: `morph_ascii_glyph` dynamically rotates limb strokes (`/` $\leftrightarrow$ `|` $\leftrightarrow$ `\`) and flexes wing carets (`^` $\leftrightarrow$ `~` $\leftrightarrow$ `_` $\leftrightarrow$ `v`) during movement strokes.
+- **Ambient Occlusion Moat**: `apply_ambient_occlusion_moat` dims background scenery by 68% and suppresses high-frequency punctuation in the 1-cell halo immediately surrounding the mascot, guaranteeing crisp figure-ground pop (ANIM-005).
+- **Scenery Contrast Compression & Memoization**: `compress_scenery_contrast` (`crates/engine/src/scenery.rs`) scales background scenery luminance to 52%, guaranteeing $>3.5:1$ figure-ground contrast against foreground mascots.
+- **Security & IPC Hardening**: Lexical argument escaping (`shell_escape_arg`) in `init.rs`, user-only `0o700` permission enforcement on Unix daemon sockets/directories (`daemon_socket.rs`), 25MB file size / 4096px dimension decompression bomb guards (`image_ascii.rs`), and orphaned daemon sweeping (`sweep_dead_daemons` in `herd.rs`).
+- **Subcommand Unification**: Unified `doctor` with `checkhealth` and `diagnose`, running both the system environment diagnostics and the Neovim-style pass/fail health check suite in a single invocation.
+- **Phase 5 Feature Expansion Suite**:
+  - `forgum fetch`: Instant and 240Hz live terminal hardware telemetry (`--instant` / `--live`) with dynamic Braille sparklines and dual-column mascot alignment (`crates/engine/src/fetch.rs`).
+  - `forgum telemetry report`: Non-blocking ambient shell bus passing exit codes and durations to active daemons (`crates/engine/src/telemetry_bus.rs`).
+  - Kitty Graphics Protocol & Multiplexers: `crates/engine/src/kitty.rs` provides z-index planes (`z=-1`, `z=1`) and native tmux/zellij widgets.
+  - Tab 6 (Mascot & Shader Studio): `crates/tui/src/app.rs` provides real-time hull/moat inspection, coat morph selection, and 240Hz kinematics telemetry.
+  - WSL Multi-Distro & Apple Metal Acceleration: Direct `/dev/dxg`, DirectML, Mesa Dozen D3D12, MPS, and MoltenVK integration with automatic CPU SIMD fallback (`crates/platform/src/gpu.rs` & `vulkan_metal.rs`).
 
 ---
 
@@ -199,14 +222,14 @@ flowchart TD
 flowchart TD
     A["forgum update [--check] [--channel <CH>]"] --> B["Detect Install Source (package_manager.rs)"]
     B --> C{Inside Git Workspace?}
-    
+
     C -->|Yes| D["detect_git_status()"]
     D --> E["Sync with active branch (dev/main)"]
     E --> F{Commits behind?}
     F -->|No| G["✓ Up to date with remote"]
     F -->|Yes| H["git pull --ff-only && cargo build --release"]
     H --> I["Atomically copy binary to active BIN_PATH"]
-    
+
     C -->|No| J{Source Type?}
     J -->|Package Manager<br/>Brew/Scoop/Apt/etc| K["Invoke native manager: brew upgrade, zypper update, etc."]
     J -->|DirectBinary<br/>Standalone| L{Check only?}
@@ -224,13 +247,13 @@ flowchart TD
     COMPUTE --> MT["Mountains: Harmonic Sinusoidal Superposition<br/>H(x) = H_base * [1 + Σ A_k |sin(2πkx/λ + φ_k)|^γ]"]
     COMPUTE --> VEG["Vegetation: Fibonacci Phyllotaxis (Φ ≈ 1.618)<br/>Procedural Crown Envelopes"]
     COMPUTE --> ROAD["Roads: Spline Undulation & Harmonic Roughness"]
-    
+
     MT & VEG & ROAD --> SCENE_BUF["Pre-allocated Framebuffer (Fixed Scratch Slices)"]
-    
+
     DNA["data/Cows/animations.json"] --> KINEMATICS["Kinematics Engine"]
     KINEMATICS --> FX_RESOLVE["CompoundSignatureEffect (Habitat: aquatic/terrestrial/aerial)"]
     FX_RESOLVE --> OCCLUSION["draw_char_with_hull (Silhouette Hull Occlusion)"]
-    
+
     OCCLUSION --> SCENE_BUF
     SCENE_BUF --> DIFF["Dirty Cell Matrix Diffing (renderer.rs)"]
     DIFF --> ANSI["24-Bit TrueColor / ANSI256 Stream Generation"]
@@ -277,12 +300,12 @@ stateDiagram-v2
 | [`crates/platform/src/vulkan_metal.rs`](file:///Z:/Projects/Forgum/crates/platform/src/vulkan_metal.rs) | `ComputeBackend`, `ComputePipelineCapabilities`, `resolve_compute_pipeline`, `probe_vulkan_runtime`, `probe_metal_runtime`, MSL/SPIR-V compute kernels | Universal Vulkan + Metal Wrapper compute architecture targeting all GPUs (2006–2026), Apple Silicon Metal, MoltenVK, and multi-threaded SIMD CPU fallback. | `vulkan`, `metal`, `moltenvk`, `compute_backend`, `spirv`, `msl`, `shaders`, `workgroup` |
 | [`crates/platform/src/platform_windows.rs`](file:///Z:/Projects/Forgum/crates/platform/src/platform_windows.rs) | `probe_windows_gpus_registry`, `parent_pid`, `parent_comm`, `stdin_has_data`, `process_handle_count` | Direct Win32 Registry probing (<0.1ms), process tree navigation, toolhelp snapshot, pipe inspection. | `registry`, `regqueryvalue`, `driverdesc`, `hardwareinformation`, `parent_pid`, `handle_count` |
 | [`crates/platform/src/terminal.rs`](file:///Z:/Projects/Forgum/crates/platform/src/terminal.rs) | `TerminalGuard`, `enable_raw_mode`, `terminal_size`, `detect_truecolor_support`, `setup_decstbm_margins`, `reset_margins`, `plan_native_split` | Terminal hardware abstraction, raw mode, alt-screen, TrueColor detection, DECSTBM hardware scroll margins, native multiplexer splitting. | `raw_mode`, `decstbm`, `margins`, `split_mode`, `truecolor`, `terminal_emulator`, `wezterm`, `kitty` |
-| [`crates/platform/src/package_manager.rs`](file:///Z:/Projects/Forgum/crates/platform/src/package_manager.rs) | `PackageManager`, `execute_package_manager_action`, `detect_installation_source`, `detect_shadow_installations`, `atomic_replace_binary`, `rollback_binary`, `detect_git_status`, `check_git_updates`, `execute_git_update`, `read_receipt`, `record_receipt` | Manages 15 package managers, atomic binary replacement, rollback guards, Git tracking, install receipts. | `package_manager`, `update`, `atomic_replace`, `rollback`, `brew`, `scoop`, `winget`, `choco`, `shadows` |
+| [`crates/platform/src/package_manager.rs`](file:///Z:/Projects/Forgum/crates/platform/src/package_manager.rs) | `PackageManager`, `execute_package_manager_action`, `detect_installation_source`, `detect_shadow_installations`, `verify_binary_signature`, `atomic_replace_binary_verified`, `atomic_replace_binary`, `rollback_binary`, `detect_git_status`, `check_git_updates`, `execute_git_update`, `read_receipt`, `record_receipt`, `FORGUM_RELEASE_PUBLIC_KEY` | Manages 15 package managers, Ed25519 / Minisign cryptographic release signature verification, atomic binary replacement, rollback guards, Git tracking, install receipts. | `package_manager`, `update`, `ed25519`, `signature`, `minisign`, `atomic_replace`, `rollback`, `brew`, `scoop`, `winget`, `choco`, `shadows` |
 | [`crates/platform/src/signals.rs`](file:///Z:/Projects/Forgum/crates/platform/src/signals.rs) | `SignalGuard`, `register_signal_handlers`, `poll_resize_event`, `ShutdownFlag` | Intercepts `SIGINT`, `SIGTERM`, `SIGWINCH` for clean cursor restoration and viewport resize events. | `signals`, `sigwinch`, `sigint`, `resize`, `shutdown` |
 | [`crates/platform/src/process.rs`](file:///Z:/Projects/Forgum/crates/platform/src/process.rs) | `kill_process`, `is_process_running`, `daemon_state_path`, `detect_session_id` | Cross-platform PID inspection, process killing, daemon lock files, multiplexer session detection. | `process`, `pid`, `daemon_state`, `session_id` |
 | [`crates/platform/src/config.rs`](file:///Z:/Projects/Forgum/crates/platform/src/config.rs) | `Config`, `load_config`, `save_config`, `config_dir`, `resolve_format` | Multi-format settings parser (JSON, TOML, YAML) with XDG and Windows AppData resolution. | `config`, `json`, `toml`, `yaml`, `xdg` |
 | [`crates/platform/src/terminal_theme.rs`](file:///Z:/Projects/Forgum/crates/platform/src/terminal_theme.rs) | `detect_terminal_theme`, `calculate_luminance`, `elevate_luminance`, `boost_saturation`, `BackgroundPreset`, `ContrastMode` | Terminal background luminance detection, Acrylic/Liquid Glass transparency compensation, contrast modes. | `acrylic`, `liquid glass`, `contrast`, `transparency`, `luminance`, `theme` |
-| [`crates/platform/src/uninstaller.rs`](file:///Z:/Projects/Forgum/crates/platform/src/uninstaller.rs) | `perform_uninstallation`, `UninstallMode`, `UninstallReport` | Soft uninstallation (preserving user configs) vs Purge uninstallation (complete removal). | `uninstall`, `purge`, `soft`, `cleanup` |
+| [`crates/platform/src/uninstaller.rs`](file:///Z:/Projects/Forgum/crates/platform/src/uninstaller.rs) | `perform_uninstallation`, `UninstallMode`, `UninstallReport`, package manager detection | Soft uninstallation (preserving user configs) vs Purge uninstallation (complete removal), redirecting to native package manager commands when managed by Scoop, Winget, Homebrew, etc. | `uninstall`, `purge`, `soft`, `cleanup`, `package_manager_detect` |
 
 ---
 
@@ -294,9 +317,10 @@ stateDiagram-v2
 | [`crates/engine/src/cli.rs`](file:///Z:/Projects/Forgum/crates/engine/src/cli.rs) | `Cli`, `Commands` (`Update`, `Init`, `Config`, `Status`, `CheckHealth`, `Stop`, `Showcase`, `Battle`) | Clap CLI parser, subcommands, aliases, flags (`--accel`, `--fps`, `--duration`, `--theme`). | `clap`, `args`, `cli`, `subcommands`, `accel` |
 | [`crates/engine/src/runner.rs`](file:///Z:/Projects/Forgum/crates/engine/src/runner.rs) | `run()`, `handle_update_command`, `handle_status_command`, `handle_stop_command`, `render_subcommand_with_scene`, `resolve_scene_randomness` | Primary dispatch controller, subcommand routing, random Fibonacci sampling, compute engine initialization. | `runner`, `dispatch`, `status`, `update`, `stop`, `random` |
 | [`crates/engine/src/gpu_compute.rs`](file:///Z:/Projects/Forgum/crates/engine/src/gpu_compute.rs) | `GpuComputeEngine`, `init_compute_engine`, `get_compute_engine`, `compute_mountain_harmonic_superposition`, `compute_road_harmonic_undulation`, `compute_foliage_density_fibonacci` | Zero-allocation hardware compute engine evaluating nature math strictly under 100MB resident RAM ceiling. | `gpu_compute`, `nature math`, `superposition`, `fibonacci`, `simd`, `zero_alloc` |
-| [`crates/engine/src/engine_core.rs`](file:///Z:/Projects/Forgum/crates/engine/src/engine_core.rs) | `Engine`, `run_engine()`, `sim_thread()`, `RenderState`, `TickGovernor` | Core animation event loop, calibrated sleep, wall-clock governor, multi-threaded SIM/RENDER split. | `engine_core`, `sim_thread`, `render_thread`, `fps`, `timing`, `tick` |
-| [`crates/engine/src/renderer.rs`](file:///Z:/Projects/Forgum/crates/engine/src/renderer.rs) | `Renderer`, `Cell`, `Buffer`, `render_diff()`, `AnsiRenderer` | Double-buffered terminal drawing, cell color caching, dirty cell differential escape code emission. | `renderer`, `framebuffer`, `double_buffer`, `damage`, `diff`, `ansi` |
-| [`crates/engine/src/scenery.rs`](file:///Z:/Projects/Forgum/crates/engine/src/scenery.rs) | `SceneryRenderer`, `render_scenery()`, `render_mountain()`, `render_road()`, `render_trees()` | Procedural harmonic mountains, Fibonacci phyllotaxis tree crowns, road texturing, animal archetypes. | `scenery`, `mountains`, `trees`, `road`, `archetype`, `biome` |
+| [`crates/engine/src/engine_core.rs`](file:///Z:/Projects/Forgum/crates/engine/src/engine_core.rs) | `LiquidFrameGovernor`, `SimState`, `run_engine()`, `sim_thread()`, `RenderState`, `Scheduler` | 240Hz liquid motion frame governor, decoupled 120Hz fixed physics accumulator, sub-cell alpha interpolation, multi-threaded SIM/RENDER split. | `engine_core`, `liquid_governor`, `sim_thread`, `render_thread`, `fps`, `timing`, `240hz`, `fixed_dt` |
+| [`crates/engine/src/renderer.rs`](file:///Z:/Projects/Forgum/crates/engine/src/renderer.rs) | `Renderer`, `Cell`, `Buffer`, `render_diff()`, `AnsiRenderer` | Double-buffered terminal drawing, DEC Mode 2026 synchronized update frames (`\x1b[?2026h`), dirty cell differential escape code emission. | `renderer`, `framebuffer`, `double_buffer`, `damage`, `diff`, `ansi`, `dec2026` |
+| [`crates/engine/src/scenery.rs`](file:///Z:/Projects/Forgum/crates/engine/src/scenery.rs) | `SceneryCache`, `SceneryCacheKey`, `compress_scenery_contrast`, `render_scenery_full_with_tod_and_season`, `render_mountain()`, `render_road()`, `render_trees()` | Procedural harmonic mountains, Fibonacci phyllotaxis tree crowns, road texturing, 100ms time-bucketed scenery cache memoization (PERF-001). | `scenery`, `scenery_cache`, `mountains`, `trees`, `road`, `archetype`, `biome`, `memoization` |
+| [`crates/engine/src/kinematics.rs`](file:///Z:/Projects/Forgum/crates/engine/src/kinematics.rs) | `AsciiRigMap`, `CellMask`, `morph_ascii_glyph`, `apply_ambient_occlusion_moat`, `KinematicBody`, `CartoonRig` | 2D boundary flood-fill rig map, leg slope pivoting (`/` <-> `|` <-> `\`), wing flexing, 1-cell ambient occlusion moat halo. | `kinematics`, `ascii_rig_map`, `flood_fill`, `morph_glyph`, `moat`, `occlusion_halo` |
 | [`crates/engine/src/effects.rs`](file:///Z:/Projects/Forgum/crates/engine/src/effects.rs) | `Effect` trait, `FloatEffect`, `WalkEffect`, `BreatheEffect`, `CompoundSignatureEffect`, `create_scene_effect` | Kinematics calculation, vertical bobbing, horizontal translation, habitat-based effect filtering. | `effects`, `float`, `walk`, `breathe`, `compound`, `kinematics` |
 | [`crates/engine/src/particles.rs`](file:///Z:/Projects/Forgum/crates/engine/src/particles.rs) | `ParticlePool`, `ParticleType` (`Fire`, `Bubbles`, `Stars`, `Zzz`) | Zero-allocation particle simulation with kinematic delta-time integration. | `particles`, `emitter`, `fire`, `bubbles`, `stars`, `zzz` |
 | [`crates/engine/src/cow.rs`](file:///Z:/Projects/Forgum/crates/engine/src/cow.rs) | `Cow`, `load_cow()`, `parse_cowfile()`, `draw_char_with_hull`, `compose_scene_with_mode` | Mascot loader, speech/thought bubbles, silhouette hull occlusion preventing scenery bleed-through. | `cow`, `mascot`, `occlusion`, `hull`, `bubble`, `speech` |
@@ -304,6 +328,7 @@ stateDiagram-v2
 | [`crates/engine/src/shell.rs`](file:///Z:/Projects/Forgum/crates/engine/src/shell.rs) | `generate_hook()`, `install_hook()`, `remove_hook()`, `supported_shells()` | Universal shell integration across 15 shells with strict marker isolation. | `shell`, `hook`, `init`, `bash`, `zsh`, `fish`, `powershell`, `nushell` |
 | [`crates/engine/src/completions.rs`](file:///Z:/Projects/Forgum/crates/engine/src/completions.rs) | `generate_completion_script()`, `install_completions()`, `complete_arg()` | Shell completions generator for all shells and subcommands. | `completions`, `autocomplete`, `tab_completion` |
 | [`crates/engine/src/checkhealth.rs`](file:///Z:/Projects/Forgum/crates/engine/src/checkhealth.rs) | `run_health_check()`, `format_ansi()`, `HealthReport` | 8-section, 20-point diagnostic health checker including Section 8 (GPU compute diagnostics). | `checkhealth`, `diagnostics`, `doctor`, `health` |
+| [`crates/engine/src/capture_rasterizer.rs`](file:///Z:/Projects/Forgum/crates/engine/src/capture_rasterizer.rs) | `render_cell_to_rgba()`, `render_framebuffer_to_rgba()`, `DEFAULT_CELL_W`, `DEFAULT_CELL_H` | Canonical RGBA font and box-drawing rasterizer for preview screenshots, video captures, and headless verification (PERF-006, PERF-007). | `capture`, `rasterizer`, `font`, `rgba`, `box_drawing`, `preview`, `ffmpeg` |
 
 ---
 

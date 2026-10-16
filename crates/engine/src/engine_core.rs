@@ -90,6 +90,108 @@ pub struct Frame {
     pub full_redraw: bool,
 }
 
+// ── 240Hz Liquid Frame Governor (ANIM-001 / ANIM-002) ──────────────
+
+pub const FIXED_SIM_DT: f64 = 1.0 / 120.0; // Fixed 120Hz physics integration step
+pub const MAX_FRAME_TIME: f64 = 0.25;      // Spiral-of-death clamp
+pub const SPIN_WINDOW: Duration = Duration::from_micros(1500); // 1.5ms spin-wait margin
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct KinematicSnapshot {
+    pub x: f64,
+    pub y: f64,
+    pub stride_phase: f64,
+    pub rig_phase: f64,
+}
+
+impl KinematicSnapshot {
+    #[must_use]
+    pub fn interpolate(prev: Self, curr: Self, alpha: f64) -> Self {
+        Self {
+            x: prev.x + (curr.x - prev.x) * alpha,
+            y: prev.y + (curr.y - prev.y) * alpha,
+            stride_phase: prev.stride_phase + (curr.stride_phase - prev.stride_phase) * alpha,
+            rig_phase: prev.rig_phase + (curr.rig_phase - prev.rig_phase) * alpha,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct LiquidFrameGovernor {
+    pub target_period: Duration,
+    pub next_deadline: Instant,
+    pub last_instant: Instant,
+    pub accumulator: f64,
+    pub elapsed_secs: f64,
+}
+
+impl LiquidFrameGovernor {
+    #[must_use]
+    pub fn new(fps: u32) -> Self {
+        let safe_fps = fps.clamp(1, 1000);
+        let target_period = Duration::from_nanos(1_000_000_000 / u64::from(safe_fps));
+        let now = Instant::now();
+        Self {
+            target_period,
+            next_deadline: now + target_period,
+            last_instant: now,
+            accumulator: 0.0,
+            elapsed_secs: 0.0,
+        }
+    }
+
+    #[must_use]
+    pub fn target_period(&self) -> Duration {
+        self.target_period
+    }
+
+    pub fn set_fps(&mut self, fps: u32) {
+        let safe_fps = fps.clamp(1, 1000);
+        self.target_period = Duration::from_nanos(1_000_000_000 / u64::from(safe_fps));
+    }
+
+    pub fn step_simulation<F>(&mut self, mut integrate_fixed: F) -> (f64, f64)
+    where
+        F: FnMut(f64),
+    {
+        let now = Instant::now();
+        let frame_time = (now.saturating_duration_since(self.last_instant))
+            .as_secs_f64()
+            .min(MAX_FRAME_TIME);
+        self.last_instant = now;
+        self.elapsed_secs += frame_time;
+        self.accumulator += frame_time;
+
+        while self.accumulator >= FIXED_SIM_DT {
+            integrate_fixed(FIXED_SIM_DT);
+            self.accumulator -= FIXED_SIM_DT;
+        }
+        let alpha = (self.accumulator / FIXED_SIM_DT).clamp(0.0, 1.0);
+        (alpha, self.elapsed_secs)
+    }
+
+    pub fn pace_frame(&mut self, shutdown: &ShutdownFlag) {
+        let now = Instant::now();
+        if now < self.next_deadline {
+            let rem = self.next_deadline - now;
+            if rem > SPIN_WINDOW {
+                shutdown.sleep_interruptible(rem - SPIN_WINDOW);
+            }
+            while Instant::now() < self.next_deadline {
+                if shutdown.is_shutdown() {
+                    return;
+                }
+                std::hint::spin_loop();
+            }
+        }
+        self.next_deadline += self.target_period;
+        let post_wait = Instant::now();
+        if self.next_deadline <= post_wait {
+            self.next_deadline = post_wait + self.target_period;
+        }
+    }
+}
+
 // ── SIM thread ─────────────────────────────────────────────────────
 
 /// State owned exclusively by the SIM thread.
@@ -116,6 +218,7 @@ struct SimState {
     need_full_redraw: bool,
     active_composed: Arc<std::sync::RwLock<String>>,
     damage_scratch: Vec<(usize, usize)>,
+    scenery_cache: crate::scenery::SceneryCache,
 }
 
 impl SimState {
@@ -211,18 +314,21 @@ impl SimState {
             need_full_redraw: true,
             active_composed,
             damage_scratch: Vec::with_capacity((cols * rows) / 4),
+            scenery_cache: crate::scenery::SceneryCache::new(),
         }
     }
 
-    /// Run one simulation step. Returns the frame snapshot to ship to RENDER.
-    fn tick(&mut self, dt: Duration, raw_dt: Duration) -> Arc<Frame> {
+    /// Update physics simulation step at a fixed timestep.
+    pub fn tick_physics(&mut self, dt_f32: f32) {
+        self.effect.update(dt_f32, self.fb.width, self.fb.height);
+    }
+
+    /// Render simulation snapshot at current elapsed clock into front buffer to ship to RENDER.
+    pub fn tick_render(&mut self, _alpha: f32, elapsed_secs: f32) -> Arc<Frame> {
         // Phase 1.6: O(1) mass-dealloc of last frame's scratch.
         self.arena.reset();
 
-        let dt_f32 = dt.as_secs_f32();
-        let raw_dt_f32 = raw_dt.as_secs_f32();
-        // Decouple simulation elapsed clock from clamped dt to eliminate 10x idle drift
-        self.elapsed += raw_dt_f32;
+        self.elapsed = elapsed_secs;
 
         // Periodic thought rotation if thought_interval > 0
         let thought_interval = self.config.thought_interval;
@@ -265,8 +371,6 @@ impl SimState {
 
         // Render scenery layers before effect
         let (mtn_style, road_style, env_style) = self.scenery;
-        let _has_scenery = env_style != crate::scenery::EnvironmentStyle::None
-            || mtn_style != crate::scenery::MountainStyle::None;
         let is_aquatic_animal = self.cow_dna.habitat == crate::dna::Habitat::Aquatic
             || self.cow_dna.is_aquatic()
             || effects::detect_animal_instinct(&self.config.cow, &self.cow_dna)
@@ -318,7 +422,7 @@ impl SimState {
             .map(crate::scenery::Season::parse)
             .unwrap_or(crate::scenery::Season::Auto)
             .resolve();
-        crate::scenery::render_scenery_full_with_tod_and_season(
+        self.scenery_cache.get_or_render(
             &mut self.fb,
             mtn_style,
             road_style,
@@ -331,9 +435,6 @@ impl SimState {
             Some(tod),
             Some(season),
         );
-
-        // Update effect.
-        self.effect.update(dt_f32, self.fb.width, self.fb.height);
 
         // Render into back buffer on top of scenery.
         self.effect.render(&mut self.fb, self.elapsed);
@@ -387,14 +488,22 @@ impl SimState {
         })
     }
 
+    /// Single-step simulation tick (legacy/backward compatibility).
+    #[allow(dead_code)]
+    pub fn tick(&mut self, dt: Duration, raw_dt: Duration) -> Arc<Frame> {
+        self.tick_physics(dt.as_secs_f32());
+        let new_elapsed = self.elapsed + raw_dt.as_secs_f32();
+        self.tick_render(1.0, new_elapsed)
+    }
+
     /// Handle hot-swap of effect, cow art, or text from control messages.
     fn handle_hot_swap(&mut self, msg: &ControlMsg) {
+        self.scenery_cache.clear();
         match msg {
             ControlMsg::Effect(name) => {
                 // Reload DNA for the new effect if it exists in animations.json,
                 // otherwise keep the current DNA but change the base animation.
-                let animations = crate::dna::load_animations_or_embedded(&self.data_dir);
-                let new_dna = crate::dna::get_dna(&animations, &self.config.cow);
+                let new_dna = crate::dna::resolve_cow_dna(&self.data_dir, &self.config.cow);
                 self.config.effect = name.clone();
                 self.cow_dna = new_dna;
                 // Recreate effect with the composed cow scene (bubble + cow)
@@ -419,6 +528,12 @@ impl SimState {
                     self.instance_id,
                     &self.config.color_mode,
                 );
+                let (mtn_style, road_style, env_style) = self.scenery;
+                let has_scenery_motion = mtn_style != crate::scenery::MountainStyle::None
+                    || road_style != crate::scenery::RoadStyle::None
+                    || env_style != crate::scenery::EnvironmentStyle::None;
+                self.scheduler.is_dynamic =
+                    (self.config.effect != "static" && self.config.effect != "none") || has_scenery_motion;
                 self.need_full_redraw = true;
             }
             ControlMsg::Cow(name) => {
@@ -441,8 +556,7 @@ impl SimState {
                     *lock = composed.clone();
                 }
                 self.cow_foot_y = effects::find_cow_foot_y(&composed);
-                let animations = crate::dna::load_animations_or_embedded(&self.data_dir);
-                self.cow_dna = crate::dna::get_dna(&animations, &self.config.cow);
+                self.cow_dna = crate::dna::resolve_cow_dna(&self.data_dir, &self.config.cow);
                 if let Some(ref pal_str) = self.config.palette {
                     let hexes: Vec<String> = pal_str
                         .split(',')
@@ -658,8 +772,14 @@ fn sim_thread(
     } else {
         None
     };
-    let mut last_frame = Instant::now();
-    let mut target_next_tick = Instant::now();
+    let target_fps = if forgum_platform::is_remote_session() && (sim.config.fps == 0 || sim.config.fps == 60) {
+        30
+    } else if sim.config.fps == 0 {
+        60
+    } else {
+        sim.config.fps as u32
+    };
+    let mut governor = LiquidFrameGovernor::new(target_fps);
     let mut last_battery_check = Instant::now();
     let mut user_speed: f32 = 1.0;
     let mut battery_throttled = false;
@@ -707,9 +827,11 @@ fn sim_thread(
             if let Some(pct) = forgum_platform::check_battery_percent() {
                 if pct < 20.0 && !battery_throttled {
                     sim.scheduler.set_speed(0.15);
+                    governor.set_fps(((target_fps as f32) * 0.15).round().clamp(1.0, 1000.0) as u32);
                     battery_throttled = true;
                 } else if pct >= 30.0 && battery_throttled {
                     sim.scheduler.set_speed(user_speed);
+                    governor.set_fps(((target_fps as f32) * user_speed).round().clamp(1.0, 1000.0) as u32);
                     battery_throttled = false;
                 }
             }
@@ -736,11 +858,13 @@ fn sim_thread(
                     user_speed = s;
                     if !battery_throttled {
                         sim.scheduler.set_speed(s);
+                        governor.set_fps(((target_fps as f32) * s).round().clamp(1.0, 1000.0) as u32);
                     }
                 }
                 ControlMsg::Resize { cols, rows } => {
                     sim.fb.resize(cols as usize, rows as usize);
                     sim.effect.on_resize(cols as usize, rows as usize);
+                    sim.scenery_cache.clear();
                     sim.need_full_redraw = true;
                 }
                 ref msg @ (ControlMsg::Effect(_)
@@ -760,26 +884,23 @@ fn sim_thread(
         }
 
         if paused {
-            let period = sim.scheduler.frame_period();
-            if !period.is_zero() {
-                std::thread::sleep(period);
-            }
-            target_next_tick = Instant::now();
+            shutdown.sleep_interruptible(governor.target_period());
             continue;
         }
 
-        // Fixed-timestep simulation with nominal delta for active tier to eliminate timing jitter.
-        let period = sim.scheduler.frame_period();
-        let effective_dt = if sim.scheduler.tier() == crate::scheduler::SchedulerTier::Active && !period.is_zero() {
-            period
-        } else {
-            let now = Instant::now();
-            let raw_dt = now.duration_since(last_frame);
-            raw_dt.clamp(Duration::from_micros(100), Duration::from_millis(100))
-        };
-        last_frame = Instant::now();
+        if sim.scheduler.tier() == crate::scheduler::SchedulerTier::Idle {
+            // Idle cow: zero CPU utilization
+            shutdown.sleep_interruptible(Duration::from_millis(100));
+            continue;
+        }
 
-        let frame = sim.tick(effective_dt, effective_dt);
+        // Decoupled fixed-timestep simulation step
+        let (alpha, elapsed_secs) = governor.step_simulation(|dt| {
+            sim.tick_physics(dt as f32);
+        });
+
+        // Frame snapshot generation with sub-pixel interpolation clock
+        let frame = sim.tick_render(alpha as f32, elapsed_secs as f32);
 
         // Send to render thread with bounded backpressure so zero frames are dropped.
         if frame_tx.send(frame).is_err() {
@@ -790,22 +911,8 @@ fn sim_thread(
             break;
         }
 
-        // Anchored hybrid sleep: sub-millisecond precision frame pacing for 60/120/144/240 FPS
-        if !period.is_zero() {
-            target_next_tick += period;
-            let current = Instant::now();
-            if current < target_next_tick {
-                let remaining = target_next_tick - current;
-                if remaining > Duration::from_micros(2500) {
-                    std::thread::sleep(remaining - Duration::from_micros(1200));
-                }
-                while Instant::now() < target_next_tick {
-                    std::hint::spin_loop();
-                }
-            } else if current > target_next_tick + period.mul_f32(2.0) {
-                target_next_tick = current;
-            }
-        }
+        // Precision frame pacing: hybrid sleep + microsecond spin window
+        governor.pace_frame(&shutdown);
     }
 }
 
@@ -932,8 +1039,15 @@ impl RenderState {
         let damage = &frame.damage;
 
         if !damage.is_empty() {
+            let sync = forgum_platform::detect_sync_support();
+            if sync {
+                let _ = self.out.write_all(b"\x1b[?2026h");
+            }
             self.renderer
                 .render_damage(&mut self.out, &frame.cells, frame.cols, damage)?;
+            if sync {
+                let _ = self.out.write_all(b"\x1b[?2026l");
+            }
             let _ = self.out.flush();
         }
 

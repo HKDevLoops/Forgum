@@ -19,19 +19,32 @@ pub fn execute_say_cmd(cmd: &[String]) -> String {
 
     let output = forgum_platform::execute_command_with_shell_fallback(cmd)
         .map(|o| {
-            let mut out = String::from_utf8_lossy(&o.stdout).to_string();
-            if out.trim().is_empty() && !o.stderr.is_empty() {
-                out = String::from_utf8_lossy(&o.stderr).to_string();
+            if o.status.success() {
+                let mut out = String::from_utf8_lossy(&o.stdout).to_string();
+                if out.trim().is_empty() && !o.stderr.is_empty() {
+                    out = String::from_utf8_lossy(&o.stderr).to_string();
+                }
+                out
+            } else {
+                let stdout = String::from_utf8_lossy(&o.stdout).to_string();
+                let stderr = String::from_utf8_lossy(&o.stderr).to_string();
+                let err_lower = stderr.to_lowercase();
+                if err_lower.contains("not recognized")
+                    || err_lower.contains("command not found")
+                    || err_lower.contains("no such file")
+                    || err_lower.contains("cannot find the path")
+                {
+                    cmd.join(" ")
+                } else if !stdout.trim().is_empty() {
+                    stdout
+                } else if !stderr.trim().is_empty() {
+                    stderr
+                } else {
+                    cmd.join(" ")
+                }
             }
-            out
         })
-        .unwrap_or_else(|e| {
-            format!(
-                "Error running {}: {}",
-                cmd.first().map(|s| s.as_str()).unwrap_or(""),
-                e
-            )
-        });
+        .unwrap_or_else(|_| cmd.join(" "));
 
     let text = output.trim().to_string();
     if text.is_empty() {

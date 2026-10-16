@@ -1,9 +1,9 @@
-//! Test integrity of all 106 mascots and embedded cow assets.
+//! Test integrity of all 132 mascots and embedded cow assets.
 //!
 //! Validates that:
-//! 1. Every single mascot listed across the 6 curated categories in `forgum_tui::app::CATEGORIES` (106 mascots)
+//! 1. Every single mascot listed across the 6 curated categories in `forgum_tui::app::CATEGORIES` (132 mascots)
 //!    is embedded at compile-time and resolves independently with distinct art (never falling back to default cow).
-//! 2. Standalone environments with zero files on disk can load and resolve all 106 mascots.
+//! 2. Standalone environments with zero files on disk can load and resolve all 132 mascots.
 //! 3. All 132 embedded mascots in `forgum-platform` expand cleanly and contain valid ASCII art.
 
 use std::collections::HashSet;

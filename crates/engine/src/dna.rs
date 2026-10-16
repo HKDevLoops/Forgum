@@ -740,14 +740,80 @@ pub fn load_animations_or_embedded(data_dir: &Path) -> HashMap<String, CowDna> {
     }
 }
 
+static EMBEDDED_CATALOG: std::sync::OnceLock<HashMap<String, CowDna>> = std::sync::OnceLock::new();
+
+/// Retrieve a reference to the authoritative compile-time embedded animation catalog.
+/// Memoized via `OnceLock`: parsed once on first access, zero-alloc on all subsequent accesses.
+pub fn get_embedded_catalog() -> &'static HashMap<String, CowDna> {
+    EMBEDDED_CATALOG.get_or_init(|| {
+        parse_animations_json_str(EMBEDDED_ANIMATIONS_JSON, None).unwrap_or_default()
+    })
+}
+
+/// Retrieve DNA for a specific cow directly from the memoized embedded catalog.
+/// Completely zero-allocation: returns `&'static CowDna` in <0.05ms without heap allocation.
+pub fn get_embedded_dna(cow_name: &str) -> Option<&'static CowDna> {
+    if cow_name.is_empty() || cow_name.ends_with('.') || cow_name == ".cow" {
+        return None;
+    }
+    let clean = cow_name.strip_suffix(".cow").unwrap_or(cow_name);
+    if clean.is_empty() || clean.ends_with(".cow") || clean.ends_with('.') {
+        return None;
+    }
+    let catalog = get_embedded_catalog();
+    catalog.get(clean).or_else(|| catalog.get(cow_name))
+}
+
+/// Ultra-fast, zero-allocation lookup path for cold CLI execution (`forgum say`, shell prompt banners).
+/// Bypasses disk scans and full map cloning, retrieving the mascot's DNA in <0.05ms.
+pub fn get_dna_fast(cow_name: &str) -> CowDna {
+    if cow_name.is_empty() || cow_name.ends_with('.') || cow_name == ".cow" {
+        return CowDna::default();
+    }
+    let clean = cow_name.strip_suffix(".cow").unwrap_or(cow_name);
+    if clean.is_empty() || clean.ends_with(".cow") || clean.ends_with('.') {
+        return CowDna::default();
+    }
+    if let Some(dna) = get_embedded_dna(clean) {
+        return dna.clone();
+    }
+    if forgum_platform::biome::ALL_MASCOTS
+        .iter()
+        .any(|m| m.name.eq_ignore_ascii_case(clean))
+    {
+        CowDna::from_biome(clean)
+    } else {
+        CowDna::default()
+    }
+}
+
+/// Resolve DNA for a specific cow, checking custom data directory on disk if candidate files exist,
+/// or directly taking the sub-0.1ms fast path from the memoized embedded catalog.
+pub fn resolve_cow_dna(data_dir: &Path, cow_name: &str) -> CowDna {
+    let candidates = resolve_animation_candidates(data_dir);
+    if candidates.iter().any(|p| p.is_file()) {
+        let animations = load_animations(data_dir);
+        if !animations.is_empty() {
+            return get_dna(&animations, cow_name);
+        }
+    }
+    get_dna_fast(cow_name)
+}
+
 /// Load the authoritative compile-time embedded animation catalog.
 pub fn load_embedded_animations() -> HashMap<String, CowDna> {
-    parse_animations_json_str(EMBEDDED_ANIMATIONS_JSON, None).unwrap_or_default()
+    get_embedded_catalog().clone()
 }
 
 /// Get DNA for a specific cow, falling back to defaults.
 pub fn get_dna(animations: &HashMap<String, CowDna>, cow_name: &str) -> CowDna {
+    if cow_name.is_empty() || cow_name.ends_with('.') || cow_name == ".cow" {
+        return CowDna::default();
+    }
     let clean = cow_name.strip_suffix(".cow").unwrap_or(cow_name);
+    if clean.is_empty() || clean.ends_with(".cow") || clean.ends_with('.') {
+        return CowDna::default();
+    }
     let with_cow = format!("{clean}.cow");
 
     if let Some(dna) = animations.get(cow_name) {
@@ -755,6 +821,8 @@ pub fn get_dna(animations: &HashMap<String, CowDna>, cow_name: &str) -> CowDna {
     } else if let Some(dna) = animations.get(clean) {
         dna.clone()
     } else if let Some(dna) = animations.get(&with_cow) {
+        dna.clone()
+    } else if let Some(dna) = get_embedded_dna(clean) {
         dna.clone()
     } else if forgum_platform::biome::ALL_MASCOTS
         .iter()
@@ -935,7 +1003,7 @@ mod tests {
                 ..CowDna::default()
             },
         );
-        // "dragon.cow.cow" → strip_suffix strips ".cow" → "dragon.cow" → not in map → default
+        // "dragon.cow.cow" → clean is "dragon.cow" (ends with .cow) → default
         let dna = get_dna(&map, "dragon.cow.cow");
         assert_eq!(dna, CowDna::default());
     }

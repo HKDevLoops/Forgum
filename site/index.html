@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Forgum - Universal Cross-Platform Terminal Mascot & Animation Engine</title>
+  <meta name="description" content="Download Forgum for Linux (.deb, .rpm, pacman), macOS (.dmg, Homebrew), Windows (.msi, WinGet, Scoop, Choco), BSD, and Nix.">
+  <style>
+    :root {
+      --bg: #090a0f;
+      --card-bg: rgba(18, 20, 29, 0.75);
+      --card-border: rgba(168, 85, 247, 0.2);
+      --text: #f1f5f9;
+      --text-muted: #94a3b8;
+      --purple: #a855f7;
+      --purple-hover: #9333ea;
+      --cyan: #06b6d4;
+      --green: #10b981;
+      --blue: #3b82f6;
+      --amber: #f59e0b;
+      --code-bg: #0f111a;
+      --code-border: #1e2233;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      padding: 0;
+      background-image: 
+        radial-gradient(circle at 15% 15%, rgba(168, 85, 247, 0.12) 0%, transparent 40%),
+        radial-gradient(circle at 85% 85%, rgba(6, 182, 212, 0.1) 0%, transparent 45%);
+      min-height: 100vh;
+    }
+    header {
+      text-align: center;
+      padding: 4rem 1.5rem 2.5rem;
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.35rem 0.85rem;
+      border-radius: 9999px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      background: rgba(168, 85, 247, 0.15);
+      border: 1px solid rgba(168, 85, 247, 0.3);
+      color: var(--purple);
+      margin-bottom: 1.25rem;
+    }
+    h1 {
+      font-size: 3rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      margin-bottom: 0.75rem;
+      background: linear-gradient(135deg, #fff 30%, #a855f7 70%, #06b6d4 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .tagline {
+      font-size: 1.2rem;
+      color: var(--text-muted);
+      max-width: 680px;
+      margin: 0 auto 1.5rem;
+    }
+    .ascii-mascot {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      font-size: 0.8rem;
+      line-height: 1.2;
+      color: var(--purple);
+      white-space: pre;
+      background: rgba(15, 17, 26, 0.7);
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      padding: 1rem;
+      display: inline-block;
+      margin: 1rem 0 2rem;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    }
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 1.5rem 4rem;
+    }
+    /* Auto-detection Hero Banner */
+    .hero-recommendation {
+      background: linear-gradient(135deg, rgba(168, 85, 247, 0.15) 0%, rgba(6, 182, 212, 0.15) 100%);
+      border: 1px solid rgba(168, 85, 247, 0.4);
+      border-radius: 12px;
+      padding: 1.75rem;
+      margin-bottom: 2.5rem;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1.25rem;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+    }
+    .hero-info h2 {
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .hero-info p {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      margin-top: 0.25rem;
+    }
+    .hero-actions {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1.4rem;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.95rem;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      cursor: pointer;
+      border: none;
+    }
+    .btn-primary {
+      background: var(--purple);
+      color: #fff;
+    }
+    .btn-primary:hover {
+      background: var(--purple-hover);
+      box-shadow: 0 0 15px rgba(168, 85, 247, 0.5);
+    }
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.08);
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.15);
+    }
+    /* Tabs Navigation */
+    .tabs-header {
+      display: flex;
+      gap: 0.5rem;
+      overflow-x: auto;
+      border-bottom: 1px solid var(--code-border);
+      padding-bottom: 0.75rem;
+      margin-bottom: 2rem;
+      scrollbar-width: thin;
+    }
+    .tab-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 1rem;
+      font-weight: 600;
+      padding: 0.6rem 1.1rem;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    .tab-btn:hover {
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.05);
+    }
+    .tab-btn.active {
+      color: #fff;
+      background: rgba(168, 85, 247, 0.2);
+      border: 1px solid rgba(168, 85, 247, 0.4);
+    }
+    /* Tab Content Cards */
+    .tab-pane {
+      display: none;
+    }
+    .tab-pane.active {
+      display: block;
+      animation: fadeIn 0.3s ease;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .platform-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 2rem;
+      margin-bottom: 1.5rem;
+      backdrop-filter: blur(8px);
+    }
+    .platform-card h3 {
+      font-size: 1.4rem;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+    .download-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1rem;
+      margin: 1.5rem 0 2rem;
+    }
+    .download-item {
+      background: rgba(15, 17, 26, 0.8);
+      border: 1px solid var(--code-border);
+      border-radius: 8px;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: transform 0.2s, border-color 0.2s;
+    }
+    .download-item:hover {
+      transform: translateY(-2px);
+      border-color: var(--purple);
+    }
+    .download-item .arch-title {
+      font-weight: 700;
+      font-size: 1rem;
+      margin-bottom: 0.25rem;
+    }
+    .download-item .file-info {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-bottom: 1rem;
+    }
+    .code-box {
+      position: relative;
+      background: var(--code-bg);
+      border: 1px solid var(--code-border);
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+      margin: 1rem 0;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.9rem;
+      color: #38bdf8;
+      overflow-x: auto;
+    }
+    .copy-btn {
+      position: absolute;
+      top: 0.6rem;
+      right: 0.6rem;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 0.3rem 0.6rem;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .copy-btn:hover {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.2);
+    }
+    footer {
+      text-align: center;
+      padding: 3rem 1.5rem;
+      border-top: 1px solid var(--code-border);
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+    footer a {
+      color: var(--purple);
+      text-decoration: none;
+    }
+    footer a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="badge">✦ Version 0.0.8-beta • Verified Multi-Platform Release ✦</div>
+    <h1>Forgum Distribution Portal</h1>
+    <p class="tagline">Cross-platform cowsay + fortune + lolcat ANSI animation engine. Ultra-fast, zero-allocation nature mathematics, 240Hz liquid motion, and universal hardware acceleration.</p>
+    
+    <div class="ascii-mascot">
+       ^__^
+       (oo)\_______
+       (__)\       )\/\
+           ||----w |
+           ||     ||
+    </div>
+  </header>
+
+  <div class="container">
+    <!-- Auto-detected Recommendation Banner -->
+    <div class="hero-recommendation" id="detected-hero">
+      <div class="hero-info">
+        <h2><span id="detected-os-icon">💻</span> <span id="detected-title">Detecting your operating system...</span></h2>
+        <p id="detected-subtitle">Selecting the optimal binary and package manager command for your machine.</p>
+      </div>
+      <div class="hero-actions" id="detected-actions">
+        <!-- Injected via JavaScript -->
+      </div>
+    </div>
+
+    <!-- Platform Selection Tabs -->
+    <div class="tabs-header">
+      <button class="tab-btn active" onclick="selectTab('tab-debian')">Debian / Ubuntu (.deb)</button>
+      <button class="tab-btn" onclick="selectTab('tab-rpm')">RHEL / Fedora / SUSE (.rpm)</button>
+      <button class="tab-btn" onclick="selectTab('tab-arch')">Arch Linux (AUR / PKGBUILD)</button>
+      <button class="tab-btn" onclick="selectTab('tab-macos')">macOS (.dmg / Brew)</button>
+      <button class="tab-btn" onclick="selectTab('tab-windows')">Windows (.msi / Winget / Scoop)</button>
+      <button class="tab-btn" onclick="selectTab('tab-nix-guix')">Nix / Guix / Gentoo / BSD</button>
+    </div>
+
+    <!-- Tab 1: Debian / Ubuntu (.deb) -->
+    <div class="tab-pane active" id="tab-debian">
+      <div class="platform-card">
+        <h3>📦 Debian, Ubuntu, Pop!_OS & Linux Mint</h3>
+        <p>Native Debian <code>.deb</code> packages with automatic dependency resolution and standard systemd/sysv integration.</p>
+        
+        <div class="download-grid">
+          <div class="download-item">
+            <div>
+              <div class="arch-title">64-bit x86 (amd64)</div>
+              <div class="file-info">forgum_0.0.8-beta_amd64.deb</div>
+            </div>
+            <a href="https://github.com/HKDevLoops/Forgum/releases/download/v0.0.8-beta/forgum_0.0.8-beta_amd64.deb" class="btn btn-primary">Download .deb (x64)</a>
+          </div>
+          <div class="download-item">
+            <div>
+              <div class="arch-title">64-bit ARM (arm64)</div>
+              <div class="file-info">forgum_0.0.8-beta_arm64.deb</div>
+            </div>
+            <a href="https://github.com/HKDevLoops/Forgum/releases/download/v0.0.8-beta/forgum_0.0.8-beta_arm64.deb" class="btn btn-secondary">Download .deb (ARM64)</a>
+          </div>
+          <div class="download-item">
+            <div>
+              <div class="arch-title">32-bit ARM (armhf)</div>
+              <div class="file-info">forgum_0.0.8-beta_armhf.deb</div>
+            </div>
+            <a href="https://github.com/HKDevLoops/Forgum/releases/download/v0.0.8-beta/forgum_0.0.8-beta_armhf.deb" class="btn btn-secondary">Download .deb (ARM32)</a>
+          </div>
+        </div>
+
+        <h4>Terminal Commands:</h4>
+        <div class="code-box">
+          <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+          <code>curl -fsSL https://raw.githubusercontent.com/HKDevLoops/Forgum/dev/install.sh | bash</code>
+        </div>
+        <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom: 1rem;">Or download and install directly via apt:</p>
+        <div class="code-box">
+          <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+          <code>sudo dpkg -i forgum_0.0.8-beta_amd64.deb || sudo apt-get install -f -y</code>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 2: Red Hat / Fedora / SUSE (.rpm) -->
+    <div class="tab-pane" id="tab-rpm">
+      <div class="platform-card">
+        <h3>🎩 Fedora, RHEL, CentOS, Rocky & openSUSE</h3>
+        <p>Precompiled <code>.rpm</code> packages optimized for RPM-based Linux distributions.</p>
+
+        <div class="download-grid">
+          <div class="download-item">
+            <div>
+              <div class="arch-title">64-bit x86 (x86_64)</div>
+              <div class="file-info">forgum-0.0.8-1.x86_64.rpm</div>
+            </div>
+            <a href="https://github.com/HKDevLoops/Forgum/releases/download/v0.0.8-beta/forgum-0.0.8-1.x86_64.rpm" class="btn btn-primary">Download .rpm (x86_64)</a>
+          </div>
+          <div class="download-item">
+            <div>
+              <div class="arch-title">64-bit ARM (aarch64)</div>
+              <div class="file-info">forgum-0.0.8-1.aarch64.rpm</div>
+            </div>
+            <a href="https://github.com/HKDevLoops/Forgum/releases/download/v0.0.8-beta/forgum-0.0.8-1.aarch64.rpm" class="btn btn-secondary">Download .rpm (ARM64)</a>
+          </div>
+        </div>
+
+        <h4>Terminal Commands:</h4>
+        <div class="code-box">
+          <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+          <code>sudo dnf install https://github.com/HKDevLoops/Forgum/releases/download/v0.0.8-beta/forgum-0.0.8-1.x86_64.rpm</code>
+        </div>
+        <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom: 1rem;">For openSUSE / SLES (via zypper):</p>
+        <div class="code-box">
+          <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+          <code>sudo zypper install https://github.com/HKDevLoops/Forgum/releases/download/v0.0.8-beta/forgum-0.0.8-1.x86_64.rpm</code>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 3: Arch Linux (AUR / PKGBUILD) -->
+    <div class="tab-pane" id="tab-arch">
+      <div class="platform-card">
+        <h3>🏹 Arch Linux, Manjaro & EndeavourOS</h3>
+        <p>Direct pacman archives and AUR PKGBUILD definitions.</p>
+
+        <div class="download-grid">
+          <div class="download-item">
+            <div>
+              <div class="arch-title">Arch Package (.pkg.tar.zst)</div>
+              <div class="file-info">forgum-0.0.8.beta-1-x86_64.pkg.tar.zst</div>
+            </div>
+            <a href="https://github.com/HKDevLoops/Forgum/releases/download/v0.0.8-beta/forgum-0.0.8.beta-1-x86_64.pkg.tar.zst" class="btn btn-primary">Download Pacman Package</a>
+          </div>
+          <div class="download-item">
+            <div>
+              <div class="arch-title">Source PKGBUILD</div>
+              <div class="file-info">packaging/pacman/PKGBUILD</div>
+            </div>
+            <a href="https://raw.githubusercontent.com/HKDevLoops/Forgum/dev/packaging/pacman/PKGBUILD" class="btn btn-secondary">View PKGBUILD</a>
+          </div>
+        </div>
+
+        <h4>Terminal Commands:</h4>
+        <div class="code-box">
+          <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+          <code>sudo pacman -U https://github.com/HKDevLoops/Forgum/releases/download/v0.0.8-beta/forgum-0.0.8.beta-1-x86_64.pkg.tar.zst</code>
+        </div>
+        <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom: 1rem;">Or via your favorite AUR helper:</p>
+        <div class="code-box">
+          <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+          <code>yay -S forgum</code>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 4: macOS (.dmg / Homebrew) -->
+    <div class="tab-pane" id="tab-macos">
+      <div class="platform-card">
+        <h3>🍎 Apple macOS (Apple Silicon M1–M4 & Intel)</h3>
+        <p>Native macOS disk image (.dmg), Homebrew formula, and Metal 3.0 MSL GPU acceleration.</p>
+
+        <div class="download-grid">
+          <div class="download-item">
+            <div>
+              <div class="arch-title">Apple Silicon (.dmg)</div>
+              <div class="file-info">forgum-0.0.8-beta-macos-arm64.dmg (M1/M2/M3/M4)</div>
+            </div>
+            <a href="https://github.com/HKDevLoops/Forgum/releases/download/v0.0.8-beta/forgum-0.0.8-beta-macos-arm64.dmg" class="btn btn-primary">Download .dmg (Apple Silicon)</a>
+          </div>
+          <div class="download-item">
+            <div>
+              <div class="arch-title">Intel Mac (.dmg)</div>
+              <div class="file-info">forgum-0.0.8-beta-macos-x64.dmg</div>
+            </div>
+            <a href="https://github.com/HKDevLoops/Forgum/releases/download/v0.0.8-beta/forgum-0.0.8-beta-macos-x64.dmg" class="btn btn-secondary">Download .dmg (Intel)</a>
+          </div>
+          <div class="download-item">
+            <div>
+              <div class="arch-title">Universal Tarball</div>
+              <div class="file-info">forgum-aarch64-apple-darwin.tar.gz</div>
+            </div>
+            <a href="https://github.com/HKDevLoops/Forgum/releases/download/v0.0.8-beta/forgum-aarch64-apple-darwin.tar.gz" class="btn btn-secondary">Download .tar.gz</a>
+          </div>
+        </div>
+
+        <h4>Terminal Commands:</h4>
+        <div class="code-box">
+          <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+          <code>brew install HKDevLoops/forgum/forgum</code>
+        </div>
+        <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom: 1rem;">Or run the one-line shell installer directly:</p>
+        <div class="code-box">
+          <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+          <code>curl -fsSL https://raw.githubusercontent.com/HKDevLoops/Forgum/dev/install.sh | bash</code>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 5: Windows (.msi / Winget / Scoop / Choco) -->
+    <div class="tab-pane" id="tab-windows">
+      <div class="platform-card">
+        <h3>🪟 Microsoft Windows 10 & 11 (x64 / ARM64)</h3>
+        <p>Windows WiX MSI installers, WinGet, Scoop, and Chocolatey packages with DirectML and Win32 GPU probing.</p>
+
+        <div class="download-grid">
+          <div class="download-item">
+            <div>
+              <div class="arch-title">Windows Installer (.msi)</div>
+              <div class="file-info">forgum.msi (Complete GUI installer)</div>
+            </div>
+            <a href="https://github.com/HKDevLoops/Forgum/releases/download/v0.0.8-beta/forgum.msi" class="btn btn-primary">Download .msi</a>
+          </div>
+          <div class="download-item">
+            <div>
+              <div class="arch-title">64-bit Zip (.zip)</div>
+              <div class="file-info">forgum-0.0.8-beta-windows-x64.zip</div>
+            </div>
+            <a href="https://github.com/HKDevLoops/Forgum/releases/download/v0.0.8-beta/forgum-0.0.8-beta-windows-x64.zip" class="btn btn-secondary">Download x64 .zip</a>
+          </div>
+          <div class="download-item">
+            <div>
+              <div class="arch-title">ARM64 Zip (.zip)</div>
+              <div class="file-info">forgum-0.0.8-beta-windows-arm64.zip (Snapdragon)</div>
+            </div>
+            <a href="https://github.com/HKDevLoops/Forgum/releases/download/v0.0.8-beta/forgum-0.0.8-beta-windows-arm64.zip" class="btn btn-secondary">Download ARM64 .zip</a>
+          </div>
+        </div>
+
+        <h4>Terminal Commands (PowerShell / Terminal):</h4>
+        <div class="code-box">
+          <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+          <code>winget install HKDevLoops.Forgum</code>
+        </div>
+        <div class="code-box">
+          <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+          <code>scoop install forgum</code>
+        </div>
+        <div class="code-box">
+          <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+          <code>choco install forgum</code>
+        </div>
+        <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom: 1rem;">Or run the one-command PowerShell installer:</p>
+        <div class="code-box">
+          <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+          <code>irm https://raw.githubusercontent.com/HKDevLoops/Forgum/dev/install.ps1 | iex</code>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 6: Nix / Guix / Gentoo / BSD -->
+    <div class="tab-pane" id="tab-nix-guix">
+      <div class="platform-card">
+        <h3>❄️ Nix, GNU Guix, Gentoo, FreeBSD & Alpine</h3>
+        <p>Declarative package definitions, musl libc static builds, and native BSD compatibility.</p>
+
+        <div class="download-grid">
+          <div class="download-item">
+            <div>
+              <div class="arch-title">Alpine / musl libc</div>
+              <div class="file-info">forgum-x86_64-unknown-linux-musl.tar.gz</div>
+            </div>
+            <a href="https://github.com/HKDevLoops/Forgum/releases/download/v0.0.8-beta/forgum-x86_64-unknown-linux-musl.tar.gz" class="btn btn-primary">Download musl Tarball</a>
+          </div>
+          <div class="download-item">
+            <div>
+              <div class="arch-title">FreeBSD x86_64</div>
+              <div class="file-info">forgum-x86_64-unknown-freebsd.tar.gz</div>
+            </div>
+            <a href="https://github.com/HKDevLoops/Forgum/releases/download/v0.0.8-beta/forgum-x86_64-unknown-freebsd.tar.gz" class="btn btn-secondary">Download FreeBSD Tarball</a>
+          </div>
+        </div>
+
+        <h4>Terminal Commands:</h4>
+        <p style="font-size:0.85rem; color:var(--text-muted);">Nix (Flake):</p>
+        <div class="code-box">
+          <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+          <code>nix run github:HKDevLoops/Forgum</code>
+        </div>
+        <p style="font-size:0.85rem; color:var(--text-muted);">GNU Guix:</p>
+        <div class="code-box">
+          <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+          <code>guix shell --container -f packaging/guix/forgum.scm -- forgum</code>
+        </div>
+        <p style="font-size:0.85rem; color:var(--text-muted);">Gentoo Portage:</p>
+        <div class="code-box">
+          <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+          <code>emerge app-misc/forgum</code>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <footer>
+    <p>Forgum is open-source software released under the <a href="https://github.com/HKDevLoops/Forgum/blob/main/LICENSE">MIT License</a>.</p>
+    <p style="margin-top: 0.5rem;">Repository: <a href="https://github.com/HKDevLoops/Forgum">github.com/HKDevLoops/Forgum</a> • Designed with zero-allocation nature mathematics.</p>
+  </footer>
+
+  <script>
+    function selectTab(tabId) {
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active'));
+
+      const targetPane = document.getElementById(tabId);
+      if (targetPane) {
+        targetPane.classList.add('active');
+      }
+
+      // Highlight corresponding button
+      const buttons = document.querySelectorAll('.tab-btn');
+      buttons.forEach(btn => {
+        if (btn.getAttribute('onclick') && btn.getAttribute('onclick').includes(tabId)) {
+          btn.classList.add('active');
+        }
+      });
+    }
+
+    function copyCode(btn) {
+      const codeElem = btn.parentElement.querySelector('code');
+      if (codeElem) {
+        navigator.clipboard.writeText(codeElem.innerText).then(() => {
+          const orig = btn.innerText;
+          btn.innerText = 'Copied!';
+          btn.style.color = '#10b981';
+          setTimeout(() => {
+            btn.innerText = orig;
+            btn.style.color = '';
+          }, 2000);
+        });
+      }
+    }
+
+    // Client OS and Architecture Detection
+    function detectClientEnvironment() {
+      const ua = navigator.userAgent || '';
+      const platform = navigator.platform || '';
+      
+      let os = 'Linux';
+      let arch = 'x64';
+      let icon = '🐧';
+      let tab = 'tab-debian';
+      let downloadUrl = 'https://github.com/HKDevLoops/Forgum/releases/download/v0.0.8-beta/forgum_0.0.8-beta_amd64.deb';
+      let downloadLabel = 'Download .deb for Debian/Ubuntu';
+      let cmd = 'curl -fsSL https://raw.githubusercontent.com/HKDevLoops/Forgum/dev/install.sh | bash';
+
+      if (/Win/i.test(platform) || /Windows/i.test(ua)) {
+        os = 'Windows';
+        icon = '🪟';
+        tab = 'tab-windows';
+        if (/ARM/i.test(ua) || /ARM64/i.test(platform)) {
+          arch = 'ARM64';
+          downloadUrl = 'https://github.com/HKDevLoops/Forgum/releases/download/v0.0.8-beta/forgum-0.0.8-beta-windows-arm64.zip';
+          downloadLabel = 'Download ARM64 .zip';
+        } else {
+          arch = 'x64';
+          downloadUrl = 'https://github.com/HKDevLoops/Forgum/releases/download/v0.0.8-beta/forgum.msi';
+          downloadLabel = 'Download Windows MSI Installer';
+        }
+        cmd = 'winget install HKDevLoops.Forgum';
+      } else if (/Mac/i.test(platform) || /Macintosh/i.test(ua)) {
+        os = 'macOS';
+        icon = '🍎';
+        tab = 'tab-macos';
+        // Test for Apple Silicon
+        const isArm = /ARM/i.test(ua) || (navigator.maxTouchPoints && navigator.maxTouchPoints > 2);
+        if (isArm) {
+          arch = 'Apple Silicon (M1–M4)';
+          downloadUrl = 'https://github.com/HKDevLoops/Forgum/releases/download/v0.0.8-beta/forgum-0.0.8-beta-macos-arm64.dmg';
+          downloadLabel = 'Download .dmg (Apple Silicon)';
+        } else {
+          arch = 'Intel';
+          downloadUrl = 'https://github.com/HKDevLoops/Forgum/releases/download/v0.0.8-beta/forgum-0.0.8-beta-macos-x64.dmg';
+          downloadLabel = 'Download .dmg (Intel)';
+        }
+        cmd = 'brew install HKDevLoops/forgum/forgum';
+      } else if (/FreeBSD/i.test(ua) || /FreeBSD/i.test(platform)) {
+        os = 'FreeBSD';
+        icon = '😈';
+        tab = 'tab-nix-guix';
+        downloadUrl = 'https://github.com/HKDevLoops/Forgum/releases/download/v0.0.8-beta/forgum-x86_64-unknown-freebsd.tar.gz';
+        downloadLabel = 'Download FreeBSD Tarball';
+      }
+
+      // Update hero recommendation
+      document.getElementById('detected-os-icon').innerText = icon;
+      document.getElementById('detected-title').innerText = `Recommended for ${os} (${arch})`;
+      document.getElementById('detected-subtitle').innerText = `One-click installer or command line terminal setup for your system:`;
+      
+      const actionsDiv = document.getElementById('detected-actions');
+      actionsDiv.innerHTML = `
+        <a href="${downloadUrl}" class="btn btn-primary">${downloadLabel}</a>
+        <button class="btn btn-secondary" onclick="navigator.clipboard.writeText('${cmd}'); this.innerText='Command Copied!';">Copy Install Command</button>
+      `;
+
+      selectTab(tab);
+    }
+
+    window.addEventListener('DOMContentLoaded', detectClientEnvironment);
+  </script>
+</body>
+</html>

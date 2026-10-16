@@ -224,6 +224,275 @@ pub fn ascii_dimensions(text: &str) -> (usize, usize) {
     (max_width, height.max(1))
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+pub enum CellMask {
+    #[default]
+    ExteriorTransparent, // Between legs / under wings: background scenery shows through
+    ExteriorMoat,        // 1-cell perimeter halo: suppresses scenery / \ | strokes & dims RGB by 68%
+    InteriorOpaque,      // Enclosed torso/head whitespace: 100% opaque (Rule C)
+    GlyphOpaque,         // Active mascot ASCII stroke
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+pub enum RigPart {
+    Head,
+    FacialFeature, // Protected $eyes, $tongue, snout
+    #[default]
+    Torso,
+    LimbForeLeft,
+    LimbForeRight,
+    LimbHindLeft,
+    LimbHindRight,
+    WingLeft,
+    WingRight,
+    Tail,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct RigCellMeta {
+    pub mask: CellMask,
+    pub part: RigPart,
+    pub u: f32,            // Pinned horizontal anatomical UV in [0.0, 1.0]
+    pub v: f32,            // Pinned vertical anatomical UV in [0.0, 1.0]
+    pub spine_offset: f32, // Lateral distance from spine in [-1.0, 1.0]
+}
+
+/// Morphs ASCII line-art characters based on instantaneous angular shear so legs pivot (/ -> | -> \)
+/// and wings/coils flex (^ -> ~ -> _ -> v) instead of sliding like a rigid stick placard.
+#[must_use]
+pub fn morph_ascii_glyph(ch: char, shear_x: f64, shear_y: f64) -> char {
+    match ch {
+        '/' | '|' | '\\' => {
+            let base_lean = match ch {
+                '/' => -0.65,
+                '|' => 0.0,
+                '\\' => 0.65,
+                _ => 0.0,
+            };
+            let lean = base_lean + shear_x;
+            if lean < -0.35 {
+                '/'
+            } else if lean > 0.35 {
+                '\\'
+            } else {
+                '|'
+            }
+        }
+        '^' | '~' | '-' | '_' | 'v' => {
+            if shear_y > 0.45 {
+                '^'
+            } else if shear_y > 0.15 {
+                '~'
+            } else if shear_y < -0.45 {
+                'v'
+            } else if shear_y < -0.15 {
+                '_'
+            } else {
+                ch
+            }
+        }
+        _ => ch,
+    }
+}
+
+/// Applies 1-cell Ambient Occlusion Moat around the mascot so mountain/tree slashes never touch mascot art.
+#[must_use]
+pub fn apply_ambient_occlusion_moat(
+    scenery_ch: char,
+    scenery_fg: (u8, u8, u8),
+    terminal_bg: (u8, u8, u8),
+) -> (char, (u8, u8, u8)) {
+    let moat_ch = match scenery_ch {
+        '/' | '\\' | '|' | '_' | '-' | '^' => ' ',
+        _ => scenery_ch,
+    };
+    let moat_fg = (
+        ((u16::from(scenery_fg.0) * 32 + u16::from(terminal_bg.0) * 68) / 100) as u8,
+        ((u16::from(scenery_fg.1) * 32 + u16::from(terminal_bg.1) * 68) / 100) as u8,
+        ((u16::from(scenery_fg.2) * 32 + u16::from(terminal_bg.2) * 68) / 100) as u8,
+    );
+    (moat_ch, moat_fg)
+}
+
+/// 2D Biomechanical Rig Map with 2D flood-fill boundary detection.
+#[derive(Clone, Debug)]
+pub struct AsciiRigMap {
+    pub width: usize,
+    pub height: usize,
+    pub cells: Vec<RigCellMeta>,
+}
+
+impl AsciiRigMap {
+    #[must_use]
+    #[allow(clippy::needless_range_loop)]
+    pub fn build(text: &str, cow_start: usize, segments: &AnatomicalSegments) -> Self {
+        let lines: Vec<&str> = text.lines().skip(cow_start).collect();
+        let height = lines.len();
+        let width = lines.iter().map(|l| l.chars().count()).max().unwrap_or(0);
+        if width == 0 || height == 0 {
+            return Self {
+                width: 0,
+                height: 0,
+                cells: Vec::new(),
+            };
+        }
+
+        let mut grid: Vec<Vec<char>> = Vec::with_capacity(height);
+        for line in &lines {
+            let mut row_chars: Vec<char> = line.chars().collect();
+            row_chars.resize(width, ' ');
+            grid.push(row_chars);
+        }
+
+        // 1. Initial categorization: non-space -> GlyphOpaque, space -> InteriorOpaque
+        let mut cells = Vec::with_capacity(width * height);
+        for y in 0..height {
+            for x in 0..width {
+                let ch = grid[y][x];
+                let mask = if ch != ' ' {
+                    CellMask::GlyphOpaque
+                } else {
+                    CellMask::InteriorOpaque
+                };
+
+                let u = (x as f32) / (width.max(1) as f32);
+                let v = (y as f32) / (height.max(1) as f32);
+                let spine_offset = (u - 0.5) * 2.0;
+
+                // Identify part
+                let part = if y + cow_start <= segments.head_row {
+                    RigPart::Head
+                } else if y + cow_start == segments.leg_row {
+                    if x <= width / 2 {
+                        RigPart::LimbForeLeft
+                    } else {
+                        RigPart::LimbHindLeft
+                    }
+                } else if x == segments.tail_col || (x > segments.tail_col && segments.tail_col > 0) {
+                    RigPart::Tail
+                } else {
+                    RigPart::Torso
+                };
+
+                cells.push(RigCellMeta {
+                    mask,
+                    part,
+                    u,
+                    v,
+                    spine_offset,
+                });
+            }
+        }
+
+        // 2. Flood fill from borders to mark exterior whitespace as ExteriorTransparent
+        let mut queue = std::collections::VecDeque::new();
+        let mut visited = vec![false; width * height];
+
+        for x in 0..width {
+            // top border
+            if grid[0][x] == ' ' {
+                visited[x] = true;
+                queue.push_back((x, 0));
+            }
+            // bottom border
+            let b_idx = (height - 1) * width + x;
+            if grid[height - 1][x] == ' ' && !visited[b_idx] {
+                visited[b_idx] = true;
+                queue.push_back((x, height - 1));
+            }
+        }
+
+        for y in 0..height {
+            // left border
+            let l_idx = y * width;
+            if grid[y][0] == ' ' && !visited[l_idx] {
+                visited[l_idx] = true;
+                queue.push_back((0, y));
+            }
+            // right border
+            let r_idx = y * width + (width - 1);
+            if grid[y][width - 1] == ' ' && !visited[r_idx] {
+                visited[r_idx] = true;
+                queue.push_back((width - 1, y));
+            }
+        }
+
+        while let Some((cx, cy)) = queue.pop_front() {
+            let idx = cy * width + cx;
+            cells[idx].mask = CellMask::ExteriorTransparent;
+
+            // 4-neighborhood
+            let neighbors: [(i32, i32); 4] = [(-1, 0), (1, 0), (0, -1), (0, 1)];
+            for (dx, dy) in neighbors {
+                let nx = cx as i32 + dx;
+                let ny = cy as i32 + dy;
+                if nx >= 0 && nx < width as i32 && ny >= 0 && ny < height as i32 {
+                    let unx = nx as usize;
+                    let uny = ny as usize;
+                    let n_idx = uny * width + unx;
+                    if !visited[n_idx] && grid[uny][unx] == ' ' {
+                        visited[n_idx] = true;
+                        queue.push_back((unx, uny));
+                    }
+                }
+            }
+        }
+
+        // 3. Mark 1-cell Chebyshev halo around GlyphOpaque as ExteriorMoat
+        let mut moat_indices = Vec::new();
+        for y in 0..height {
+            for x in 0..width {
+                let idx = y * width + x;
+                if cells[idx].mask == CellMask::ExteriorTransparent {
+                    // Check 8-neighborhood for any GlyphOpaque
+                    let mut has_glyph_neighbor = false;
+                    for dy in -1..=1 {
+                        for dx in -1..=1 {
+                            if dx == 0 && dy == 0 {
+                                continue;
+                            }
+                            let nx = x as i32 + dx;
+                            let ny = y as i32 + dy;
+                            if nx >= 0 && nx < width as i32 && ny >= 0 && ny < height as i32 {
+                                let n_idx = (ny as usize) * width + (nx as usize);
+                                if cells[n_idx].mask == CellMask::GlyphOpaque {
+                                    has_glyph_neighbor = true;
+                                    break;
+                                }
+                            }
+                        }
+                        if has_glyph_neighbor {
+                            break;
+                        }
+                    }
+                    if has_glyph_neighbor {
+                        moat_indices.push(idx);
+                    }
+                }
+            }
+        }
+
+        for idx in moat_indices {
+            cells[idx].mask = CellMask::ExteriorMoat;
+        }
+
+        Self {
+            width,
+            height,
+            cells,
+        }
+    }
+
+    #[must_use]
+    pub fn get(&self, x: usize, y: usize) -> Option<&RigCellMeta> {
+        if x < self.width && y < self.height {
+            self.cells.get(y * self.width + x)
+        } else {
+            None
+        }
+    }
+}
+
 /// Anatomical segmentation landmarks for an ASCII character mesh.
 /// Divides the creature into functional kinetic zones:
 /// - Dialogue/Bubble Zone: lines before the animal art
@@ -243,6 +512,23 @@ pub struct AnatomicalSegments {
     pub width: usize,
     pub height: usize,
     pub faces_right: bool,
+}
+
+impl Default for AnatomicalSegments {
+    fn default() -> Self {
+        Self {
+            bubble_lines: 0,
+            cow_start: 0,
+            head_row: 1,
+            head_col: 0,
+            chest_row: 2,
+            leg_row: 3,
+            tail_col: 0,
+            width: 10,
+            height: 4,
+            faces_right: true,
+        }
+    }
 }
 
 impl AnatomicalSegments {

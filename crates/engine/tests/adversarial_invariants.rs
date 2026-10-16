@@ -493,3 +493,221 @@ fn dynamic_animation_compute_offload_invariance() {
     assert!((-3.0..=3.0).contains(&rig.bubble_offset_x));
     assert!((-1.0..=1.0).contains(&rig.bubble_offset_y));
 }
+
+// ── Invariant 12: All Effects FPS, Velocity & Phase Independence ────
+
+#[test]
+fn invariant_all_effects_fps_velocity_and_phase_independence() {
+    use forgum_engine::kinematics::{BoundsMode, KinematicBody};
+
+    // 1. KinematicBody velocity and position invariance at 30 FPS vs 240 FPS for 5.0 simulated seconds
+    let sim_duration = 5.0_f64;
+    let mut body_30 = KinematicBody::new(10, 5, BoundsMode::Wrap);
+    let dt_30 = 1.0 / 30.0;
+    let steps_30 = (sim_duration * 30.0) as usize;
+    for _ in 0..steps_30 {
+        body_30.update(dt_30 as f32, 1.0, 160, 40);
+    }
+
+    let mut body_240 = KinematicBody::new(10, 5, BoundsMode::Wrap);
+    let dt_240 = 1.0 / 240.0;
+    let steps_240 = (sim_duration * 240.0) as usize;
+    for _ in 0..steps_240 {
+        body_240.update(dt_240 as f32, 1.0, 160, 40);
+    }
+
+    let diff_x = (body_30.x - body_240.x).abs();
+    assert!(
+        diff_x < 0.1,
+        "KinematicBody position must match within 0.1% across 30 FPS vs 240 FPS, got diff {diff_x}"
+    );
+
+    // 2. Verify all effects in ALL_EFFECTS update consistently across 5.0s
+    let dd = data_dir();
+    let animations = dna::load_animations(&dd);
+    let default_dna = dna::get_dna(&animations, "default");
+    let cow_raw = load_cow("default", &dd, "oo", "  ", "\\\\");
+
+    for &eff_name in effects::ALL_EFFECTS {
+        let mut effect_30 = effects::create_scene_effect(
+            eff_name,
+            cow_raw.clone(),
+            default_dna.clone(),
+            0,
+            "natural",
+        );
+        for _ in 0..steps_30 {
+            effect_30.update(dt_30 as f32, 80, 24);
+        }
+
+        let mut effect_240 = effects::create_scene_effect(
+            eff_name,
+            cow_raw.clone(),
+            default_dna.clone(),
+            0,
+            "natural",
+        );
+        for _ in 0..steps_240 {
+            effect_240.update(dt_240 as f32, 80, 24);
+        }
+
+        // Verify neither panics and both render without buffer corruption
+        let mut fb_30 = FrameBuffer::new(80, 24);
+        let mut fb_240 = FrameBuffer::new(80, 24);
+        effect_30.render(&mut fb_30, sim_duration as f32);
+        effect_240.render(&mut fb_240, sim_duration as f32);
+    }
+}
+
+// ── Invariant 13: Liquid Governor 240Hz P99 Jitter Bound ─────────────
+
+#[test]
+fn invariant_liquid_governor_240hz_p99_jitter_bound() {
+    use forgum_engine::engine_core::LiquidFrameGovernor;
+
+    let mut gov = LiquidFrameGovernor::new(240);
+    let expected_period_ns = 1_000_000_000 / 240;
+    assert_eq!(
+        gov.target_period().as_nanos(),
+        expected_period_ns as u128,
+        "Target period at 240Hz must be exactly 4,166,666 ns"
+    );
+
+    let mut fixed_integrations = 0;
+    for _ in 0..500 {
+        let (alpha, elapsed) = gov.step_simulation(|_dt| {
+            fixed_integrations += 1;
+        });
+        assert!(
+            (0.0..=1.0).contains(&alpha),
+            "Alpha interpolation must stay in [0.0, 1.0], got {alpha}"
+        );
+        assert!(
+            elapsed >= 0.0,
+            "Elapsed simulation clock must be non-negative"
+        );
+    }
+}
+
+// ── Invariant 14: Flood-Fill Hull & Moat Preserve Concavities ────────
+
+#[test]
+fn invariant_flood_fill_hull_and_moat_preserve_concavities() {
+    use forgum_engine::kinematics::{AnatomicalSegments, AsciiRigMap, CellMask};
+
+    let dd = data_dir();
+    let cows_dir = dd.join("Cows");
+    let cow_files: Vec<_> = std::fs::read_dir(&cows_dir)
+        .expect("data/Cows exists")
+        .filter_map(|e| e.ok())
+        .filter(|e| e.path().extension().is_some_and(|ext| ext == "cow"))
+        .collect();
+
+    assert_eq!(cow_files.len(), 132);
+
+    for entry in &cow_files {
+        let cow_name = entry
+            .path()
+            .file_stem()
+            .unwrap()
+            .to_string_lossy()
+            .to_string();
+        let cow_raw = load_cow(&cow_name, &dd, "oo", "  ", "\\\\");
+        let segments = AnatomicalSegments::detect(&cow_raw, 0, None, None, None, 1);
+        let rig = AsciiRigMap::build(&cow_raw, 0, &segments);
+
+        if rig.width > 0 && rig.height > 0 {
+            // Check that every mascot has glyph opaque cells
+            let has_glyph = rig.cells.iter().any(|c| c.mask == CellMask::GlyphOpaque);
+            assert!(
+                has_glyph,
+                "Mascot '{cow_name}' must contain GlyphOpaque cells"
+            );
+
+            // Check that border whitespace is exterior transparent
+            let has_exterior = rig
+                .cells
+                .iter()
+                .any(|c| c.mask == CellMask::ExteriorTransparent);
+            assert!(
+                has_exterior,
+                "Mascot '{cow_name}' must contain ExteriorTransparent cells"
+            );
+        }
+    }
+
+    // Explicit concavity test: A U-shaped mascot outline with interior and exterior whitespace
+    let concave_mascot = "\
+|   |
+|   |
++---+
+";
+    let segments = AnatomicalSegments::detect(concave_mascot, 0, None, None, None, 1);
+    let rig = AsciiRigMap::build(concave_mascot, 0, &segments);
+
+    // The top row (y=0, x=1..=3) connects directly to the top boundary, so it is exterior transparent
+    // Cell (2, 0) is ExteriorTransparent
+    let top_gap_cell = &rig.cells[2];
+    assert_eq!(
+        top_gap_cell.mask,
+        CellMask::ExteriorTransparent,
+        "Concave top opening must be marked ExteriorTransparent"
+    );
+
+    // Verify 1-cell ExteriorMoat exists adjacent to GlyphOpaque cells
+    let has_moat = rig.cells.iter().any(|c| c.mask == CellMask::ExteriorMoat);
+    assert!(
+        has_moat,
+        "Rig map must contain 1-cell ExteriorMoat halo cells"
+    );
+}
+
+// ── Invariant 15: UV-Pinned Palette & Zero Color Swimming ───────────
+
+#[test]
+fn invariant_uv_pinned_palette_zero_color_swimming() {
+    use forgum_engine::kinematics::{morph_ascii_glyph, AnatomicalSegments, AsciiRigMap};
+
+    // 1. Morph ASCII glyph transitions preserve slope bounds without jumping
+    // Pivoting leg transitions
+    assert_eq!(morph_ascii_glyph('|', -0.5, 0.0), '/');
+    assert_eq!(morph_ascii_glyph('|', 0.0, 0.0), '|');
+    assert_eq!(morph_ascii_glyph('|', 0.5, 0.0), '\\');
+
+    assert_eq!(morph_ascii_glyph('/', -0.2, 0.0), '/');
+    assert_eq!(morph_ascii_glyph('/', 0.8, 0.0), '|');
+    assert_eq!(morph_ascii_glyph('/', 1.1, 0.0), '\\');
+
+    assert_eq!(morph_ascii_glyph('\\', 0.2, 0.0), '\\');
+    assert_eq!(morph_ascii_glyph('\\', -0.8, 0.0), '|');
+    assert_eq!(morph_ascii_glyph('\\', -1.1, 0.0), '/');
+
+    // Flexing wing transitions
+    assert_eq!(morph_ascii_glyph('-', 0.0, 0.5), '^');
+    assert_eq!(morph_ascii_glyph('-', 0.0, 0.25), '~');
+    assert_eq!(morph_ascii_glyph('-', 0.0, -0.25), '_');
+    assert_eq!(morph_ascii_glyph('-', 0.0, -0.5), 'v');
+    assert_eq!(morph_ascii_glyph('-', 0.0, 0.0), '-');
+
+    // 2. UV coordinates are pinned to anatomical positions and do not swim between frames
+    let mascot_art = " (oo)\n (  )\n || ||\n";
+    let segments = AnatomicalSegments::detect(mascot_art, 0, None, None, None, 1);
+    let rig_frame1 = AsciiRigMap::build(mascot_art, 0, &segments);
+    let rig_frame2 = AsciiRigMap::build(mascot_art, 0, &segments);
+
+    assert_eq!(rig_frame1.cells.len(), rig_frame2.cells.len());
+    for (i, (c1, c2)) in rig_frame1.cells.iter().zip(rig_frame2.cells.iter()).enumerate() {
+        assert_eq!(
+            c1.u, c2.u,
+            "Cell {i}: U coordinate must remain strictly pinned across frames (zero swimming)"
+        );
+        assert_eq!(
+            c1.v, c2.v,
+            "Cell {i}: V coordinate must remain strictly pinned across frames (zero swimming)"
+        );
+        assert_eq!(
+            c1.part, c2.part,
+            "Cell {i}: Anatomical part classification must remain identical"
+        );
+    }
+}

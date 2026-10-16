@@ -99,6 +99,7 @@ pub fn run_standalone_tui(initial_tab: Option<&str>) -> Result<(), Box<dyn std::
         "fx" | "effects" | "anim" | "colors" | "3" => Some(Tab::Effects),
         "install" | "installer" | "shell" | "shells" | "4" => Some(Tab::Installer),
         "config" | "settings" | "5" => Some(Tab::Config),
+        "studio" | "shader" | "kinematics" | "hull" | "6" => Some(Tab::Studio),
         _ => None,
     };
     run_tui(None, tab)

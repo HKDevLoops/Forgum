@@ -44,11 +44,12 @@ impl DaemonSocket {
     pub fn bind(path: &Path) -> Result<Self, PlatformError> {
         #[cfg(unix)]
         {
-            // Ensure the parent directory exists (e.g. $XDG_RUNTIME_DIR/Forgum
-            // may not exist on a fresh install or in CI). Without this,
-            // `bind` fails with ENOENT and the daemon can't start.
+            use std::os::unix::fs::PermissionsExt;
+
+            // Ensure the parent directory exists and is restricted to user-only (0o700)
             if let Some(parent) = path.parent() {
                 let _ = std::fs::create_dir_all(parent);
+                let _ = std::fs::set_permissions(parent, std::fs::Permissions::from_mode(0o700));
             }
 
             // Remove stale socket file from a previous unclean shutdown,
@@ -66,6 +67,7 @@ impl DaemonSocket {
             let listener =
                 std::os::unix::net::UnixListener::bind(path).map_err(PlatformError::Io)?;
             listener.set_nonblocking(true).map_err(PlatformError::Io)?;
+            let _ = std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o700));
 
             Ok(Self {
                 inner: SocketInner::Unix {

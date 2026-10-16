@@ -9,101 +9,76 @@
 //! - Uses pre-allocated static scratch buffers (~64 KB resident memory).
 //! - Adheres strictly to workspace-wide `unsafe_code = "deny"`.
 
-use forgum_platform::compute::ComputeEngine;
-use forgum_platform::gpu::{AccelerationMode, GpuDeviceType, GpuInfo};
-use std::sync::OnceLock;
+pub use forgum_platform::compute::ComputeEngine;
+use forgum_platform::gpu::AccelerationMode;
 
-/// Global compute engine instance initialized on startup.
-static COMPUTE_ENGINE: OnceLock<GpuComputeEngine> = OnceLock::new();
-
-/// Retrieve or initialize the process-wide compute engine.
-#[must_use]
-pub fn get_compute_engine(mode: Option<AccelerationMode>) -> &'static GpuComputeEngine {
-    COMPUTE_ENGINE.get_or_init(|| {
-        let requested = mode.unwrap_or(AccelerationMode::Auto);
-        GpuComputeEngine::init(requested)
-    })
-}
-
-/// Explicitly initialize the compute engine with a specific acceleration policy.
-pub fn init_compute_engine(mode: AccelerationMode) -> &'static GpuComputeEngine {
-    COMPUTE_ENGINE.get_or_init(|| GpuComputeEngine::init(mode))
-}
-
-/// Hardware-accelerated nature math and particle compute engine.
-#[derive(Debug)]
+/// Lightweight, copyable wrapper around the process-wide `ComputeEngine` singleton.
+/// Delegates all mathematical and hardware-accelerated passes via `Deref`.
+#[derive(Debug, Clone, Copy)]
 pub struct GpuComputeEngine {
     platform_engine: &'static ComputeEngine,
     mode: AccelerationMode,
+}
+
+impl std::ops::Deref for GpuComputeEngine {
+    type Target = ComputeEngine;
+
+    #[inline]
+    fn deref(&self) -> &Self::Target {
+        self.platform_engine
+    }
+}
+
+impl Default for GpuComputeEngine {
+    fn default() -> Self {
+        get_compute_engine(None)
+    }
+}
+
+/// Retrieve the process-wide compute engine directly from `forgum_platform`.
+#[must_use]
+pub fn get_compute_engine(mode: Option<AccelerationMode>) -> GpuComputeEngine {
+    let mode = mode.unwrap_or(AccelerationMode::Auto);
+    GpuComputeEngine {
+        platform_engine: forgum_platform::compute::get_compute_engine(Some(mode)),
+        mode,
+    }
+}
+
+/// Explicitly initialize the process-wide compute engine with a specific acceleration policy.
+pub fn init_compute_engine(mode: AccelerationMode) -> GpuComputeEngine {
+    GpuComputeEngine {
+        platform_engine: forgum_platform::compute::init_compute_engine(mode),
+        mode,
+    }
 }
 
 impl GpuComputeEngine {
     /// Initialize compute engine with the requested acceleration policy.
     #[must_use]
     pub fn init(mode: AccelerationMode) -> Self {
-        let platform_engine = forgum_platform::compute::get_compute_engine(Some(mode));
         Self {
-            platform_engine,
+            platform_engine: forgum_platform::compute::get_compute_engine(Some(mode)),
             mode,
         }
     }
 
+    /// Retrieve the resolved compute backend for this engine instance.
     #[must_use]
-    pub fn device_type(&self) -> GpuDeviceType {
-        self.platform_engine.device_type()
+    pub fn compute_backend(&self) -> forgum_platform::ComputeBackend {
+        forgum_platform::resolve_compute_pipeline(self.mode).backend
     }
 
-    #[must_use]
-    pub fn device_name(&self) -> &str {
-        self.platform_engine.device_name()
-    }
-
-    #[must_use]
-    pub fn device_info(&self) -> Option<&GpuInfo> {
-        self.platform_engine.device_info()
-    }
-
-    #[must_use]
-    pub fn requested_mode(&self) -> AccelerationMode {
-        self.mode
-    }
-
-    #[must_use]
-    pub fn is_accelerated(&self) -> bool {
-        self.platform_engine.is_accelerated()
-    }
-
-    /// Access the active Vulkan + Metal compute pipeline capabilities.
+    /// Retrieve the comprehensive compute pipeline capabilities for this engine instance.
     #[must_use]
     pub fn pipeline_capabilities(&self) -> &'static forgum_platform::ComputePipelineCapabilities {
         forgum_platform::resolve_compute_pipeline(self.mode)
     }
 
-    /// Active compute execution backend (Vulkan, Metal, MoltenVK, or SimdCpu).
+    /// Retrieve the requested acceleration mode.
     #[must_use]
-    pub fn compute_backend(&self) -> forgum_platform::ComputeBackend {
-        self.pipeline_capabilities().backend
-    }
-
-    /// Evaluates harmonic sinusoidal mountain elevation:
-    /// H(x) = H_base * [1 + Σ A_k |sin(2πkx/λ + φ_k)|^γ]
-    ///
-    /// Evaluated in parallel across CPU/GPU cores via `std::thread::scope`.
-    pub fn compute_mountain_harmonic_superposition(
-        &self,
-        cols: usize,
-        h_base: f32,
-        wavelength: f32,
-        gamma: f32,
-        time: f32,
-        amplitudes: &[f32],
-        phases: &[f32],
-        out: &mut [f32],
-    ) {
-        self.platform_engine
-            .compute_mountain_harmonic_superposition(
-                cols, h_base, wavelength, gamma, time, amplitudes, phases, out,
-            );
+    pub fn requested_mode(&self) -> AccelerationMode {
+        self.mode
     }
 
     /// Evaluates full mountain elevations for a given style across columns.
@@ -211,171 +186,6 @@ impl GpuComputeEngine {
         );
     }
 
-    /// Evaluates road surface spline undulation and procedural harmonic surface roughness.
-    /// Evaluated in parallel across CPU/GPU cores via `std::thread::scope`.
-    pub fn compute_road_undulation(
-        &self,
-        cols: usize,
-        base_y: f32,
-        roughness: f32,
-        time: f32,
-        out: &mut [f32],
-    ) {
-        self.compute_road_undulation_chunk(0, cols, base_y, roughness, time, out);
-    }
-
-    /// Evaluates road surface spline undulation starting at arbitrary column offset `start_x`.
-    /// Evaluated in parallel across CPU/GPU cores via `std::thread::scope`.
-    pub fn compute_road_undulation_chunk(
-        &self,
-        start_x: usize,
-        cols: usize,
-        base_y: f32,
-        roughness: f32,
-        time: f32,
-        out: &mut [f32],
-    ) {
-        self.platform_engine
-            .compute_road_undulation_chunk(start_x, cols, base_y, roughness, time, out);
-    }
-
-    /// Evaluates vegetation crown envelope with Fibonacci / Golden Ratio spacing:
-    /// Φ ≈ 1.6180339887
-    #[must_use]
-    pub fn compute_foliage_density(&self, x: f32, y: f32, crown_radius: f32) -> f32 {
-        self.platform_engine
-            .compute_foliage_density(x, y, crown_radius)
-    }
-
-    /// Parallel particle physics integration step:
-    /// Updates position, velocity, and life parameters in-place with zero allocation.
-    pub fn compute_particle_physics_step(
-        &self,
-        positions_x: &mut [f32],
-        positions_y: &mut [f32],
-        velocities_x: &mut [f32],
-        velocities_y: &mut [f32],
-        lifetimes: &mut [f32],
-        dt: f32,
-        gravity: f32,
-        drag: f32,
-        cols: usize,
-        rows: usize,
-    ) {
-        self.platform_engine.compute_particle_physics_step(
-            positions_x,
-            positions_y,
-            velocities_x,
-            velocities_y,
-            lifetimes,
-            dt,
-            gravity,
-            drag,
-            cols,
-            rows,
-        );
-    }
-
-    /// Evaluates continuous spring-damper dialogue bubble physics.
-    pub fn compute_dynamic_bubble_inertia(
-        &self,
-        dt: f32,
-        elapsed: f32,
-        mascot_vx: f32,
-        bubble_offset_x: &mut f32,
-        bubble_vel_x: &mut f32,
-        bubble_offset_y: &mut f32,
-        bubble_vel_y: &mut f32,
-    ) {
-        self.platform_engine.compute_dynamic_bubble_inertia(
-            dt,
-            elapsed,
-            mascot_vx,
-            bubble_offset_x,
-            bubble_vel_x,
-            bubble_offset_y,
-            bubble_vel_y,
-        );
-    }
-
-    /// Evaluates continuous 2D harmonic Lissajous or continuous trajectory displacement.
-    pub fn compute_dynamic_kinematics_step(
-        &self,
-        total_time: f32,
-        cols: usize,
-        rows: usize,
-        width: usize,
-        height: usize,
-        amp_x: f32,
-        amp_y: f32,
-        freq_x: f32,
-        freq_y: f32,
-        phase_x: f32,
-        phase_y: f32,
-        out_x: &mut f32,
-        out_y: &mut f32,
-    ) {
-        self.platform_engine.compute_dynamic_kinematics_step(
-            total_time, cols, rows, width, height, amp_x, amp_y, freq_x, freq_y, phase_x, phase_y,
-            out_x, out_y,
-        );
-    }
-
-    /// Batch-evaluates aquatic underwater rising bubble kinematics (turbulence, wobble, vertical drift).
-    pub fn compute_underwater_bubble_kinematics(
-        &self,
-        dt: f32,
-        time: f32,
-        xs: &mut [f32],
-        ys: &mut [f32],
-        lifetimes: &mut [f32],
-        rise_speeds: &[f32],
-    ) {
-        self.platform_engine.compute_underwater_bubble_kinematics(
-            dt,
-            time,
-            xs,
-            ys,
-            lifetimes,
-            rise_speeds,
-        );
-    }
-
-    /// Evaluates continuous celestial trajectory arc (Sun / Moon) across sky horizon:
-    /// Returns (screen_x, screen_y) within terminal bounds [0..cols, 0..sky_horizon].
-    /// Mode: 0 = Dawn, 1 = Day, 2 = Dusk, 3 = Night.
-    #[must_use]
-    pub fn compute_celestial_trajectory(
-        &self,
-        mode: u8,
-        time: f32,
-        cols: usize,
-        sky_horizon: usize,
-    ) -> (usize, usize) {
-        self.platform_engine
-            .compute_celestial_trajectory(mode, time, cols, sky_horizon)
-    }
-
-    /// Multi-threaded batch evaluation of tree swaying lever arms and aerodynamic gusts.
-    /// Evaluates `out_sways` in parallel with zero heap allocation.
-    pub fn compute_tree_sway_batch(
-        &self,
-        height_fractions: &[f32],
-        is_small_shrubs: &[bool],
-        species_is_willow: &[bool],
-        tree_seeds: &[f32],
-        time: f32,
-        out_sways: &mut [isize],
-    ) {
-        self.platform_engine.compute_tree_sway_batch(
-            height_fractions,
-            is_small_shrubs,
-            species_is_willow,
-            tree_seeds,
-            time,
-            out_sways,
-        );
-    }
 }
 
 #[cfg(test)]

@@ -13,13 +13,14 @@ use std::path::{Path, PathBuf};
 use forgum_engine::cow::{expand_cow, load_cow};
 use forgum_engine::dna;
 use forgum_engine::effects;
-use forgum_engine::framebuffer::{Cell, Color, FrameBuffer};
+use forgum_engine::framebuffer::FrameBuffer;
 
 // ── Constants ──────────────────────────────────────────────────────
 
-/// Terminal cell dimensions in pixels.
-const CELL_W: usize = 8;
-const CELL_H: usize = 16;
+use forgum_engine::capture_rasterizer::{
+    render_framebuffer_to_rgba, DEFAULT_BG_COLOR as BG_COLOR, DEFAULT_CELL_H as CELL_H,
+    DEFAULT_CELL_W as CELL_W,
+};
 
 /// Number of animation frames to render per cow.
 const FRAMES_PER_COW: usize = 60;
@@ -30,14 +31,6 @@ const HERO_FRAME: usize = 30;
 /// Canvas size in terminal cells.
 const CANVAS_COLS: usize = 80;
 const CANVAS_ROWS: usize = 24;
-
-/// Background color (dark terminal).
-const BG_COLOR: Color = Color {
-    r: 30,
-    g: 30,
-    b: 40,
-    a: 255,
-};
 
 // ── Helpers ────────────────────────────────────────────────────────
 
@@ -96,58 +89,9 @@ fn all_cow_names() -> Vec<String> {
 
 // ── Framebuffer → PNG conversion ───────────────────────────────────
 
-/// Render a single cell into a pixel buffer at the given cell position.
-fn render_cell_to_pixels(
-    pixels: &mut [u8],
-    img_width: usize,
-    cell_x: usize,
-    cell_y: usize,
-    cell: &Cell,
-) {
-    let fg = cell.fg;
-    let bg = if cell.bg.a > 0 { cell.bg } else { BG_COLOR };
-
-    let alpha = cell.alpha as f32 / 255.0;
-    let fr = (fg.r as f32 * alpha + bg.r as f32 * (1.0 - alpha)) as u8;
-    let fg_g = (fg.g as f32 * alpha + bg.g as f32 * (1.0 - alpha)) as u8;
-    let fb = (fg.b as f32 * alpha + bg.b as f32 * (1.0 - alpha)) as u8;
-
-    let px_x = cell_x * CELL_W;
-    let px_y = cell_y * CELL_H;
-
-    let (r, g, b) = if cell.ch == ' ' || cell.ch == '\0' {
-        (bg.r, bg.g, bg.b)
-    } else {
-        (fr, fg_g, fb)
-    };
-
-    for dy in 0..CELL_H {
-        for dx in 0..CELL_W {
-            let px = (px_y + dy) * img_width + (px_x + dx);
-            let base = px * 4;
-            if base + 3 < pixels.len() {
-                pixels[base] = r;
-                pixels[base + 1] = g;
-                pixels[base + 2] = b;
-                pixels[base + 3] = 255;
-            }
-        }
-    }
-}
-
 /// Convert a FrameBuffer to an RGBA pixel buffer.
 fn framebuffer_to_pixels(fb: &FrameBuffer) -> Vec<u8> {
-    let img_w = fb.width * CELL_W;
-    let img_h = fb.height * CELL_H;
-    let mut pixels = vec![0u8; img_w * img_h * 4];
-
-    for y in 0..fb.height {
-        for x in 0..fb.width {
-            let cell = fb.get(x, y);
-            render_cell_to_pixels(&mut pixels, img_w, x, y, &cell);
-        }
-    }
-    pixels
+    render_framebuffer_to_rgba(fb, CELL_W, CELL_H, BG_COLOR).0
 }
 
 /// Save a framebuffer as a PNG file.

@@ -77,6 +77,18 @@ impl ComputeEngine {
         self.device_type.is_gpu()
     }
 
+    /// Access the active Vulkan + Metal compute pipeline capabilities.
+    #[must_use]
+    pub fn pipeline_capabilities(&self) -> &'static crate::ComputePipelineCapabilities {
+        crate::resolve_compute_pipeline(self.requested_mode)
+    }
+
+    /// Active compute execution backend (Vulkan, Metal, MoltenVK, or SimdCpu).
+    #[must_use]
+    pub fn compute_backend(&self) -> crate::ComputeBackend {
+        self.pipeline_capabilities().backend
+    }
+
     /// Evaluates harmonic sinusoidal mountain elevation:
     /// H(x) = H_base * [1 + Σ A_k |sin(2πkx/λ + φ_k)|^γ]
     ///

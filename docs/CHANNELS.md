@@ -1,11 +1,11 @@
 # 🌊 Forgum Release Channels & Multi-Channel Architecture
 
-This guide details Forgum's 3-branch release architecture, how to switch release channels, and how Forgum resolves dual installations and cross-package-manager conflicts.
+This guide details Forgum's 4-channel release architecture, how to switch release channels, and how Forgum resolves dual installations and cross-package-manager conflicts.
 
 ---
 
 ## 📑 Table of Contents
-1. [The 3-Channel Architecture](#1-the-3-channel-architecture)
+1. [The 4-Channel Architecture](#1-the-4-channel-architecture)
 2. [Channel Comparison Matrix](#2-channel-comparison-matrix)
 3. [Switching Channels via CLI](#3-switching-channels-via-cli)
 4. [Cross-Package-Manager Conflict Resolution](#4-cross-package-manager-conflict-resolution)
@@ -16,27 +16,34 @@ This guide details Forgum's 3-branch release architecture, how to switch release
 
 ---
 
-## 1. The 3-Channel Architecture
+## 1. The 4-Channel Architecture
 
-Forgum provides three distinct release branches to suit different stability and development needs:
+Forgum provides four distinct release channels to suit different stability and development needs:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│ 1. dev (Maintainer & Contributor Branch)                   │
+│ 1. dev (Local & Contributor Channel)                        │
 │    - PR landing target for all active development.          │
 │    - Bleeding-edge features, kinematics, and physics models.│
 └──────────────────────────────┬──────────────────────────────┘
                                │ (Automated Daily CI/CD at 02:00 UTC)
                                ▼
 ┌─────────────────────────────────────────────────────────────┐
-│ 2. nightly (Early-Access Channel)                           │
+│ 2. nightly (Bleeding Edge Rolling Channel)                  │
 │    - Automated pre-release binary rolling builds.           │
-│    - Ideal for power users who want fresh updates.          │
+│    - Ideal for power users who want daily fresh updates.    │
 └──────────────────────────────┬──────────────────────────────┘
-                               │ (Tagged Stable Release)
+                               │ (Candidate Validation)
                                ▼
 ┌─────────────────────────────────────────────────────────────┐
-│ 3. main (Public Stable Channel)                             │
+│ 3. alpha (Early Testing & Preview Channel)                  │
+│    - Pre-release testing builds before tagging on main.     │
+│    - Validates stability, animations, and GPU acceleration. │
+└──────────────────────────────┬──────────────────────────────┘
+                               │ (Tagged Release)
+                               ▼
+┌─────────────────────────────────────────────────────────────┐
+│ 4. stable (Public Stable Channel - main branch)             │
 │    - Recommended for all general users and production.      │
 │    - Distributed via Homebrew, Scoop, Winget, Pacman, etc.  │
 └─────────────────────────────────────────────────────────────┘
@@ -48,9 +55,10 @@ Forgum provides three distinct release branches to suit different stability and 
 
 | Channel | Recommended Audience | Release Cadence | Target Branch | Update Command |
 | :--- | :--- | :--- | :--- | :--- |
-| **`main`** (Stable) | All users, default installations | Semantic version tags (`v0.0.8-beta`) | `main` | `forgum update --channel stable` |
-| **`nightly`** (Early Access) | Testers, power users, theme creators | Daily rolling release | `nightly` | `forgum update --channel nightly` |
-| **`dev`** (Bleeding Edge) | Maintainers & active PR contributors | On git commit | `dev` | `forgum channel set dev` |
+| **`stable`** (Main) | All users, default installations | Semantic version tags (`v0.0.8-beta`) | `main` | `forgum update --channel stable` |
+| **`alpha`** (Preview) | Early testing, canary validations | Pre-release release candidates | `dev` | `forgum update --channel alpha` |
+| **`nightly`** (Bleeding Edge) | Testers, power users, theme creators | Daily rolling release | `nightly` | `forgum update --channel nightly` |
+| **`dev`** (Local/Git) | Maintainers & active PR contributors | On git commit | `dev` | `forgum channel set dev` |
 
 ---
 

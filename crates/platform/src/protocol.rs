@@ -527,9 +527,148 @@ impl Default for SceneConfig {
     }
 }
 
+/// Metadata record for a declarative configuration property.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ConfigSchemaField {
+    pub name: &'static str,
+    pub label: &'static str,
+    pub category: &'static str,
+    pub desc: &'static str,
+    pub type_name: &'static str,
+    pub has_aliases: bool,
+}
+
+impl ConfigSchemaField {
+    #[must_use]
+    pub const fn new(
+        name: &'static str,
+        label: &'static str,
+        category: &'static str,
+        desc: &'static str,
+        type_name: &'static str,
+        has_aliases: bool,
+    ) -> Self {
+        Self {
+            name,
+            label,
+            category,
+            desc,
+            type_name,
+            has_aliases,
+        }
+    }
+}
+
+/// Declarative configuration definition macro.
+///
+/// Unifies field declaration, type definitions, defaults, serde attributes, category badges,
+/// descriptions, and schema reflection into a single declarative invocation, eliminating
+/// the 9-file "No-Orphan-Config Dance".
+#[macro_export]
+macro_rules! define_forgum_config {
+    (
+        $(
+            $(#[$meta:meta])*
+            field: $name:ident,
+            type: $ty:ty,
+            default: $default:expr,
+            category: $category:literal,
+            label: $label:literal,
+            desc: $desc:literal
+            $(, aliases: [$($alias:literal),* $(,)?])?
+        );+ $(;)?
+    ) => {
+        /// Canonical compile-time schema metadata table for all declared Forgum configuration fields.
+        pub const FORGUM_CONFIG_SCHEMA: &'static [$crate::protocol::ConfigSchemaField] = &[
+            $(
+                $crate::protocol::ConfigSchemaField::new(
+                    stringify!($name),
+                    $label,
+                    $category,
+                    $desc,
+                    stringify!($ty),
+                    false $( || ![$($alias),*].is_empty() )?,
+                ),
+            )+
+        ];
+
+        /// Look up configuration schema metadata by label or field name.
+        #[must_use]
+        pub fn lookup_config_schema(query: &str) -> Option<&'static $crate::protocol::ConfigSchemaField> {
+            let q = query.trim().to_ascii_lowercase();
+            FORGUM_CONFIG_SCHEMA.iter().find(|f| {
+                f.name.eq_ignore_ascii_case(&q) || f.label.eq_ignore_ascii_case(&q)
+            })
+        }
+    };
+}
+
+// Canonical schema definition via the declarative macro
+define_forgum_config! {
+    field: cow, type: String, default: default_cow(), category: "Scene", label: "cow", desc: "Mascot character art template";
+    field: text, type: String, default: String::new(), category: "Scene", label: "text", desc: "Speech or thought bubble text";
+    field: think, type: bool, default: false, category: "Scene", label: "think", desc: "Render as thought bubble instead of speech";
+    field: effect, type: String, default: default_effect(), category: "Animation", label: "effect", desc: "Mascot animation or effect preset";
+    field: background, type: bool, default: false, category: "Display", label: "background", desc: "Continuous prompt background execution mode";
+    field: duration, type: u32, default: 0, category: "Display", label: "duration", desc: "Execution duration in seconds (0 = infinite / until signal)";
+    field: fps, type: u16, default: default_fps(), category: "Display", label: "fps", desc: "Target refresh rate in frames per second (1..240)";
+    field: eyes, type: String, default: default_eyes(), category: "Scene", label: "eyes", desc: "Mascot custom eye glyphs";
+    field: tongue, type: String, default: default_tongue(), category: "Scene", label: "tongue", desc: "Mascot custom tongue glyphs";
+    field: default_shell, type: String, default: default_default_shell(), category: "Shell", label: "default_shell", desc: "Default shell used for completions and hooks";
+    field: auto_render_on_prompt, type: bool, default: default_auto_render(), category: "Shell", label: "auto_render_on_prompt", desc: "Automatically render banner on shell prompt";
+    field: color_mode, type: String, default: default_color_mode(), category: "Display", label: "color_mode", desc: "Color rendering palette mode (natural, rainbow, solid, etc.)";
+    field: shell_attach_mode, type: String, default: default_shell_attach_mode(), category: "Shell", label: "shell_attach_mode", desc: "Shell attachment mode (banner, prompt, split, clear, pane)";
+    field: environment, type: Option<String>, default: None, category: "Scenery", label: "environment", desc: "Procedural scenery biome environment";
+    field: road, type: Option<String>, default: None, category: "Scenery", label: "road", desc: "Procedural road surface texture style";
+    field: mountain, type: Option<String>, default: None, category: "Scenery", label: "mountain", desc: "Procedural harmonic mountain horizon style";
+    field: palette, type: Option<String>, default: None, category: "Display", label: "palette", desc: "Custom comma-separated hex color palette";
+    field: time_of_day, type: Option<String>, default: None, category: "Scenery", label: "time_of_day", desc: "Solar illumination angle (dawn, day, dusk, night)";
+    field: season, type: Option<String>, default: None, category: "Scenery", label: "season", desc: "Foliage phenology (spring, summer, autumn, winter)";
+    field: thought_interval, type: u32, default: default_thought_interval(), category: "Display", label: "thought_interval", desc: "Thought quote rotation interval in seconds";
+    field: split_scroll, type: bool, default: false, category: "Display", label: "split_scroll", desc: "Hardware DECSTBM margin reservation mode";
+    field: reserve_rows, type: Option<u16>, default: None, category: "Display", label: "reserve_rows", desc: "Explicit terminal top rows reserved for banner";
+    field: reserve_cols, type: Option<u16>, default: None, category: "Display", label: "reserve_cols", desc: "Explicit terminal columns reserved for banner";
+    field: split_ratio, type: Option<f32>, default: None, category: "Display", label: "split_ratio", desc: "Ratio of terminal height reserved for animation";
+    field: animation, type: Option<String>, default: None, category: "Animation", label: "animation", desc: "Animation motion mode (static, dynamic)";
+    field: animation_type, type: Option<String>, default: None, category: "Animation", label: "animation_type", desc: "Specific kinematic locomotion type";
+    field: image, type: Option<String>, default: None, category: "Scene", label: "image", desc: "Path to image converted to ASCII mascot art";
+    field: split_mode, type: Option<String>, default: None, category: "Display", label: "split_mode", desc: "Split adapter execution mode";
+    field: editor, type: Option<String>, default: None, category: "System", label: "editor", desc: "Preferred external text editor command";
+    field: random, type: Option<RandomSetting>, default: None, category: "Scene", label: "random", desc: "Universal randomization policy";
+    field: contrast_mode, type: Option<String>, default: None, category: "Display", label: "contrast_mode", desc: "Terminal background contrast preset profile";
+    field: colorblind_mode, type: Option<String>, default: None, category: "Accessibility", label: "colorblind_mode", desc: "Color vision deficiency compensation mode", aliases: ["cvd", "colorblind", "color_blind"];
+    field: accel_mode, type: Option<String>, default: None, category: "System", label: "accel_mode", desc: "Hardware acceleration compute policy", aliases: ["acceleration_mode", "gpu_mode", "accel"];
+    field: reduce_motion, type: bool, default: false, category: "Accessibility", label: "reduce_motion", desc: "Disable rapid kinetic animations", aliases: ["reduced_motion", "reduced-motion"];
+    field: text_only, type: bool, default: false, category: "Display", label: "text_only", desc: "Print text speech bubble without mascot art", aliases: ["fortune_only", "fortune-only"];
+    field: banner, type: bool, default: false, category: "Display", label: "banner", desc: "Render fast inline startup banner", aliases: ["banner_mode", "banner-mode"];
+    field: aspect, type: Option<String>, default: None, category: "Display", label: "aspect", desc: "Viewport aspect ratio preset", aliases: ["aspect_ratio", "aspect-ratio"];
+    field: aspect_mode, type: Option<String>, default: None, category: "Display", label: "aspect_mode", desc: "Aspect ratio adaptation mode", aliases: ["aspect-mode"];
+    field: update_method, type: Option<String>, default: None, category: "System", label: "update_method", desc: "Package manager or channel update method", aliases: ["update-method", "update_channel"];
+    field: check_updates, type: bool, default: default_check_updates(), category: "System", label: "check_updates", desc: "Check for release updates on startup", aliases: ["check-updates", "update_check"];
+    field: keybindings, type: Option<KeybindingsConfig>, default: None, category: "System", label: "keybindings", desc: "Custom TUI navigation and action keybindings";
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_define_forgum_config_schema_completeness() {
+        assert!(FORGUM_CONFIG_SCHEMA.len() >= 40);
+        let fps_field = lookup_config_schema("fps").expect("fps field must exist");
+        assert_eq!(fps_field.category, "Display");
+        assert_eq!(fps_field.label, "fps");
+
+        let cow_field = lookup_config_schema("cow").expect("cow field must exist");
+        assert_eq!(cow_field.category, "Scene");
+
+        let check_updates_field = lookup_config_schema("check_updates").expect("check_updates must exist");
+        assert_eq!(check_updates_field.category, "System");
+
+        let accel_field = lookup_config_schema("accel_mode").expect("accel_mode must exist");
+        assert_eq!(accel_field.category, "System");
+        assert!(accel_field.has_aliases);
+    }
 
     #[test]
     fn defaults_are_sane() {

@@ -8,6 +8,7 @@
 //! delegated to `forgum-platform`. CI greps `engine/src/` and fails on hits.
 
 pub mod battle;
+pub mod capture_rasterizer;
 pub mod checkhealth;
 pub mod cli;
 pub mod color;
@@ -23,6 +24,7 @@ pub mod easing;
 pub mod effects;
 pub mod engine_core;
 pub mod error;
+pub mod fetch;
 pub mod fortune;
 pub mod framebuffer;
 pub mod gpu_compute;
@@ -30,6 +32,7 @@ pub mod herd;
 pub mod image_ascii;
 pub mod init;
 pub mod kinematics;
+pub mod kitty;
 pub mod logger;
 pub mod metrics;
 pub mod options_table;
@@ -50,6 +53,7 @@ pub mod showcase;
 pub mod split_scroll;
 pub mod status_line;
 pub mod taunt;
+pub mod telemetry_bus;
 pub mod theme;
 pub mod timer;
 pub mod verlet;

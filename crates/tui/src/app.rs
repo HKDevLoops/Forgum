@@ -75,15 +75,17 @@ pub enum Tab {
     Effects = 2,
     Installer = 3,
     Config = 4,
+    Studio = 5,
 }
 
 impl Tab {
-    pub const ALL: [Tab; 5] = [
+    pub const ALL: [Tab; 6] = [
         Tab::Mascots,
         Tab::Scenery,
         Tab::Effects,
         Tab::Installer,
         Tab::Config,
+        Tab::Studio,
     ];
 
     pub fn title(self) -> &'static str {
@@ -93,6 +95,7 @@ impl Tab {
             Tab::Effects => " 3:FX & Colors ",
             Tab::Installer => " 4:Shell Installer ",
             Tab::Config => " 5:Configuration ",
+            Tab::Studio => " 6:Studio ",
         }
     }
 
@@ -103,6 +106,7 @@ impl Tab {
             Tab::Effects => " 3:FX ",
             Tab::Installer => " 4:Setup ",
             Tab::Config => " 5:Config ",
+            Tab::Studio => " 6:Studio ",
         }
     }
 
@@ -113,6 +117,7 @@ impl Tab {
             Tab::Effects => " ✨ ANIMATION & FX ",
             Tab::Installer => " 🚀 SHELL INSTALLER ",
             Tab::Config => " ⚙️ CONFIG MATRIX ",
+            Tab::Studio => " 🎨 MASCOT & SHADER STUDIO ",
         }
     }
 
@@ -123,6 +128,7 @@ impl Tab {
             Tab::Effects => "✨ EFFECTS",
             Tab::Installer => "🚀 INSTALL",
             Tab::Config => "⚙️ CONFIG",
+            Tab::Studio => "🎨 STUDIO",
         }
     }
 
@@ -133,6 +139,7 @@ impl Tab {
             Tab::Effects => "FX",
             Tab::Installer => "Setup",
             Tab::Config => "Config",
+            Tab::Studio => "Studio",
         }
     }
 }
@@ -1062,6 +1069,11 @@ pub struct ConfigApp {
     pub aspect_dropdown: Dropdown,
     pub aspect_mode_dropdown: Dropdown,
 
+    // Studio Tab state (Tab 6)
+    pub studio_sub_focus: usize,
+    pub studio_morph_idx: usize,
+    pub studio_debug_overlay: bool,
+
     // Shared state
     pub saved: bool,
     pub status_message: String,
@@ -1303,6 +1315,9 @@ impl ConfigApp {
             accel_mode_dropdown,
             aspect_dropdown,
             aspect_mode_dropdown,
+            studio_sub_focus: 0,
+            studio_morph_idx: 0,
+            studio_debug_overlay: true,
             saved: false,
             status_message: format!(
                 "💡 Pro-Tip: {} (<T> next tip | <?> help)",
@@ -2021,6 +2036,13 @@ impl ConfigApp {
                             format!("Switched to {}", self.current_tab.mode_label());
                         return Ok(None);
                     }
+                    KeyCode::Char('6') if self.current_tab != Tab::Config => {
+                        self.current_tab = Tab::Studio;
+                        self.h_scroll = 0;
+                        self.status_message =
+                            format!("Switched to {}", self.current_tab.mode_label());
+                        return Ok(None);
+                    }
                     _ => {}
                 }
 
@@ -2031,6 +2053,7 @@ impl ConfigApp {
                     Tab::Effects => self.handle_effects_key(key),
                     Tab::Installer => self.handle_installer_key(key),
                     Tab::Config => self.handle_config_key(key),
+                    Tab::Studio => self.handle_studio_key(key),
                 }
             }
             Event::Resize(width, height) => {
@@ -2095,6 +2118,7 @@ impl ConfigApp {
                         Tab::Effects => 20,
                         Tab::Installer => 21,
                         Tab::Config => 19,
+                        Tab::Studio => 28,
                     };
                     let mut cur = mode_w + 1;
                     let mut clicked_tab = None;
@@ -2116,8 +2140,10 @@ impl ConfigApp {
                         Tab::Effects
                     } else if mouse.column < 82 {
                         Tab::Installer
-                    } else {
+                    } else if mouse.column < 100 {
                         Tab::Config
+                    } else {
+                        Tab::Studio
                     };
                     self.current_tab = tab;
                     self.status_message = format!("Switched to {}", tab.mode_label());
@@ -2286,6 +2312,16 @@ impl ConfigApp {
                                 }
                             }
                         }
+                        Tab::Studio => {
+                            if row_idx < 3 {
+                                self.studio_sub_focus = row_idx;
+                                self.status_message = match self.studio_sub_focus {
+                                    0 => "Studio Mode: Mascot Hull & Moat Debugger".into(),
+                                    1 => "Studio Mode: Biological Palette & Coat Morphs".into(),
+                                    _ => "Studio Mode: Kinematics & Physics Accumulator".into(),
+                                };
+                            }
+                        }
                     }
                 }
             }
@@ -2350,6 +2386,14 @@ impl ConfigApp {
                         self.editing_config = false;
                     }
                     self.config_field_idx = (self.config_field_idx + 1) % ConfigField::ALL.len();
+                }
+                Tab::Studio => {
+                    self.studio_sub_focus = (self.studio_sub_focus + 1) % 3;
+                    self.status_message = match self.studio_sub_focus {
+                        0 => "Studio Mode: Mascot Hull & Moat Debugger".into(),
+                        1 => "Studio Mode: Biological Palette & Coat Morphs".into(),
+                        _ => "Studio Mode: Kinematics & Physics Accumulator".into(),
+                    };
                 }
             },
             MouseEventKind::ScrollUp => match self.current_tab {
@@ -2449,6 +2493,18 @@ impl ConfigApp {
                     } else {
                         self.config_field_idx = ConfigField::ALL.len().saturating_sub(1);
                     }
+                }
+                Tab::Studio => {
+                    if self.studio_sub_focus > 0 {
+                        self.studio_sub_focus -= 1;
+                    } else {
+                        self.studio_sub_focus = 2;
+                    }
+                    self.status_message = match self.studio_sub_focus {
+                        0 => "Studio Mode: Mascot Hull & Moat Debugger".into(),
+                        1 => "Studio Mode: Biological Palette & Coat Morphs".into(),
+                        _ => "Studio Mode: Kinematics & Physics Accumulator".into(),
+                    };
                 }
             },
             _ => {}
@@ -2689,6 +2745,9 @@ impl ConfigApp {
             Tab::Config => {
                 self.config_field_idx = 0;
             }
+            Tab::Studio => {
+                self.studio_sub_focus = 0;
+            }
         }
         self.status_message = "Jumped to top [gg]".into();
     }
@@ -2749,6 +2808,9 @@ impl ConfigApp {
             }
             Tab::Config => {
                 self.config_field_idx = ConfigField::ALL.len().saturating_sub(1);
+            }
+            Tab::Studio => {
+                self.studio_sub_focus = 2;
             }
         }
         self.status_message = "Jumped to bottom [G]".into();
@@ -2856,6 +2918,13 @@ impl ConfigApp {
                         (self.config_field_idx + delta).min(ConfigField::ALL.len() - 1);
                 } else {
                     self.config_field_idx = self.config_field_idx.saturating_sub(delta);
+                }
+            }
+            Tab::Studio => {
+                if down {
+                    self.studio_sub_focus = 2;
+                } else {
+                    self.studio_sub_focus = 0;
                 }
             }
         }
@@ -3310,6 +3379,62 @@ export extern "forgum" [
             "▶ Testing shell overlay simulation for {sh} (OK: responsive, 0ms prompt latency)"
         ));
         self.status_message = format!("Test prompt overlay executed cleanly for {sh}.");
+    }
+
+    fn handle_studio_key(&mut self, key: KeyEvent) -> anyhow::Result<Option<Action>> {
+        match key.code {
+            KeyCode::Up | KeyCode::Char('k') => {
+                if self.studio_sub_focus > 0 {
+                    self.studio_sub_focus -= 1;
+                } else {
+                    self.studio_sub_focus = 2;
+                }
+                self.status_message = match self.studio_sub_focus {
+                    0 => "Studio Mode: Mascot Hull & Moat Debugger".into(),
+                    1 => "Studio Mode: Biological Palette & Coat Morphs".into(),
+                    _ => "Studio Mode: Kinematics & Physics Accumulator".into(),
+                };
+            }
+            KeyCode::Down | KeyCode::Char('j') => {
+                self.studio_sub_focus = (self.studio_sub_focus + 1) % 3;
+                self.status_message = match self.studio_sub_focus {
+                    0 => "Studio Mode: Mascot Hull & Moat Debugger".into(),
+                    1 => "Studio Mode: Biological Palette & Coat Morphs".into(),
+                    _ => "Studio Mode: Kinematics & Physics Accumulator".into(),
+                };
+            }
+            KeyCode::Char(' ') => {
+                self.studio_debug_overlay = !self.studio_debug_overlay;
+                self.status_message = format!(
+                    "Studio Hull/Moat Overlay: {}",
+                    if self.studio_debug_overlay { "ACTIVE" } else { "DISABLED" }
+                );
+            }
+            KeyCode::Left | KeyCode::Char('h') | KeyCode::Char('[') => {
+                let biome = forgum_platform::biome::get_mascot_biome(&self.config.cow);
+                let variations = biome.variations();
+                if !variations.is_empty() {
+                    if self.studio_morph_idx > 0 {
+                        self.studio_morph_idx -= 1;
+                    } else {
+                        self.studio_morph_idx = variations.len().saturating_sub(1);
+                    }
+                    let morph = &variations[self.studio_morph_idx];
+                    self.status_message = format!("Coat Morph: {}", morph.name);
+                }
+            }
+            KeyCode::Right | KeyCode::Char('l') | KeyCode::Char(']') => {
+                let biome = forgum_platform::biome::get_mascot_biome(&self.config.cow);
+                let variations = biome.variations();
+                if !variations.is_empty() {
+                    self.studio_morph_idx = (self.studio_morph_idx + 1) % variations.len();
+                    let morph = &variations[self.studio_morph_idx];
+                    self.status_message = format!("Coat Morph: {}", morph.name);
+                }
+            }
+            _ => {}
+        }
+        Ok(None)
     }
 
     fn handle_config_key(&mut self, key: KeyEvent) -> anyhow::Result<Option<Action>> {
@@ -5491,6 +5616,7 @@ export extern "forgum" [
                 Tab::Effects => self.render_effects_list(f, vert_split[0]),
                 Tab::Installer => self.render_installer_list(f, vert_split[0]),
                 Tab::Config => self.render_config_list(f, vert_split[0]),
+                Tab::Studio => self.render_studio_list(f, vert_split[0]),
             }
             self.render_live_preview(f, vert_split[1]);
             if inspector_len > 0 {
@@ -5502,7 +5628,7 @@ export extern "forgum" [
         // ── Standard / Wide Mode: side-by-side split layout ──────────────────
         // For Tab::Config: allocate 56-58% of screen width (50..100 cols) to provide
         // a spacious, clean, and properly aligned settings page, leaving ~42-44% for live preview.
-        // For other tabs (Mascots, Scenery, Effects): allocate 36-38% (30..60 cols).
+        // For other tabs (Mascots, Scenery, Effects, Studio): allocate 36-38% (30..60 cols).
         let (left_pct, min_w, max_w) = if self.current_tab == Tab::Config {
             let pct: u16 = if bp == Breakpoint::Wide { 56 } else { 58 };
             (pct, 50, 100)
@@ -5536,6 +5662,7 @@ export extern "forgum" [
             Tab::Effects => self.render_effects_list(f, left_rect),
             Tab::Installer => self.render_installer_list(f, left_rect),
             Tab::Config => self.render_config_list(f, left_rect),
+            Tab::Studio => self.render_studio_list(f, left_rect),
         }
 
         // Adaptive Inspector Height:
@@ -7003,6 +7130,93 @@ export extern "forgum" [
         }
     }
 
+    /// Render Tab 6: Mascot & Shader Studio toolset.
+    fn render_studio_list(&self, f: &mut Frame, area: Rect) {
+        let items = [
+            (
+                "0: Bounding Hull & Moat Debugger",
+                if self.studio_debug_overlay && self.studio_sub_focus == 0 {
+                    "[✔ Active Overlay]"
+                } else if self.studio_sub_focus == 0 {
+                    "[● Selected - Space to Toggle]"
+                } else {
+                    "[○ Inactive]"
+                },
+                "Renders interior convex-hull spaces as '#' & ambient occlusion moat as '·'",
+            ),
+            (
+                "1: Biological Coat Morph Selector",
+                if self.studio_sub_focus == 1 {
+                    "[● Selected - h/l to Cycle]"
+                } else {
+                    "[○ Inactive]"
+                },
+                "Audits authentic biological phenotype color variations (e.g. cattle 6 morphs)",
+            ),
+            (
+                "2: 240Hz / 120Hz Kinematics Telemetry",
+                if self.studio_sub_focus == 2 {
+                    "[● Active Telemetry]"
+                } else {
+                    "[○ Inactive]"
+                },
+                "Live Verlet particle & kinematics physics delta monitoring & sub-step tracker",
+            ),
+        ];
+
+        let list_items: Vec<ListItem> = items
+            .iter()
+            .enumerate()
+            .map(|(i, (name, status, desc))| {
+                let is_sel = i == self.studio_sub_focus;
+                let prefix = if is_sel { "▶ " } else { "  " };
+
+                let header_style = if is_sel {
+                    Style::default()
+                        .fg(tailwind::AMBER_300)
+                        .add_modifier(Modifier::BOLD)
+                } else {
+                    Style::default().fg(tailwind::SLATE_200)
+                };
+
+                let status_style = if status.contains("Active") || status.contains("Selected") {
+                    Style::default()
+                        .fg(tailwind::EMERALD_400)
+                        .add_modifier(Modifier::BOLD)
+                } else {
+                    Style::default().fg(tailwind::SLATE_500)
+                };
+
+                ListItem::new(vec![
+                    Line::from(vec![
+                        Span::styled(prefix, Style::default().fg(tailwind::CYAN_400)),
+                        Span::styled(*name, header_style),
+                        Span::raw(" "),
+                        Span::styled(*status, status_style),
+                    ]),
+                    Line::from(vec![
+                        Span::raw("    "),
+                        Span::styled(*desc, Style::default().fg(tailwind::SLATE_400)),
+                    ]),
+                ])
+            })
+            .collect();
+
+        let list = List::new(list_items).block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_type(BorderType::Rounded)
+                .border_style(Style::default().fg(tailwind::INDIGO_500))
+                .title(Span::styled(
+                    " 🔬 Mascot & Shader Studio Toolset (j/k: Select, Space: Toggle, h/l: Morph) ",
+                    Style::default()
+                        .fg(tailwind::SKY_400)
+                        .add_modifier(Modifier::BOLD),
+                )),
+        );
+        f.render_widget(list, area);
+    }
+
     /// Quantize animation time according to target FPS.
     #[inline]
     pub fn quantize_time(time: f32, fps: u16) -> f32 {
@@ -7614,16 +7828,58 @@ export extern "forgum" [
                         });
 
                     let mascot_pal = Self::get_mascot_natural_palette(&self.config.cow);
-                    let p: &[(u8, u8, u8)] = match &parsed_custom {
-                        Some(custom) => custom.as_slice(),
-                        None => mascot_pal,
+                    let vars = forgum_platform::biome::get_mascot_variations(&self.config.cow);
+                    let p: &[(u8, u8, u8)] = if self.current_tab == Tab::Studio
+                        && self.studio_sub_focus == 1
+                        && !vars.is_empty()
+                    {
+                        let active_idx = self.studio_morph_idx % vars.len();
+                        &vars[active_idx].rgb
+                    } else {
+                        match &parsed_custom {
+                            Some(custom) => custom.as_slice(),
+                            None => mascot_pal,
+                        }
                     };
+
+                    let first_non_space = l.chars().position(|c| !c.is_whitespace());
+                    let last_non_space = l
+                        .chars()
+                        .enumerate()
+                        .filter(|(_, c)| !c.is_whitespace())
+                        .last()
+                        .map(|(idx, _)| idx);
 
                     let mut spans = Vec::new();
                     spans.push(Span::raw("  "));
                     for (x, ch) in l.chars().enumerate() {
                         if ch == ' ' {
-                            spans.push(Span::raw(" "));
+                            if self.current_tab == Tab::Studio
+                                && self.studio_debug_overlay
+                                && self.studio_sub_focus == 0
+                            {
+                                if let (Some(f), Some(la)) = (first_non_space, last_non_space) {
+                                    if x > f && x < la {
+                                        // Hull interior space
+                                        spans.push(Span::styled(
+                                            "#",
+                                            Style::default().fg(tailwind::EMERALD_500),
+                                        ));
+                                    } else if x == f.saturating_sub(1) || x == la + 1 {
+                                        // Chebyshev ambient occlusion moat margin
+                                        spans.push(Span::styled(
+                                            "·",
+                                            Style::default().fg(tailwind::INDIGO_400),
+                                        ));
+                                    } else {
+                                        spans.push(Span::raw(" "));
+                                    }
+                                } else {
+                                    spans.push(Span::raw(" "));
+                                }
+                            } else {
+                                spans.push(Span::raw(" "));
+                            }
                         } else {
                             let (r, g, b) = Self::natural_creature_color(p, x, animal_rel_y, ch);
                             let (cr, cg, cb) = adjust_color(r, g, b);
@@ -8277,6 +8533,210 @@ export extern "forgum" [
                 );
                 f.render_widget(p, area);
             }
+            Tab::Studio => {
+                let mut lines: Vec<Line> = Vec::with_capacity(8);
+                match self.studio_sub_focus {
+                    0 => {
+                        lines.push(Line::from(vec![
+                            Span::styled(
+                                "Tool: ",
+                                Style::default()
+                                    .fg(tailwind::SKY_400)
+                                    .add_modifier(Modifier::BOLD),
+                            ),
+                            Span::styled(
+                                "Convex Hull Occlusion & Chebyshev Moat Inspection",
+                                Style::default()
+                                    .fg(tailwind::AMBER_300)
+                                    .add_modifier(Modifier::BOLD),
+                            ),
+                        ]));
+                        lines.push(Line::from(vec![
+                            Span::styled(
+                                "Overlay Status: ",
+                                Style::default()
+                                    .fg(tailwind::VIOLET_400)
+                                    .add_modifier(Modifier::BOLD),
+                            ),
+                            Span::styled(
+                                if self.studio_debug_overlay {
+                                    "✔ ACTIVE (Visualizing '#' Hull Interior & '·' Moat Margin)"
+                                } else {
+                                    "✖ OFF (Press <Space> to activate overlay)"
+                                },
+                                Style::default().fg(if self.studio_debug_overlay {
+                                    tailwind::EMERALD_400
+                                } else {
+                                    tailwind::ROSE_400
+                                }),
+                            ),
+                        ]));
+                        lines.push(Line::from(vec![
+                            Span::styled(
+                                "Occlusion Invariant: ",
+                                Style::default()
+                                    .fg(tailwind::EMERALD_400)
+                                    .add_modifier(Modifier::BOLD),
+                            ),
+                            Span::styled(
+                                "Mandate 2.C — Bounding-hull occlusion prevents background scenery/road bleed-through inside mascot silhouette.",
+                                Style::default().fg(tailwind::SLATE_300),
+                            ),
+                        ]));
+                        lines.push(Line::from(vec![
+                            Span::styled(
+                                "Shader Compute: ",
+                                Style::default()
+                                    .fg(tailwind::AMBER_400)
+                                    .add_modifier(Modifier::BOLD),
+                            ),
+                            Span::styled(
+                                "Chebyshev Distance Transform (Radius: 2px) on pre-allocated framebuffer lines.",
+                                Style::default().fg(tailwind::SLATE_300),
+                            ),
+                        ]));
+                    }
+                    1 => {
+                        let vars = forgum_platform::biome::get_mascot_variations(&self.config.cow);
+                        let total_vars = vars.len();
+                        let active_idx = if total_vars > 0 {
+                            self.studio_morph_idx % total_vars
+                        } else {
+                            0
+                        };
+                        let v = if total_vars > 0 {
+                            &vars[active_idx]
+                        } else {
+                            &vars[0]
+                        };
+
+                        lines.push(Line::from(vec![
+                            Span::styled(
+                                "Tool: ",
+                                Style::default()
+                                    .fg(tailwind::SKY_400)
+                                    .add_modifier(Modifier::BOLD),
+                            ),
+                            Span::styled(
+                                "Biological Coat Polymorphism & Coat Color Morphs",
+                                Style::default()
+                                    .fg(tailwind::AMBER_300)
+                                    .add_modifier(Modifier::BOLD),
+                            ),
+                        ]));
+                        lines.push(Line::from(vec![
+                            Span::styled(
+                                "Active Phenotype: ",
+                                Style::default()
+                                    .fg(tailwind::VIOLET_400)
+                                    .add_modifier(Modifier::BOLD),
+                            ),
+                            Span::styled(
+                                format!("{} [{}/{}]", v.name, active_idx + 1, total_vars),
+                                Style::default()
+                                    .fg(tailwind::EMERALD_400)
+                                    .add_modifier(Modifier::BOLD),
+                            ),
+                        ]));
+                        lines.push(Line::from(vec![
+                            Span::styled(
+                                "Biological Description: ",
+                                Style::default()
+                                    .fg(tailwind::AMBER_400)
+                                    .add_modifier(Modifier::BOLD),
+                            ),
+                            Span::styled(v.description, Style::default().fg(tailwind::SLATE_200)),
+                        ]));
+                        let hex_colors: Vec<String> = v
+                            .rgb
+                            .iter()
+                            .map(|(r, g, b)| format!("#{r:02x}{g:02x}{b:02x}"))
+                            .collect();
+                        lines.push(Line::from(vec![
+                            Span::styled(
+                                "Phenotype Pigments: ",
+                                Style::default()
+                                    .fg(tailwind::TEAL_400)
+                                    .add_modifier(Modifier::BOLD),
+                            ),
+                            Span::styled(
+                                hex_colors.join(" • "),
+                                Style::default().fg(tailwind::SLATE_300),
+                            ),
+                            Span::styled(
+                                " (Cycle with <h/l> or <[/]>)",
+                                Style::default().fg(tailwind::SLATE_500),
+                            ),
+                        ]));
+                    }
+                    _ => {
+                        lines.push(Line::from(vec![
+                            Span::styled(
+                                "Tool: ",
+                                Style::default()
+                                    .fg(tailwind::SKY_400)
+                                    .add_modifier(Modifier::BOLD),
+                            ),
+                            Span::styled(
+                                "240Hz / 120Hz Ultra-High-Refresh Kinematics Telemetry",
+                                Style::default()
+                                    .fg(tailwind::AMBER_300)
+                                    .add_modifier(Modifier::BOLD),
+                            ),
+                        ]));
+                        lines.push(Line::from(vec![
+                            Span::styled(
+                                "Sub-Step Integrator: ",
+                                Style::default()
+                                    .fg(tailwind::VIOLET_400)
+                                    .add_modifier(Modifier::BOLD),
+                            ),
+                            Span::styled(
+                                "Fixed 240Hz Verlet Step (4.167ms delta), Sub-frame Particle Accumulator",
+                                Style::default().fg(tailwind::EMERALD_400),
+                            ),
+                        ]));
+                        lines.push(Line::from(vec![
+                            Span::styled(
+                                "Kinematics Mode: ",
+                                Style::default()
+                                    .fg(tailwind::AMBER_400)
+                                    .add_modifier(Modifier::BOLD),
+                            ),
+                            Span::styled(
+                                "Smooth Harmonic Bobbing + Continuous Sub-Cell Horizontal Translation",
+                                Style::default().fg(tailwind::SLATE_200),
+                            ),
+                        ]));
+                        lines.push(Line::from(vec![
+                            Span::styled(
+                                "Zero-Allocation Budget: ",
+                                Style::default()
+                                    .fg(tailwind::EMERALD_400)
+                                    .add_modifier(Modifier::BOLD),
+                            ),
+                            Span::styled(
+                                "Mandate 2.I & 2.O — 0 heap allocs per frame, stack arrays, <100MB resident ceiling.",
+                                Style::default().fg(tailwind::SLATE_300),
+                            ),
+                        ]));
+                    }
+                }
+
+                let p = Paragraph::new(lines).wrap(Wrap { trim: true }).block(
+                    Block::default()
+                        .borders(Borders::ALL)
+                        .border_type(BorderType::Rounded)
+                        .border_style(Style::default().fg(tailwind::INDIGO_400))
+                        .title(Span::styled(
+                            " 🔬 Studio Diagnostics & Kinematics Telemetry ",
+                            Style::default()
+                                .fg(tailwind::VIOLET_400)
+                                .add_modifier(Modifier::BOLD),
+                        )),
+                );
+                f.render_widget(p, area);
+            }
         }
     }
 
@@ -8444,6 +8904,55 @@ export extern "forgum" [
                         .fg(tailwind::FUCHSIA_400),
                 ),
                 Span::styled(" Tip  ", Style::default().fg(tailwind::SLATE_300)),
+                Span::styled(
+                    " <?> ",
+                    Style::default()
+                        .bg(tailwind::SLATE_800)
+                        .fg(tailwind::SKY_400),
+                ),
+                Span::styled(" Vim  ", Style::default().fg(tailwind::SLATE_300)),
+                Span::styled(
+                    " <ZZ/q> ",
+                    Style::default()
+                        .bg(tailwind::SLATE_800)
+                        .fg(tailwind::ROSE_500),
+                ),
+                Span::styled(" Quit  ", Style::default().fg(tailwind::SLATE_300)),
+                Span::styled(
+                    format!(" | {}", self.status_message),
+                    Style::default().fg(tailwind::SKY_400),
+                ),
+            ]
+        } else if self.current_tab == Tab::Studio {
+            vec![
+                Span::styled(
+                    " <Tab/gt> ",
+                    Style::default()
+                        .bg(tailwind::SLATE_800)
+                        .fg(tailwind::SLATE_200),
+                ),
+                Span::styled(" Tabs  ", Style::default().fg(tailwind::SLATE_400)),
+                Span::styled(
+                    " <j/k> ",
+                    Style::default()
+                        .bg(tailwind::SLATE_800)
+                        .fg(tailwind::SLATE_200),
+                ),
+                Span::styled(" Tool  ", Style::default().fg(tailwind::SLATE_400)),
+                Span::styled(
+                    " <Space> ",
+                    Style::default()
+                        .bg(tailwind::SLATE_800)
+                        .fg(tailwind::EMERALD_400),
+                ),
+                Span::styled(" Overlay  ", Style::default().fg(tailwind::SLATE_300)),
+                Span::styled(
+                    " <h/l> ",
+                    Style::default()
+                        .bg(tailwind::SLATE_800)
+                        .fg(tailwind::AMBER_400),
+                ),
+                Span::styled(" Morphs  ", Style::default().fg(tailwind::SLATE_300)),
                 Span::styled(
                     " <?> ",
                     Style::default()

@@ -105,6 +105,8 @@ fn run_inner() -> ExitCode {
             | Some(cli::Commands::Status)
             | Some(cli::Commands::Checkhealth { .. })
             | Some(cli::Commands::Uninstall { .. })
+            | Some(cli::Commands::StatusLine { .. })
+            | Some(cli::Commands::Telemetry { .. })
     );
     let notify_args = args.clone();
 
@@ -1336,7 +1338,14 @@ fn run_inner() -> ExitCode {
             if let Some(limitation) = caps.emulator.limitation_notes() {
                 println!("Limitation: \x1b[1;33m{}\x1b[0m", limitation);
             }
-            ExitCode::SUCCESS
+            println!();
+            let report = forgum_engine::checkhealth::run_health_check(args.config.as_deref());
+            print!("{}", report.format_ansi());
+            if report.error_count > 0 {
+                ExitCode::from(1)
+            } else {
+                ExitCode::SUCCESS
+            }
         }
 
         // ── checkhealth ────────────────────────────────────────────
@@ -1431,10 +1440,43 @@ fn run_inner() -> ExitCode {
         }
 
         // ── status-line ────────────────────────────────────────────
-        Some(cli::Commands::StatusLine { max_len }) => {
-            let line = forgum_engine::status_line::render_status_line(max_len);
-            print!("{line}");
+        Some(cli::Commands::StatusLine { max_len, mux }) => {
+            match mux.as_str() {
+                "tmux" => {
+                    let out = forgum_engine::kitty::render_tmux_status(None, None, None);
+                    print!("{out}");
+                }
+                "zellij" => {
+                    let out = forgum_engine::kitty::render_zellij_status(None, None, None);
+                    print!("{out}");
+                }
+                _ => {
+                    let line = forgum_engine::status_line::render_status_line(max_len);
+                    print!("{line}");
+                }
+            }
             ExitCode::SUCCESS
+        }
+
+        // ── fetch ──────────────────────────────────────────────────
+        Some(cli::Commands::Fetch { live, cow, palette, .. }) => {
+            if live {
+                forgum_engine::fetch::run_live_fetch(cow.as_deref(), palette.as_deref())
+            } else {
+                let out = forgum_engine::fetch::render_instant_fetch(cow.as_deref(), palette.as_deref());
+                println!("{out}");
+                ExitCode::SUCCESS
+            }
+        }
+
+        // ── telemetry ──────────────────────────────────────────────
+        Some(cli::Commands::Telemetry { sub }) => {
+            match sub {
+                cli::TelemetrySub::Report { exit_code, elapsed_ms, command, session } => {
+                    let elapsed = if elapsed_ms > 0 { Some(elapsed_ms) } else { None };
+                    forgum_engine::telemetry_bus::report_shell_telemetry(session.as_deref(), exit_code, elapsed, command.as_deref())
+                }
+            }
         }
 
         // ── herd list ──────────────────────────────────────────────
@@ -1762,7 +1804,12 @@ fn run_inner() -> ExitCode {
         // ── say ─────────────────────────────────────────────────────
         Some(cli::Commands::Say { cmd }) => {
             let cmd_output = forgum_engine::say::execute_say_cmd(&cmd);
-            if args.image.is_some() {
+            if args.image.is_some()
+                || args.banner
+                || args.background
+                || args.effect.is_some()
+                || args.environment.is_some()
+            {
                 let mut scene = match build_scene_config(&args) {
                     Ok(s) => s,
                     Err(e) => {
@@ -1774,7 +1821,10 @@ fn run_inner() -> ExitCode {
                 render_subcommand_with_scene(args, scene)
             } else {
                 let data_dir = forgum_platform::data_dir().unwrap_or_else(|_| PathBuf::from("."));
-                let cow_text = cow::load_cow("default", &data_dir, "oo", "U", "\\\\");
+                let cow_name = args.cow.as_deref().unwrap_or("default");
+                let eyes = args.eyes.as_deref().unwrap_or("oo");
+                let tongue = args.tongue.as_deref().unwrap_or("U");
+                let cow_text = cow::load_cow(cow_name, &data_dir, eyes, tongue, "\\\\");
                 let output = cow::compose_scene(&cow_text, &cmd_output);
                 print!("{output}");
                 ExitCode::SUCCESS
@@ -2925,8 +2975,21 @@ fn handle_update_command(
                 ExitCode::SUCCESS
             }
             Err(err) => {
-                eprintln!("\x1b[1;31m✗ Update action failed:\x1b[0m {err}");
-                ExitCode::from(1)
+                eprintln!("\x1b[1;33m⚠️  Package manager update (`{}`) failed: {}\x1b[0m", chosen_pm.name(), err);
+                println!("\x1b[36m>> Automatically falling back to direct celestial binary installation...\x1b[0m\n");
+                match forgum_platform::execute_standalone_update(channel) {
+                    Ok(msg) => {
+                        println!("\n\x1b[1;32m✓ Standalone fallback update succeeded: {msg}\x1b[0m");
+                        let _ = forgum_platform::clear_update_cache();
+                        ExitCode::SUCCESS
+                    }
+                    Err(fallback_err) => {
+                        eprintln!(
+                            "\x1b[1;31m✗ Both package manager and direct binary fallback failed:\x1b[0m\n  • Package manager error: {err}\n  • Direct binary fallback error: {fallback_err}"
+                        );
+                        ExitCode::from(1)
+                    }
+                }
             }
         }
     }
@@ -3918,8 +3981,7 @@ fn render_subcommand_with_scene(
     };
     let composed = cow::compose_scene_with_mode(&cow_text, &scene.text, is_thought);
 
-    let animations = dna::load_animations_or_embedded(&data);
-    let mut cow_dna = dna::get_dna(&animations, &scene.cow);
+    let mut cow_dna = dna::resolve_cow_dna(&data, &scene.cow);
     if let Some(ref pal_str) = scene.palette {
         let hexes: Vec<String> = pal_str
             .split(',')
@@ -4127,8 +4189,7 @@ fn run_daemon_child(args: cli::Args) -> ExitCode {
         thoughts_glyph,
     );
     let composed = cow::compose_scene_with_mode(&cow_text, &scene.text, is_thought);
-    let animations = dna::load_animations_or_embedded(&data);
-    let mut cow_dna = dna::get_dna(&animations, &scene.cow);
+    let mut cow_dna = dna::resolve_cow_dna(&data, &scene.cow);
     if let Some(ref pal_str) = scene.palette {
         let hexes: Vec<String> = pal_str
             .split(',')

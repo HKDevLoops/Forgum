@@ -18,12 +18,44 @@ pub fn generate_hook(shell: Shell, engine_path: &str) -> String {
     generate_hook_with_args(shell, engine_path, &[])
 }
 
+fn is_safe_shell_arg(arg: &str) -> bool {
+    !arg.is_empty()
+        && arg
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || matches!(c, '_' | '-' | '.' | '/' | ':' | '='))
+}
+
+/// Lexically escape a command-line argument for inclusion in a shell hook script.
+pub fn shell_escape_arg(shell: Shell, arg: &str) -> String {
+    if is_safe_shell_arg(arg) {
+        return arg.to_string();
+    }
+    match shell {
+        Shell::PowerShell | Shell::Pwsh => {
+            format!("'{}'", arg.replace('\'', "''"))
+        }
+        Shell::Fish => {
+            format!("'{}'", arg.replace('\\', "\\\\").replace('\'', "\\'"))
+        }
+        Shell::Cmd => {
+            format!("\"{}\"", arg.replace('"', "\"\""))
+        }
+        _ => {
+            format!("'{}'", arg.replace('\'', "'\\''"))
+        }
+    }
+}
+
 /// Generate a shell hook script with optional render arguments forwarded.
 pub fn generate_hook_with_args(shell: Shell, engine_path: &str, render_args: &[String]) -> String {
-    let extra = if render_args.is_empty() {
+    let escaped_args: Vec<String> = render_args
+        .iter()
+        .map(|a| shell_escape_arg(shell, a))
+        .collect();
+    let extra = if escaped_args.is_empty() {
         String::new()
     } else {
-        format!(" {}", render_args.join(" "))
+        format!(" {}", escaped_args.join(" "))
     };
     match shell {
         Shell::Bash => generate_bash_hook(engine_path, &extra),

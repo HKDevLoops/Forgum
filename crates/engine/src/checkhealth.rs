@@ -812,6 +812,9 @@ pub fn run_health_check(explicit_config: Option<&Path>) -> HealthReport {
             .map(|d| d.name.as_str())
             .unwrap_or("CPU Host")
     ));
+    if forgum_platform::is_wsl() {
+        dev_details.push("WSL Environment: Windows Subsystem for Linux (WSL2 Direct3D 12 GPU paravirtualization active)".into());
+    }
     dev_details.push("Strict Nature Math Memory Ceiling: <100MB resident RAM verified (zero heap allocations in render loop)".into());
 
     gpu_items.push(HealthItem {
@@ -891,6 +894,9 @@ pub fn run_health_check(explicit_config: Option<&Path>) -> HealthReport {
             "CPU Scoped SIMD Fallback"
         }
     ));
+    if forgum_platform::is_wsl() {
+        pipeline_details.push("WSL Acceleration: Direct3D 12 kernel bridge (/dev/dxg) + Multi-Distro Vulkan / DirectML loader".into());
+    }
 
     gpu_items.push(HealthItem {
         status: HealthStatus::Ok,

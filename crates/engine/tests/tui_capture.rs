@@ -15,18 +15,14 @@ use forgum_tui::app::{ConfigApp, Tab};
 use ratatui::backend::TestBackend;
 use ratatui::Terminal;
 
-const CELL_W: usize = 8;
-const CELL_H: usize = 16;
+use forgum_engine::capture_rasterizer::{
+    render_framebuffer_to_rgba, DEFAULT_BG_COLOR as BG_COLOR, DEFAULT_CELL_H as CELL_H,
+    DEFAULT_CELL_W as CELL_W,
+};
+
 const COLS: usize = 90;
 const ROWS: usize = 28;
 const FPS: u32 = 30;
-
-const BG_COLOR: Color = Color {
-    r: 24,
-    g: 24,
-    b: 37,
-    a: 255,
-};
 
 fn workspace_root() -> PathBuf {
     let m = Path::new(env!("CARGO_MANIFEST_DIR"));
@@ -122,103 +118,8 @@ fn buffer_to_framebuffer(buffer: &ratatui::buffer::Buffer) -> FrameBuffer {
     fb
 }
 
-fn render_cell_to_pixels(
-    pixels: &mut [u8],
-    img_width: usize,
-    cell_x: usize,
-    cell_y: usize,
-    cell: &forgum_engine::framebuffer::Cell,
-) {
-    let fg = cell.fg;
-    let bg = if cell.bg.a > 0 { cell.bg } else { BG_COLOR };
-    let px_x = cell_x * CELL_W;
-    let px_y = cell_y * CELL_H;
-    let glyph_bits = forgum_platform::font::glyph(cell.ch)
-        .or_else(|| forgum_platform::font::glyph(cell.ch.to_ascii_uppercase()));
-
-    for dy in 0..CELL_H {
-        let font_y = dy * 8 / CELL_H;
-        for dx in 0..CELL_W {
-            let px = (px_y + dy) * img_width + (px_x + dx);
-            let base = px * 4;
-            if base + 3 < pixels.len() {
-                let is_fg = match glyph_bits {
-                    Some(bits) => (bits[font_y] >> (7 - (dx.min(7)))) & 1 == 1,
-                    None => match cell.ch {
-                        '─' | '═' => dy == CELL_H / 2 || dy == CELL_H / 2 - 1,
-                        '│' | '║' => dx == CELL_W / 2 || dx == CELL_W / 2 - 1,
-                        '┌' | '╭' | '╔' => {
-                            (dx >= CELL_W / 2 && (dy == CELL_H / 2 || dy == CELL_H / 2 - 1))
-                                || (dy >= CELL_H / 2 && (dx == CELL_W / 2 || dx == CELL_W / 2 - 1))
-                        }
-                        '┐' | '╮' | '╗' => {
-                            (dx <= CELL_W / 2 && (dy == CELL_H / 2 || dy == CELL_H / 2 - 1))
-                                || (dy >= CELL_H / 2 && (dx == CELL_W / 2 || dx == CELL_W / 2 - 1))
-                        }
-                        '└' | '╰' | '╚' => {
-                            (dx >= CELL_W / 2 && (dy == CELL_H / 2 || dy == CELL_H / 2 - 1))
-                                || (dy <= CELL_H / 2 && (dx == CELL_W / 2 || dx == CELL_W / 2 - 1))
-                        }
-                        '┘' | '╯' | '╝' => {
-                            (dx <= CELL_W / 2 && (dy == CELL_H / 2 || dy == CELL_H / 2 - 1))
-                                || (dy <= CELL_H / 2 && (dx == CELL_W / 2 || dx == CELL_W / 2 - 1))
-                        }
-                        '├' | '╠' => {
-                            (dx == CELL_W / 2 || dx == CELL_W / 2 - 1)
-                                || (dx >= CELL_W / 2 && (dy == CELL_H / 2 || dy == CELL_H / 2 - 1))
-                        }
-                        '┤' | '╣' => {
-                            (dx == CELL_W / 2 || dx == CELL_W / 2 - 1)
-                                || (dx <= CELL_W / 2 && (dy == CELL_H / 2 || dy == CELL_H / 2 - 1))
-                        }
-                        '┼' | '╬' => {
-                            (dx == CELL_W / 2 || dx == CELL_W / 2 - 1)
-                                || (dy == CELL_H / 2 || dy == CELL_H / 2 - 1)
-                        }
-                        '▶' => dx >= (dy.min(CELL_H - 1 - dy) / 2) && dx <= CELL_W - 2,
-                        '█' => true,
-                        '▀' => dy < CELL_H / 2,
-                        '▄' => dy >= CELL_H / 2,
-                        _ => {
-                            if cell.ch != ' '
-                                && cell.ch != '\0'
-                                && cell.ch != '\r'
-                                && cell.ch != '\n'
-                            {
-                                dx == 0 || dx == CELL_W - 1 || dy == 0 || dy == CELL_H - 1
-                            } else {
-                                false
-                            }
-                        }
-                    },
-                };
-
-                let (r, g, b) = if is_fg {
-                    (fg.r, fg.g, fg.b)
-                } else {
-                    (bg.r, bg.g, bg.b)
-                };
-
-                pixels[base] = r;
-                pixels[base + 1] = g;
-                pixels[base + 2] = b;
-                pixels[base + 3] = 255;
-            }
-        }
-    }
-}
-
 fn framebuffer_to_rgba(fb: &FrameBuffer) -> Vec<u8> {
-    let img_w = fb.width * CELL_W;
-    let img_h = fb.height * CELL_H;
-    let mut pixels = vec![0u8; img_w * img_h * 4];
-    for y in 0..fb.height {
-        for x in 0..fb.width {
-            let cell = fb.get(x, y);
-            render_cell_to_pixels(&mut pixels, img_w, x, y, &cell);
-        }
-    }
-    pixels
+    render_framebuffer_to_rgba(fb, CELL_W, CELL_H, BG_COLOR).0
 }
 
 fn save_framebuffer_png(fb: &FrameBuffer, out_path: &Path) {

@@ -129,6 +129,43 @@ pub fn discover_daemons() -> Vec<HerdEntry> {
     result
 }
 
+/// Prune stale/orphaned daemon state files and sockets where the process is no longer alive.
+pub fn sweep_dead_daemons() -> usize {
+    let runtime = match forgum_platform::runtime_dir() {
+        Ok(p) => p,
+        Err(_) => return 0,
+    };
+
+    let entries = match std::fs::read_dir(&runtime) {
+        Ok(e) => e,
+        Err(_) => return 0,
+    };
+
+    let mut swept = 0;
+    for entry in entries.flatten() {
+        let path = entry.path();
+        let name = match path.file_name().and_then(|n| n.to_str()) {
+            Some(n) => n,
+            None => continue,
+        };
+        if !name.starts_with("daemon-") || !name.ends_with(".json") {
+            continue;
+        }
+
+        if let Ok(state) = crate::daemon::DaemonState::read(&path) {
+            if !state.is_alive() {
+                let _ = std::fs::remove_file(&path);
+                let sock_path = std::path::Path::new(&state.socket_path);
+                if sock_path.exists() {
+                    let _ = std::fs::remove_file(sock_path);
+                }
+                swept += 1;
+            }
+        }
+    }
+    swept
+}
+
 fn filter_daemons(entries: Vec<HerdEntry>, filter: &HerdFilter) -> Vec<HerdEntry> {
     if filter.all {
         return entries;

@@ -2185,14 +2185,9 @@ impl Effect for FlyEffect {
                     continue;
                 }
 
-                // In-place wing flap (carets '^' <-> 'v'):
-                if is_upstroke {
-                    if ch == 'v' {
-                        ch = '^';
-                    }
-                } else if ch == '^' {
-                    ch = 'v';
-                }
+                // Aerodynamic wing flap and shear morphing:
+                let wing_shear = if is_upstroke { 0.7 } else { -0.7 };
+                ch = crate::kinematics::morph_ascii_glyph(ch, 0.0, wing_shear);
 
                 let cell_fg = resolve_fg_palette_char(
                     &self.color_mode,

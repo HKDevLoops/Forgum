@@ -634,7 +634,6 @@ if [ "$DOWNLOAD_OK" -eq 0 ]; then
           if [ -s "$TMP/$ASSET_NAME" ]; then
             ARCHIVE="$TMP/$ASSET_NAME"
             DOWNLOAD_OK=1
-            break
           fi
         fi
       elif command -v wget >/dev/null 2>&1; then
@@ -642,9 +641,47 @@ if [ "$DOWNLOAD_OK" -eq 0 ]; then
           if [ -s "$TMP/$ASSET_NAME" ]; then
             ARCHIVE="$TMP/$ASSET_NAME"
             DOWNLOAD_OK=1
-            break
           fi
         fi
+      fi
+
+      # Cryptographic SHA-256 Checksum Verification
+      if [ "$DOWNLOAD_OK" -eq 1 ] && [ -n "$ARCHIVE" ]; then
+        echo -e "\033[36m>> Verifying cryptographic SHA-256 checksum for ${ASSET_NAME}...\033[0m"
+        SHA_OK=0
+        if command -v curl >/dev/null 2>&1; then
+          curl -fsSL -4 --connect-timeout 5 -H "User-Agent: forgum-install" "${CANDIDATE}.sha256" -o "$TMP/${ASSET_NAME}.sha256" 2>/dev/null || true
+        elif command -v wget >/dev/null 2>&1; then
+          wget -q -4 --timeout=5 "${CANDIDATE}.sha256" -O "$TMP/${ASSET_NAME}.sha256" 2>/dev/null || true
+        fi
+
+        if [ -s "$TMP/${ASSET_NAME}.sha256" ]; then
+          EXPECTED_SHA="$(awk '{print $1}' "$TMP/${ASSET_NAME}.sha256" | head -n1)"
+          ACTUAL_SHA=""
+          if command -v sha256sum >/dev/null 2>&1; then
+            ACTUAL_SHA="$(sha256sum "$ARCHIVE" | awk '{print $1}')"
+          elif command -v shasum >/dev/null 2>&1; then
+            ACTUAL_SHA="$(shasum -a 256 "$ARCHIVE" | awk '{print $1}')"
+          fi
+
+          if [ -n "$ACTUAL_SHA" ] && [ -n "$EXPECTED_SHA" ]; then
+            if [ "$ACTUAL_SHA" != "$EXPECTED_SHA" ]; then
+              echo -e "\033[31m>> SECURITY ERROR: SHA-256 checksum mismatch for ${ASSET_NAME}!\033[0m"
+              echo -e "   Expected: ${EXPECTED_SHA}"
+              echo -e "   Computed: ${ACTUAL_SHA}"
+              echo -e "\033[31m>> Aborting installation of unverified archive to protect system integrity.\033[0m"
+              DOWNLOAD_OK=0
+              ARCHIVE=""
+              continue
+            else
+              echo -e "  \033[32m[✓] Cryptographic SHA-256 checksum verified: ${ACTUAL_SHA:0:16}...\033[0m"
+              SHA_OK=1
+            fi
+          fi
+        else
+          echo -e "  \033[90m[-] Notice: Remote .sha256 checksum file not found on upstream release server.\033[0m"
+        fi
+        break
       fi
     done
 

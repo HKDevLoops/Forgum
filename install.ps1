@@ -305,6 +305,34 @@ if (-not $localInstalled) {
                 Invoke-WebRequest -Uri $candidate -OutFile $zipPath -UseBasicParsing -Headers @{ 'User-Agent' = 'forgum-install' } -TimeoutSec 15 -ErrorAction Stop
                 if ((Test-Path -LiteralPath $zipPath) -and (Get-Item -LiteralPath $zipPath).Length -gt 0) {
                     $downloadOk = $true
+
+                    # Cryptographic SHA-256 Checksum Verification
+                    Write-Host ">> Verifying cryptographic SHA-256 checksum for $candidateName..." -ForegroundColor Cyan
+                    $shaCandidate = "$candidate.sha256"
+                    $shaPath = Join-Path $tmp 'archive.sha256'
+                    try {
+                        Invoke-WebRequest -Uri $shaCandidate -OutFile $shaPath -UseBasicParsing -Headers @{ 'User-Agent' = 'forgum-install' } -TimeoutSec 8 -ErrorAction Stop
+                        if (Test-Path -LiteralPath $shaPath) {
+                            $shaRaw = (Get-Content -LiteralPath $shaPath -Raw).Trim()
+                            $expectedSha = ($shaRaw -split '\s+')[0].Trim().ToLower()
+                            $actualSha = (Get-FileHash -LiteralPath $zipPath -Algorithm SHA256).Hash.ToLower()
+
+                            if ($expectedSha -and $actualSha) {
+                                if ($actualSha -ne $expectedSha) {
+                                    Write-Host ">> SECURITY ERROR: SHA-256 checksum mismatch for $candidateName!" -ForegroundColor Red
+                                    Write-Host "   Expected: $expectedSha"
+                                    Write-Host "   Computed: $actualSha"
+                                    Write-Host ">> Aborting installation of unverified archive to protect system integrity." -ForegroundColor Red
+                                    $downloadOk = $false
+                                    continue
+                                } else {
+                                    Write-Host "  [✓] Cryptographic SHA-256 checksum verified: $($actualSha.Substring(0,16))..." -ForegroundColor Green
+                                }
+                            }
+                        }
+                    } catch {
+                        Write-Host "  [-] Notice: Remote .sha256 checksum file not found on upstream release server." -ForegroundColor DarkGray
+                    }
                     break
                 }
             } catch {}

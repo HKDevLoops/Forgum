@@ -74,7 +74,7 @@ impl OutputHandle {
             OutputTarget::Pipe => Box::new(io::stdout()), // last resort
         };
         Ok(Self {
-            buf: Vec::with_capacity(8 * 1024),
+            buf: Vec::with_capacity(64 * 1024),
             inner: writer,
             target,
         })

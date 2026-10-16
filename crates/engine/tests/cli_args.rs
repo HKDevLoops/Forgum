@@ -310,7 +310,7 @@ fn status_line_max_len_flag() {
     let cli =
         Cli::try_parse_from(argv(&["forgum-engine", "status-line", "--max-len", "120"])).unwrap();
     match cli.command {
-        Some(Commands::StatusLine { max_len }) => assert_eq!(max_len, 120),
+        Some(Commands::StatusLine { max_len, .. }) => assert_eq!(max_len, 120),
         _ => panic!("expected StatusLine"),
     }
 }

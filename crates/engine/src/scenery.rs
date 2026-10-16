@@ -4273,6 +4273,137 @@ pub fn render_scenery_full_with_tod_and_season(
     render_road_with_tod(fb, road, road_y, w, time, tod);
 }
 
+/// Compress background scenery luminance to maintain >3.5:1 figure-ground contrast against foreground mascots.
+#[inline]
+pub fn compress_scenery_contrast(fb: &mut FrameBuffer) {
+    for cell in fb.back.iter_mut() {
+        if cell.ch != ' ' && cell.fg != Color::WHITE {
+            cell.fg = cell.fg.scale_luminance(0.52);
+        }
+    }
+}
+
+/// Scenery cache key to determine whether background scenery can be reused without recalculating
+/// trigonometric alpine crests, road undulation, and Fibonacci trees.
+#[derive(Debug, Clone, PartialEq)]
+pub struct SceneryCacheKey {
+    pub width: usize,
+    pub height: usize,
+    pub mountain: MountainStyle,
+    pub road: RoadStyle,
+    pub env: EnvironmentStyle,
+    pub road_y: usize,
+    pub tod: TimeOfDay,
+    pub season: Season,
+    pub animal_height: usize,
+    pub time_bucket: u32,
+}
+
+/// Memoization cache for procedural background scenery (PERF-001).
+///
+/// Avoids recalculating trigonometric alpine crests, road undulations, and Fibonacci foliage
+/// on every frame at 240Hz when camera coordinates, season, time-of-day, and dimensions are stationary.
+#[derive(Debug, Clone, Default)]
+pub struct SceneryCache {
+    key: Option<SceneryCacheKey>,
+    cached_cells: Vec<Cell>,
+}
+
+impl SceneryCache {
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Clear cache entries.
+    pub fn clear(&mut self) {
+        self.key = None;
+        self.cached_cells.clear();
+    }
+
+    /// Render scenery into `fb`, reading from the memoization cache when stationary.
+    #[allow(clippy::too_many_arguments)]
+    pub fn get_or_render(
+        &mut self,
+        fb: &mut FrameBuffer,
+        mountain: MountainStyle,
+        road: RoadStyle,
+        env: EnvironmentStyle,
+        road_y: usize,
+        time: f32,
+        animal_name: Option<&str>,
+        animal_height: Option<usize>,
+        base_anim: Option<BaseAnim>,
+        time_of_day: Option<TimeOfDay>,
+        season: Option<Season>,
+    ) {
+        let w = fb.width;
+        let h = fb.height;
+        if w == 0 || h == 0 {
+            return;
+        }
+
+        let tod = time_of_day.unwrap_or_default().resolve();
+        let cur_season = season.unwrap_or_default().resolve();
+        let anim_h = animal_height.unwrap_or(12);
+
+        // Quantize time into 100ms buckets so elements drift naturally while
+        // caching ~96% of frames at 240Hz.
+        let time_bucket = (time * 10.0).floor() as u32;
+
+        let key = SceneryCacheKey {
+            width: w,
+            height: h,
+            mountain,
+            road,
+            env,
+            road_y,
+            tod,
+            season: cur_season,
+            animal_height: anim_h,
+            time_bucket,
+        };
+
+        if self.key.as_ref() == Some(&key) && self.cached_cells.len() == w * h {
+            // Cache hit: populate back buffer from cached cells
+            for y in 0..h {
+                for x in 0..w {
+                    let cell = self.cached_cells[y * w + x];
+                    if cell.alpha > 0 || cell.ch != ' ' {
+                        let _ = fb.set(x, y, cell);
+                    }
+                }
+            }
+            return;
+        }
+
+        // Cache miss: render freshly
+        render_scenery_full_with_tod_and_season(
+            fb,
+            mountain,
+            road,
+            env,
+            road_y,
+            time,
+            animal_name,
+            Some(anim_h),
+            base_anim,
+            Some(tod),
+            Some(cur_season),
+        );
+
+        // Snapshot generated scenery cells
+        self.cached_cells.clear();
+        self.cached_cells.reserve(w * h);
+        for y in 0..h {
+            for x in 0..w {
+                self.cached_cells.push(fb.get_back(x, y));
+            }
+        }
+        self.key = Some(key);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

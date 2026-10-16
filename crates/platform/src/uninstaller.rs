@@ -259,6 +259,16 @@ fn remove_from_user_path(logs: &mut Vec<String>, errors: &mut Vec<String>) -> bo
 fn remove_binaries(logs: &mut Vec<String>, errors: &mut Vec<String>) -> bool {
     let mut any_removed = false;
 
+    // Check if binary was managed by an external package manager (SEC-007 / BUG-015)
+    let source = crate::package_manager::detect_installation_source();
+    if source != crate::package_manager::PackageManager::DirectBinary {
+        logs.push(format!(
+            "Notice: Forgum was detected as installed via {} package manager. Run '{}' to cleanly reconcile system package records.",
+            source.name(),
+            source.uninstall_command()
+        ));
+    }
+
     // Collect candidate binary paths
     let mut candidate_paths: Vec<PathBuf> = Vec::new();
 

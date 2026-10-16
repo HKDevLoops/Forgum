@@ -55,10 +55,27 @@ pub enum RenderMode {
 ///
 /// The per-frame scratch buffer is reused across calls so a frame with many
 /// changed cells allocates **zero** heap (D1/D3): no `format!()` per cell.
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct AnsiRenderer {
     scratch: Vec<u8>,
     mode: RenderMode,
+}
+
+#[inline]
+fn color_close(c1: Color, c2: Color) -> bool {
+    let dr = (i16::from(c1.r) - i16::from(c2.r)).abs();
+    let dg = (i16::from(c1.g) - i16::from(c2.g)).abs();
+    let db = (i16::from(c1.b) - i16::from(c2.b)).abs();
+    dr + dg + db <= 3
+}
+
+impl Default for AnsiRenderer {
+    fn default() -> Self {
+        Self {
+            scratch: Vec::with_capacity(64 * 1024),
+            mode: RenderMode::Standard,
+        }
+    }
 }
 
 impl AnsiRenderer {
@@ -68,14 +85,14 @@ impl AnsiRenderer {
 
     pub fn new_banner() -> Self {
         Self {
-            scratch: Vec::with_capacity(1024),
+            scratch: Vec::with_capacity(64 * 1024),
             mode: RenderMode::Banner,
         }
     }
 
     pub fn new_overlay() -> Self {
         Self {
-            scratch: Vec::with_capacity(1024),
+            scratch: Vec::with_capacity(64 * 1024),
             mode: RenderMode::Overlay,
         }
     }
@@ -184,7 +201,7 @@ impl Renderer for AnsiRenderer {
                 cur_cursor = Some((x0 + run_len, y0));
                 i += run_len;
             } else {
-                if last_fg != Some(cell0.fg) {
+                if !last_fg.is_some_and(|last| color_close(last, cell0.fg)) {
                     buf.extend_from_slice(b"\x1b[38;2;");
                     Self::write_decimal(buf, u32::from(cell0.fg.r));
                     buf.push(b';');
@@ -207,7 +224,7 @@ impl Renderer for AnsiRenderer {
                     }
                     let nidx = ny * cols + nx;
                     let nc = cells.get(nidx).copied().unwrap_or_default();
-                    if nc.alpha == 0 || nc.fg != cell0.fg {
+                    if nc.alpha == 0 || !color_close(nc.fg, cell0.fg) {
                         break;
                     }
                     let s = nc.ch.encode_utf8(&mut ch_buf);

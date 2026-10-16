@@ -489,7 +489,7 @@ pub enum Commands {
     /// Launch the interactive terminal UI & studio.
     #[command(alias = "menu", alias = "ui", alias = "studio")]
     Tui {
-        /// Initial tab to focus: mascots, scenery, effects, installer, config
+        /// Initial tab to focus: mascots, scenery, effects, installer, config, studio
         #[arg(default_value = "")]
         tab: String,
     },
@@ -668,11 +668,14 @@ pub enum Commands {
         #[command(subcommand)]
         sub: TmuxSub,
     },
-    /// One-shot status line for tmux status-right.
+    /// One-shot status line for tmux status-right or zellij widget.
     StatusLine {
         /// Maximum visible length in characters.
         #[arg(long, default_value = "70")]
         max_len: usize,
+        /// Multiplexer widget format: tmux, zellij, or plain.
+        #[arg(long, default_value = "plain")]
+        mux: String,
     },
     /// Fleet manager: control all running daemons.
     Herd {
@@ -863,6 +866,31 @@ pub enum Commands {
         #[arg(num_args = 0..)]
         message: Vec<String>,
     },
+    /// Display beautiful terminal system telemetry with animated mascot (fastfetch/neofetch replacement).
+    #[command(alias = "sysinfo", alias = "info", alias = "neofetch", alias = "fastfetch")]
+    Fetch {
+        /// Force single-frame instantaneous terminal output (default).
+        #[arg(long, short = 'i')]
+        instant: bool,
+
+        /// Live interactive 240Hz animation mode beside real-time Braille hardware metrics.
+        #[arg(long, short = 'l')]
+        live: bool,
+
+        /// Specific mascot name to display (defaults to default cow or random).
+        #[arg(short = 'c', long, visible_alias = "animal", value_name = "NAME")]
+        cow: Option<String>,
+
+        /// Color palette name to apply.
+        #[arg(short = 'p', long, value_name = "PALETTE")]
+        palette: Option<String>,
+    },
+    /// Reactive Living Pasture shell telemetry bus integration.
+    #[command(name = "telemetry", alias = "pasture")]
+    Telemetry {
+        #[command(subcommand)]
+        sub: TelemetrySub,
+    },
     /// Print version and build information.
     Version,
 }
@@ -879,6 +907,28 @@ pub enum TmuxSub {
     Screen,
     /// List supported multiplexer integration options.
     List,
+}
+
+#[derive(Debug, Clone, Subcommand, PartialEq, Eq)]
+pub enum TelemetrySub {
+    /// Report shell command execution telemetry (exit code, elapsed ms, command name).
+    Report {
+        /// Last command exit code (0 = success, nonzero = failure).
+        #[arg(short = 'x', long, default_value = "0")]
+        exit_code: i32,
+
+        /// Execution duration in milliseconds.
+        #[arg(short = 'm', long, alias = "time", default_value = "0")]
+        elapsed_ms: u64,
+
+        /// Command string executed.
+        #[arg(short = 'c', long)]
+        command: Option<String>,
+
+        /// Terminal session identifier (defaults to current session).
+        #[arg(short = 's', long)]
+        session: Option<String>,
+    },
 }
 
 #[derive(Debug, Subcommand)]
@@ -1115,6 +1165,8 @@ pub enum Command {
     Zoomies,
     Yeet,
     Moonwalk,
+    Fetch,
+    Telemetry,
     Version,
     Unknown(String),
 }
@@ -1503,11 +1555,13 @@ pub fn parse_args(argv: Vec<String>) -> Result<(Args, Option<Commands>), CliErro
             };
             (Command::Moonwalk, txt, false)
         }
+        Some(Commands::Fetch { .. }) => (Command::Fetch, None, false),
+        Some(Commands::Telemetry { .. }) => (Command::Telemetry, None, false),
         Some(Commands::Version) => (Command::Version, None, false),
     };
 
     let max_len = match &cli.command {
-        Some(Commands::StatusLine { max_len }) => Some(*max_len),
+        Some(Commands::StatusLine { max_len, .. }) => Some(*max_len),
         _ => None,
     };
 
@@ -2169,15 +2223,51 @@ mod tests {
         let (a, cmd) = parse(&["forgum", "status-line"]);
         assert_eq!(a.command, Command::StatusLine);
         assert_eq!(a.max_len, Some(70));
-        assert!(matches!(cmd, Some(Commands::StatusLine { max_len: 70 })));
+        assert!(matches!(cmd, Some(Commands::StatusLine { max_len: 70, .. })));
     }
 
     #[test]
     fn status_line_custom_max_len() {
-        let (a, cmd) = parse(&["forgum", "status-line", "--max-len", "40"]);
+        let (a, cmd) = parse(&["forgum", "status-line", "--max-len", "40", "--mux", "tmux"]);
         assert_eq!(a.command, Command::StatusLine);
         assert_eq!(a.max_len, Some(40));
-        assert!(matches!(cmd, Some(Commands::StatusLine { max_len: 40 })));
+        assert!(matches!(
+            cmd,
+            Some(Commands::StatusLine {
+                max_len: 40,
+                mux
+            }) if mux == "tmux"
+        ));
+    }
+
+    #[test]
+    fn fetch_command_parsing() {
+        let (a, cmd) = parse(&["forgum", "fetch", "--cow", "dragon"]);
+        assert_eq!(a.command, Command::Fetch);
+        assert!(matches!(
+            cmd,
+            Some(Commands::Fetch {
+                cow: Some(c),
+                live: false,
+                ..
+            }) if c == "dragon"
+        ));
+    }
+
+    #[test]
+    fn telemetry_command_parsing() {
+        let (a, cmd) = parse(&["forgum", "telemetry", "report", "-x", "0", "-m", "42"]);
+        assert_eq!(a.command, Command::Telemetry);
+        assert!(matches!(
+            cmd,
+            Some(Commands::Telemetry {
+                sub: TelemetrySub::Report {
+                    exit_code: 0,
+                    elapsed_ms: 42,
+                    ..
+                }
+            })
+        ));
     }
 
     #[test]

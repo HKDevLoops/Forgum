@@ -16,7 +16,18 @@ if [ -z "${VERSION}" ]; then
   exit 1
 fi
 
-ARCH="amd64"
+if command -v dpkg >/dev/null 2>&1; then
+  ARCH="$(dpkg --print-architecture)"
+else
+  case "$(uname -m)" in
+    x86_64|amd64) ARCH="amd64" ;;
+    aarch64|arm64) ARCH="arm64" ;;
+    armv7*|armhf) ARCH="armhf" ;;
+    riscv64*) ARCH="riscv64" ;;
+    i686|i386) ARCH="i386" ;;
+    *) ARCH="$(uname -m)" ;;
+  esac
+fi
 PKG_NAME="forgum"
 DEB_DIR="forgum_${VERSION}_${ARCH}"
 
@@ -33,6 +44,7 @@ chmod 755 "${DEB_DIR}/usr/bin/forgum"
 # Copy control and postinst
 cp "${SCRIPT_DIR}/DEBIAN/control" "${DEB_DIR}/DEBIAN/"
 sed -i "s/^Version:.*/Version: ${VERSION}/" "${DEB_DIR}/DEBIAN/control"
+sed -i "s/^Architecture:.*/Architecture: ${ARCH}/" "${DEB_DIR}/DEBIAN/control"
 cp "${SCRIPT_DIR}/DEBIAN/postinst" "${DEB_DIR}/DEBIAN/"
 chmod 755 "${DEB_DIR}/DEBIAN/postinst"
 

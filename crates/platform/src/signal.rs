@@ -70,6 +70,23 @@ impl ShutdownFlag {
     pub fn trigger(&self) {
         self.shutdown.store(true, Ordering::Relaxed);
     }
+
+    /// Alias for `is_shutdown` checking if termination was triggered.
+    #[must_use]
+    pub fn is_triggered(&self) -> bool {
+        self.is_shutdown()
+    }
+
+    /// Sleep for `duration` in interruptible slices, waking up immediately if shutdown is triggered.
+    pub fn sleep_interruptible(&self, duration: std::time::Duration) {
+        let chunk = std::time::Duration::from_millis(5);
+        let mut rem = duration;
+        while !rem.is_zero() && !self.is_shutdown() {
+            let sleep_time = rem.min(chunk);
+            std::thread::sleep(sleep_time);
+            rem = rem.saturating_sub(sleep_time);
+        }
+    }
 }
 
 impl Default for ShutdownFlag {

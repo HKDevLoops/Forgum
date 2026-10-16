@@ -67,6 +67,10 @@ Whenever a new version `X.Y.Z-beta` is authorized by the user, **EVERY SINGLE ON
 | [`.github/workflows/release.yml`](file:///Z:/Projects/Forgum/.github/workflows/release.yml#L4-L8) | `on: push: tags: ['v*', 'alpha-*']` | `v*` | Release workflow ONLY triggers on tags starting with `v`. Tag must match `Cargo.toml`. |
 | [`.github/workflows/release.yml`](file:///Z:/Projects/Forgum/.github/workflows/release.yml#L115-L117) | Tarball artifact name | `forgum-${{ matrix.target }}.tar.gz` | Linux/macOS/BSD prebuilt archive downloaded by `install.sh`. |
 | [`.github/workflows/release.yml`](file:///Z:/Projects/Forgum/.github/workflows/release.yml#L140-L145) | Zip artifact name | `forgum-${VERSION}-windows-x64.zip` | Windows prebuilt archive consumed by Winget, Scoop, and `install.ps1`. |
+| [`.github/workflows/release.yml`](file:///Z:/Projects/Forgum/.github/workflows/release.yml#L158-L165) | macOS DMG artifact name | `forgum-${VERSION}-macos-${ARCH}.dmg` | Double-clickable macOS disk image with built-in installer. |
+| [`.github/workflows/release.yml`](file:///Z:/Projects/Forgum/.github/workflows/release.yml#L272-L375) | `verify-release-artifacts` | Automated verification job | Runs smoke tests, .deb/.rpm lints, and checksum checks before release approval. |
+| [`.github/workflows/release.yml`](file:///Z:/Projects/Forgum/.github/workflows/release.yml#L368-L385) | Master checksum manifest | `SHA256SUMS` & `*.sha256` | Cryptographic SHA-256 verification across all release assets. |
+| [`docs/index.html`](file:///Z:/Projects/Forgum/docs/index.html) | Universal Web Download Portal | Static HTML/CSS/JS | GitHub Pages download portal with OS autodetection and copyable terminal commands. |
 
 ### E. Multi-Channel Package Manifests (All Supported Managers)
 | Package Manager | Manifest File Path | Target Key / Line | Format Rule |
@@ -82,6 +86,7 @@ Whenever a new version `X.Y.Z-beta` is authorized by the user, **EVERY SINGLE ON
 | **Gentoo** | [`packaging/gentoo/forgum-*.ebuild`](file:///Z:/Projects/Forgum/packaging/gentoo/) | Filename: `forgum-X.Y.Z.ebuild`<br>[`packaging/gentoo/README.md`](file:///Z:/Projects/Forgum/packaging/gentoo/README.md) | **Ebuild Rule**: File must be renamed to match version (`forgum-0.0.8.ebuild`). |
 | **GNU Guix** | [`packaging/guix/forgum.scm`](file:///Z:/Projects/Forgum/packaging/guix/forgum.scm#L8) | `(version "X.Y.Z-beta")` | Guix Scheme package definition. |
 | **Windows MSI** | [`packaging/windows/forgum.wxs`](file:///Z:/Projects/Forgum/packaging/windows/forgum.wxs#L4) | `Version="X.Y.Z"` | WiX standard requires 3-part integer format (`0.0.8`). |
+| **macOS DMG** | [`packaging/macos/build-dmg.sh`](file:///Z:/Projects/Forgum/packaging/macos/build-dmg.sh) | `forgum-${VERSION}-macos-${ARCH}.dmg` | Compressed UDZO disk image with embedded installer. |
 
 ### F. Documentation & Reference Manuals
 | File Path | Lookup Target | Format | Rationale |

@@ -291,9 +291,10 @@ pub fn classify_gpu_architecture(
         || lower_name.contains("ai boost")
         || lower_name.contains("xdna")
         || lower_name.contains("ipu")
-        || lower_name.contains("neural engine")
+        || lower_name.contains("neural")
         || lower_name.contains("ane")
         || lower_name.contains("hexagon")
+        || lower_name.contains("directml")
     {
         return if vendor == "Intel"
             || lower_name.contains("intel")
@@ -470,6 +471,21 @@ pub fn classify_gpu_architecture(
                 2010,
                 vec!["DirectX 11".into(), "CUDA 6".into(), "OpenGL 4.4".into()],
             )
+        } else if lower_name.contains("wsl")
+            || lower_name.contains("geforce")
+            || lower_name.contains("rtx")
+        {
+            (
+                "Ampere / Ada Lovelace (WSL Unified Shader)".into(),
+                2022,
+                vec![
+                    "Vulkan 1.3".into(),
+                    "DirectX 12 Ultimate".into(),
+                    "CUDA 12".into(),
+                    "OpenGL 4.6".into(),
+                    "DirectML".into(),
+                ],
+            )
         } else {
             (
                 "Tesla / G80 (Pioneer Unified Architecture)".into(),
@@ -570,6 +586,17 @@ pub fn classify_gpu_architecture(
                     "OpenGL 4.5".into(),
                 ],
             )
+        } else if lower_name.contains("wsl") {
+            (
+                "RDNA 2 / RDNA 3 (WSL Unified Shader)".into(),
+                2022,
+                vec![
+                    "Vulkan 1.3".into(),
+                    "DirectX 12 Ultimate".into(),
+                    "DirectML".into(),
+                    "OpenGL 4.6".into(),
+                ],
+            )
         } else {
             (
                 "TeraScale (Unified VLIW Architecture)".into(),
@@ -635,6 +662,17 @@ pub fn classify_gpu_architecture(
                     "DirectX 11".into(),
                     "OpenGL 4.0".into(),
                     "OpenCL 1.2".into(),
+                ],
+            )
+        } else if lower_name.contains("wsl") {
+            (
+                "Xe-HPG / Arc (WSL Unified Shader)".into(),
+                2022,
+                vec![
+                    "Vulkan 1.3".into(),
+                    "DirectX 12 Ultimate".into(),
+                    "oneAPI / DirectML".into(),
+                    "OpenGL 4.6".into(),
                 ],
             )
         } else {
@@ -829,39 +867,182 @@ fn probe_windows_gpus() -> Vec<GpuInfo> {
 }
 
 #[cfg(unix)]
-fn probe_unix_gpus() -> Vec<GpuInfo> {
+fn detect_linux_distro() -> String {
+    if let Ok(content) = std::fs::read_to_string("/etc/os-release") {
+        for line in content.lines() {
+            if let Some(rest) = line.strip_prefix("PRETTY_NAME=") {
+                return rest.trim_matches('"').trim_matches('\'').to_string();
+            }
+        }
+        for line in content.lines() {
+            if let Some(rest) = line.strip_prefix("NAME=") {
+                return rest.trim_matches('"').trim_matches('\'').to_string();
+            }
+        }
+    }
+    "Linux".to_string()
+}
+
+/// Probes for WSL (Windows Subsystem for Linux) hardware acceleration across
+/// all Linux distributions (Ubuntu, Debian, Fedora, Arch, Alpine, openSUSE, Gentoo, Void, NixOS).
+///
+/// Inspects:
+/// 1. Direct3D 12 kernel paravirtualization device (`/dev/dxg`)
+/// 2. Mirrored host GPU driver metadata in `/usr/lib/wsl/drivers/` (NVIDIA, AMD, Intel, Qualcomm)
+/// 3. DirectML neural compute library (`/usr/lib/wsl/lib/libdirectml.so`)
+/// 4. Mesa Dozen D3D12 Vulkan driver (`libvulkan_dzn.so`) for musl/Alpine and all distros
+#[cfg(unix)]
+fn probe_wsl_gpus() -> Vec<GpuInfo> {
     let mut list = Vec::new();
 
-    // 1. WSL DirectX GPU Paravirtualization (/dev/dxg)
-    if Path::new("/dev/dxg").exists() {
-        let has_nvidia = Path::new("/proc/driver/nvidia/version").exists()
-            || Path::new("/usr/lib/wsl/lib/libcuda.so").exists();
+    let is_wsl = Path::new("/dev/dxg").exists()
+        || crate::terminal::is_wsl()
+        || Path::new("/usr/lib/wsl/lib").exists();
 
-        if has_nvidia {
-            let (arch, yr, protos) = classify_gpu_architecture(
-                "WSL DirectX / NVIDIA GPU Adapter",
-                "NVIDIA",
-                "dxg:nvidia",
-            );
+    if !is_wsl {
+        return list;
+    }
+
+    let distro = detect_linux_distro();
+
+    // 1. Inspect /usr/lib/wsl/drivers for host GPU driver manifestations
+    let mut host_vendors_found = Vec::new();
+    if let Ok(entries) = std::fs::read_dir("/usr/lib/wsl/drivers") {
+        for entry in entries.flatten() {
+            let name_lower = entry
+                .file_name()
+                .to_string_lossy()
+                .to_ascii_lowercase();
+
+            let vendor = if name_lower.starts_with("nv") || name_lower.contains("nvidia") {
+                Some("NVIDIA")
+            } else if name_lower.starts_with("u0")
+                || name_lower.contains("amd")
+                || name_lower.contains("ati")
+            {
+                Some("AMD")
+            } else if name_lower.starts_with("iigd") || name_lower.contains("intel") {
+                Some("Intel")
+            } else if name_lower.starts_with("qcom") || name_lower.contains("qualcomm") {
+                Some("Qualcomm")
+            } else {
+                None
+            };
+
+            if let Some(v) = vendor {
+                if !host_vendors_found.contains(&v) {
+                    host_vendors_found.push(v);
+                }
+            }
+        }
+    }
+
+    // 2. Also check /proc/driver/nvidia or /usr/lib/wsl/lib/libcuda.so
+    let has_cuda = Path::new("/proc/driver/nvidia/version").exists()
+        || Path::new("/usr/lib/wsl/lib/libcuda.so").exists();
+    if has_cuda && !host_vendors_found.contains(&"NVIDIA") {
+        host_vendors_found.push("NVIDIA");
+    }
+
+    // 3. For each detected vendor, create an authoritative GpuInfo record
+    for &vendor in &host_vendors_found {
+        match vendor {
+            "NVIDIA" => {
+                let name = format!("WSL NVIDIA GeForce / RTX GPU ({distro})");
+                let (arch, yr, protos) = classify_gpu_architecture(&name, "NVIDIA", "dxg:nvidia");
+                list.push(GpuInfo {
+                    name,
+                    vendor: "NVIDIA".to_string(),
+                    device_type: GpuDeviceType::Dedicated,
+                    architecture: arch,
+                    generation_year: yr,
+                    protocols: protos,
+                    vram_bytes: None,
+                    identifier: "/dev/dxg:nvidia".to_string(),
+                    is_available: true,
+                });
+            }
+            "AMD" => {
+                let name = format!("WSL AMD Radeon GPU ({distro})");
+                let (arch, yr, protos) = classify_gpu_architecture(&name, "AMD", "dxg:amd");
+                list.push(GpuInfo {
+                    name,
+                    vendor: "AMD".to_string(),
+                    device_type: GpuDeviceType::Dedicated,
+                    architecture: arch,
+                    generation_year: yr,
+                    protocols: protos,
+                    vram_bytes: None,
+                    identifier: "/dev/dxg:amd".to_string(),
+                    is_available: true,
+                });
+            }
+            "Intel" => {
+                let name = format!("WSL Intel Arc / Iris Xe GPU ({distro})");
+                let (arch, yr, protos) = classify_gpu_architecture(&name, "Intel", "dxg:intel");
+                list.push(GpuInfo {
+                    name,
+                    vendor: "Intel".to_string(),
+                    device_type: GpuDeviceType::Integrated,
+                    architecture: arch,
+                    generation_year: yr,
+                    protocols: protos,
+                    vram_bytes: None,
+                    identifier: "/dev/dxg:intel".to_string(),
+                    is_available: true,
+                });
+            }
+            "Qualcomm" => {
+                let name = format!("WSL Qualcomm Snapdragon Adreno GPU ({distro})");
+                let (arch, yr, protos) =
+                    classify_gpu_architecture(&name, "Qualcomm", "dxg:qualcomm");
+                list.push(GpuInfo {
+                    name,
+                    vendor: "Qualcomm".to_string(),
+                    device_type: GpuDeviceType::Integrated,
+                    architecture: arch,
+                    generation_year: yr,
+                    protocols: protos,
+                    vram_bytes: None,
+                    identifier: "/dev/dxg:qualcomm".to_string(),
+                    is_available: true,
+                });
+            }
+            _ => {}
+        }
+    }
+
+    // 4. If host_vendors_found was empty but /dev/dxg exists:
+    // Check if Mesa Dozen D3D12 driver exists (common in Alpine Linux musl, Arch, Fedora)
+    if list.is_empty() && Path::new("/dev/dxg").exists() {
+        let has_dozen = [
+            "/usr/lib/libvulkan_dzn.so",
+            "/usr/lib64/libvulkan_dzn.so",
+            "/usr/lib/x86_64-linux-gnu/libvulkan_dzn.so",
+            "/usr/lib/aarch64-linux-gnu/libvulkan_dzn.so",
+        ]
+        .iter()
+        .any(|p| Path::new(p).exists());
+
+        if has_dozen {
+            let name = format!("WSL Mesa Dozen D3D12 Vulkan Adapter ({distro})");
+            let (arch, yr, protos) = classify_gpu_architecture(&name, "Mesa", "dxg:dozen");
             list.push(GpuInfo {
-                name: "WSL DirectX / NVIDIA GPU Adapter".to_string(),
-                vendor: "NVIDIA".to_string(),
+                name,
+                vendor: "Mesa / Microsoft".to_string(),
                 device_type: GpuDeviceType::Dedicated,
                 architecture: arch,
                 generation_year: yr,
                 protocols: protos,
-                vram_bytes: None,
-                identifier: "/dev/dxg:nvidia".to_string(),
+                vram_bytes: Some(1024 * 1024 * 1024),
+                identifier: "/dev/dxg:dozen".to_string(),
                 is_available: true,
             });
         } else {
-            let (arch, yr, protos) = classify_gpu_architecture(
-                "WSL DirectX Virtual Graphics Adapter",
-                "Microsoft",
-                "dxg",
-            );
+            let name = format!("WSL DirectX Virtual Graphics Adapter ({distro})");
+            let (arch, yr, protos) = classify_gpu_architecture(&name, "Microsoft", "dxg");
             list.push(GpuInfo {
-                name: "WSL DirectX Virtual Graphics Adapter".to_string(),
+                name,
                 vendor: "Microsoft".to_string(),
                 device_type: GpuDeviceType::Integrated,
                 architecture: arch,
@@ -873,6 +1054,35 @@ fn probe_unix_gpus() -> Vec<GpuInfo> {
             });
         }
     }
+
+    // 5. DirectML NPU detection across all WSL distros
+    let has_directml = Path::new("/usr/lib/wsl/lib/libdirectml.so").exists()
+        || Path::new("/usr/lib/libdirectml.so").exists();
+    if has_directml {
+        let name = format!("WSL DirectML Neural Processing Unit ({distro})");
+        let (arch, yr, protos) = classify_gpu_architecture(&name, "Microsoft", "directml");
+        list.push(GpuInfo {
+            name,
+            vendor: "Microsoft DirectML".to_string(),
+            device_type: GpuDeviceType::Npu,
+            architecture: arch,
+            generation_year: yr,
+            protocols: protos,
+            vram_bytes: None,
+            identifier: "/usr/lib/wsl/lib/libdirectml.so".to_string(),
+            is_available: true,
+        });
+    }
+
+    list
+}
+
+#[cfg(unix)]
+fn probe_unix_gpus() -> Vec<GpuInfo> {
+    let mut list = Vec::new();
+
+    // 1. WSL DirectX GPU Paravirtualization across all Linux distros
+    list.extend(probe_wsl_gpus());
 
     // 2. Linux native DRM subsystem (/sys/class/drm/card*)
     if let Ok(entries) = std::fs::read_dir("/sys/class/drm") {
@@ -1019,6 +1229,51 @@ fn probe_unix_gpus() -> Vec<GpuInfo> {
                 }
             }
         }
+
+        // Fallback for sandboxed macOS environments or when system_profiler is unavailable
+        if list.is_empty()
+            && (Path::new("/System/Library/Frameworks/Metal.framework").exists()
+                || Path::new("/System/Library/Frameworks/Metal.framework/Metal").exists())
+        {
+            let is_arm = std::env::consts::ARCH == "aarch64";
+            let name = if is_arm {
+                "Apple Silicon Integrated GPU (Metal Fallback)".to_string()
+            } else {
+                "Intel Mac Integrated GPU (Metal Fallback)".to_string()
+            };
+            let (arch, yr, protos) =
+                classify_gpu_architecture(&name, "Apple", "apple-metal-framework");
+            list.push(GpuInfo {
+                name,
+                vendor: "Apple".to_string(),
+                device_type: GpuDeviceType::Integrated,
+                architecture: arch,
+                generation_year: yr,
+                protocols: protos,
+                vram_bytes: None,
+                identifier: "apple-metal-framework".to_string(),
+                is_available: true,
+            });
+
+            if is_arm {
+                let (npu_arch, npu_yr, npu_protos) = classify_gpu_architecture(
+                    "Apple Neural Engine (ANE)",
+                    "Apple",
+                    "apple-ane-framework",
+                );
+                list.push(GpuInfo {
+                    name: "Apple Neural Engine (ANE)".to_string(),
+                    vendor: "Apple".to_string(),
+                    device_type: GpuDeviceType::Npu,
+                    architecture: npu_arch,
+                    generation_year: npu_yr,
+                    protocols: npu_protos,
+                    vram_bytes: None,
+                    identifier: "apple-ane-framework".to_string(),
+                    is_available: true,
+                });
+            }
+        }
     }
 
     list
@@ -1135,5 +1390,37 @@ mod tests {
                 | GpuDeviceType::Integrated
                 | GpuDeviceType::Cpu
         ));
+    }
+
+    #[test]
+    fn test_wsl_gpu_architecture_and_multi_distro_classification() {
+        // NVIDIA under WSL
+        let (nv_arch, yr, protos) = classify_gpu_architecture(
+            "WSL NVIDIA GeForce / RTX GPU (Ubuntu 24.04 LTS)",
+            "NVIDIA",
+            "dxg:nvidia",
+        );
+        assert!(nv_arch.contains("Ampere") || nv_arch.contains("Blackwell") || nv_arch.contains("Ada"));
+        assert!(protos.iter().any(|p| p.contains("Vulkan") || p.contains("DirectX")));
+        assert!(yr >= 2020);
+
+        // AMD under WSL
+        let (amd_arch, _, _) =
+            classify_gpu_architecture("WSL AMD Radeon GPU (Arch Linux)", "AMD", "dxg:amd");
+        assert!(amd_arch.contains("RDNA") || amd_arch.contains("GCN"));
+
+        // Intel under WSL
+        let (intel_arch, _, _) =
+            classify_gpu_architecture("WSL Intel Arc / Iris Xe GPU (Fedora Linux 41)", "Intel", "dxg:intel");
+        assert!(intel_arch.contains("Arc") || intel_arch.contains("Xe"));
+
+        // DirectML NPU under WSL
+        let (dml_arch, _, dml_protos) = classify_gpu_architecture(
+            "WSL DirectML Neural Processing Unit (Alpine Linux v3.20)",
+            "Microsoft",
+            "directml",
+        );
+        assert!(dml_protos.iter().any(|p| p.contains("DirectML")));
+        assert!(dml_arch.contains("DirectML") || dml_arch.contains("NPU") || dml_arch.contains("DirectX"));
     }
 }

@@ -1,4 +1,4 @@
-//! Verify ALL 106 cow files in data/Cows/ load and expand without panicking.
+//! Verify ALL 132 cow files in data/Cows/ load and expand without panicking.
 //! Also verify animations.json loads correctly and DNA profiles are valid.
 //!
 //! This is the safety net that catches:
@@ -48,12 +48,12 @@ fn all_cow_names() -> Vec<String> {
 // ── cow.rs integration tests ────────────────────────────────────────────────
 
 #[test]
-fn all_106_cow_files_load_and_expand() {
+fn all_132_cow_files_load_and_expand() {
     let dd = data_dir();
     let names = all_cow_names();
     assert!(
-        names.len() >= 100,
-        "Expected at least 100 cow files, found {}",
+        names.len() >= 132,
+        "Expected at least 132 cow files, found {}",
         names.len()
     );
 
@@ -338,7 +338,7 @@ fn expand_cow_preserves_multiline_structure() {
 }
 
 #[test]
-fn test_all_106_cows_expand_with_thought_glyph() {
+fn test_all_132_cows_expand_with_thought_glyph() {
     let dd = data_dir();
     let names = all_cow_names();
     let mut failures = Vec::new();

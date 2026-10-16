@@ -11,6 +11,27 @@ function Stop-ForgumDaemon {
     [CmdletBinding()]
     param()
 
+    # Delegate directly to canonical Rust binary session management if forgum is available
+    $exe = Get-Command forgum -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source -First 1
+    if (-not $exe) {
+        $candidates = @(
+            (Join-Path $PSScriptRoot "..\target\release\forgum.exe"),
+            (Join-Path $PSScriptRoot "..\target\debug\forgum.exe"),
+            (Join-Path $env:LOCALAPPDATA "Forgum\forgum.exe"),
+            (Join-Path $env:USERPROFILE ".cargo\bin\forgum.exe")
+        )
+        foreach ($c in $candidates) {
+            if (Test-Path -LiteralPath $c) {
+                $exe = $c
+                break
+            }
+        }
+    }
+    if ($exe) {
+        & $exe stop
+        return
+    }
+
     $session = Get-ForgumSessionId
     $daemonPath = Get-ForgumDaemonStatePath -SessionId $session
 

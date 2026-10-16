@@ -77,7 +77,7 @@ pub use guards::{AltScreenGuard, CursorShowGuard, RawModeGuard, TimerResolutionG
 pub use mux::{detect_mux, Mux};
 pub use output::{open_output, OutputHandle, OutputTarget};
 pub use package_manager::{
-    atomic_replace_binary, check_for_updates_cached, check_git_updates, clear_update_cache,
+    atomic_replace_binary, atomic_replace_binary_verified, check_for_updates_cached, check_git_updates, clear_update_cache,
     compare_semver, detect_available_package_managers, detect_git_status,
     detect_installation_source, detect_shadow_installations, detect_source_from_path,
     execute_git_update, execute_package_manager_action, execute_standalone_update,
@@ -85,9 +85,9 @@ pub use package_manager::{
     is_newer_version, local_release_binary_path, parse_version_from_cargo_toml,
     parse_version_from_release_json, read_receipt, read_update_cache, record_receipt,
     rollback_binary, select_update_method_interactive, should_spawn_background_check,
-    spawn_background_update_check, write_receipt, write_update_cache, GitRepoStatus,
-    PackageManager, ParsedSemVer, Receipt, ReleaseChannel, ShadowInstallation, UpdateCheckCache,
-    UpdateNotice,
+    spawn_background_update_check, verify_binary_signature, write_receipt, write_update_cache,
+    GitRepoStatus, PackageManager, ParsedSemVer, Receipt, ReleaseChannel, ShadowInstallation,
+    UpdateCheckCache, UpdateNotice, FORGUM_RELEASE_PUBLIC_KEY,
 };
 pub use paths::{
     config_dir, config_path, control_socket_path, daemon_state_path, data_dir, detect_config_file,
@@ -98,7 +98,10 @@ pub use paths::{
 pub use platform_unix::parent_pid;
 #[cfg(windows)]
 pub use platform_windows::parent_pid;
-pub use protocol::{ConfigFormat, KeybindingsConfig, RandomSetting, SceneConfig};
+pub use protocol::{
+    lookup_config_schema, ConfigFormat, ConfigSchemaField, KeybindingsConfig, RandomSetting,
+    SceneConfig, FORGUM_CONFIG_SCHEMA,
+};
 pub use shell::{
     remove_all_forgum_blocks, remove_delimited_block, uninstall_all_shell_integrations,
     uninstall_shell_integration, update_delimited_block, write_file_if_changed, Shell,
@@ -157,10 +160,10 @@ pub fn stdin_has_data() -> bool {
     }
 }
 pub use terminal::{
-    detect_capabilities, detect_remote_session, detect_terminal_emulator, is_remote_session,
-    is_stdin_tty, is_stdout_tty, is_wsl, plan_native_split, terminal_size, terminal_supports_sync,
-    AspectRatioFormat, ColorLevel, GraphicsCaps, NativeSplitPlan, RemoteSessionType, SplitMode,
-    TerminalCapabilities, TerminalEmulator,
+    detect_capabilities, detect_remote_session, detect_sync_support, detect_terminal_emulator,
+    is_remote_session, is_stdin_tty, is_stdout_tty, is_wsl, plan_native_split, terminal_size,
+    terminal_supports_sync, AspectRatioFormat, ColorLevel, GraphicsCaps, NativeSplitPlan,
+    RemoteSessionType, SplitMode, TerminalCapabilities, TerminalEmulator,
 };
 pub use terminal_theme::{
     apply_colorblind_transform, boost_saturation, calculate_luminance, detect_terminal_theme,

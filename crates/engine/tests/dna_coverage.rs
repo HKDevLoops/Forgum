@@ -1,7 +1,7 @@
 //! Exhaustive DNA and mascot coverage audit tests.
 //!
 //! Validates:
-//! 1. All 106 curated mascots from `crates/tui/src/app.rs` CATEGORIES exist in both:
+//! 1. All 132 curated mascots from `crates/tui/src/app.rs` CATEGORIES exist in both:
 //!    - `data/animations.json`
 //!    - `data/Cows/animations.json`
 //! 2. Every single entry contains:
@@ -18,9 +18,9 @@ use std::path::{Path, PathBuf};
 use forgum_engine::color::get_natural_hex_palette;
 use forgum_engine::dna::{load_animations, BaseAnim, ParticleType};
 
-/// Curated 106 mascots from `crates/tui/src/app.rs` CATEGORIES.
-const MASCOTS_106: &[&str] = &[
-    // Farm & Domestic (22)
+/// Curated 132 mascots from `crates/tui/src/app.rs` CATEGORIES.
+const MASCOTS_132: &[&str] = &[
+    // Farm & Domestic (24)
     "default",
     "cat",
     "cat2",
@@ -37,13 +37,15 @@ const MASCOTS_106: &[&str] = &[
     "kitten",
     "meow",
     "hamster",
+    "lamb",
+    "lamb2",
     "mule",
     "pig",
     "ram",
     "rooster",
     "sheep",
     "turkey",
-    // Wild & Safari (16)
+    // Wild & Safari (21)
     "armadillo",
     "bearface",
     "elephant",
@@ -54,13 +56,18 @@ const MASCOTS_106: &[&str] = &[
     "koala",
     "luke-koala",
     "moofasa",
+    "moose",
+    "owl",
     "panther",
     "rhino",
+    "shikato",
     "sloth",
+    "squirrel",
     "telebears",
     "tiger",
+    "tortoise",
     "wolf",
-    // Oceanic & Amphibian (14)
+    // Oceanic & Amphibian (17)
     "bud-frogs",
     "docker-whale",
     "dolphin",
@@ -68,14 +75,17 @@ const MASCOTS_106: &[&str] = &[
     "ebi_furai",
     "happy-whale",
     "jellyfish",
+    "lobster",
     "octopus",
     "pufferfish",
     "seahorse",
+    "seahorse-big",
+    "smiling-octopus",
     "squid",
     "turtle",
     "walrus",
     "whale",
-    // Fantasy & Sci-Fi (19)
+    // Fantasy & Sci-Fi (22)
     "atat",
     "cthulhu-mini",
     "daemon",
@@ -88,14 +98,17 @@ const MASCOTS_106: &[&str] = &[
     "minotaur",
     "mooghidjirah",
     "moojira",
+    "personality-sphere",
     "pterodactyl",
+    "satanic",
     "sauron",
     "stegosaurus",
     "unipony",
     "vader",
+    "weeping-angel",
     "wizard",
     "yoda",
-    // Pop Culture & Fun (17)
+    // Pop Culture & Fun (23)
     "beavis.zen",
     "bill-the-cat",
     "charizardvice",
@@ -105,15 +118,21 @@ const MASCOTS_106: &[&str] = &[
     "hellokitty",
     "hypno",
     "kiss",
+    "lollerskates",
     "mona-lisa",
     "nyan",
     "radioactive-kitty",
     "ren",
     "snoopy",
+    "snoopyhouse",
+    "snoopysleep",
+    "spidercow",
     "stimpy",
     "tux",
+    "tux-big",
+    "tweety-bird",
     "vulpix",
-    // Abstract & Quirky (18)
+    // Abstract & Quirky (25)
     "apt",
     "bees",
     "claw-arm",
@@ -123,15 +142,22 @@ const MASCOTS_106: &[&str] = &[
     "fence",
     "hiya",
     "jesus",
+    "king",
+    "knight",
     "kosh",
     "mutilated",
+    "pawn",
+    "periodic-table",
     "queen",
+    "rook",
+    "shrug",
     "skeleton",
     "small",
     "supermilker",
     "surgery",
     "three-eyes",
     "viper",
+    "world",
 ];
 
 fn repo_root() -> PathBuf {
@@ -144,20 +170,20 @@ fn repo_root() -> PathBuf {
 }
 
 #[test]
-fn test_categories_count_is_exact_106() {
+fn test_categories_count_is_exact_132() {
     assert_eq!(
-        MASCOTS_106.len(),
-        106,
-        "Expected exactly 106 mascots in curated categories"
+        MASCOTS_132.len(),
+        132,
+        "Expected exactly 132 mascots in curated categories"
     );
     let mut seen = HashSet::new();
-    for m in MASCOTS_106 {
-        assert!(seen.insert(*m), "Duplicate mascot in MASCOTS_106: {m}");
+    for m in MASCOTS_132 {
+        assert!(seen.insert(*m), "Duplicate mascot in MASCOTS_132: {m}");
     }
 }
 
 #[test]
-fn test_all_106_mascots_present_in_both_animation_files() {
+fn test_all_132_mascots_present_in_both_animation_files() {
     let root = repo_root();
     let data_json_path = root.join("data").join("animations.json");
     let cows_json_path = root.join("data").join("Cows").join("animations.json");
@@ -172,7 +198,7 @@ fn test_all_106_mascots_present_in_both_animation_files() {
     let cows_map: serde_json::Value =
         serde_json::from_str(&cows_str).expect("Failed to parse data/Cows/animations.json");
 
-    for &mascot in MASCOTS_106 {
+    for &mascot in MASCOTS_132 {
         assert!(
             data_map.get(mascot).is_some(),
             "Mascot '{mascot}' missing from data/animations.json"
@@ -240,7 +266,7 @@ fn test_dna_properties_and_palette_matching() {
     let cows_map: serde_json::Map<String, serde_json::Value> =
         serde_json::from_str(&cows_str).unwrap();
 
-    for &mascot in MASCOTS_106 {
+    for &mascot in MASCOTS_132 {
         let expected_palette = get_natural_hex_palette(mascot);
         assert_eq!(
             expected_palette.len(),
@@ -369,7 +395,7 @@ fn test_dna_loads_every_single_entry_without_fallback() {
         "data/Cows/animations.json must load all 132 animals"
     );
 
-    for &mascot in MASCOTS_106 {
+    for &mascot in MASCOTS_132 {
         let dna_data = anims_data
             .get(mascot)
             .unwrap_or_else(|| panic!("Failed to load DNA for '{mascot}' from data/"));

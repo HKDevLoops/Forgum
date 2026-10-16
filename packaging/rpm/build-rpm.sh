@@ -30,4 +30,4 @@ chmod 755 "${RPM_DIR}/BUILD/forgum"
 
 rpmbuild -bb --define "_topdir ${RPM_DIR}" --define "version ${VERSION}" "${SCRIPT_DIR}/forgum.spec"
 
-echo "Built RPM in: ${RPM_DIR}/RPMS/x86_64/"
+echo "Built RPM in: $(ls "${RPM_DIR}/RPMS"/*/*.rpm 2>/dev/null || echo "${RPM_DIR}/RPMS/")"

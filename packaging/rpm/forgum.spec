@@ -7,8 +7,6 @@ License:        MIT
 URL:            https://github.com/HKDevLoops/Forgum
 Source0:        %{name}-%{version}.tar.gz
 
-BuildArch:      x86_64
-
 %description
 Forgum is a modern terminal mascot and animation engine rendering cowsay, fortune,
 and lolcat with physical ANSI effects, procedural biomes, and split-shell integration.

@@ -300,16 +300,36 @@ pub fn convert_image_to_ascii(img: &DynamicImage, config: &AsciiConverterConfig)
     result
 }
 
+/// Maximum file size allowed for image decoding (25 MB) to prevent OOM decompression bombs.
+pub const MAX_IMAGE_FILE_SIZE: u64 = 25 * 1024 * 1024;
+/// Maximum pixel dimension (width or height) allowed for image decoding (4096 pixels).
+pub const MAX_IMAGE_DIMENSION: u32 = 4096;
+
 /// Convert an image file on disk to an ASCII art string.
 pub fn convert_image_path_to_ascii(
     path: impl AsRef<Path>,
     config: &AsciiConverterConfig,
 ) -> Result<String, ImageAsciiError> {
     let p = path.as_ref();
+    if let Ok(meta) = p.metadata() {
+        if meta.len() > MAX_IMAGE_FILE_SIZE {
+            return Err(ImageAsciiError::Custom(format!(
+                "image file size ({} bytes) exceeds safety ceiling of 25MB",
+                meta.len()
+            )));
+        }
+    }
     let img = image::open(p).map_err(|e| ImageAsciiError::ImageDecode {
         path: p.to_path_buf(),
         source: e,
     })?;
+    if img.width() > MAX_IMAGE_DIMENSION || img.height() > MAX_IMAGE_DIMENSION {
+        return Err(ImageAsciiError::Custom(format!(
+            "image dimensions ({}x{}) exceed safety ceiling of 4096x4096",
+            img.width(),
+            img.height()
+        )));
+    }
     Ok(convert_image_to_ascii(&img, config))
 }
 
@@ -322,6 +342,13 @@ pub fn image_to_cow_from_image(
     _cow_name: &str,
     width: Option<usize>,
 ) -> Result<String, ImageAsciiError> {
+    if img.width() > MAX_IMAGE_DIMENSION || img.height() > MAX_IMAGE_DIMENSION {
+        return Err(ImageAsciiError::Custom(format!(
+            "image dimensions ({}x{}) exceed safety ceiling of 4096x4096",
+            img.width(),
+            img.height()
+        )));
+    }
     let config = AsciiConverterConfig {
         target_width: width.or(Some(40)),
         target_height: None,
@@ -394,6 +421,14 @@ pub fn image_to_cow(
     width: Option<usize>,
 ) -> Result<String, ImageAsciiError> {
     let p = img_path.as_ref();
+    if let Ok(meta) = p.metadata() {
+        if meta.len() > MAX_IMAGE_FILE_SIZE {
+            return Err(ImageAsciiError::Custom(format!(
+                "image file size ({} bytes) exceeds safety ceiling of 25MB",
+                meta.len()
+            )));
+        }
+    }
     let img = image::open(p).map_err(|e| ImageAsciiError::ImageDecode {
         path: p.to_path_buf(),
         source: e,
