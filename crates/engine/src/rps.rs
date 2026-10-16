@@ -8,7 +8,7 @@
 
 use crate::battle::run_battle;
 use std::io::{self, Write};
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 /// Possible weapon moves in Rock-Paper-Scissors.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -411,6 +411,305 @@ pub fn prompt_user_choice() -> Option<RpsMove> {
     }
 }
 
+/// Render a single animated frame of the liquid motion RPS showdown.
+pub fn render_liquid_showdown_frame(
+    player_name: &str,
+    cpu_name: &str,
+    player_move: RpsMove,
+    cpu_move: RpsMove,
+    outcome: RpsOutcome,
+    elapsed: f32,
+) -> String {
+    let (term_w, _) = forgum_platform::terminal_size();
+    let width = (term_w as usize).clamp(74, 90);
+    let mut out = String::with_capacity(3072);
+    let border_len = width.saturating_sub(2);
+    let border = "=".repeat(border_len);
+
+    out.push_str(&format!("\x1b[1;36m+{border}+\x1b[0m\x1b[K\r\n"));
+    out.push_str("|  ⚔️  \x1b[1;33mROCK • PAPER • SCISSORS SHOWDOWN: USER VS COMPUTER\x1b[0m");
+    let title_pad = border_len.saturating_sub(62);
+    out.push_str(&format!("{}⚔️  |\x1b[K\r\n", " ".repeat(title_pad)));
+    out.push_str(&format!("\x1b[1;36m+{border}+\x1b[0m\x1b[K\r\n\x1b[K\r\n"));
+
+    let p_mascot = crate::battle::resolve_fighter_mascot(player_name, "lion");
+    let c_mascot = crate::battle::resolve_fighter_mascot(cpu_name, "dragon");
+    let (p_species, _, _) = crate::battle::mascot_combat_profile(&p_mascot);
+    let (c_species, _, _) = crate::battle::mascot_combat_profile(&c_mascot);
+
+    let (p_header, c_header) = if elapsed < 1.05 {
+        (
+            format!(
+                "\x1b[1;32m[USER] {} ({})\x1b[0m: ✊ Pumping...",
+                player_name, p_species
+            ),
+            format!(
+                "\x1b[1;35m[COMPUTER] {} ({})\x1b[0m: ✊ Pumping...",
+                cpu_name, c_species
+            ),
+        )
+    } else {
+        (
+            format!(
+                "\x1b[1;32m[USER] {} ({})\x1b[0m: {} {}",
+                player_name,
+                p_species,
+                player_move.emoji(),
+                player_move.name()
+            ),
+            format!(
+                "\x1b[1;35m[COMPUTER] {} ({})\x1b[0m: {} {}",
+                cpu_name,
+                c_species,
+                cpu_move.emoji(),
+                cpu_move.name()
+            ),
+        )
+    };
+
+    out.push_str(&format!("  {:<44}  {}\x1b[K\r\n", p_header, c_header));
+
+    // Animated countdown status line
+    if elapsed < 0.35 {
+        out.push_str("    \x1b[1;33m✊ [1/3] ROCK...\x1b[0m\x1b[K\r\n\x1b[K\r\n");
+    } else if elapsed < 0.70 {
+        out.push_str("    \x1b[1;36m✊ [2/3] PAPER...\x1b[0m\x1b[K\r\n\x1b[K\r\n");
+    } else if elapsed < 1.05 {
+        out.push_str("    \x1b[1;35m✊ [3/3] SCISSORS...\x1b[0m\x1b[K\r\n\x1b[K\r\n");
+    } else if elapsed < 1.45 {
+        out.push_str("    \x1b[1;31m💥 [SHOOT!] THE WEAPONS CLASH!\x1b[0m\x1b[K\r\n\x1b[K\r\n");
+    } else if elapsed < 1.80 {
+        let impact_msg = match outcome {
+            RpsOutcome::PlayerWins => "\x1b[1;32m⚡ CRITICAL IMPACT! User breaks through!\x1b[0m",
+            RpsOutcome::ComputerWins => {
+                "\x1b[1;31m⚡ CRITICAL IMPACT! Computer shatters defense!\x1b[0m"
+            }
+            RpsOutcome::Tie => "\x1b[1;33m⚡ STALEMATE IMPACT! Equal momentum!\x1b[0m",
+        };
+        out.push_str(&format!("    {impact_msg}\x1b[K\r\n\x1b[K\r\n"));
+    } else {
+        out.push_str("    \x1b[1;33m⚡ SHOWDOWN RESOLVED! ⚡\x1b[0m\x1b[K\r\n\x1b[K\r\n");
+    }
+
+    let p_hand = if elapsed < 1.05 {
+        RpsMove::Rock.ascii_player()
+    } else if elapsed < 1.25 {
+        if elapsed < 1.15 {
+            RpsMove::Rock.ascii_player()
+        } else {
+            player_move.ascii_player()
+        }
+    } else {
+        player_move.ascii_player()
+    };
+
+    let c_hand = if elapsed < 1.05 {
+        RpsMove::Rock.ascii_cpu()
+    } else if elapsed < 1.25 {
+        if elapsed < 1.15 {
+            RpsMove::Rock.ascii_cpu()
+        } else {
+            cpu_move.ascii_cpu()
+        }
+    } else {
+        cpu_move.ascii_cpu()
+    };
+
+    let (pad_top, pad_bot) = if elapsed < 1.05 {
+        let sub = (elapsed % 0.35) / 0.35;
+        let bob = (std::f32::consts::PI * sub).sin();
+        if bob > 0.65 {
+            (0, 2)
+        } else if bob > 0.30 {
+            (1, 1)
+        } else {
+            (2, 0)
+        }
+    } else {
+        (1, 1)
+    };
+
+    let (x1, x2) = if elapsed < 1.05 {
+        (4.0_f32, 48.0_f32)
+    } else if elapsed < 1.45 {
+        let tau = ((elapsed - 1.05) / 0.40).clamp(0.0, 1.0);
+        let e = 1.0 - (1.0 - tau).powi(3);
+        (4.0 + 12.0 * e, 48.0 - 12.0 * e)
+    } else {
+        let dt = elapsed - 1.45;
+        let d = (-3.5 * dt).exp() * (std::f32::consts::TAU * 7.0 * dt).cos();
+        let r = 1.0 - (-5.0 * dt).exp();
+        match outcome {
+            RpsOutcome::PlayerWins => (16.0 + 1.5 * r, 36.0 + 9.0 * r + 2.5 * d),
+            RpsOutcome::ComputerWins => (16.0 - 9.0 * r - 2.5 * d, 36.0 - 1.5 * r),
+            RpsOutcome::Tie => (16.0 - 3.5 * r - 1.5 * d, 36.0 + 3.5 * r + 1.5 * d),
+        }
+    };
+
+    let col1 = (x1.round() as usize).clamp(1, 28);
+    let col2 = (x2.round() as usize).clamp(col1 + 17, width.saturating_sub(18));
+
+    let (p_color, c_color) = if elapsed < 1.05 {
+        ("\x1b[1;32m", "\x1b[1;35m")
+    } else if elapsed < 1.45 {
+        ("\x1b[1;37m", "\x1b[1;37m")
+    } else {
+        match outcome {
+            RpsOutcome::PlayerWins => ("\x1b[1;32m", "\x1b[1;31m"),
+            RpsOutcome::ComputerWins => ("\x1b[1;31m", "\x1b[1;35m"),
+            RpsOutcome::Tie => ("\x1b[1;33m", "\x1b[1;33m"),
+        }
+    };
+
+    for _ in 0..pad_top {
+        out.push_str("\x1b[K\r\n");
+    }
+
+    for row in 0..6 {
+        let p_str = p_hand[row];
+        let c_str = c_hand[row];
+        let gap_size = col2.saturating_sub(col1 + 17);
+        let gap_str = if elapsed >= 1.40 && (row == 2 || row == 3) {
+            let spark_idx = (((elapsed * 20.0) as usize) + row) % 4;
+            let spark = match spark_idx {
+                0 => "\x1b[1;33m✦ \x1b[1;31m💥 \x1b[1;36m✧\x1b[0m",
+                1 => "\x1b[1;31m⚡ \x1b[1;33m* \x1b[1;35m✦\x1b[0m",
+                2 => "\x1b[1;36m✧ \x1b[1;33m⚡ \x1b[1;31m💥\x1b[0m",
+                _ => "\x1b[1;33m💥 \x1b[1;32m+ \x1b[1;33m⚡\x1b[0m",
+            };
+            let center_pad = gap_size.saturating_sub(7) / 2;
+            format!(
+                "{}{}{}",
+                " ".repeat(center_pad),
+                spark,
+                " ".repeat(gap_size.saturating_sub(center_pad + 7))
+            )
+        } else if row == 2 && elapsed >= 1.05 && elapsed < 1.40 {
+            let center_pad = gap_size.saturating_sub(10) / 2;
+            format!(
+                "{}\x1b[1;33m⚡ VS ⚡\x1b[0m{}",
+                " ".repeat(center_pad),
+                " ".repeat(gap_size.saturating_sub(center_pad + 10))
+            )
+        } else {
+            " ".repeat(gap_size)
+        };
+
+        out.push_str(&format!(
+            "{}{}{}\x1b[0m{}{}{}\x1b[0m\x1b[K\r\n",
+            " ".repeat(col1),
+            p_color,
+            p_str,
+            gap_str,
+            c_color,
+            c_str
+        ));
+    }
+
+    for _ in 0..pad_bot {
+        out.push_str("\x1b[K\r\n");
+    }
+
+    out.push_str("\x1b[K\r\n");
+
+    if elapsed >= 1.70 {
+        match outcome {
+            RpsOutcome::PlayerWins => {
+                let verb = player_move.verb_against(cpu_move);
+                out.push_str(&format!(
+                    "  \x1b[1;32m🎉 VICTORY! Your [{}] {} Computer's [{}]!\x1b[0m\x1b[K\r\n",
+                    player_move.name(),
+                    verb,
+                    cpu_move.name()
+                ));
+                out.push_str(&format!(
+                    "  \x1b[1;33m🏆 {} ({}) claims decisive momentum! Charging to battle! 🏆\x1b[0m\x1b[K\r\n\x1b[K\r\n",
+                    player_name, p_species
+                ));
+            }
+            RpsOutcome::ComputerWins => {
+                let verb = cpu_move.verb_against(player_move);
+                out.push_str(&format!(
+                    "  \x1b[1;31m💀 DEFEAT! Computer's [{}] {} your [{}]!\x1b[0m\x1b[K\r\n",
+                    cpu_move.name(),
+                    verb,
+                    player_move.name()
+                ));
+                out.push_str(&format!(
+                    "  \x1b[1;31m⚔️ {} ({}) strikes back with tournament advantage! ⚔️\x1b[0m\x1b[K\r\n\x1b[K\r\n",
+                    cpu_name, c_species
+                ));
+            }
+            RpsOutcome::Tie => {
+                out.push_str(&format!(
+                    "  \x1b[1;33m🤝 STALEMATE! Both champions deployed [{}]!\x1b[0m\x1b[K\r\n",
+                    player_move.name()
+                ));
+                out.push_str("  \x1b[1;33m⚔️ Evenly matched! Entering sudden-death joust arena! ⚔️\x1b[0m\x1b[K\r\n\x1b[K\r\n");
+            }
+        }
+    } else {
+        out.push_str("\x1b[K\r\n\x1b[K\r\n");
+    }
+
+    out
+}
+
+/// Run high-refresh liquid motion animated showdown loop with DEC Mode 2026 synchronized updates.
+pub fn run_liquid_showdown(
+    player_name: &str,
+    cpu_name: &str,
+    player_move: RpsMove,
+    cpu_move: RpsMove,
+    outcome: RpsOutcome,
+    fps: u16,
+) {
+    let target_fps = fps.clamp(5, 240) as u32;
+    let mut governor = crate::engine_core::LiquidFrameGovernor::new(target_fps);
+    let shutdown = forgum_platform::ShutdownFlag::new();
+    let total_duration = Duration::from_millis(2500);
+    let mut start_time = Instant::now();
+
+    while start_time.elapsed() < total_duration && !shutdown.is_shutdown() {
+        if crossterm::event::poll(Duration::ZERO).unwrap_or(false) {
+            if let Ok(crossterm::event::Event::Key(k)) = crossterm::event::read() {
+                if k.kind == crossterm::event::KeyEventKind::Press {
+                    match k.code {
+                        crossterm::event::KeyCode::Char('q')
+                        | crossterm::event::KeyCode::Char('Q')
+                        | crossterm::event::KeyCode::Esc => {
+                            return;
+                        }
+                        crossterm::event::KeyCode::Char(' ')
+                        | crossterm::event::KeyCode::Enter
+                            if start_time.elapsed() < Duration::from_millis(1600) =>
+                        {
+                            start_time = Instant::now() - Duration::from_millis(1700);
+                        }
+                        _ => {}
+                    }
+                }
+            }
+        }
+
+        let elapsed = start_time.elapsed().as_secs_f32();
+        let frame = render_liquid_showdown_frame(
+            player_name,
+            cpu_name,
+            player_move,
+            cpu_move,
+            outcome,
+            elapsed,
+        );
+
+        // Tear-free DEC Mode 2026 synchronized terminal frame
+        print!("\x1b[?2026h\x1b[H{frame}\x1b[?2026l");
+        let _ = io::stdout().flush();
+
+        governor.pace_frame(&shutdown);
+    }
+}
+
 /// Run a live, interactive Rock-Paper-Scissors battle with showdown animation.
 pub fn run_rps_battle_live(
     player_name: &str,
@@ -437,14 +736,8 @@ pub fn run_rps_battle_live(
     let c_move = rng.next_move();
     let outcome = RpsOutcome::evaluate(p_move, c_move);
 
-    // Clear terminal and display dramatic hand showdown
-    print!("\x1b[2J\x1b[H");
-    let arena_text = render_showdown_arena(player_name, cpu_name, p_move, c_move, outcome);
-    print!("{arena_text}");
-    let _ = io::stdout().flush();
-
-    // Dramatic pause for player to register showdown result
-    std::thread::sleep(Duration::from_millis(1800));
+    // Live liquid motion animated showdown (up to 240Hz with monotonic pacing)
+    run_liquid_showdown(player_name, cpu_name, p_move, c_move, outcome, fps);
 
     // Determine joust victor: 1 for Player, 2 for Computer
     let winner = match outcome {
@@ -470,14 +763,18 @@ pub fn run_rps_battle_live(
     drop(_alt_guard);
     drop(_cursor_guard);
 
-    let (winner_name, loser_name) = if winner == 1 {
-        (player_name, cpu_name)
+    let p_mascot = crate::battle::resolve_fighter_mascot(player_name, "lion");
+    let c_mascot = crate::battle::resolve_fighter_mascot(cpu_name, "dragon");
+    let (winner_name, loser_name, winner_species) = if winner == 1 {
+        let (species, _, _) = crate::battle::mascot_combat_profile(&p_mascot);
+        (player_name, cpu_name, species)
     } else {
-        (cpu_name, player_name)
+        let (species, _, _) = crate::battle::mascot_combat_profile(&c_mascot);
+        (cpu_name, player_name, species)
     };
     println!(
-        "\n  \x1b[1;33m🏆 RPS ARENA CHAMPION: \x1b[1;32m{}\x1b[1;33m defeated \x1b[1;31m{}\x1b[1;33m! All hail the Bovine Victor! 🏆\x1b[0m\n",
-        winner_name, loser_name
+        "\n  \x1b[1;33m🏆 RPS ARENA CHAMPION: \x1b[1;32m{}\x1b[1;33m defeated \x1b[1;31m{}\x1b[1;33m! All hail the {} Victor! 🏆\x1b[0m\n",
+        winner_name, loser_name, winner_species
     );
     let _ = io::stdout().flush();
 }
@@ -606,5 +903,32 @@ mod tests {
         assert!(log.contains("PlayerOne"));
         assert!(log.contains("RobotOverlord"));
         assert!(log.contains("ROCK"));
+    }
+
+    #[test]
+    fn rps_liquid_showdown_frame_renders_all_phases() {
+        let p_name = "Player";
+        let c_name = "Computer";
+        let p_move = RpsMove::Rock;
+        let c_move = RpsMove::Scissors;
+        let outcome = RpsOutcome::PlayerWins;
+
+        // Phase 1: Countdown pump
+        let frame_count1 = render_liquid_showdown_frame(p_name, c_name, p_move, c_move, outcome, 0.2);
+        assert!(frame_count1.contains("ROCK • PAPER • SCISSORS SHOWDOWN"));
+        assert!(frame_count1.contains("ROCK..."));
+
+        // Phase 2: Shoot & thrust
+        let frame_shoot = render_liquid_showdown_frame(p_name, c_name, p_move, c_move, outcome, 1.2);
+        assert!(frame_shoot.contains("SHOOT!"));
+
+        // Phase 3: Impact & recoil
+        let frame_impact = render_liquid_showdown_frame(p_name, c_name, p_move, c_move, outcome, 1.6);
+        assert!(frame_impact.contains("CRITICAL IMPACT"));
+
+        // Phase 4: Victorious fanfare
+        let frame_result = render_liquid_showdown_frame(p_name, c_name, p_move, c_move, outcome, 2.0);
+        assert!(frame_result.contains("VICTORY"));
+        assert!(frame_result.contains("CRUSHES"));
     }
 }

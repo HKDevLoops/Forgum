@@ -1394,15 +1394,86 @@ pub fn parse_args(argv: Vec<String>) -> Result<(Args, Option<Commands>), CliErro
             }
 
             let exit_code = 64;
-            let mut message = e.to_string();
-            for arg in argv.iter().skip(1) {
-                if let Some(suggestion) = generate_command_suggestion(arg) {
-                    message.push_str("\n\n");
-                    message.push_str(&suggestion);
-                    break;
+            match e.kind() {
+                clap::error::ErrorKind::InvalidSubcommand => {
+                    let invalid_sub = normalized_argv
+                        .iter()
+                        .skip(1)
+                        .find(|arg| !arg.starts_with('-'))
+                        .map(|s| s.as_str())
+                        .unwrap_or("unknown");
+                    let sub_list = crate::completions::all_subcommands();
+                    let sub_names: Vec<&str> = sub_list.iter().map(|(n, _)| *n).collect();
+                    let closest = find_closest_match(invalid_sub, &sub_names);
+                    let message = crate::completions::format_unknown_subcommand_error(
+                        invalid_sub,
+                        closest,
+                        &sub_list,
+                    );
+                    return Err(CliError { exit_code, message });
+                }
+                clap::error::ErrorKind::UnknownArgument => {
+                    let invalid_flag = normalized_argv
+                        .iter()
+                        .skip(1)
+                        .find(|arg| arg.starts_with('-'))
+                        .map(|s| s.as_str())
+                        .unwrap_or("unknown");
+                    let subcmd_opt = normalized_argv
+                        .iter()
+                        .skip(1)
+                        .find(|arg| !arg.starts_with('-') && SUBCOMMAND_CANDIDATES.contains(&arg.as_str()));
+                    if let Some(subcmd) = subcmd_opt {
+                        if let Some(valid_flags) = crate::completions::flags_for_subcommand(subcmd) {
+                            let mut flag_names: Vec<&str> = valid_flags.iter().map(|(f, _)| *f).collect();
+                            if let Some(metas) = crate::completions::flag_metas_for_subcommand(subcmd) {
+                                for f in metas {
+                                    for alias in f.aliases {
+                                        if alias.starts_with("--") {
+                                            flag_names.push(alias);
+                                        }
+                                    }
+                                }
+                            }
+                            let closest = find_closest_match(invalid_flag, &flag_names);
+                            let message = crate::completions::format_unknown_subcommand_flag_error(
+                                subcmd,
+                                invalid_flag,
+                                closest,
+                                &valid_flags,
+                            );
+                            return Err(CliError { exit_code, message });
+                        }
+                    }
+                    let root_flags = crate::completions::all_root_flags();
+                    let mut flag_names: Vec<&str> = root_flags.iter().map(|(f, _)| *f).collect();
+                    for f in crate::completions::ROOT_FLAGS_METADATA {
+                        for alias in f.aliases {
+                            if alias.starts_with("--") {
+                                flag_names.push(alias);
+                            }
+                        }
+                    }
+                    let closest = find_closest_match(invalid_flag, &flag_names);
+                    let message = crate::completions::format_unknown_root_flag_error(
+                        invalid_flag,
+                        closest,
+                        &root_flags,
+                    );
+                    return Err(CliError { exit_code, message });
+                }
+                _ => {
+                    let mut message = e.to_string();
+                    for arg in argv.iter().skip(1) {
+                        if let Some(suggestion) = generate_command_suggestion(arg) {
+                            message.push_str("\n\n");
+                            message.push_str(&suggestion);
+                            break;
+                        }
+                    }
+                    return Err(CliError { exit_code, message });
                 }
             }
-            return Err(CliError { exit_code, message });
         }
     };
 
@@ -1572,6 +1643,8 @@ pub fn parse_args(argv: Vec<String>) -> Result<(Args, Option<Commands>), CliErro
         Some(Commands::Prune { .. }) => (Command::Prune, None, false),
         Some(Commands::Version) => (Command::Version, None, false),
     };
+
+    validate_cli_values(&cli, &cli.command)?;
 
     let max_len = match &cli.command {
         Some(Commands::StatusLine { max_len, .. }) => Some(*max_len),
@@ -2058,12 +2131,372 @@ pub fn is_command_typo(word: &str) -> Option<String> {
     for &sub in SUBCOMMAND_CANDIDATES {
         let max_dist = if sub.len() <= 4 { 1 } else { 2 };
         if levenshtein_distance(&q, sub) <= max_dist {
-            return Some(format!(
-                "💡 Did you mean '{sub}'? Run 'forgum list' to browse available options."
-            ));
+            let sub_list = crate::completions::all_subcommands();
+            let mut msg = format!("💡 Did you mean '{sub}'?\n\nAvailable subcommands:");
+            for (name, desc) in sub_list {
+                msg.push_str(&format!("\n  • {:<16} {}", name, desc));
+            }
+            return Some(msg);
         }
     }
     None
+}
+
+/// Check if an argument string is an explicit query for available options.
+pub fn is_list_query(s: &str) -> bool {
+    let s = s.trim();
+    s.eq_ignore_ascii_case("list")
+        || s.eq_ignore_ascii_case("--list")
+        || s.eq_ignore_ascii_case("-l")
+        || s.eq_ignore_ascii_case("help")
+        || s.eq_ignore_ascii_case("--help")
+        || s.eq_ignore_ascii_case("-h")
+        || s == "?"
+        || s.eq_ignore_ascii_case("ls")
+        || s.eq_ignore_ascii_case("options")
+        || s.eq_ignore_ascii_case("show")
+}
+
+/// Validate CLI argument and flag values against acceptable options.
+///
+/// If a user passes an invalid value to a flag or subcommand, this function reports
+/// that it is invalid, suggests the closest match, and lists all acceptable values.
+pub fn validate_cli_values(cli: &Cli, command: &Option<Commands>) -> Result<(), CliError> {
+    // 1. --effect / --animation-type
+    let eff_opt = cli.effect.as_deref().or(cli.animation_type.as_deref());
+    if let Some(eff) = eff_opt {
+        if !is_list_query(eff) && eff != "random" {
+            let valid_choices = crate::completions::choices_for_flag("--effect").unwrap_or_default();
+            let valid_names: Vec<&str> = valid_choices.iter().map(|(n, _)| *n).collect();
+            if !valid_names.iter().any(|v| v.eq_ignore_ascii_case(eff)) {
+                let closest = find_closest_match(eff, &valid_names);
+                return Err(CliError {
+                    exit_code: 64,
+                    message: crate::completions::format_invalid_value_error(
+                        "--effect",
+                        eff,
+                        closest,
+                        &valid_choices,
+                    ),
+                });
+            }
+        }
+    }
+
+    // 2. --color-mode
+    if let Some(ref cm) = cli.color_mode {
+        if !is_list_query(cm) {
+            let valid_choices = crate::completions::choices_for_flag("--color-mode").unwrap_or_default();
+            let valid_names: Vec<&str> = valid_choices.iter().map(|(n, _)| *n).collect();
+            if !valid_names.iter().any(|v| v.eq_ignore_ascii_case(cm)) {
+                let closest = find_closest_match(cm, &valid_names);
+                return Err(CliError {
+                    exit_code: 64,
+                    message: crate::completions::format_invalid_value_error(
+                        "--color-mode",
+                        cm,
+                        closest,
+                        &valid_choices,
+                    ),
+                });
+            }
+        }
+    }
+
+    // 3. --mountain
+    if let Some(ref m) = cli.mountain {
+        if !is_list_query(m) && m != "random" {
+            let valid_choices = crate::completions::choices_for_flag("--mountain").unwrap_or_default();
+            let valid_names: Vec<&str> = valid_choices.iter().map(|(n, _)| *n).collect();
+            if !valid_names.iter().any(|v| v.eq_ignore_ascii_case(m)) {
+                let closest = find_closest_match(m, &valid_names);
+                return Err(CliError {
+                    exit_code: 64,
+                    message: crate::completions::format_invalid_value_error(
+                        "--mountain",
+                        m,
+                        closest,
+                        &valid_choices,
+                    ),
+                });
+            }
+        }
+    }
+
+    // 4. --road
+    if let Some(ref r) = cli.road {
+        if !is_list_query(r) && r != "random" {
+            let valid_choices = crate::completions::choices_for_flag("--road").unwrap_or_default();
+            let valid_names: Vec<&str> = valid_choices.iter().map(|(n, _)| *n).collect();
+            if !valid_names.iter().any(|v| v.eq_ignore_ascii_case(r)) {
+                let closest = find_closest_match(r, &valid_names);
+                return Err(CliError {
+                    exit_code: 64,
+                    message: crate::completions::format_invalid_value_error(
+                        "--road",
+                        r,
+                        closest,
+                        &valid_choices,
+                    ),
+                });
+            }
+        }
+    }
+
+    // 5. --environment
+    if let Some(ref e) = cli.environment {
+        if !is_list_query(e) && e != "random" {
+            let valid_choices = crate::completions::choices_for_flag("--environment").unwrap_or_default();
+            let valid_names: Vec<&str> = valid_choices.iter().map(|(n, _)| *n).collect();
+            if !valid_names.iter().any(|v| v.eq_ignore_ascii_case(e)) {
+                let closest = find_closest_match(e, &valid_names);
+                return Err(CliError {
+                    exit_code: 64,
+                    message: crate::completions::format_invalid_value_error(
+                        "--environment",
+                        e,
+                        closest,
+                        &valid_choices,
+                    ),
+                });
+            }
+        }
+    }
+
+    // 6. --accel
+    if let Some(ref a) = cli.accel {
+        let valid_choices = crate::completions::choices_for_flag("--accel").unwrap_or_default();
+        let valid_names: Vec<&str> = valid_choices.iter().map(|(n, _)| *n).collect();
+        if !valid_names.iter().any(|v| v.eq_ignore_ascii_case(a)) {
+            let closest = find_closest_match(a, &valid_names);
+            return Err(CliError {
+                exit_code: 64,
+                message: crate::completions::format_invalid_value_error(
+                    "--accel",
+                    a,
+                    closest,
+                    &valid_choices,
+                ),
+            });
+        }
+    }
+
+    // 7. --time-of-day
+    if let Some(ref tod) = cli.time_of_day {
+        let valid_choices = crate::completions::choices_for_flag("--time-of-day").unwrap_or_default();
+        let valid_names: Vec<&str> = valid_choices.iter().map(|(n, _)| *n).collect();
+        if !valid_names.iter().any(|v| v.eq_ignore_ascii_case(tod)) {
+            let closest = find_closest_match(tod, &valid_names);
+            return Err(CliError {
+                exit_code: 64,
+                message: crate::completions::format_invalid_value_error(
+                    "--time-of-day",
+                    tod,
+                    closest,
+                    &valid_choices,
+                ),
+            });
+        }
+    }
+
+    // 8. --season
+    if let Some(ref s) = cli.season {
+        let valid_choices = crate::completions::choices_for_flag("--season").unwrap_or_default();
+        let valid_names: Vec<&str> = valid_choices.iter().map(|(n, _)| *n).collect();
+        if !valid_names.iter().any(|v| v.eq_ignore_ascii_case(s)) {
+            let closest = find_closest_match(s, &valid_names);
+            return Err(CliError {
+                exit_code: 64,
+                message: crate::completions::format_invalid_value_error(
+                    "--season",
+                    s,
+                    closest,
+                    &valid_choices,
+                ),
+            });
+        }
+    }
+
+    // 9. --aspect
+    if let Some(ref asp) = cli.aspect {
+        let valid_choices = crate::completions::choices_for_flag("--aspect").unwrap_or_default();
+        let valid_names: Vec<&str> = valid_choices.iter().map(|(n, _)| *n).collect();
+        if !valid_names.iter().any(|v| v.eq_ignore_ascii_case(asp)) {
+            let closest = find_closest_match(asp, &valid_names);
+            return Err(CliError {
+                exit_code: 64,
+                message: crate::completions::format_invalid_value_error(
+                    "--aspect",
+                    asp,
+                    closest,
+                    &valid_choices,
+                ),
+            });
+        }
+    }
+
+    // 10. --aspect-mode
+    if let Some(ref am) = cli.aspect_mode {
+        let valid_choices = crate::completions::choices_for_flag("--aspect-mode").unwrap_or_default();
+        let valid_names: Vec<&str> = valid_choices.iter().map(|(n, _)| *n).collect();
+        if !valid_names.iter().any(|v| v.eq_ignore_ascii_case(am)) {
+            let closest = find_closest_match(am, &valid_names);
+            return Err(CliError {
+                exit_code: 64,
+                message: crate::completions::format_invalid_value_error(
+                    "--aspect-mode",
+                    am,
+                    closest,
+                    &valid_choices,
+                ),
+            });
+        }
+    }
+
+    // 11. --colorblind
+    if let Some(ref cb) = cli.colorblind {
+        let valid_choices = crate::completions::choices_for_flag("--colorblind").unwrap_or_default();
+        let valid_names: Vec<&str> = valid_choices.iter().map(|(n, _)| *n).collect();
+        if !valid_names.iter().any(|v| v.eq_ignore_ascii_case(cb)) {
+            let closest = find_closest_match(cb, &valid_names);
+            return Err(CliError {
+                exit_code: 64,
+                message: crate::completions::format_invalid_value_error(
+                    "--colorblind",
+                    cb,
+                    closest,
+                    &valid_choices,
+                ),
+            });
+        }
+    }
+
+    // 12. --split-mode
+    if let Some(ref sm) = cli.split_mode {
+        let valid_choices = crate::completions::choices_for_flag("--split-mode").unwrap_or_default();
+        let valid_names: Vec<&str> = valid_choices.iter().map(|(n, _)| *n).collect();
+        if !valid_names.iter().any(|v| v.eq_ignore_ascii_case(sm)) {
+            let closest = find_closest_match(sm, &valid_names);
+            return Err(CliError {
+                exit_code: 64,
+                message: crate::completions::format_invalid_value_error(
+                    "--split-mode",
+                    sm,
+                    closest,
+                    &valid_choices,
+                ),
+            });
+        }
+    }
+
+    // 13. Subcommand specific validations
+    if let Some(ref cmd) = command {
+        match cmd {
+            Commands::Update { method: Some(ref m), .. } => {
+                if !is_list_query(m) {
+                    let valid_choices = crate::completions::choices_for_flag("--method").unwrap_or_default();
+                    let valid_names: Vec<&str> = valid_choices.iter().map(|(n, _)| *n).collect();
+                    if !valid_names.iter().any(|v| v.eq_ignore_ascii_case(m)) {
+                        let closest = find_closest_match(m, &valid_names);
+                        return Err(CliError {
+                            exit_code: 64,
+                            message: crate::completions::format_invalid_value_error(
+                                "--method",
+                                m,
+                                closest,
+                                &valid_choices,
+                            ),
+                        });
+                    }
+                }
+            }
+            Commands::Uninstall { method: Some(ref m), .. } => {
+                if !is_list_query(m) {
+                    let valid_choices = crate::completions::choices_for_flag("--method").unwrap_or_default();
+                    let valid_names: Vec<&str> = valid_choices.iter().map(|(n, _)| *n).collect();
+                    if !valid_names.iter().any(|v| v.eq_ignore_ascii_case(m)) && m != "purge" {
+                        let closest = find_closest_match(m, &valid_names);
+                        return Err(CliError {
+                            exit_code: 64,
+                            message: crate::completions::format_invalid_value_error(
+                                "--method",
+                                m,
+                                closest,
+                                &valid_choices,
+                            ),
+                        });
+                    }
+                }
+            }
+            Commands::Config { migrate: Some(ref fmt), .. } => {
+                let valid_choices = crate::completions::choices_for_flag("--migrate").unwrap_or_default();
+                let valid_names: Vec<&str> = valid_choices.iter().map(|(n, _)| *n).collect();
+                if !valid_names.iter().any(|v| v.eq_ignore_ascii_case(fmt)) {
+                    let closest = find_closest_match(fmt, &valid_names);
+                    return Err(CliError {
+                        exit_code: 64,
+                        message: crate::completions::format_invalid_value_error(
+                            "--migrate",
+                            fmt,
+                            closest,
+                            &valid_choices,
+                        ),
+                    });
+                }
+            }
+            Commands::Logs { level: Some(ref lvl), .. } => {
+                let valid_choices = crate::completions::choices_for_flag("--level").unwrap_or_default();
+                let valid_names: Vec<&str> = valid_choices.iter().map(|(n, _)| *n).collect();
+                if !valid_names.iter().any(|v| v.eq_ignore_ascii_case(lvl)) {
+                    let closest = find_closest_match(lvl, &valid_names);
+                    return Err(CliError {
+                        exit_code: 64,
+                        message: crate::completions::format_invalid_value_error(
+                            "--level",
+                            lvl,
+                            closest,
+                            &valid_choices,
+                        ),
+                    });
+                }
+            }
+            Commands::RpsBattle { choice: Some(ref ch), .. } => {
+                let valid_choices = crate::completions::choices_for_flag("--choice").unwrap_or_default();
+                let valid_names: Vec<&str> = valid_choices.iter().map(|(n, _)| *n).collect();
+                if !valid_names.iter().any(|v| v.eq_ignore_ascii_case(ch)) {
+                    let closest = find_closest_match(ch, &valid_names);
+                    return Err(CliError {
+                        exit_code: 64,
+                        message: crate::completions::format_invalid_value_error(
+                            "--choice",
+                            ch,
+                            closest,
+                            &valid_choices,
+                        ),
+                    });
+                }
+            }
+            Commands::List { ref category } => {
+                let valid_cats = &["all", "animals", "effects", "scenery", "colors", "shells", "mountains", "roads", "environments", "config", "multiplexers", "eyes", "tongue"];
+                if !valid_cats.iter().any(|c| c.eq_ignore_ascii_case(category)) {
+                    let closest = find_closest_match(category, valid_cats);
+                    let choices: Vec<(&str, &str)> = crate::completions::LIST_CATEGORY_CHOICES.iter().map(|c| (c.value, c.description)).collect();
+                    return Err(CliError {
+                        exit_code: 64,
+                        message: crate::completions::format_invalid_value_error(
+                            "category",
+                            category,
+                            closest,
+                            &choices,
+                        ),
+                    });
+                }
+            }
+            _ => {}
+        }
+    }
+
+    Ok(())
 }
 
 /// Generate helpful, interactive CLI suggestions based on user input.

@@ -79,13 +79,82 @@ $env:FORGUM_TELEMETRY = "0"
 
 ---
 
-## 5. Live Badges
+## 5. Local Anonymous Statistics (`stats.json`)
 
-The aggregate counters are publicly visible on shields.io badges:
+Starting in `0.0.8-beta`, Forgum records an **isolated, local-only tally** stored on your machine in:
+- **Linux/macOS**: `~/.config/forgum/stats.json`
+- **Windows**: `%APPDATA%\forgum\stats.json`
 
-- **Users Tried**:  
-  `https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fapi.counterapi.dev%2Fv1%2Fforgum%2Fusers_tried&query=%24.count&label=Users%20Tried&color=blueviolet&style=for-the-badge&logo=starship`
-- **Installations**:  
-  `https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fapi.counterapi.dev%2Fv1%2Fforgum%2Fusers_installed&query=%24.count&label=Installations&color=00F2FE&style=for-the-badge&logo=spacex`
-- **Active Users**:  
-  `https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fapi.counterapi.dev%2Fv1%2Fforgum%2Factive_users&query=%24.count&label=Active%20Users&color=F59E0B&style=for-the-badge&logo=sparkles`
+This file is 100% private and never transmitted anywhere. It provides an offline summary of your local client interactions:
+```json
+{
+  "users_tried_count": 1,
+  "is_installed": true,
+  "active_pulses_count": 14,
+  "last_pulse_unix": 1729080000,
+  "first_seen_unix": 1727800000
+}
+```
+
+---
+
+## 6. Custom Telemetry Endpoints (`FORGUM_TELEMETRY_ENDPOINT`)
+
+You can redirect anonymous pulses to your own private proxy or metrics aggregator using the `FORGUM_TELEMETRY_ENDPOINT` environment variable.
+
+Supported patterns:
+- **Interpolated**: `export FORGUM_TELEMETRY_ENDPOINT="https://telemetry.yourdomain.com/v1/pulse/{metric}"`
+- **Path appended**: `export FORGUM_TELEMETRY_ENDPOINT="https://telemetry.yourdomain.com/v1/pulse"` (automatically appends `/{metric}`)
+
+---
+
+## 7. Recommended Modern Stats Architectures for Open-Source CLI Tools
+
+Collecting usage metrics for an open-source binary terminal tool without violating user privacy or relying on fragile hobby mirrors requires careful architecture. The 3 best industry-standard patterns:
+
+### Tier 1: Canonical GitHub Releases Analytics (Immediate Best Practice)
+- **Mechanism**: GitHub natively increments `download_count` for all release assets (`.tar.gz`, `.zip`, `.deb`, `.rpm`, `.exe`).
+- **Shields.io Badge**: `https://img.shields.io/github/downloads/HKDevLoops/Forgum/total?style=for-the-badge&logo=github&color=blueviolet&label=Downloads`
+- **Why it is superior**: 100% uptime guaranteed by GitHub CDN, zero external servers, completely tamper-resistant against script spam, and never blocked by browser or DNS adblockers (Pi-hole, NextDNS).
+
+### Tier 2: Serverless Cloudflare Worker + Edge KV (For Active Daily Heartbeats)
+If real-time daily active user pulses are desired, deploy a zero-cost Cloudflare Worker (100,000 free requests/day):
+- **Worker Code**:
+  ```javascript
+  export default {
+    async fetch(request, env) {
+      const url = new URL(request.url);
+      const metric = url.pathname.split("/").pop();
+      if (!["users_tried", "users_installed", "active_users"].includes(metric)) {
+        return new Response("Invalid metric", { status: 400 });
+      }
+      // Increment counter in Cloudflare KV without logging IP
+      const current = (await env.STATS_KV.get(metric)) || 0;
+      const updated = Number(current) + 1;
+      await env.STATS_KV.put(metric, updated.toString());
+
+      return new Response(JSON.stringify({ schemaVersion: 1, label: metric, message: updated.toString(), color: "blue" }), {
+        headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
+      });
+    }
+  };
+  ```
+- **Shields.io Endpoint**: `https://img.shields.io/endpoint?url=https%3A%2F%2Fyour-worker.workers.dev%2Factive_users`
+
+### Tier 3: GitOps Daily Aggregator via GitHub Actions (The Private Metrics Cache)
+A GitHub Actions cron job runs daily at `00:00 UTC`, queries GitHub Releases API and crates.io API, aggregates download totals, and commits an immutable `metrics/stats.json` snapshot to GitHub Pages or repository. Badges consume the cached snapshot with 100% reliability.
+
+---
+
+## 8. Live Badges
+
+The aggregate counters and official downloads are publicly visible on shields.io badges:
+
+- **GitHub Total Downloads**:  
+  `https://img.shields.io/github/downloads/HKDevLoops/Forgum/total?style=for-the-badge&logo=github&color=blueviolet&label=Downloads`
+- **Latest Release**:  
+  `https://img.shields.io/github/v/release/HKDevLoops/Forgum?include_prereleases&style=for-the-badge&logo=rust&color=00F2FE&label=Release`
+- **Users Explored**:  
+  `https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fcountapi.mileshilliard.com%2Fapi%2Fv1%2Fget%2Fhkdevloops_forgum_users_tried&query=%24.value&label=Users%20Tried&color=F59E0B&style=for-the-badge&logo=starship`
+- **Privacy Guarantee**:  
+  `https://img.shields.io/badge/Telemetry-100%25%20Transparent%20%26%20Private-success?style=for-the-badge&logo=shield`

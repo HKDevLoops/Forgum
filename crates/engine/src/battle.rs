@@ -13,24 +13,94 @@ pub const PHI: f64 = 1.618_033_988_749_895;
 #[derive(Debug, Clone)]
 pub struct BattleCow {
     pub name: String,
+    pub mascot: String,
+    pub species: String,
     pub eyes: String,
     pub x: i32,
     pub y: usize,
     pub alive: bool,
     pub hp: u32,
     pub max_hp: u32,
+    pub mass: f32,
+    pub habitat: String,
+}
+
+/// Resolve any fighter name into an authentic mascot catalog key.
+pub fn resolve_fighter_mascot(name: &str, default_fallback: &str) -> String {
+    let clean = name.trim().to_ascii_lowercase();
+    if clean.is_empty() {
+        return default_fallback.to_string();
+    }
+    if forgum_platform::embedded_cows::get_embedded_cow(&clean).is_some() {
+        return clean;
+    }
+    match clean.as_str() {
+        "bessie" | "daisy" | "clover" | "cow" | "bovine" => "default".to_string(),
+        "alice" => "dragon".to_string(),
+        "bob" => "pegasus".to_string(),
+        "charlie" => "tiger".to_string(),
+        "player" => "lion".to_string(),
+        "cpu" | "computer" => "dragon".to_string(),
+        _ => {
+            let champions = [
+                "dragon", "pegasus", "elephant", "tiger", "lion",
+                "default", "koala", "dolphin", "duck", "cat",
+                "doge", "bunny", "corgi", "armadillo", "goat"
+            ];
+            let hash = clean.bytes().fold(0usize, |acc, b| acc.wrapping_add(b as usize));
+            champions[hash % champions.len()].to_string()
+        }
+    }
+}
+
+/// Derive biological combat mass, species archetype, and habitat from mascot key.
+pub fn mascot_combat_profile(mascot: &str) -> (String, f32, String) {
+    let m = mascot.to_ascii_lowercase();
+    if m.contains("dragon") || m.contains("charizard") {
+        ("Dragon".to_string(), 2.4, "aerial".to_string())
+    } else if m.contains("elephant") || m.contains("rhino") || m.contains("atat") {
+        ("Elephant".to_string(), 2.6, "terrestrial".to_string())
+    } else if m.contains("pegasus") {
+        ("Pegasus".to_string(), 1.4, "aerial".to_string())
+    } else if m.contains("tiger") || m.contains("lion") || m.contains("panther") {
+        ("Tiger".to_string(), 1.7, "terrestrial".to_string())
+    } else if m.contains("dolphin") || m.contains("shark") || m.contains("whale") {
+        ("Dolphin".to_string(), 1.8, "aquatic".to_string())
+    } else if m.contains("dog") || m.contains("corgi") || m.contains("wolf") {
+        ("Canine".to_string(), 1.2, "terrestrial".to_string())
+    } else if m.contains("cat") || m.contains("kitten") {
+        ("Feline".to_string(), 0.9, "terrestrial".to_string())
+    } else if m.contains("duck") || m.contains("bird") || m.contains("eagle") {
+        ("Avian".to_string(), 0.8, "aerial".to_string())
+    } else if m.contains("koala") || m.contains("bear") || m.contains("panda") {
+        ("Marsupial".to_string(), 1.5, "terrestrial".to_string())
+    } else if m.contains("goat") || m.contains("sheep") || m.contains("ram") {
+        ("Caprine".to_string(), 1.2, "terrestrial".to_string())
+    } else {
+        ("Bovine".to_string(), 1.3, "terrestrial".to_string())
+    }
 }
 
 impl BattleCow {
     pub fn new(name: &str, eyes: &str, start_x: i32) -> Self {
+        let mascot = resolve_fighter_mascot(name, "default");
+        Self::with_mascot(name, &mascot, eyes, start_x)
+    }
+
+    pub fn with_mascot(name: &str, mascot: &str, eyes: &str, start_x: i32) -> Self {
+        let (species, mass, habitat) = mascot_combat_profile(mascot);
         Self {
             name: name.to_string(),
+            mascot: mascot.to_string(),
+            species,
             eyes: eyes.to_string(),
             x: start_x,
             y: 5,
             alive: true,
             hp: 100,
             max_hp: 100,
+            mass,
+            habitat,
         }
     }
 }
@@ -209,13 +279,22 @@ impl Battle {
 
         let mut cow1 = BattleCow::new(name1, "oo", start_x1);
         cow1.y = cow_y;
-        cow1.hp = max_hp1;
-        cow1.max_hp = max_hp1;
 
         let mut cow2 = BattleCow::new(name2, "oo", start_x2);
         cow2.y = cow_y;
-        cow2.hp = max_hp2;
-        cow2.max_hp = max_hp2;
+
+        // Scale starting HP by biological mass while strictly preserving asymmetry (max_hp1 != max_hp2)
+        let hp1_scaled = ((max_hp1 as f32) * (cow1.mass / 1.3)).round() as u32;
+        let hp2_scaled = ((max_hp2 as f32) * (cow2.mass / 1.3)).round() as u32;
+        let (final_hp1, final_hp2) = if hp1_scaled == hp2_scaled {
+            (hp1_scaled + 6, hp2_scaled)
+        } else {
+            (hp1_scaled, hp2_scaled)
+        };
+        cow1.hp = final_hp1;
+        cow1.max_hp = final_hp1;
+        cow2.hp = final_hp2;
+        cow2.max_hp = final_hp2;
 
         Self {
             cow1,
@@ -247,8 +326,11 @@ impl Battle {
         match self.phase {
             BattlePhase::Charging => {
                 self.phase_frames += 1;
-                self.pos1 += self.speed1;
-                self.pos2 -= self.speed2;
+                // Fluid ease-in acceleration for realistic thundering momentum buildup
+                let t = (self.phase_frames as f32 / self.charge_duration as f32).clamp(0.0, 1.0);
+                let ease_factor = 0.5 + 0.9 * t;
+                self.pos1 += self.speed1 * ease_factor;
+                self.pos2 -= self.speed2 * ease_factor;
                 self.cow1.x = self.pos1.round() as i32;
                 self.cow2.x = self.pos2.round() as i32;
 
@@ -285,16 +367,24 @@ impl Battle {
 
                 // Mid-collision: Loser's lance shatters, loser recoils, eyes change
                 if self.phase_frames >= self.collision_duration / 2 {
+                    let (winner_mass, loser_mass) = if self.winner == 1 {
+                        (self.cow1.mass, self.cow2.mass)
+                    } else {
+                        (self.cow2.mass, self.cow1.mass)
+                    };
+                    // Mass-based elastic recoil: heavy titans knock lighter mascots back further
+                    let recoil = ((winner_mass / loser_mass.max(0.1)) * 3.0).clamp(2.0, 9.0).round() as i32;
+
                     if self.winner == 1 {
                         self.cow1.eyes = "^^".to_string();
                         self.cow2.eyes = "xx".to_string();
                         self.cow2.alive = false;
-                        self.cow2.x = (self.clash_x + 2).min(self.width as i32 - 10);
+                        self.cow2.x = (self.clash_x + recoil).min(self.width as i32 - 10);
                     } else {
                         self.cow1.eyes = "xx".to_string();
                         self.cow2.eyes = "@@".to_string();
                         self.cow1.alive = false;
-                        self.cow1.x = (self.clash_x - 24).max(1);
+                        self.cow1.x = (self.clash_x - 22 - recoil).max(1);
                     }
                 }
 
@@ -428,18 +518,39 @@ impl Battle {
             &self.cow1.name
         };
 
+        let is_aerial = self.cow1.habitat == "aerial" || self.cow2.habitat == "aerial";
+        let is_titan = self.cow1.mass >= 2.0 || self.cow2.mass >= 2.0;
+        let is_aquatic = self.cow1.habitat == "aquatic" || self.cow2.habitat == "aquatic";
+
         let commentary = match self.phase {
             BattlePhase::Charging => {
                 if self.phase_frames < self.charge_duration / 3 {
                     format!(
-                        "  ❯ {} and {} lower tournament lances and begin their charge!",
-                        self.cow1.name, self.cow2.name
+                        "  ❯ {} ({}) and {} ({}) lower their weapons and begin their charge!",
+                        self.cow1.name, self.cow1.species, self.cow2.name, self.cow2.species
                     )
                 } else if self.phase_frames < (self.charge_duration * 2) / 3 {
-                    format!(
-                        "  ❯ Hooves thunder across the turf! Distances: {} vs {} cols...",
-                        self.dist1, self.dist2
-                    )
+                    if is_aerial {
+                        format!(
+                            "  ❯ Wings buffet the arena as champions swoop toward col {}!",
+                            self.clash_x
+                        )
+                    } else if is_titan {
+                        format!(
+                            "  ❯ Ground shudders under colossal strides! Distances: {} vs {} cols...",
+                            self.dist1, self.dist2
+                        )
+                    } else if is_aquatic {
+                        format!(
+                            "  ❯ Hydrodynamic surge across the turf! Distances: {} vs {} cols...",
+                            self.dist1, self.dist2
+                        )
+                    } else {
+                        format!(
+                            "  ❯ Hooves thunder across the turf! Distances: {} vs {} cols...",
+                            self.dist1, self.dist2
+                        )
+                    }
                 } else {
                     format!(
                         "  ❯ BRACE FOR IMPACT! The champions hurtle toward column {}!",
@@ -449,16 +560,16 @@ impl Battle {
             }
             BattlePhase::Collision => {
                 if self.phase_frames < self.collision_duration / 3 {
-                    "  💥 *** THUNDEROUS CLASH! LANCE TIPS COLLIDE! *** 💥".to_string()
+                    "  💥 *** THUNDEROUS CLASH! WEAPONS COLLIDE! *** 💥".to_string()
                 } else if self.phase_frames < (self.collision_duration * 2) / 3 {
-                    "  ⚡ *** WOOD SPLINTERS! THE ARENA SHUDDERS UNDER IMPACT! *** ⚡".to_string()
+                    "  ⚡ *** ENERGY DISCHARGES! THE ARENA SHUDDERS UNDER IMPACT! *** ⚡".to_string()
                 } else {
                     format!("  💥 {winner_name} delivers a devastating blow to {loser_name}!")
                 }
             }
             BattlePhase::Aftermath => {
                 format!(
-                    "  🏆 {loser_name} is unseated! {winner_name} claims supreme jousting glory!"
+                    "  🏆 {loser_name} is unseated! {winner_name} claims supreme arena glory!"
                 )
             }
             BattlePhase::Done => {
@@ -653,7 +764,16 @@ impl Battle {
             } else {
                 winner_cow.x + 5
             };
-            let bubble = "\"VICTORY!\"";
+            let bubble = match winner_cow.species.as_str() {
+                "Dragon" => "\"ROAAAR!\"",
+                "Elephant" => "\"TRUMPET!\"",
+                "Tiger" => "\"ROAAR!\"",
+                "Dolphin" => "\"VICTORY!\"",
+                "Avian" => "\"QUACK!\"",
+                "Canine" => "\"AWOOO!\"",
+                "Bovine" => "\"MOOO!\"",
+                _ => "\"VICTORY!\"",
+            };
             for (bi, bc) in bubble.chars().enumerate() {
                 let bx = win_head_x + bi as i32;
                 if bx >= 1 && bx < (self.width as i32 - 1) && bubble_y < self.height {
@@ -677,11 +797,7 @@ impl Battle {
         legs_frame: u32,
         lance_broken: bool,
     ) {
-        let art = if is_left_cow {
-            cow1_art(&cow.eyes, legs_frame, lance_broken)
-        } else {
-            cow2_art(&cow.eyes, legs_frame, lance_broken)
-        };
+        let art = species_fighter_art(&cow.species, &cow.eyes, is_left_cow, legs_frame, lance_broken);
 
         let lance_color = if is_left_cow {
             Color::rgb(0, 220, 255)
@@ -694,6 +810,19 @@ impl Battle {
             "@@" => Color::rgb(220, 120, 255),
             "^^" => Color::rgb(255, 230, 80),
             _ => Color::rgb(255, 255, 255),
+        };
+
+        let body_color = match cow.species.as_str() {
+            "Dragon" => Color::rgb(70, 220, 110),
+            "Pegasus" => Color::rgb(240, 245, 255),
+            "Elephant" => Color::rgb(175, 185, 200),
+            "Tiger" => Color::rgb(255, 165, 30),
+            "Dolphin" => Color::rgb(60, 190, 255),
+            "Canine" => Color::rgb(235, 195, 130),
+            "Feline" => Color::rgb(245, 180, 150),
+            "Avian" => Color::rgb(255, 220, 50),
+            "Marsupial" => Color::rgb(190, 160, 130),
+            _ => Color::rgb(240, 240, 240),
         };
 
         for (line_idx, line) in art.iter().enumerate() {
@@ -714,17 +843,311 @@ impl Battle {
                 let color = if ch == '=' || ch == '>' || ch == '<' || (lance_broken && ch == '-') {
                     lance_color
                 } else if line_idx == 1
-                    && ((is_left_cow && (ch_idx == 14 || ch_idx == 15))
-                        || (!is_left_cow && (ch_idx == 9 || ch_idx == 10)))
+                    && ((is_left_cow && (ch_idx >= 12 && ch_idx <= 17))
+                        || (!is_left_cow && (ch_idx >= 8 && ch_idx <= 14)))
+                    && (ch == 'o' || ch == 'x' || ch == '^' || ch == '@' || ch == '.')
                 {
                     eye_color
                 } else if ch == '^' {
                     Color::rgb(255, 195, 75)
                 } else {
-                    Color::rgb(240, 240, 240)
+                    body_color
                 };
 
                 fb.set(x as usize, y, Cell::new(ch, color));
+            }
+        }
+    }
+}
+
+/// Dynamic animal combat silhouettes for all major mascot archetypes.
+fn species_fighter_art(
+    species: &str,
+    eyes: &str,
+    is_left: bool,
+    legs_frame: u32,
+    lance_broken: bool,
+) -> Vec<String> {
+    match species {
+        "Dragon" => {
+            let lance = if is_left {
+                if lance_broken { "== -  - " } else { "=======>" }
+            } else if lance_broken {
+                "-  - =="
+            } else {
+                "<======="
+            };
+            let (wing1, wing2) = match legs_frame % 3 {
+                0 => ("/ \\  //\\", "\\/   \\/"),
+                1 => ("// \\//  ", " / \\/ \\ "),
+                _ => ("\\\\ // \\\\", "  \\/   /"),
+            };
+            if is_left {
+                vec![
+                    format!("         {wing1}   ^__^        "),
+                    format!("  __/_// {wing2}  ({eyes}){lance}"),
+                    "  \\  / //  \\   / \\_/_            ".to_string(),
+                    "   \\  //    \\ (   \\__/           ".to_string(),
+                    "    `-'       `-'--'             ".to_string(),
+                ]
+            } else {
+                vec![
+                    format!("        ^__^   {wing1}         "),
+                    format!("{lance}({eyes})  {wing2} \\\\_\\__  "),
+                    "            _\\_/ \\   /  \\\\ \\  /  ".to_string(),
+                    "           /__/   ) /    \\\\  /   ".to_string(),
+                    "            `--'-' `-'       `-' ".to_string(),
+                ]
+            }
+        }
+        "Pegasus" => {
+            let lance = if is_left {
+                if lance_broken { "== -  - " } else { "=======>" }
+            } else if lance_broken {
+                "-  - =="
+            } else {
+                "<======="
+            };
+            let (w1, w2) = match legs_frame % 3 {
+                0 => ("_/\\_", "\\  /"),
+                1 => ("_~_~", " \\/ "),
+                _ => ("_--_", " /\\ "),
+            };
+            if is_left {
+                vec![
+                    format!("         {w1}       ^__^         "),
+                    format!("  ______/ (o)_____ ({eyes}){lance}"),
+                    format!("  {w2}  \\  /     \\ (__)          "),
+                    "   \\/    \\/       ||--w          ".to_string(),
+                    "                  || ||          ".to_string(),
+                ]
+            } else {
+                vec![
+                    format!("         ^__^       {w1}         "),
+                    format!("{lance}({eyes}) _____ (o) \\______  "),
+                    format!("         (__) /     \\  {w2}          "),
+                    "          w--||       \\/    \\/   ".to_string(),
+                    "          || ||                  ".to_string(),
+                ]
+            }
+        }
+        "Elephant" => {
+            let lance = if is_left {
+                if lance_broken { "== -  - " } else { "=======>" }
+            } else if lance_broken {
+                "-  - =="
+            } else {
+                "<======="
+            };
+            let (leg1, leg2) = match legs_frame % 3 {
+                0 => ("||   ||", "||   ||"),
+                1 => ("//   ||", "//   ||"),
+                _ => ("||   \\\\", "||   \\\\"),
+            };
+            if is_left {
+                vec![
+                    "        /\\___/\\                  ".to_string(),
+                    format!("       /  {eyes}  \\___{lance}     "),
+                    "      (   (_)   )  \\             ".to_string(),
+                    "       \\       /   /             ".to_string(),
+                    format!("        {leg1} \\_/              "),
+                ]
+            } else {
+                vec![
+                    "                /\\___/\\          ".to_string(),
+                    format!("{lance}___/  {eyes}  \\         "),
+                    "            /  (   (_)   )       ".to_string(),
+                    "            \\   \\       /        ".to_string(),
+                    format!("             \\_/ {leg2}          "),
+                ]
+            }
+        }
+        "Tiger" => {
+            let lance = if is_left {
+                if lance_broken { "== -  - " } else { "=======>" }
+            } else if lance_broken {
+                "-  - =="
+            } else {
+                "<======="
+            };
+            let (p1, p2) = match legs_frame % 3 {
+                0 => ("(_/---\\_)", "(\\_)--\\_)"),
+                1 => ("(_//--\\_)", "(\\_)//\\_)"),
+                _ => ("(_\\\\--\\_)", "(\\_)\\\\^_)"),
+            };
+            if is_left {
+                vec![
+                    "         /|_/|                   ".to_string(),
+                    format!("        ( {eyes} )______{lance}   "),
+                    "         > ^ <       \\           ".to_string(),
+                    "        /     \\  \\    \\          ".to_string(),
+                    format!("       {p1}{p2}          "),
+                ]
+            } else {
+                vec![
+                    "                |\\_|\\            ".to_string(),
+                    format!("{lance}______( {eyes} )    "),
+                    "           /       > ^ <         ".to_string(),
+                    "          /    /  /     \\        ".to_string(),
+                    format!("         {p2}{p1}         "),
+                ]
+            }
+        }
+        "Dolphin" => {
+            let lance = if is_left {
+                if lance_broken { "== -  - " } else { "=======>" }
+            } else if lance_broken {
+                "-  - =="
+            } else {
+                "<======="
+            };
+            let wave = match legs_frame % 3 {
+                0 => " ~~~ ~~~ ",
+                1 => "~~ ~~ ~~~",
+                _ => " ~ ~ ~ ~ ",
+            };
+            if is_left {
+                vec![
+                    "             __                  ".to_string(),
+                    format!("       _.-~'`  `'~-.__{lance}    "),
+                    format!("     .'  ({eyes})        `\\        "),
+                    "    (    /--\\          )         ".to_string(),
+                    format!("    {wave} `'-.____...---'-'`    "),
+                ]
+            } else {
+                vec![
+                    "             __                  ".to_string(),
+                    format!("{lance}__.-~'`  `'~-._          "),
+                    format!("        /'        ({eyes})  `.     "),
+                    "       (          /--\\    )      ".to_string(),
+                    format!("       `'-.____...---'-'` {wave} "),
+                ]
+            }
+        }
+        "Canine" => {
+            let lance = if is_left {
+                if lance_broken { "== -  - " } else { "=======>" }
+            } else if lance_broken {
+                "-  - =="
+            } else {
+                "<======="
+            };
+            let (leg1, leg2) = match legs_frame % 3 {
+                0 => ("||   ||---w |", "||   ||    ||"),
+                1 => ("//   ||---w |", "//   ||    ||"),
+                _ => ("||   \\\\---w |", "||   \\\\    \\\\"),
+            };
+            if is_left {
+                vec![
+                    "         ^..^                    ".to_string(),
+                    format!("        ( {eyes} )_______{lance}  "),
+                    "         \\  / \\      \\           ".to_string(),
+                    format!("          {leg1}                 "),
+                    format!("          {leg2}                 "),
+                ]
+            } else {
+                vec![
+                    "                ^..^             ".to_string(),
+                    format!("{lance}_______( {eyes} )   "),
+                    "             /      / \\  /       ".to_string(),
+                    format!("            | w---{leg1}         "),
+                    format!("            ||    {leg2}         "),
+                ]
+            }
+        }
+        "Feline" => {
+            let lance = if is_left {
+                if lance_broken { "== -  - " } else { "=======>" }
+            } else if lance_broken {
+                "-  - =="
+            } else {
+                "<======="
+            };
+            let (p1, p2) = match legs_frame % 3 {
+                0 => ("(_/\\_)", "(_/\\_)--\\_)"),
+                1 => ("(_//_)", "(_//_)--\\_)"),
+                _ => ("(_\\\\_)", "(_\\\\_)--\\_)"),
+            };
+            if is_left {
+                vec![
+                    "        /\\_/\\                    ".to_string(),
+                    format!("       ( {eyes} )______{lance}   "),
+                    "        > ^ <       \\            ".to_string(),
+                    "        /    \\  \\    \\           ".to_string(),
+                    format!("       {p1}{p2}           "),
+                ]
+            } else {
+                vec![
+                    "              /\\_/\\              ".to_string(),
+                    format!("{lance}______( {eyes} )    "),
+                    "           /       > ^ <         ".to_string(),
+                    "          /    /  /     \\        ".to_string(),
+                    format!("         {p2}{p1}          "),
+                ]
+            }
+        }
+        "Avian" => {
+            let lance = if is_left {
+                if lance_broken { "== -  - " } else { "=======>" }
+            } else if lance_broken {
+                "-  - =="
+            } else {
+                "<======="
+            };
+            let (w1, w2) = match legs_frame % 3 {
+                0 => ("__", "  ||  "),
+                1 => ("~~", " //   "),
+                _ => ("^^", "   \\\\ "),
+            };
+            if is_left {
+                vec![
+                    format!("         {w1}                    "),
+                    format!("       >({eyes} )___{lance}      "),
+                    "        ( ._> /                  ".to_string(),
+                    "         `---'                   ".to_string(),
+                    format!("        {w2}                     "),
+                ]
+            } else {
+                vec![
+                    format!("                 {w1}            "),
+                    format!("{lance}___( {eyes})<       "),
+                    "              \\ <_. )            ".to_string(),
+                    "               `---'             ".to_string(),
+                    format!("              {w2}               "),
+                ]
+            }
+        }
+        "Marsupial" => {
+            let lance = if is_left {
+                if lance_broken { "== -  - " } else { "=======>" }
+            } else if lance_broken {
+                "-  - =="
+            } else {
+                "<======="
+            };
+            if is_left {
+                vec![
+                    "        @(o.o)@                  ".to_string(),
+                    format!("        (  \"  )______{lance}     "),
+                    "        /     \\      \\           ".to_string(),
+                    "       |       |---w  |          ".to_string(),
+                    "       (_/\\_/\\_)(_/\\_)|          ".to_string(),
+                ]
+            } else {
+                vec![
+                    "                @(o.o)@          ".to_string(),
+                    format!("{lance}______(  \"  )     "),
+                    "             /      /     \\      ".to_string(),
+                    "            |  w---|       |     ".to_string(),
+                    "            |(_/\\_)(_/\\_/\\_)     ".to_string(),
+                ]
+            }
+        }
+        _ => {
+            if is_left {
+                cow1_art(eyes, legs_frame, lance_broken)
+            } else {
+                cow2_art(eyes, legs_frame, lance_broken)
             }
         }
     }
@@ -771,7 +1194,7 @@ pub fn run_battle_live(name1: &str, name2: &str, winner_choice: u8, target_fps: 
     run_battle_live_internal(name1, name2, winner_choice, target_fps, true);
 }
 
-/// Internal live battle runner supporting caller-managed alternate screens.
+/// Internal live battle runner supporting caller-managed alternate screens and true 240Hz Liquid Motion.
 pub fn run_battle_live_internal(
     name1: &str,
     name2: &str,
@@ -805,8 +1228,10 @@ pub fn run_battle_live_internal(
         None
     };
 
-    let fps = target_fps.clamp(5, 60);
-    let frame_time = Duration::from_millis(1000 / fps as u64);
+    // 240Hz Liquid Frame Governor with decoupled physics & monotonic deadline frame pacing
+    let fps = target_fps.clamp(5, 240);
+    let mut governor = crate::engine_core::LiquidFrameGovernor::new(fps as u32);
+    let shutdown = forgum_platform::ShutdownFlag::new();
     let max_duration = Duration::from_secs(25);
     let start = Instant::now();
 
@@ -814,12 +1239,17 @@ pub fn run_battle_live_internal(
     print!("\x1b[2J\x1b[H");
     let _ = std::io::stdout().flush();
 
-    while !battle.is_done() && start.elapsed() < max_duration {
-        battle.tick();
+    while !battle.is_done() && start.elapsed() < max_duration && !shutdown.is_shutdown() {
+        governor.step_simulation(|_dt| {
+            battle.tick();
+        });
+
         let frame = battle.render_frame_styled(true);
-        print!("\x1b[H{frame}");
+        // Tear-free DEC Mode 2026 synchronized update
+        print!("\x1b[?2026h\x1b[H{frame}\x1b[?2026l");
         let _ = std::io::stdout().flush();
-        std::thread::sleep(frame_time);
+
+        governor.pace_frame(&shutdown);
     }
 
     if manage_alt_screen {
@@ -830,20 +1260,15 @@ pub fn run_battle_live_internal(
         drop(_alt_guard);
         drop(_cursor_guard);
 
-        let winner_name = if battle.winner == 1 {
-            &battle.cow1.name
+        let (winner_name, loser_name, winner_species) = if battle.winner == 1 {
+            (&battle.cow1.name, &battle.cow2.name, &battle.cow1.species)
         } else {
-            &battle.cow2.name
-        };
-        let loser_name = if battle.winner == 1 {
-            &battle.cow2.name
-        } else {
-            &battle.cow1.name
+            (&battle.cow2.name, &battle.cow1.name, &battle.cow2.species)
         };
 
         println!(
-            "\n  \x1b[1;33m🏆 JOUST CHAMPION: \x1b[1;32m{}\x1b[1;33m defeated \x1b[1;31m{}\x1b[1;33m! (Charge: {} vs {} cols | Clash: col {}) All hail the Bovine Victor! 🏆\x1b[0m\n",
-            winner_name, loser_name, battle.dist1, battle.dist2, battle.clash_x
+            "\n  \x1b[1;33m🏆 JOUST CHAMPION: \x1b[1;32m{}\x1b[1;33m defeated \x1b[1;31m{}\x1b[1;33m! (Charge: {} vs {} cols | Clash: col {}) All hail the {} Victor! 🏆\x1b[0m\n",
+            winner_name, loser_name, battle.dist1, battle.dist2, battle.clash_x, winner_species
         );
         let _ = std::io::stdout().flush();
     }

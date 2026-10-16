@@ -990,3 +990,63 @@ fn update_method_and_check_updates_config_and_cli_flags() {
     assert_eq!(loaded.update_method.as_deref(), Some("zypper"));
     assert!(!loaded.check_updates);
 }
+
+#[test]
+fn diagnostic_error_recovery_invalid_flag_values() {
+    // 1. Invalid --effect lists all accepted effects
+    let err_fx = parse_args(argv(&["forgum", "--effect", "superglide"])).unwrap_err();
+    assert!(err_fx.message.contains("Invalid value 'superglide' for flag '--effect'"));
+    assert!(err_fx.message.contains("Valid values for '--effect':"));
+    assert!(err_fx.message.contains("walk"));
+    assert!(err_fx.message.contains("breathe"));
+    assert!(err_fx.message.contains("float"));
+    assert!(err_fx.message.contains("animal_natural"));
+
+    // 2. Invalid --color-mode lists valid color modes
+    let err_cm = parse_args(argv(&["forgum", "--color-mode", "neon_glow"])).unwrap_err();
+    assert!(err_cm.message.contains("Invalid value 'neon_glow' for flag '--color-mode'"));
+    assert!(err_cm.message.contains("Valid values for '--color-mode':"));
+    assert!(err_cm.message.contains("natural"));
+    assert!(err_cm.message.contains("animal"));
+    assert!(err_cm.message.contains("rainbow"));
+    assert!(err_cm.message.contains("solid"));
+
+    // 3. Invalid --mountain lists valid mountain styles
+    let err_mt = parse_args(argv(&["forgum", "--mountain", "cosmic_cliff"])).unwrap_err();
+    assert!(err_mt.message.contains("Invalid value 'cosmic_cliff' for flag '--mountain'"));
+    assert!(err_mt.message.contains("Valid values for '--mountain':"));
+    assert!(err_mt.message.contains("peaks"));
+    assert!(err_mt.message.contains("volcano"));
+}
+
+#[test]
+fn diagnostic_error_recovery_unknown_subcommand_and_flags() {
+    // 1. Unknown flag under 'config' subcommand lists all valid config flags
+    let err_cfg_flag = parse_args(argv(&["forgum", "config", "--badflag"])).unwrap_err();
+    assert!(err_cfg_flag.message.contains("Unknown flag '--badflag' for subcommand 'config'"));
+    assert!(err_cfg_flag.message.contains("Valid flags for 'config':"));
+    assert!(err_cfg_flag.message.contains("--list"));
+    assert!(err_cfg_flag.message.contains("--tui"));
+    assert!(err_cfg_flag.message.contains("--migrate"));
+
+    // 2. Unknown root flag lists all valid root flags
+    let err_root_flag = parse_args(argv(&["forgum", "--nonexistentflag"])).unwrap_err();
+    assert!(err_root_flag.message.contains("Unknown flag '--nonexistentflag'"));
+    assert!(err_root_flag.message.contains("Valid flags:"));
+    assert!(err_root_flag.message.contains("--cow"));
+    assert!(err_root_flag.message.contains("--effect"));
+    assert!(err_root_flag.message.contains("--mountain"));
+    assert!(err_root_flag.message.contains("--road"));
+
+    // 3. Command typo lists closest match and all available subcommands
+    let err_sub = parse_args(argv(&["forgum", "confg"])).unwrap_err();
+    assert!(err_sub.message.contains("Unrecognized command or option 'confg'"));
+    assert!(err_sub.message.contains("Did you mean 'config'?"));
+    assert!(err_sub.message.contains("Available subcommands:"));
+    assert!(err_sub.message.contains("render"));
+    assert!(err_sub.message.contains("think"));
+    assert!(err_sub.message.contains("fortune"));
+    assert!(err_sub.message.contains("battle"));
+    assert!(err_sub.message.contains("rps"));
+    assert!(err_sub.message.contains("config"));
+}

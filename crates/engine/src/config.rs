@@ -209,6 +209,442 @@ pub fn merge(base: SceneConfig, overlay: SceneConfig) -> SceneConfig {
     }
 }
 
+/// Get list of all supported configuration keys (key, description).
+pub fn supported_config_keys() -> Vec<(&'static str, &'static str)> {
+    crate::completions::all_config_keys()
+}
+
+/// Retrieve the formatted string value of a configuration key from SceneConfig.
+pub fn get_config_value(config: &SceneConfig, key: &str) -> Result<String, String> {
+    let clean = key.trim().to_lowercase().replace('_', "-");
+    match clean.as_str() {
+        "cow" | "animal" => Ok(config.cow.clone()),
+        "text" => Ok(config.text.clone()),
+        "effect" | "animation-type" | "anim-type" | "fx" => Ok(config.effect.clone()),
+        "background" => Ok(config.background.to_string()),
+        "duration" => Ok(config.duration.to_string()),
+        "fps" => Ok(config.fps.to_string()),
+        "eyes" => Ok(config.eyes.clone()),
+        "tongue" => Ok(config.tongue.clone()),
+        "default-shell" => Ok(config.default_shell.clone()),
+        "auto-render-on-prompt" => Ok(config.auto_render_on_prompt.to_string()),
+        "think" => Ok(config.think.to_string()),
+        "color-mode" => Ok(config.color_mode.clone()),
+        "shell-attach-mode" | "attach-mode" => Ok(config.shell_attach_mode.clone()),
+        "environment" | "env" => Ok(config.environment.as_deref().unwrap_or("none").to_string()),
+        "road" => Ok(config.road.as_deref().unwrap_or("none").to_string()),
+        "mountain" | "mtn" => Ok(config.mountain.as_deref().unwrap_or("none").to_string()),
+        "palette" => Ok(config.palette.as_deref().unwrap_or("none").to_string()),
+        "time-of-day" | "tod" => Ok(config.time_of_day.as_deref().unwrap_or("auto").to_string()),
+        "season" => Ok(config.season.as_deref().unwrap_or("auto").to_string()),
+        "thought-interval" => Ok(config.thought_interval.to_string()),
+        "split-scroll" => Ok(config.split_scroll.to_string()),
+        "reserve-rows" => Ok(config.reserve_rows.map(|n| n.to_string()).unwrap_or_else(|| "none".to_string())),
+        "reserve-cols" => Ok(config.reserve_cols.map(|n| n.to_string()).unwrap_or_else(|| "none".to_string())),
+        "split-ratio" => Ok(config.split_ratio.map(|r| r.to_string()).unwrap_or_else(|| "none".to_string())),
+        "animation" => Ok(config.animation.as_deref().unwrap_or("none").to_string()),
+        "image" => Ok(config.image.as_deref().unwrap_or("none").to_string()),
+        "split-mode" => Ok(config.split_mode.as_deref().unwrap_or("none").to_string()),
+        "editor" => Ok(config.editor.as_deref().unwrap_or("auto").to_string()),
+        "accel-mode" | "accel" | "acceleration-mode" | "gpu-mode" => Ok(config.accel_mode.as_deref().unwrap_or("auto").to_string()),
+        "reduce-motion" | "reduced-motion" => Ok(config.reduce_motion.to_string()),
+        "text-only" | "fortune-only" => Ok(config.text_only.to_string()),
+        "banner" | "banner-mode" => Ok(config.banner.to_string()),
+        "aspect" | "aspect-ratio" => Ok(config.aspect.as_deref().unwrap_or("auto").to_string()),
+        "aspect-mode" => Ok(config.aspect_mode.as_deref().unwrap_or("auto").to_string()),
+        "update-method" => Ok(config.update_method.as_deref().unwrap_or("prompt").to_string()),
+        "check-updates" | "update-check" => Ok(config.check_updates.to_string()),
+        "colorblind-mode" | "colorblind" | "cvd" => Ok(config.colorblind_mode.as_deref().unwrap_or("none").to_string()),
+        "contrast-mode" => Ok(config.contrast_mode.as_deref().unwrap_or("standard").to_string()),
+        "random" => Ok(match &config.random {
+            Some(forgum_platform::protocol::RandomSetting::Bool(b)) => b.to_string(),
+            Some(forgum_platform::protocol::RandomSetting::String(s)) => s.clone(),
+            Some(forgum_platform::protocol::RandomSetting::List(l)) => l.join(","),
+            None => "false".to_string(),
+        }),
+        other => {
+            let keys = supported_config_keys();
+            let key_names: Vec<&str> = keys.iter().map(|(k, _)| *k).collect();
+            let closest = crate::cli::find_closest_match(other, &key_names);
+            Err(crate::completions::format_unknown_config_key_error(other, closest, &keys))
+        }
+    }
+}
+
+/// Set a configuration value in SceneConfig with strict LSP validation, closest fuzzy matching, and choice listing.
+pub fn set_config_value(config: &mut SceneConfig, key: &str, value: &str) -> Result<(), String> {
+    let clean_key = key.trim().to_lowercase().replace('_', "-");
+    let val_trimmed = value.trim();
+
+    let validate_choice = |target_key: &str, choices: &[(&str, &str)], v: &str| -> Result<(), String> {
+        if choices.iter().any(|(c, _)| c.eq_ignore_ascii_case(v)) {
+            Ok(())
+        } else {
+            let choice_names: Vec<&str> = choices.iter().map(|(c, _)| *c).collect();
+            let closest = crate::cli::find_closest_match(v, &choice_names);
+            Err(crate::completions::format_invalid_config_value_error(target_key, v, closest, choices))
+        }
+    };
+
+    match clean_key.as_str() {
+        "cow" | "animal" => {
+            let valid = crate::completions::choices_for_config_key("cow").unwrap_or_default();
+            if val_trimmed != "random" && !valid.iter().any(|(c, _)| c.eq_ignore_ascii_case(val_trimmed)) {
+                let names: Vec<&str> = valid.iter().map(|(c, _)| *c).collect();
+                let closest = crate::cli::find_closest_match(val_trimmed, &names);
+                return Err(crate::completions::format_invalid_config_value_error(key, val_trimmed, closest, &valid));
+            }
+            config.cow = val_trimmed.to_string();
+        }
+        "text" => {
+            config.text = val_trimmed.to_string();
+        }
+        "effect" | "animation-type" | "anim-type" | "fx" => {
+            let valid = crate::completions::choices_for_config_key("effect").unwrap_or_default();
+            if val_trimmed != "default" && val_trimmed != "none" {
+                validate_choice(key, &valid, val_trimmed)?;
+            }
+            config.effect = val_trimmed.to_string();
+        }
+        "background" => {
+            config.background = val_trimmed.parse::<bool>().map_err(|_| {
+                let bool_choices = &[("true", "Enable background mode"), ("false", "Disable background mode")];
+                crate::completions::format_invalid_config_value_error(key, val_trimmed, None, bool_choices)
+            })?;
+        }
+        "duration" => {
+            config.duration = val_trimmed.parse::<u32>().map_err(|e| {
+                format!("❌ Error: Invalid integer value '{val_trimmed}' for configuration key '{key}': {e}")
+            })?;
+        }
+        "fps" => {
+            let fps = val_trimmed.parse::<u16>().map_err(|e| {
+                format!("❌ Error: Invalid integer value '{val_trimmed}' for configuration key '{key}': {e}")
+            })?;
+            if fps > 240 {
+                return Err(format!("❌ Error: Invalid FPS '{fps}' for '{key}'. Target FPS must be between 1 and 240."));
+            }
+            config.fps = fps;
+        }
+        "eyes" => {
+            config.eyes = val_trimmed.to_string();
+        }
+        "tongue" => {
+            config.tongue = val_trimmed.to_string();
+        }
+        "default-shell" => {
+            config.default_shell = val_trimmed.to_string();
+        }
+        "auto-render-on-prompt" => {
+            config.auto_render_on_prompt = val_trimmed.parse::<bool>().map_err(|_| {
+                let bool_choices = &[("true", "Enable auto render"), ("false", "Disable auto render")];
+                crate::completions::format_invalid_config_value_error(key, val_trimmed, None, bool_choices)
+            })?;
+        }
+        "think" => {
+            config.think = val_trimmed.parse::<bool>().map_err(|_| {
+                let bool_choices = &[("true", "Render thought bubble"), ("false", "Render speech bubble")];
+                crate::completions::format_invalid_config_value_error(key, val_trimmed, None, bool_choices)
+            })?;
+        }
+        "color-mode" => {
+            let valid = crate::completions::choices_for_config_key("color-mode").unwrap_or_default();
+            validate_choice(key, &valid, val_trimmed)?;
+            config.color_mode = val_trimmed.to_string();
+        }
+        "shell-attach-mode" | "attach-mode" => {
+            let valid = crate::completions::choices_for_config_key("shell-attach-mode").unwrap_or_default();
+            validate_choice(key, &valid, val_trimmed)?;
+            config.shell_attach_mode = val_trimmed.to_string();
+        }
+        "environment" | "env" => {
+            if val_trimmed == "none" || val_trimmed.is_empty() {
+                config.environment = None;
+            } else {
+                let valid = crate::completions::choices_for_config_key("environment").unwrap_or_default();
+                validate_choice(key, &valid, val_trimmed)?;
+                config.environment = Some(val_trimmed.to_string());
+            }
+        }
+        "road" => {
+            if val_trimmed == "none" || val_trimmed.is_empty() {
+                config.road = None;
+            } else {
+                let valid = crate::completions::choices_for_config_key("road").unwrap_or_default();
+                validate_choice(key, &valid, val_trimmed)?;
+                config.road = Some(val_trimmed.to_string());
+            }
+        }
+        "mountain" | "mtn" => {
+            if val_trimmed == "none" || val_trimmed.is_empty() {
+                config.mountain = None;
+            } else {
+                let valid = crate::completions::choices_for_config_key("mountain").unwrap_or_default();
+                validate_choice(key, &valid, val_trimmed)?;
+                config.mountain = Some(val_trimmed.to_string());
+            }
+        }
+        "palette" => {
+            config.palette = if val_trimmed == "none" || val_trimmed.is_empty() {
+                None
+            } else {
+                Some(val_trimmed.to_string())
+            };
+        }
+        "time-of-day" | "tod" => {
+            if val_trimmed == "auto" || val_trimmed.is_empty() {
+                config.time_of_day = None;
+            } else {
+                let valid = crate::completions::choices_for_config_key("time-of-day").unwrap_or_default();
+                validate_choice(key, &valid, val_trimmed)?;
+                config.time_of_day = Some(val_trimmed.to_string());
+            }
+        }
+        "season" => {
+            if val_trimmed == "auto" || val_trimmed.is_empty() {
+                config.season = None;
+            } else {
+                let valid = crate::completions::choices_for_config_key("season").unwrap_or_default();
+                validate_choice(key, &valid, val_trimmed)?;
+                config.season = Some(val_trimmed.to_string());
+            }
+        }
+        "thought-interval" => {
+            config.thought_interval = val_trimmed.parse::<u32>().map_err(|e| {
+                format!("❌ Error: Invalid integer value '{val_trimmed}' for configuration key '{key}': {e}")
+            })?;
+        }
+        "split-scroll" => {
+            config.split_scroll = val_trimmed.parse::<bool>().map_err(|_| {
+                let bool_choices = &[("true", "Enable DECSTBM margins"), ("false", "Disable DECSTBM margins")];
+                crate::completions::format_invalid_config_value_error(key, val_trimmed, None, bool_choices)
+            })?;
+        }
+        "reserve-rows" => {
+            config.reserve_rows = if val_trimmed == "none" || val_trimmed.is_empty() {
+                None
+            } else {
+                Some(val_trimmed.parse::<u16>().map_err(|e| {
+                    format!("❌ Error: Invalid integer value '{val_trimmed}' for configuration key '{key}': {e}")
+                })?)
+            };
+        }
+        "reserve-cols" => {
+            config.reserve_cols = if val_trimmed == "none" || val_trimmed.is_empty() {
+                None
+            } else {
+                Some(val_trimmed.parse::<u16>().map_err(|e| {
+                    format!("❌ Error: Invalid integer value '{val_trimmed}' for configuration key '{key}': {e}")
+                })?)
+            };
+        }
+        "split-ratio" => {
+            config.split_ratio = if val_trimmed == "none" || val_trimmed.is_empty() {
+                None
+            } else {
+                let r = val_trimmed.parse::<f32>().map_err(|e| {
+                    format!("❌ Error: Invalid float value '{val_trimmed}' for configuration key '{key}': {e}")
+                })?;
+                if !(0.05..=0.95).contains(&r) {
+                    return Err(format!("❌ Error: Invalid split ratio '{r}' for '{key}'. Ratio must be between 0.1 and 0.8."));
+                }
+                Some(r)
+            };
+        }
+        "animation" => {
+            config.animation = if val_trimmed == "none" || val_trimmed.is_empty() {
+                None
+            } else if val_trimmed == "static" || val_trimmed == "dynamic" {
+                Some(val_trimmed.to_string())
+            } else {
+                let choices = &[("static", "Stationary mascot"), ("dynamic", "Kinetic motion animation")];
+                let closest = crate::cli::find_closest_match(val_trimmed, &["static", "dynamic"]);
+                return Err(crate::completions::format_invalid_config_value_error(key, val_trimmed, closest, choices));
+            };
+        }
+        "image" => {
+            config.image = if val_trimmed == "none" || val_trimmed.is_empty() {
+                None
+            } else {
+                Some(val_trimmed.to_string())
+            };
+        }
+        "split-mode" => {
+            if val_trimmed == "none" || val_trimmed == "auto" || val_trimmed.is_empty() {
+                config.split_mode = None;
+            } else {
+                let valid = crate::completions::choices_for_config_key("split-mode").unwrap_or_default();
+                validate_choice(key, &valid, val_trimmed)?;
+                config.split_mode = Some(val_trimmed.to_string());
+            }
+        }
+        "editor" => {
+            config.editor = if val_trimmed == "none" || val_trimmed == "auto" || val_trimmed.is_empty() {
+                None
+            } else {
+                Some(val_trimmed.to_string())
+            };
+        }
+        "accel-mode" | "accel" | "acceleration-mode" | "gpu-mode" => {
+            let valid = crate::completions::choices_for_config_key("accel").unwrap_or_default();
+            validate_choice(key, &valid, val_trimmed)?;
+            config.accel_mode = Some(val_trimmed.to_string());
+        }
+        "reduce-motion" | "reduced-motion" => {
+            config.reduce_motion = val_trimmed.parse::<bool>().map_err(|_| {
+                let bool_choices = &[("true", "Disable kinetic motions"), ("false", "Enable animations")];
+                crate::completions::format_invalid_config_value_error(key, val_trimmed, None, bool_choices)
+            })?;
+        }
+        "text-only" | "fortune-only" => {
+            config.text_only = val_trimmed.parse::<bool>().map_err(|_| {
+                let bool_choices = &[("true", "Print text only"), ("false", "Print mascot and text")];
+                crate::completions::format_invalid_config_value_error(key, val_trimmed, None, bool_choices)
+            })?;
+        }
+        "banner" | "banner-mode" => {
+            let b = val_trimmed.parse::<bool>().map_err(|_| {
+                let bool_choices = &[("true", "Enable banner mode"), ("false", "Disable banner mode")];
+                crate::completions::format_invalid_config_value_error(key, val_trimmed, None, bool_choices)
+            })?;
+            config.banner = b;
+            if b {
+                config.shell_attach_mode = "banner".to_string();
+            }
+        }
+        "aspect" | "aspect-ratio" => {
+            let valid = crate::completions::choices_for_config_key("aspect").unwrap_or_default();
+            validate_choice(key, &valid, val_trimmed)?;
+            config.aspect = Some(val_trimmed.to_string());
+        }
+        "aspect-mode" => {
+            let valid = crate::completions::choices_for_config_key("aspect-mode").unwrap_or_default();
+            validate_choice(key, &valid, val_trimmed)?;
+            config.aspect_mode = Some(val_trimmed.to_string());
+        }
+        "update-method" => {
+            let valid = crate::completions::choices_for_config_key("update-method").unwrap_or_default();
+            if val_trimmed != "prompt" && val_trimmed != "ask" && val_trimmed != "auto" {
+                validate_choice(key, &valid, val_trimmed)?;
+            }
+            config.update_method = Some(val_trimmed.to_string());
+        }
+        "check-updates" | "update-check" => {
+            config.check_updates = val_trimmed.parse::<bool>().map_err(|_| {
+                let bool_choices = &[("true", "Enable update checks"), ("false", "Disable update checks")];
+                crate::completions::format_invalid_config_value_error(key, val_trimmed, None, bool_choices)
+            })?;
+        }
+        "colorblind-mode" | "colorblind" | "cvd" => {
+            let valid = crate::completions::choices_for_config_key("colorblind").unwrap_or_default();
+            validate_choice(key, &valid, val_trimmed)?;
+            config.colorblind_mode = Some(val_trimmed.to_string());
+        }
+        "contrast-mode" => {
+            let choices = &[
+                ("standard", "Default terminal contrast"),
+                ("high_contrast", "High visibility bold contrast"),
+                ("acrylic_glass", "Subtle translucent contrast"),
+                ("vibrant", "Deep saturated contrast"),
+            ];
+            validate_choice(key, choices, val_trimmed)?;
+            config.contrast_mode = Some(val_trimmed.to_string());
+        }
+        "random" => {
+            if let Ok(b) = val_trimmed.parse::<bool>() {
+                config.random = Some(forgum_platform::protocol::RandomSetting::Bool(b));
+            } else {
+                let valid = crate::completions::choices_for_config_key("random").unwrap_or_default();
+                validate_choice(key, &valid, val_trimmed)?;
+                config.random = Some(forgum_platform::protocol::RandomSetting::String(val_trimmed.to_string()));
+            }
+        }
+        other => {
+            let keys = supported_config_keys();
+            let key_names: Vec<&str> = keys.iter().map(|(k, _)| *k).collect();
+            let closest = crate::cli::find_closest_match(other, &key_names);
+            return Err(crate::completions::format_unknown_config_key_error(other, closest, &keys));
+        }
+    }
+
+    Ok(())
+}
+
+/// Validate all fields of a SceneConfig against acceptable options.
+pub fn validate_config(config: &SceneConfig) -> Result<(), Vec<String>> {
+    let mut errors = Vec::new();
+
+    if !config.effect.is_empty() && config.effect != "default" && config.effect != "none" {
+        let choices = crate::completions::choices_for_config_key("effect").unwrap_or_default();
+        if !choices.iter().any(|(c, _)| c.eq_ignore_ascii_case(&config.effect)) {
+            let names: Vec<&str> = choices.iter().map(|(c, _)| *c).collect();
+            let closest = crate::cli::find_closest_match(&config.effect, &names);
+            errors.push(crate::completions::format_invalid_config_value_error("effect", &config.effect, closest, &choices));
+        }
+    }
+
+    if !config.color_mode.is_empty() {
+        let choices = crate::completions::choices_for_config_key("color_mode").unwrap_or_default();
+        if !choices.iter().any(|(c, _)| c.eq_ignore_ascii_case(&config.color_mode)) {
+            let names: Vec<&str> = choices.iter().map(|(c, _)| *c).collect();
+            let closest = crate::cli::find_closest_match(&config.color_mode, &names);
+            errors.push(crate::completions::format_invalid_config_value_error("color_mode", &config.color_mode, closest, &choices));
+        }
+    }
+
+    if let Some(ref m) = config.mountain {
+        if m != "none" && m != "auto" && m != "random" {
+            let choices = crate::completions::choices_for_config_key("mountain").unwrap_or_default();
+            if !choices.iter().any(|(c, _)| c.eq_ignore_ascii_case(m)) {
+                let names: Vec<&str> = choices.iter().map(|(c, _)| *c).collect();
+                let closest = crate::cli::find_closest_match(m, &names);
+                errors.push(crate::completions::format_invalid_config_value_error("mountain", m, closest, &choices));
+            }
+        }
+    }
+
+    if let Some(ref r) = config.road {
+        if r != "none" && r != "auto" && r != "random" {
+            let choices = crate::completions::choices_for_config_key("road").unwrap_or_default();
+            if !choices.iter().any(|(c, _)| c.eq_ignore_ascii_case(r)) {
+                let names: Vec<&str> = choices.iter().map(|(c, _)| *c).collect();
+                let closest = crate::cli::find_closest_match(r, &names);
+                errors.push(crate::completions::format_invalid_config_value_error("road", r, closest, &choices));
+            }
+        }
+    }
+
+    if let Some(ref e) = config.environment {
+        if e != "none" && e != "auto" && e != "random" {
+            let choices = crate::completions::choices_for_config_key("environment").unwrap_or_default();
+            if !choices.iter().any(|(c, _)| c.eq_ignore_ascii_case(e)) {
+                let names: Vec<&str> = choices.iter().map(|(c, _)| *c).collect();
+                let closest = crate::cli::find_closest_match(e, &names);
+                errors.push(crate::completions::format_invalid_config_value_error("environment", e, closest, &choices));
+            }
+        }
+    }
+
+    if let Some(ref a) = config.accel_mode {
+        let choices = crate::completions::choices_for_config_key("accel_mode").unwrap_or_default();
+        if !choices.iter().any(|(c, _)| c.eq_ignore_ascii_case(a)) {
+            let names: Vec<&str> = choices.iter().map(|(c, _)| *c).collect();
+            let closest = crate::cli::find_closest_match(a, &names);
+            errors.push(crate::completions::format_invalid_config_value_error("accel_mode", a, closest, &choices));
+        }
+    }
+
+    if config.fps > 240 {
+        errors.push(format!("❌ Error: Invalid FPS '{}' in configuration. Target FPS must be between 1 and 240.", config.fps));
+    }
+
+    if errors.is_empty() {
+        Ok(())
+    } else {
+        Err(errors)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -295,5 +731,85 @@ mod tests {
         };
         let m = merge(base, overlay);
         assert_eq!(m.random, Some(RandomSetting::Bool(true)));
+    }
+
+    #[test]
+    fn test_get_and_set_config_value_valid() {
+        let mut cfg = SceneConfig::default();
+
+        set_config_value(&mut cfg, "effect", "walk").unwrap();
+        assert_eq!(cfg.effect, "walk");
+        assert_eq!(get_config_value(&cfg, "effect").unwrap(), "walk");
+
+        set_config_value(&mut cfg, "color_mode", "natural").unwrap();
+        assert_eq!(cfg.color_mode, "natural");
+        assert_eq!(get_config_value(&cfg, "color_mode").unwrap(), "natural");
+
+        set_config_value(&mut cfg, "fps", "120").unwrap();
+        assert_eq!(cfg.fps, 120);
+        assert_eq!(get_config_value(&cfg, "fps").unwrap(), "120");
+
+        set_config_value(&mut cfg, "background", "true").unwrap();
+        assert!(cfg.background);
+        assert_eq!(get_config_value(&cfg, "background").unwrap(), "true");
+
+        set_config_value(&mut cfg, "update_method", "zypper").unwrap();
+        assert_eq!(cfg.update_method.as_deref(), Some("zypper"));
+        assert_eq!(get_config_value(&cfg, "update_method").unwrap(), "zypper");
+    }
+
+    #[test]
+    fn test_set_config_value_invalid_key_error_recovery() {
+        let mut cfg = SceneConfig::default();
+        let err = set_config_value(&mut cfg, "efct", "walk").unwrap_err();
+        assert!(err.contains("Unknown configuration key 'efct'"));
+        assert!(err.contains("Did you mean 'effect'?"));
+        assert!(err.contains("Supported configuration keys:"));
+        assert!(err.contains("cow"));
+        assert!(err.contains("effect"));
+        assert!(err.contains("color_mode"));
+        assert!(err.contains("mountain"));
+    }
+
+    #[test]
+    fn test_set_config_value_invalid_value_error_recovery() {
+        let mut cfg = SceneConfig::default();
+        let err = set_config_value(&mut cfg, "effect", "superglide").unwrap_err();
+        assert!(err.contains("Invalid value 'superglide' for configuration key 'effect'"));
+        assert!(err.contains("Valid values for 'effect':"));
+        assert!(err.contains("walk"));
+        assert!(err.contains("breathe"));
+        assert!(err.contains("float"));
+
+        let err_cm = set_config_value(&mut cfg, "color_mode", "neon_glow").unwrap_err();
+        assert!(err_cm.contains("Invalid value 'neon_glow' for configuration key 'color_mode'"));
+        assert!(err_cm.contains("Valid values for 'color_mode':"));
+        assert!(err_cm.contains("natural"));
+        assert!(err_cm.contains("rainbow"));
+
+        let err_fps = set_config_value(&mut cfg, "fps", "300").unwrap_err();
+        assert!(err_fps.contains("Target FPS must be between 1 and 240"));
+    }
+
+    #[test]
+    fn test_validate_config() {
+        let mut cfg = SceneConfig {
+            effect: "walk".to_string(),
+            color_mode: "natural".to_string(),
+            mountain: Some("peaks".to_string()),
+            road: Some("dirt".to_string()),
+            environment: Some("pasture".to_string()),
+            accel_mode: Some("auto".to_string()),
+            fps: 60,
+            ..Default::default()
+        };
+        assert!(validate_config(&cfg).is_ok());
+
+        cfg.effect = "bad_fx".to_string();
+        cfg.fps = 500;
+        let errs = validate_config(&cfg).unwrap_err();
+        assert_eq!(errs.len(), 2);
+        assert!(errs[0].contains("Invalid value 'bad_fx' for configuration key 'effect'"));
+        assert!(errs[1].contains("Invalid FPS '500' in configuration"));
     }
 }

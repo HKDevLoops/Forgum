@@ -993,11 +993,20 @@ pub fn record_receipt(
 // INTERACTIVE PACKAGE MANAGER SELECTION
 // ═══════════════════════════════════════════════════════════════════════════
 
+/// User's choice from the interactive update menu.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum UpdateActionChoice {
+    PackageManager(PackageManager),
+    Git,
+    Cancel,
+}
+
 /// Interactively prompts the user to select their desired update method / package manager.
 /// Shows all available methods on the host with the detected source marked as recommended.
-pub fn select_update_method_interactive(
+pub fn select_update_action_interactive(
     default_pm: PackageManager,
-) -> Result<PackageManager, String> {
+    in_git_repo: bool,
+) -> Result<UpdateActionChoice, String> {
     let mut available: Vec<PackageManager> = Vec::new();
 
     // 1. First add the detected source so it is option #1
@@ -1043,24 +1052,53 @@ pub fn select_update_method_interactive(
         );
     }
 
+    let mut git_option_num = None;
+    if in_git_repo {
+        let num = available.len() + 1;
+        git_option_num = Some(num);
+        println!(
+            "  \x1b[1m{num}.\x1b[0m \x1b[1;35m{:<18}\x1b[0m (`git pull --ff-only && cargo build --release`) \x1b[1;35m[Git Workspace]\x1b[0m",
+            "Git Repository"
+        );
+    }
+
+    let cancel_num = if in_git_repo {
+        available.len() + 2
+    } else {
+        available.len() + 1
+    };
     println!(
-        "\n\x1b[90m(Tip: Set a default anytime with `forgum config set update_method <name>` or via TUI)\x1b[0m"
+        "  \x1b[1m{cancel_num}.\x1b[0m \x1b[90m{:<18} (Abort update and return to shell)\x1b[0m",
+        "Cancel / Exit"
+    );
+
+    println!(
+        "\n\x1b[90m(Tip: Pass `--method <name>` to skip this menu, or set a default via `forgum config set update_method <name>`)\x1b[0m"
     );
     print!(
-        "Select update method [1-{}] (default: 1): ",
-        available.len()
+        "Select update method [1-{}, or 'q'] (default: 1): ",
+        cancel_num
     );
     let _ = std::io::Write::flush(&mut std::io::stdout());
 
     let mut input = String::new();
     if std::io::stdin().read_line(&mut input).is_err() {
-        return Ok(default_pm);
+        return Ok(UpdateActionChoice::PackageManager(default_pm));
     }
 
     let trimmed = input.trim();
     if trimmed.is_empty() {
         println!("Selected: \x1b[1;32m{}\x1b[0m\n", default_pm.name());
-        return Ok(default_pm);
+        return Ok(UpdateActionChoice::PackageManager(default_pm));
+    }
+
+    if trimmed.eq_ignore_ascii_case("q")
+        || trimmed.eq_ignore_ascii_case("quit")
+        || trimmed.eq_ignore_ascii_case("cancel")
+        || trimmed.eq_ignore_ascii_case("exit")
+        || trimmed == "0"
+    {
+        return Ok(UpdateActionChoice::Cancel);
     }
 
     // Try parsing as number
@@ -1068,14 +1106,25 @@ pub fn select_update_method_interactive(
         if choice >= 1 && choice <= available.len() {
             let chosen = available[choice - 1];
             println!("Selected: \x1b[1;32m{}\x1b[0m\n", chosen.name());
-            return Ok(chosen);
+            return Ok(UpdateActionChoice::PackageManager(chosen));
+        } else if Some(choice) == git_option_num {
+            println!("Selected: \x1b[1;35mGit Repository\x1b[0m\n");
+            return Ok(UpdateActionChoice::Git);
+        } else if choice == cancel_num {
+            return Ok(UpdateActionChoice::Cancel);
         }
+    }
+
+    // Try parsing 'g' or 'git'
+    if in_git_repo && (trimmed.eq_ignore_ascii_case("g") || trimmed.eq_ignore_ascii_case("git")) {
+        println!("Selected: \x1b[1;35mGit Repository\x1b[0m\n");
+        return Ok(UpdateActionChoice::Git);
     }
 
     // Try parsing as package manager name string (e.g. "zypper", "scoop", "standalone")
     if let Some(pm) = PackageManager::from_str_loose(trimmed) {
         println!("Selected: \x1b[1;32m{}\x1b[0m\n", pm.name());
-        return Ok(pm);
+        return Ok(UpdateActionChoice::PackageManager(pm));
     }
 
     println!(
@@ -1083,7 +1132,17 @@ pub fn select_update_method_interactive(
         trimmed,
         default_pm.name()
     );
-    Ok(default_pm)
+    Ok(UpdateActionChoice::PackageManager(default_pm))
+}
+
+/// Backwards-compatible interactive selector returning PackageManager.
+pub fn select_update_method_interactive(
+    default_pm: PackageManager,
+) -> Result<PackageManager, String> {
+    match select_update_action_interactive(default_pm, false) {
+        Ok(UpdateActionChoice::PackageManager(pm)) => Ok(pm),
+        _ => Ok(default_pm),
+    }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

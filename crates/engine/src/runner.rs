@@ -84,6 +84,10 @@ fn run_inner() -> ExitCode {
             argv.insert(1, "init".to_string());
         }
     }
+    if argv.len() > 1 && (argv[1] == "complete-context" || argv[1] == "__complete") {
+        crate::completions::handle_complete_context_cli(&argv[2..]);
+        return ExitCode::SUCCESS;
+    }
     let (args, command) = match parse_args(argv) {
         Ok(v) => v,
         Err(e) => {
@@ -634,378 +638,21 @@ fn run_inner() -> ExitCode {
             match op {
                 ConfigOp::Get(k) => {
                     let cfg = read_config_file(&cfg_path).unwrap_or_default();
-                    match k.as_str() {
-                        "cow" => println!("{}", cfg.cow),
-                        "text" => println!("{}", cfg.text),
-                        "effect" => println!("{}", cfg.effect),
-                        "background" => println!("{}", cfg.background),
-                        "duration" => println!("{}", cfg.duration),
-                        "fps" => println!("{}", cfg.fps),
-                        "eyes" => println!("{}", cfg.eyes),
-                        "tongue" => println!("{}", cfg.tongue),
-                        "default_shell" => println!("{}", cfg.default_shell),
-                        "auto_render_on_prompt" => println!("{}", cfg.auto_render_on_prompt),
-                        "think" => println!("{}", cfg.think),
-                        "color_mode" => println!("{}", cfg.color_mode),
-                        "shell_attach_mode" | "attach_mode" => {
-                            println!("{}", cfg.shell_attach_mode)
+                    match forgum_engine::config::get_config_value(&cfg, &k) {
+                        Ok(val) => {
+                            println!("{val}");
+                            ExitCode::SUCCESS
                         }
-                        "environment" | "env" => {
-                            println!("{}", cfg.environment.as_deref().unwrap_or("none"))
-                        }
-                        "road" => println!("{}", cfg.road.as_deref().unwrap_or("none")),
-                        "mountain" | "mtn" => {
-                            println!("{}", cfg.mountain.as_deref().unwrap_or("none"))
-                        }
-                        "palette" => println!("{}", cfg.palette.as_deref().unwrap_or("none")),
-                        "time_of_day" | "tod" => {
-                            println!("{}", cfg.time_of_day.as_deref().unwrap_or("auto"))
-                        }
-                        "season" => {
-                            println!("{}", cfg.season.as_deref().unwrap_or("auto"))
-                        }
-                        "thought_interval" => println!("{}", cfg.thought_interval),
-                        "split_scroll" => println!("{}", cfg.split_scroll),
-                        "reserve_rows" => println!(
-                            "{}",
-                            cfg.reserve_rows
-                                .map(|n| n.to_string())
-                                .unwrap_or_else(|| "none".to_string())
-                        ),
-                        "reserve_cols" => println!(
-                            "{}",
-                            cfg.reserve_cols
-                                .map(|n| n.to_string())
-                                .unwrap_or_else(|| "none".to_string())
-                        ),
-                        "split_ratio" => println!(
-                            "{}",
-                            cfg.split_ratio
-                                .map(|r| r.to_string())
-                                .unwrap_or_else(|| "none".to_string())
-                        ),
-                        "animation" => println!("{}", cfg.animation.as_deref().unwrap_or("none")),
-                        "animation_type" | "anim_type" => {
-                            println!("{}", cfg.animation_type.as_deref().unwrap_or("none"))
-                        }
-                        "image" => println!("{}", cfg.image.as_deref().unwrap_or("none")),
-                        "split_mode" => println!("{}", cfg.split_mode.as_deref().unwrap_or("none")),
-                        "editor" => println!("{}", cfg.editor.as_deref().unwrap_or("auto")),
-                        "accel_mode" | "acceleration_mode" | "gpu_mode" | "accel" => {
-                            println!("{}", cfg.accel_mode.as_deref().unwrap_or("auto"))
-                        }
-                        "reduce_motion" | "reduce-motion" | "reduced_motion" | "reduced-motion" => {
-                            println!("{}", cfg.reduce_motion)
-                        }
-                        "text_only" | "text-only" | "fortune_only" | "fortune-only" => {
-                            println!("{}", cfg.text_only)
-                        }
-                        "banner" | "banner_mode" | "banner-mode" => println!("{}", cfg.banner),
-                        "aspect" | "aspect_ratio" | "aspect-ratio" => {
-                            println!("{}", cfg.aspect.as_deref().unwrap_or("auto"))
-                        }
-                        "aspect_mode" | "aspect-mode" => {
-                            println!("{}", cfg.aspect_mode.as_deref().unwrap_or("auto"))
-                        }
-                        "update_method" | "update-method" => {
-                            println!("{}", cfg.update_method.as_deref().unwrap_or("prompt"))
-                        }
-                        "check_updates" | "check-updates" | "update_check" => {
-                            println!("{}", cfg.check_updates)
-                        }
-                        other => {
-                            eprintln!("unknown config key: {other}");
-                            eprintln!(
-                                "supported keys: cow, text, effect, background, duration, \
-                                 fps, eyes, tongue, default_shell, auto_render_on_prompt, think, \
-                                 color_mode, shell_attach_mode, environment, road, mountain, \
-                                 palette, thought_interval, split_scroll, split_mode, reserve_rows, reserve_cols, \
-                                 split_ratio, animation, animation_type, image, editor, accel_mode, \
-                                 reduce_motion, text_only, banner, aspect, aspect_mode, update_method, check_updates"
-                            );
-                            return ExitCode::from(1);
+                        Err(e) => {
+                            eprintln!("{e}");
+                            ExitCode::from(1)
                         }
                     }
-                    ExitCode::SUCCESS
                 }
                 ConfigOp::Set(k, v) => {
-                    let printed = v.clone();
                     let mut cfg = read_config_file(&cfg_path).unwrap_or_default();
-                    let parse_err: Option<String> = match k.as_str() {
-                        "cow" => {
-                            cfg.cow = v;
-                            None
-                        }
-                        "text" => {
-                            cfg.text = v;
-                            None
-                        }
-                        "effect" => {
-                            cfg.effect = v;
-                            None
-                        }
-                        "background" => match v.parse::<bool>() {
-                            Ok(b) => {
-                                cfg.background = b;
-                                None
-                            }
-                            Err(e) => Some(format!("{e}")),
-                        },
-                        "duration" => match v.parse::<u32>() {
-                            Ok(n) => {
-                                cfg.duration = n;
-                                None
-                            }
-                            Err(e) => Some(format!("{e}")),
-                        },
-                        "fps" => match v.parse::<u16>() {
-                            Ok(n) => {
-                                cfg.fps = n;
-                                None
-                            }
-                            Err(e) => Some(format!("{e}")),
-                        },
-                        "eyes" => {
-                            cfg.eyes = v;
-                            None
-                        }
-                        "tongue" => {
-                            cfg.tongue = v;
-                            None
-                        }
-                        "default_shell" => {
-                            cfg.default_shell = v;
-                            None
-                        }
-                        "auto_render_on_prompt" => match v.parse::<bool>() {
-                            Ok(b) => {
-                                cfg.auto_render_on_prompt = b;
-                                None
-                            }
-                            Err(e) => Some(format!("{e}")),
-                        },
-                        "think" => match v.parse::<bool>() {
-                            Ok(b) => {
-                                cfg.think = b;
-                                None
-                            }
-                            Err(e) => Some(format!("{e}")),
-                        },
-                        "color_mode" => {
-                            cfg.color_mode = v;
-                            None
-                        }
-                        "shell_attach_mode" | "attach_mode" => {
-                            cfg.shell_attach_mode = v;
-                            None
-                        }
-                        "environment" | "env" => {
-                            cfg.environment = if v.is_empty() || v == "none" {
-                                None
-                            } else {
-                                Some(v)
-                            };
-                            None
-                        }
-                        "road" => {
-                            cfg.road = if v.is_empty() || v == "none" {
-                                None
-                            } else {
-                                Some(v)
-                            };
-                            None
-                        }
-                        "mountain" | "mtn" => {
-                            cfg.mountain = if v.is_empty() || v == "none" {
-                                None
-                            } else {
-                                Some(v)
-                            };
-                            None
-                        }
-                        "palette" => {
-                            cfg.palette = if v.is_empty() || v == "none" {
-                                None
-                            } else {
-                                Some(v)
-                            };
-                            None
-                        }
-                        "time_of_day" | "tod" => {
-                            cfg.time_of_day = if v.is_empty() || v == "auto" {
-                                None
-                            } else {
-                                Some(v)
-                            };
-                            None
-                        }
-                        "season" => {
-                            cfg.season = if v.is_empty() || v == "auto" {
-                                None
-                            } else {
-                                Some(v)
-                            };
-                            None
-                        }
-                        "thought_interval" => match v.parse::<u32>() {
-                            Ok(n) => {
-                                cfg.thought_interval = n;
-                                None
-                            }
-                            Err(e) => Some(format!("{e}")),
-                        },
-                        "split_scroll" => match v.parse::<bool>() {
-                            Ok(b) => {
-                                cfg.split_scroll = b;
-                                None
-                            }
-                            Err(e) => Some(format!("{e}")),
-                        },
-                        "reserve_rows" => match v.parse::<u16>() {
-                            Ok(n) => {
-                                cfg.reserve_rows = Some(n);
-                                None
-                            }
-                            Err(e) => Some(format!("{e}")),
-                        },
-                        "reserve_cols" => match v.parse::<u16>() {
-                            Ok(n) => {
-                                cfg.reserve_cols = Some(n);
-                                None
-                            }
-                            Err(e) => Some(format!("{e}")),
-                        },
-                        "split_ratio" => match v.parse::<f32>() {
-                            Ok(r) => {
-                                cfg.split_ratio = Some(r);
-                                None
-                            }
-                            Err(e) => Some(format!("{e}")),
-                        },
-                        "animation" => {
-                            cfg.animation = if v.is_empty() || v == "none" {
-                                None
-                            } else {
-                                Some(v)
-                            };
-                            None
-                        }
-                        "animation_type" | "anim_type" => {
-                            cfg.animation_type = if v.is_empty() || v == "none" {
-                                None
-                            } else {
-                                Some(v)
-                            };
-                            None
-                        }
-                        "image" => {
-                            cfg.image = if v.is_empty() || v == "none" {
-                                None
-                            } else {
-                                Some(v)
-                            };
-                            None
-                        }
-                        "split_mode" => {
-                            cfg.split_mode = if v.is_empty() || v == "none" {
-                                None
-                            } else {
-                                Some(v)
-                            };
-                            None
-                        }
-                        "editor" => {
-                            cfg.editor = if v.is_empty() || v == "none" {
-                                None
-                            } else {
-                                Some(v)
-                            };
-                            None
-                        }
-                        "accel_mode" | "acceleration_mode" | "gpu_mode" | "accel" => {
-                            cfg.accel_mode = if v.is_empty() || v == "auto" {
-                                Some("auto".to_string())
-                            } else {
-                                Some(v)
-                            };
-                            None
-                        }
-                        "reduce_motion" | "reduce-motion" | "reduced_motion" | "reduced-motion" => {
-                            match v.parse::<bool>() {
-                                Ok(b) => {
-                                    cfg.reduce_motion = b;
-                                    None
-                                }
-                                Err(e) => Some(format!("{e}")),
-                            }
-                        }
-                        "text_only" | "text-only" | "fortune_only" | "fortune-only" => {
-                            match v.parse::<bool>() {
-                                Ok(b) => {
-                                    cfg.text_only = b;
-                                    None
-                                }
-                                Err(e) => Some(format!("{e}")),
-                            }
-                        }
-                        "banner" | "banner_mode" | "banner-mode" => match v.parse::<bool>() {
-                            Ok(b) => {
-                                cfg.banner = b;
-                                if b {
-                                    cfg.shell_attach_mode = "banner".to_string();
-                                }
-                                None
-                            }
-                            Err(e) => Some(format!("{e}")),
-                        },
-                        "aspect" | "aspect_ratio" | "aspect-ratio" => {
-                            cfg.aspect = if v.is_empty() || v == "auto" {
-                                Some("auto".to_string())
-                            } else {
-                                Some(v)
-                            };
-                            None
-                        }
-                        "aspect_mode" | "aspect-mode" => {
-                            cfg.aspect_mode = if v.is_empty() || v == "auto" {
-                                Some("auto".to_string())
-                            } else {
-                                Some(v)
-                            };
-                            None
-                        }
-                        "update_method" | "update-method" => {
-                            cfg.update_method = if v.is_empty() || v == "prompt" || v == "ask" {
-                                Some("prompt".to_string())
-                            } else {
-                                Some(v)
-                            };
-                            None
-                        }
-                        "check_updates" | "check-updates" | "update_check" => {
-                            match v.parse::<bool>() {
-                                Ok(b) => {
-                                    cfg.check_updates = b;
-                                    None
-                                }
-                                Err(e) => Some(format!("{e}")),
-                            }
-                        }
-                        other => {
-                            eprintln!("unknown config key: {other}");
-                            eprintln!(
-                                "supported keys: cow, text, effect, background, duration, \
-                                 fps, eyes, tongue, default_shell, auto_render_on_prompt, think, \
-                                 color_mode, shell_attach_mode, environment, road, mountain, \
-                                 palette, thought_interval, split_scroll, split_mode, reserve_rows, reserve_cols, \
-                                 split_ratio, animation, animation_type, image, editor, accel_mode, \
-                                 reduce_motion, text_only, banner, aspect, aspect_mode, update_method, check_updates"
-                            );
-                            return ExitCode::from(1);
-                        }
-                    };
-                    if let Some(e) = parse_err {
-                        eprintln!("invalid value for `{k}`: {e}");
+                    if let Err(e) = forgum_engine::config::set_config_value(&mut cfg, &k, &v) {
+                        eprintln!("{e}");
                         return ExitCode::from(1);
                     }
                     if let Err(e) = write_config_file(&cfg_path, &cfg, cfg_format) {
@@ -1013,7 +660,7 @@ fn run_inner() -> ExitCode {
                         return ExitCode::from(e.exit_code() as u8);
                     }
                     println!(
-                        "set {k} = {printed} in {} ({})",
+                        "set {k} = {v} in {} ({})",
                         cfg_path.display(),
                         cfg_format.display_name()
                     );
@@ -1858,8 +1505,29 @@ fn run_inner() -> ExitCode {
             winner,
             fps,
         }) => {
-            let n1 = fighter1.unwrap_or(name1);
-            let n2 = fighter2.unwrap_or(name2);
+            let (n1, n2) = if fighter1.is_none() && fighter2.is_none() && name1 == "Alice" && name2 == "Bob" {
+                const CHAMPION_PAIRS: &[(&str, &str)] = &[
+                    ("Dragon", "Pegasus"),
+                    ("Tiger", "Lion"),
+                    ("Elephant", "Rhino"),
+                    ("Dolphin", "Orca"),
+                    ("Wolf", "Bear"),
+                    ("Falcon", "Dragon"),
+                    ("Canine", "Feline"),
+                    ("Koala", "Tiger"),
+                    ("Bessie", "Daisy"),
+                    ("Armadillo", "Goat"),
+                ];
+                let idx = (std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .map(|d| d.as_millis() as usize)
+                    .unwrap_or(0))
+                    % CHAMPION_PAIRS.len();
+                let pair = CHAMPION_PAIRS[idx];
+                (pair.0.to_string(), pair.1.to_string())
+            } else {
+                (fighter1.unwrap_or(name1), fighter2.unwrap_or(name2))
+            };
             if !headless && forgum_platform::is_stdout_tty() {
                 forgum_engine::daemon::stop_session_daemon_and_reset_margins();
                 forgum_engine::battle::run_battle_live(&n1, &n2, winner, fps);
@@ -2662,181 +2330,75 @@ fn handle_update_command(
         );
     }
 
-    // Contributor & Tester Git Synchronization
-    if method_flag.is_none() && cfg.update_method.is_none() {
-        if let Some(mut git_status) = forgum_platform::detect_git_status(channel) {
-            println!("\x1b[1;36m━━━ Git Workspace Detected (Contributor / Tester Mode) ━━━\x1b[0m");
-            println!(
-                "  • Current Branch:    \x1b[1;32m{}\x1b[0m (commit: {})",
-                git_status.branch, git_status.local_commit
-            );
-            println!(
-                "  • Target Tracking:   \x1b[1morigin/{}\x1b[0m",
-                git_status.remote_branch
-            );
-            if git_status.is_dirty {
-                println!(
-                    "  • Working Directory: \x1b[1;33m⚠️  Uncommitted modifications detected\x1b[0m"
-                );
-            } else {
-                println!("  • Working Directory: \x1b[1;32m✓ Clean\x1b[0m");
-            }
+    println!("\x1b[1;36m━━━ Forgum Auto-Update ━━━\x1b[0m");
+    println!("Installed via:    \x1b[1;32m{}\x1b[0m", source.name());
+    println!(
+        "Release Channel:  \x1b[1;33m{}\x1b[0m",
+        channel.display_name()
+    );
 
-            print!("  • Remote Status:     Fetching updates from HKDevLoops/Forgum... ");
-            let _ = std::io::Write::flush(&mut std::io::stdout());
+    let local_ver = env!("CARGO_PKG_VERSION").trim_start_matches('v');
+    print!(
+        "Checking latest version on channel \x1b[1;33m{}\x1b[0m... ",
+        channel.display_name()
+    );
+    let _ = std::io::Write::flush(&mut std::io::stdout());
 
-            match forgum_platform::check_git_updates(&mut git_status) {
-                Ok(()) => {
-                    if git_status.commits_behind == 0 {
-                        println!(
-                            "\x1b[1;32m✓ Up to date with origin/{}\x1b[0m",
-                            git_status.remote_branch
-                        );
-                    } else {
-                        println!(
-                            "\x1b[1;33m⚠️  Behind origin/{} by {} commit(s)\x1b[0m",
-                            git_status.remote_branch, git_status.commits_behind
-                        );
-                    }
+    let (has_update, _clean_remote) = match forgum_platform::fetch_remote_channel_version(channel) {
+        Ok(remote_ver) => {
+            let clean_remote = remote_ver.trim_start_matches('v').to_string();
+            println!("\x1b[1;32mv{}\x1b[0m", clean_remote);
+            let now = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_secs())
+                .unwrap_or(0);
+            let update_available = forgum_platform::is_newer_version(local_ver, &clean_remote);
+            let cache = forgum_platform::UpdateCheckCache {
+                last_checked: now,
+                latest_version: clean_remote.clone(),
+                channel,
+            };
+            let _ = forgum_platform::write_update_cache(&cache);
 
-                    if let Some(ref summary) = git_status.latest_remote_summary {
-                        println!("  • Latest Remote:     \x1b[90m{summary}\x1b[0m");
-                    }
-
-                    if check {
-                        if git_status.commits_behind > 0 {
-                            println!(
-                                "\nRun `forgum update` to pull latest changes and rebuild binary."
-                            );
-                        }
-                        return ExitCode::SUCCESS;
-                    }
-
-                    if git_status.commits_behind == 0 {
-                        println!(
-                            "\n\x1b[1;32m✓ Git tree is synchronized with origin/{}.\x1b[0m",
-                            git_status.remote_branch
-                        );
-                        let version = env!("CARGO_PKG_VERSION");
-                        let target_exe = forgum_platform::local_release_binary_path();
-                        if !target_exe.exists() {
-                            println!(
-                                "\x1b[36m>> Rebuilding binary from current repository...\x1b[0m"
-                            );
-                            match forgum_platform::execute_git_update(&git_status) {
-                                Ok(msg) => println!("{msg}"),
-                                Err(e) => eprintln!("\x1b[1;31m✗ Build failed:\x1b[0m {e}"),
-                            }
-                        } else {
-                            println!("\x1b[1;32m✓ Already on latest version of Forgum ({version}). No update required.\x1b[0m");
-                            println!(
-                                "\x1b[1;36m{}\x1b[0m\n",
-                                forgum_platform::get_funky_latest_version_quote()
-                            );
-                        }
-                        return ExitCode::SUCCESS;
-                    }
-
+            if !update_available {
+                if local_ver == clean_remote {
                     println!(
-                        "\n\x1b[1;36m>> Pulling latest commits from origin/{}...\x1b[0m",
-                        git_status.remote_branch
+                        "\n\x1b[1;32m✓ Already on latest version of Forgum (v{local_ver}) on channel '{}'.\x1b[0m\n\
+                         \x1b[1;36m{}\x1b[0m\n",
+                        channel.as_str(),
+                        forgum_platform::get_funky_latest_version_quote()
                     );
-                    match forgum_platform::execute_git_update(&git_status) {
-                        Ok(msg) => {
-                            println!("{msg}");
-                            println!("\n\x1b[1;32m✓ Tester/Contributor update completed successfully.\x1b[0m");
-                            return ExitCode::SUCCESS;
-                        }
-                        Err(err) => {
-                            eprintln!("\x1b[1;31m✗ Git update failed:\x1b[0m {err}");
-                            return ExitCode::from(1);
-                        }
-                    }
-                }
-                Err(e) => {
-                    println!("\x1b[1;31m✗ Could not fetch remote:\x1b[0m {e}");
-                }
-            }
-            println!();
-        }
-    }
-
-    if check {
-        println!("\x1b[1;36m━━━ Forgum Auto-Update ━━━\x1b[0m");
-        println!("Installed via:    \x1b[1;32m{}\x1b[0m", source.name());
-        let preferred_method_name = if let Some(m) = method_flag {
-            m.to_string()
-        } else {
-            cfg.update_method
-                .clone()
-                .unwrap_or_else(|| "prompt (ask each time)".into())
-        };
-        println!(
-            "Preferred Method: \x1b[1;32m{}\x1b[0m",
-            preferred_method_name
-        );
-        println!(
-            "Release Channel:  \x1b[1;33m{}\x1b[0m",
-            channel.display_name()
-        );
-        println!(
-            "Action:           \x1b[1;33mChecking for available updates\x1b[0m (Command: `{}`)\n",
-            source.check_command()
-        );
-
-        let local_ver = env!("CARGO_PKG_VERSION").trim_start_matches('v');
-        print!(
-            "Checking latest version on channel \x1b[1;33m{}\x1b[0m... ",
-            channel.display_name()
-        );
-        let _ = std::io::Write::flush(&mut std::io::stdout());
-
-        match forgum_platform::fetch_remote_channel_version(channel) {
-            Ok(remote_ver) => {
-                let clean_remote = remote_ver.trim_start_matches('v');
-                println!("\x1b[1;32mv{}\x1b[0m", clean_remote);
-                let now = std::time::SystemTime::now()
-                    .duration_since(std::time::UNIX_EPOCH)
-                    .map(|d| d.as_secs())
-                    .unwrap_or(0);
-                let has_update = forgum_platform::is_newer_version(local_ver, clean_remote);
-                let cache = forgum_platform::UpdateCheckCache {
-                    last_checked: now,
-                    latest_version: clean_remote.to_string(),
-                    channel,
-                };
-                let _ = forgum_platform::write_update_cache(&cache);
-
-                if !has_update {
-                    if local_ver == clean_remote {
-                        println!(
-                            "\n\x1b[1;32m✓ Already on latest version of Forgum (v{local_ver}) on channel '{}'.\x1b[0m\n\
-                             \x1b[1;36m{}\x1b[0m\n",
-                            channel.as_str(),
-                            forgum_platform::get_funky_latest_version_quote()
-                        );
-                    } else {
-                        println!(
-                            "\n\x1b[1;32m✓ Running ahead-of-upstream build of Forgum (v{local_ver} >= upstream v{clean_remote}) on channel '{}'.\x1b[0m\n\
-                             \x1b[1;36m{}\x1b[0m\n",
-                            channel.as_str(),
-                            forgum_platform::get_funky_latest_version_quote()
-                        );
-                    }
                 } else {
                     println!(
-                        "  • Installed:  \x1b[1;33mv{local_ver}\x1b[0m\n\
-                         • Upstream:   \x1b[1;32mv{clean_remote}\x1b[0m (Update available!)\n\n\
-                         Run `forgum update` to upgrade."
+                        "\n\x1b[1;32m✓ Running ahead-of-upstream build of Forgum (v{local_ver} >= upstream v{clean_remote}) on channel '{}'.\x1b[0m\n\
+                         \x1b[1;36m{}\x1b[0m\n",
+                        channel.as_str(),
+                        forgum_platform::get_funky_latest_version_quote()
                     );
                 }
+            } else {
+                println!(
+                    "  • Installed:  \x1b[1;33mv{local_ver}\x1b[0m\n\
+                     • Upstream:   \x1b[1;32mv{clean_remote}\x1b[0m (Update available!)\n"
+                );
             }
-            Err(e) => {
-                println!("\x1b[90m(online check skipped: {e})\x1b[0m\n");
-            }
+            (update_available, clean_remote)
+        }
+        Err(e) => {
+            println!("\x1b[90m(online check note: {e})\x1b[0m\n");
+            (false, String::new())
+        }
+    };
+
+    if check {
+        if has_update {
+            println!("Run `forgum update` to upgrade.");
         }
         return ExitCode::SUCCESS;
     }
+
+    let mut git_status_opt = forgum_platform::detect_git_status(channel);
+    let in_git_repo = git_status_opt.is_some();
 
     // Resolve update method / package manager
     let chosen_pm = if let Some(m) = method_flag {
@@ -2850,33 +2412,61 @@ fn handle_update_command(
                 return ExitCode::from(1);
             }
         }
-    } else {
+    } else if non_interactive || !std::io::stdin().is_terminal() {
         let configured = cfg.update_method.as_deref().unwrap_or("prompt");
         if configured.eq_ignore_ascii_case("auto") {
             source
-        } else if !configured.eq_ignore_ascii_case("prompt")
-            && !configured.eq_ignore_ascii_case("ask")
-        {
-            match forgum_platform::PackageManager::from_str_loose(configured) {
-                Some(pm) => pm,
-                None => {
-                    if non_interactive || !std::io::stdin().is_terminal() {
-                        source
-                    } else {
-                        forgum_platform::select_update_method_interactive(source).unwrap_or(source)
+        } else if let Some(pm) = forgum_platform::PackageManager::from_str_loose(configured) {
+            pm
+        } else if in_git_repo {
+            // In non-interactive git workspace with no configured PM, perform git update
+            if let Some(ref mut git_status) = git_status_opt {
+                println!("\x1b[1;36m━━━ Git Workspace (Non-Interactive Contributor Mode) ━━━\x1b[0m");
+                match forgum_platform::execute_git_update(git_status) {
+                    Ok(msg) => {
+                        println!("{msg}");
+                        return ExitCode::SUCCESS;
+                    }
+                    Err(e) => {
+                        eprintln!("\x1b[1;31m✗ Git update failed:\x1b[0m {e}");
+                        return ExitCode::from(1);
                     }
                 }
             }
+            source
         } else {
-            // Default: ask every time with interactive selection
-            if non_interactive || !std::io::stdin().is_terminal() {
-                println!(
-                    "\x1b[90m(Non-interactive environment detected: proceeding with default method: {})\x1b[0m\n",
-                    source.name()
-                );
+            source
+        }
+    } else {
+        // Interactive terminal: always show the selection menu!
+        match forgum_platform::select_update_action_interactive(source, in_git_repo) {
+            Ok(forgum_platform::UpdateActionChoice::Cancel) => {
+                println!("\x1b[90mUpdate cancelled.\x1b[0m\n");
+                return ExitCode::SUCCESS;
+            }
+            Ok(forgum_platform::UpdateActionChoice::Git) => {
+                if let Some(ref mut git_status) = git_status_opt {
+                    println!("\n\x1b[1;36m>> Pulling latest commits from origin/{}...\x1b[0m", git_status.remote_branch);
+                    match forgum_platform::execute_git_update(git_status) {
+                        Ok(msg) => {
+                            println!("{msg}");
+                            println!("\n\x1b[1;32m✓ Git update and rebuild completed successfully.\x1b[0m");
+                            return ExitCode::SUCCESS;
+                        }
+                        Err(e) => {
+                            eprintln!("\x1b[1;31m✗ Git update failed:\x1b[0m {e}");
+                            return ExitCode::from(1);
+                        }
+                    }
+                } else {
+                    eprintln!("{PROGRAM}: not inside a git repository.");
+                    return ExitCode::from(1);
+                }
+            }
+            Ok(forgum_platform::UpdateActionChoice::PackageManager(pm)) => pm,
+            Err(e) => {
+                eprintln!("\x1b[90m(selection error: {e}, defaulting to {})\x1b[0m", source.name());
                 source
-            } else {
-                forgum_platform::select_update_method_interactive(source).unwrap_or(source)
             }
         }
     };

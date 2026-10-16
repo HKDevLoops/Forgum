@@ -173,8 +173,14 @@ _forgum_time_of_day="auto dawn day dusk night"
 _forgum_seasons="auto spring summer autumn winter"
 
 _forgum_custom_complete() {
-    local prev="${COMP_WORDS[COMP_CWORD-1]}"
     local cur="${COMP_WORDS[COMP_CWORD]}"
+    local line="$COMP_LINE"
+    local lsp_out=$(forgum complete-context --bash --line "$line" --word "$cur" 2>/dev/null)
+    if [[ -n "$lsp_out" ]]; then
+        COMPREPLY=( $(compgen -W "$lsp_out" -- "$cur") )
+        return 0
+    fi
+    local prev="${COMP_WORDS[COMP_CWORD-1]}"
     case "$prev" in
         --effect|-e)
             COMPREPLY=( $(compgen -W "$_forgum_effects" -- "$cur") )
@@ -503,21 +509,39 @@ _forgum_seasons=(
     'autumn:Golden senescence and deciduous transition to fiery amber and scarlet'
     'winter:Skeletal defoliation of broadleaf trees and frosted evergreen needles'
 )
+
+_forgum_lsp_complete() {
+    local -a lsp_items
+    local line="$BUFFER"
+    local cur="${words[CURRENT]}"
+    local IFS=$'\n'
+    lsp_items=($(forgum complete-context --zsh --line "$line" --word "$cur" 2>/dev/null))
+    if [[ ${#lsp_items[@]} -gt 0 ]]; then
+        _describe 'forgum' lsp_items
+        return 0
+    fi
+}
 "#;
     script.push_str(zsh_extra);
     script
 }
 
 fn generate_fish_completions() -> String {
-    r#"# forgum fish completion script with auto-suggestions
+    r#"# forgum fish completion script with LSP context autocompletion & auto-suggestions
+function __fish_forgum_dynamic_complete
+    set -l cmd (commandline -pc)
+    set -l token (commandline -ct)
+    forgum complete-context --fish --line "$cmd" --word "$token" 2>/dev/null
+end
+
+complete -c forgum -f -a '(__fish_forgum_dynamic_complete)'
+
 function __fish_forgum_no_subcommand
     set -l cmd (commandline -poc)
     test (count $cmd) -eq 1
 end
 
-complete -c forgum -f
-
-# Subcommands
+# Fallback subcommands
 complete -c forgum -n '__fish_forgum_no_subcommand' -a 'render' -d 'Render mascot animation (default)'
 complete -c forgum -n '__fish_forgum_no_subcommand' -a 'think' -d 'Render in cowthink mode'
 complete -c forgum -n '__fish_forgum_no_subcommand' -a 'fortune' -d 'Print a random fortune'
@@ -579,6 +603,25 @@ fn generate_powershell_completions() -> String {
 Register-ArgumentCompleter -Native -CommandName 'forgum' -ScriptBlock {
     param($wordToComplete, $commandAst, $cursorPosition)
 
+    # 1. Dynamic LSP Context Autocompletion via 'forgum complete-context'
+    try {
+        $line = $commandAst.Extent.Text
+        $output = & forgum complete-context --powershell --line "$line" --word "$wordToComplete" 2>$null
+        if ($LASTEXITCODE -eq 0 -and $output) {
+            $results = @()
+            foreach ($item in $output) {
+                $parts = $item -split "`t"
+                if ($parts.Count -ge 4) {
+                    $results += [System.Management.Automation.CompletionResult]::new($parts[0], $parts[1], [System.Management.Automation.CompletionResultType]::$($parts[2]), $parts[3])
+                }
+            }
+            if ($results.Count -gt 0) {
+                return $results
+            }
+        }
+    } catch {}
+
+    # 2. Resilient Static LSP-Style Fallback
     $elements = $commandAst.CommandElements
     $prevWord = if ($elements.Count -ge 2) { $elements[-2].Extent.Text } else { '' }
 
@@ -1423,3 +1466,1605 @@ function completion/forgum {
 "#
     .to_string()
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// LSP Context-Aware Autocompletion Engine & Unified Metadata Registry
+// ═══════════════════════════════════════════════════════════════════════════
+
+/// Completion candidate kind (Command, ParameterName, ParameterValue, Positional).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CompletionKind {
+    Command,
+    ParameterName,
+    ParameterValue,
+    Positional,
+}
+
+impl CompletionKind {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            CompletionKind::Command => "Command",
+            CompletionKind::ParameterName => "ParameterName",
+            CompletionKind::ParameterValue => "ParameterValue",
+            CompletionKind::Positional => "ParameterValue",
+        }
+    }
+}
+
+/// Completion candidate returned by LSP context resolution.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CompletionCandidate {
+    pub name: &'static str,
+    pub display: &'static str,
+    pub kind: CompletionKind,
+    pub description: &'static str,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SubcommandMeta {
+    pub name: &'static str,
+    pub aliases: &'static [&'static str],
+    pub description: &'static str,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct FlagMeta {
+    pub long: &'static str,
+    pub short: Option<&'static str>,
+    pub aliases: &'static [&'static str],
+    pub description: &'static str,
+    pub takes_value: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ChoiceMeta {
+    pub value: &'static str,
+    pub description: &'static str,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ConfigKeyMeta {
+    pub key: &'static str,
+    pub aliases: &'static [&'static str],
+    pub value_type: &'static str,
+    pub description: &'static str,
+}
+
+pub const SUBCOMMAND_METADATA: &[SubcommandMeta] = &[
+    SubcommandMeta { name: "render", aliases: &["view"], description: "Render mascot animation (default execution mode)" },
+    SubcommandMeta { name: "think", aliases: &[], description: "Render in cowthink mode with thought bubble" },
+    SubcommandMeta { name: "fortune", aliases: &[], description: "Print a random fortune with animated mascot" },
+    SubcommandMeta { name: "battle", aliases: &["arena"], description: "ASCII mascot jousting arena between two fighters" },
+    SubcommandMeta { name: "rps", aliases: &["rps-battle"], description: "Interactive Rock Paper Scissors battle (User vs CPU)" },
+    SubcommandMeta { name: "config", aliases: &[], description: "View or edit configuration keys and format" },
+    SubcommandMeta { name: "logs", aliases: &["log", "view-logs", "show-logs"], description: "View, query, stream, or clear structured engine logs" },
+    SubcommandMeta { name: "diagnose", aliases: &["triage", "bugradar"], description: "Run diagnostic triage across logs and subsystems" },
+    SubcommandMeta { name: "init", aliases: &[], description: "Generate shell prompt integration hook" },
+    SubcommandMeta { name: "completions", aliases: &[], description: "Install shell completions and attach to profile" },
+    SubcommandMeta { name: "list", aliases: &["options", "ls", "show"], description: "List available options for animals, scenery, effects, colors" },
+    SubcommandMeta { name: "status", aliases: &[], description: "Print engine daemon health status" },
+    SubcommandMeta { name: "doctor", aliases: &[], description: "Diagnose terminal capabilities and configuration" },
+    SubcommandMeta { name: "checkhealth", aliases: &["health"], description: "Run comprehensive system health check" },
+    SubcommandMeta { name: "update", aliases: &["upgrade"], description: "Update Forgum to the latest version" },
+    SubcommandMeta { name: "install", aliases: &["setup"], description: "Install Forgum binary, manpages, and shell hooks" },
+    SubcommandMeta { name: "uninstall", aliases: &["deorbit", "remove"], description: "Uninstall Forgum and optionally purge configurations" },
+    SubcommandMeta { name: "channel", aliases: &["channels"], description: "Manage release channels (stable, alpha, nightly, dev)" },
+    SubcommandMeta { name: "tui", aliases: &[], description: "Launch interactive terminal UI configuration dashboard" },
+    SubcommandMeta { name: "herd", aliases: &[], description: "Fleet manager: control all running daemons" },
+    SubcommandMeta { name: "theme", aliases: &[], description: "Manage mascot color and animation theme" },
+    SubcommandMeta { name: "demo", aliases: &[], description: "Run interactive showcase demo" },
+    SubcommandMeta { name: "showcase", aliases: &[], description: "Run 60-second showcase demo reel" },
+    SubcommandMeta { name: "say", aliases: &[], description: "Run command and render output in speech bubble" },
+    SubcommandMeta { name: "timer", aliases: &[], description: "Time a command and display duration in speech bubble" },
+    SubcommandMeta { name: "sweep", aliases: &["clean"], description: "Emergency terminal restore, raw mode disable, and cleanup" },
+    SubcommandMeta { name: "stop", aliases: &["kill", "halt", "reset", "unreserve", "clear", "clear-margins", "clear_margins"], description: "Stop running animation, split mode, or background daemon" },
+    SubcommandMeta { name: "image", aliases: &[], description: "Convert an image to ASCII art or save as mascot" },
+    SubcommandMeta { name: "fetch", aliases: &["sysinfo", "info", "neofetch", "fastfetch"], description: "Display system telemetry with animated mascot" },
+    SubcommandMeta { name: "telemetry", aliases: &["pasture"], description: "Reactive Living Pasture shell telemetry bus integration" },
+    SubcommandMeta { name: "status-line", aliases: &[], description: "One-shot status line for tmux or zellij widget" },
+    SubcommandMeta { name: "tmux", aliases: &[], description: "tmux and terminal multiplexer integration configuration" },
+    SubcommandMeta { name: "remote", aliases: &[], description: "Remote sync: follow mascot across SSH sessions" },
+    SubcommandMeta { name: "moo", aliases: &["bovine", "cowsay"], description: "Quick joyful bovine vocalization" },
+    SubcommandMeta { name: "vibe", aliases: &["chill", "zen"], description: "Mascot chilling and vibing peacefully in terminal" },
+    SubcommandMeta { name: "touch-grass", aliases: &["touch_grass", "grass", "outside"], description: "Encourage yourself to touch grass with a pasture walk" },
+    SubcommandMeta { name: "chad", aliases: &["gigachad", "based"], description: "Unleash Gigachad terminal energy" },
+    SubcommandMeta { name: "zoomies", aliases: &["speed", "fast", "hyper"], description: "Mascot running wildly with unstoppable zoomies" },
+    SubcommandMeta { name: "yeet", aliases: &["launch", "ascend"], description: "Yeet the mascot into orbit with high velocity" },
+    SubcommandMeta { name: "moonwalk", aliases: &["hee-hee", "smooth-criminal"], description: "Perform legendary reverse-glide moonwalk" },
+    SubcommandMeta { name: "version", aliases: &[], description: "Print version and build information" },
+];
+
+pub const ROOT_FLAGS_METADATA: &[FlagMeta] = &[
+    FlagMeta { long: "--cow", short: Some("-c"), aliases: &["--animal", "-a"], description: "Animal mascot name (default, tux, dragon...)", takes_value: true },
+    FlagMeta { long: "--effect", short: Some("-e"), aliases: &["--anim-type", "--fx", "--anim"], description: "Animation effect (moonwalk, walk, breathe, float...)", takes_value: true },
+    FlagMeta { long: "--mountain", short: None, aliases: &[], description: "Procedural mountain horizon (hills, peaks, volcano...)", takes_value: true },
+    FlagMeta { long: "--road", short: None, aliases: &[], description: "Ground/road terrain style (dirt, cobblestone, magma...)", takes_value: true },
+    FlagMeta { long: "--environment", short: None, aliases: &["--env", "--scenery"], description: "Atmospheric particle environment (pasture, inferno, ocean...)", takes_value: true },
+    FlagMeta { long: "--color-mode", short: None, aliases: &[], description: "Color rendering mode (natural, animal, rainbow, solid, none)", takes_value: true },
+    FlagMeta { long: "--palette", short: Some("-p"), aliases: &[], description: "Custom hex palette gradient (e.g. '#ff007f,#00f0ff')", takes_value: true },
+    FlagMeta { long: "--accel", short: None, aliases: &[], description: "Hardware acceleration mode (auto, dedicated, integrated, npu, cpu)", takes_value: true },
+    FlagMeta { long: "--time-of-day", short: None, aliases: &["--tod"], description: "Solar illumination mode (auto, dawn, day, dusk, night)", takes_value: true },
+    FlagMeta { long: "--season", short: None, aliases: &[], description: "Seasonal foliage phenology (auto, spring, summer, autumn, winter)", takes_value: true },
+    FlagMeta { long: "--aspect", short: None, aliases: &["--aspect-ratio"], description: "Viewport aspect ratio preset (auto, 21:9, 16:9, 4:3, 1:1)", takes_value: true },
+    FlagMeta { long: "--aspect-mode", short: None, aliases: &[], description: "Aspect ratio adaptation mode (preset, dynamic, auto)", takes_value: true },
+    FlagMeta { long: "--colorblind", short: None, aliases: &["--cvd"], description: "Color vision deficiency mode (protanopia, deuteranopia...)", takes_value: true },
+    FlagMeta { long: "--shell-attach-mode", short: None, aliases: &["--attach-mode"], description: "Shell execution attach mode (startup, prompt, clear, split, pane)", takes_value: true },
+    FlagMeta { long: "--split-mode", short: None, aliases: &[], description: "Split adapter mode (decstbm, native, precmd, seamless, auto)", takes_value: true },
+    FlagMeta { long: "--banner", short: Some("-B"), aliases: &[], description: "Render inline as animated banner above prompt", takes_value: false },
+    FlagMeta { long: "--background", short: Some("-b"), aliases: &[], description: "Render above prompt as non-blocking overlay", takes_value: false },
+    FlagMeta { long: "--duration", short: Some("-d"), aliases: &[], description: "Duration in seconds (0 = infinite)", takes_value: true },
+    FlagMeta { long: "--fps", short: None, aliases: &[], description: "Target frames per second", takes_value: true },
+    FlagMeta { long: "--thought-interval", short: None, aliases: &[], description: "Interval in seconds to rotate fortunes in background mode", takes_value: true },
+    FlagMeta { long: "--split-scroll", short: None, aliases: &["--split"], description: "Lock terminal scroll margins below animation (DECSTBM)", takes_value: false },
+    FlagMeta { long: "--reserve-rows", short: None, aliases: &[], description: "Reserve top N rows for persistent animation canvas", takes_value: true },
+    FlagMeta { long: "--reserve-cols", short: None, aliases: &[], description: "Reserve top N columns for animation canvas", takes_value: true },
+    FlagMeta { long: "--split-ratio", short: None, aliases: &[], description: "Fractional ratio of terminal height to reserve (0.1..0.8)", takes_value: true },
+    FlagMeta { long: "--text", short: Some("-t"), aliases: &[], description: "Text inside the speech bubble", takes_value: true },
+    FlagMeta { long: "--think", short: Some("-T"), aliases: &[], description: "Render as thought bubble instead of speech bubble", takes_value: false },
+    FlagMeta { long: "--speech", short: Some("-S"), aliases: &[], description: "Force speech bubble output (overrides think)", takes_value: false },
+    FlagMeta { long: "--reduce-motion", short: None, aliases: &[], description: "Disable animations; keep gentle fades only (accessibility)", takes_value: false },
+    FlagMeta { long: "--text-only", short: None, aliases: &[], description: "Print just fortune text without ASCII mascot art", takes_value: false },
+    FlagMeta { long: "--eyes", short: None, aliases: &[], description: "Custom eyes glyph (e.g. oo, $$, @@)", takes_value: true },
+    FlagMeta { long: "--tongue", short: None, aliases: &[], description: "Custom tongue glyph (e.g. U, ||)", takes_value: true },
+    FlagMeta { long: "--image", short: None, aliases: &[], description: "Load mascot from an image file (PNG, JPG, BMP)", takes_value: true },
+    FlagMeta { long: "--config", short: None, aliases: &[], description: "Path to custom JSON, TOML, or YAML config file", takes_value: true },
+    FlagMeta { long: "--file", short: Some("-f"), aliases: &[], description: "Path to scene JSON file (alternative to stdin)", takes_value: true },
+    FlagMeta { long: "--random", short: Some("-r"), aliases: &[], description: "Randomize mascot, scenery, effect, or all", takes_value: true },
+    FlagMeta { long: "--check-updates", short: None, aliases: &[], description: "Enable automatic background update check", takes_value: false },
+    FlagMeta { long: "--no-check-updates", short: None, aliases: &[], description: "Disable automatic background update check", takes_value: false },
+    FlagMeta { long: "--list", short: Some("-l"), aliases: &[], description: "Display available options in structured tables", takes_value: false },
+];
+
+pub const CONFIG_FLAGS_METADATA: &[FlagMeta] = &[
+    FlagMeta { long: "--list", short: Some("-l"), aliases: &[], description: "List all configuration keys, data types, and values", takes_value: false },
+    FlagMeta { long: "--tui", short: None, aliases: &[], description: "Open interactive configuration editor dashboard", takes_value: false },
+    FlagMeta { long: "--migrate", short: None, aliases: &[], description: "Migrate configuration to another format (json, yaml, toml)", takes_value: true },
+];
+
+pub const LOGS_FLAGS_METADATA: &[FlagMeta] = &[
+    FlagMeta { long: "--lines", short: Some("-n"), aliases: &["--limit"], description: "Number of recent log lines to display (default: 25)", takes_value: true },
+    FlagMeta { long: "--level", short: Some("-l"), aliases: &[], description: "Minimum log level filter (TRACE, DEBUG, INFO, WARN, ERROR)", takes_value: true },
+    FlagMeta { long: "--json", short: None, aliases: &[], description: "Output raw JSON Lines instead of formatted table", takes_value: false },
+    FlagMeta { long: "--follow", short: Some("-w"), aliases: &["--tail", "--watch"], description: "Follow / stream live logs in real time", takes_value: false },
+    FlagMeta { long: "--path", short: Some("-p"), aliases: &[], description: "Print absolute path to log files and directory", takes_value: false },
+    FlagMeta { long: "--open", short: Some("-o"), aliases: &["--edit"], description: "Open log directory or file in default editor", takes_value: false },
+    FlagMeta { long: "--raw", short: None, aliases: &["--cat", "--dump"], description: "Output raw unformatted text log directly", takes_value: false },
+    FlagMeta { long: "--filter", short: Some("-s"), aliases: &["--grep", "--query", "--search"], description: "Filter/search logs by keyword or substring", takes_value: true },
+    FlagMeta { long: "--clear", short: None, aliases: &["--clean"], description: "Clear/truncate existing log files", takes_value: false },
+    FlagMeta { long: "--diagnose", short: Some("-D"), aliases: &["--bugs", "--triage"], description: "Run intelligent diagnostic triage on log events", takes_value: false },
+];
+
+pub const UPDATE_FLAGS_METADATA: &[FlagMeta] = &[
+    FlagMeta { long: "--method", short: None, aliases: &[], description: "Package manager method (cargo, brew, scoop, winget, choco, aur, apt, dnf, pacman, script)", takes_value: true },
+    FlagMeta { long: "--force", short: None, aliases: &[], description: "Force update even if already up to date", takes_value: false },
+    FlagMeta { long: "--check", short: None, aliases: &[], description: "Check for available updates without applying", takes_value: false },
+    FlagMeta { long: "--dry-run", short: None, aliases: &[], description: "Simulate update execution without making changes", takes_value: false },
+    FlagMeta { long: "--channel", short: None, aliases: &[], description: "Release channel (stable, beta, nightly, alpha, dev)", takes_value: true },
+    FlagMeta { long: "--nightly", short: None, aliases: &[], description: "Switch to and install the nightly release channel", takes_value: false },
+    FlagMeta { long: "--beta", short: None, aliases: &[], description: "Switch to and install the beta release channel", takes_value: false },
+    FlagMeta { long: "--stable", short: None, aliases: &[], description: "Switch to and install the stable release channel", takes_value: false },
+    FlagMeta { long: "--yes", short: Some("-y"), aliases: &[], description: "Automatically answer yes to prompts", takes_value: false },
+    FlagMeta { long: "--json", short: None, aliases: &[], description: "Output raw JSON report", takes_value: false },
+];
+
+pub const UNINSTALL_FLAGS_METADATA: &[FlagMeta] = &[
+    FlagMeta { long: "--method", short: None, aliases: &[], description: "Uninstallation method (cargo, brew, scoop, winget, choco, purge)", takes_value: true },
+    FlagMeta { long: "--purge", short: None, aliases: &[], description: "Purge all configuration files, data directories, and logs", takes_value: false },
+    FlagMeta { long: "--force", short: None, aliases: &[], description: "Force uninstallation without confirmation prompts", takes_value: false },
+    FlagMeta { long: "--yes", short: Some("-y"), aliases: &[], description: "Automatically answer yes to confirmation prompts", takes_value: false },
+    FlagMeta { long: "--dry-run", short: None, aliases: &[], description: "Simulate uninstallation without removing files", takes_value: false },
+    FlagMeta { long: "--tui", short: None, aliases: &[], description: "Launch interactive uninstallation wizard", takes_value: false },
+];
+
+pub const INSTALL_FLAGS_METADATA: &[FlagMeta] = &[
+    FlagMeta { long: "--method", short: None, aliases: &[], description: "Installation method (cargo, brew, scoop, winget, choco, script)", takes_value: true },
+    FlagMeta { long: "--force", short: None, aliases: &[], description: "Force reinstall if already installed", takes_value: false },
+    FlagMeta { long: "--channel", short: None, aliases: &[], description: "Release channel to install", takes_value: true },
+    FlagMeta { long: "--headless", short: None, aliases: &[], description: "Run in headless mode without interactive prompts", takes_value: false },
+    FlagMeta { long: "--telemetry", short: None, aliases: &[], description: "Telemetry preference (allow, deny, prompt)", takes_value: true },
+];
+
+pub const BATTLE_FLAGS_METADATA: &[FlagMeta] = &[
+    FlagMeta { long: "--fighter1", short: None, aliases: &[], description: "Name of the first fighter mascot", takes_value: true },
+    FlagMeta { long: "--fighter2", short: None, aliases: &[], description: "Name of the second fighter mascot", takes_value: true },
+    FlagMeta { long: "--name1", short: None, aliases: &[], description: "Display name of the first fighter (default: Alice)", takes_value: true },
+    FlagMeta { long: "--name2", short: None, aliases: &[], description: "Display name of the second fighter (default: Bob)", takes_value: true },
+    FlagMeta { long: "--headless", short: None, aliases: &[], description: "Headless mode (dump battle log without live animation)", takes_value: false },
+    FlagMeta { long: "--winner", short: None, aliases: &[], description: "Force battle victor: 1 for fighter1, 2 for fighter2, 0 for random", takes_value: true },
+    FlagMeta { long: "--fps", short: None, aliases: &[], description: "Frame rate for live animation playback (default: 12)", takes_value: true },
+];
+
+pub const RPS_FLAGS_METADATA: &[FlagMeta] = &[
+    FlagMeta { long: "--choice", short: Some("-c"), aliases: &[], description: "Pre-selected weapon choice: rock (r), paper (p), scissors (s)", takes_value: true },
+    FlagMeta { long: "--player", short: None, aliases: &[], description: "Name of the player mascot / fighter", takes_value: true },
+    FlagMeta { long: "--cpu", short: None, aliases: &[], description: "Name of the computer mascot / fighter", takes_value: true },
+    FlagMeta { long: "--headless", short: None, aliases: &[], description: "Headless mode (dump result without interactive prompt)", takes_value: false },
+    FlagMeta { long: "--fps", short: None, aliases: &[], description: "Frame rate for live joust animation playback (default: 12)", takes_value: true },
+];
+
+pub const IMAGE_FLAGS_METADATA: &[FlagMeta] = &[
+    FlagMeta { long: "--width", short: Some("-w"), aliases: &[], description: "Target width in character columns", takes_value: true },
+    FlagMeta { long: "--height", short: Some("-H"), aliases: &[], description: "Target height in character rows", takes_value: true },
+    FlagMeta { long: "--color", short: Some("-C"), aliases: &[], description: "Color mode: truecolor, ansi256, grayscale, monochrome", takes_value: true },
+    FlagMeta { long: "--ramp", short: None, aliases: &[], description: "Luminance ramp: standard, detailed, blocks", takes_value: true },
+    FlagMeta { long: "--save-cow", short: None, aliases: &[], description: "Save generated ASCII art as custom cow mascot", takes_value: true },
+    FlagMeta { long: "--output", short: Some("-o"), aliases: &[], description: "Output file path to write ASCII art to", takes_value: true },
+    FlagMeta { long: "--invert", short: Some("-i"), aliases: &[], description: "Invert luminance mapping", takes_value: false },
+];
+
+pub const FETCH_FLAGS_METADATA: &[FlagMeta] = &[
+    FlagMeta { long: "--instant", short: Some("-i"), aliases: &[], description: "Force single-frame instantaneous terminal output (default)", takes_value: false },
+    FlagMeta { long: "--live", short: Some("-l"), aliases: &[], description: "Live interactive 240Hz animation mode beside real-time metrics", takes_value: false },
+    FlagMeta { long: "--cow", short: Some("-c"), aliases: &["--animal"], description: "Specific mascot name to display", takes_value: true },
+    FlagMeta { long: "--palette", short: Some("-p"), aliases: &[], description: "Color palette name to apply", takes_value: true },
+];
+
+pub const INIT_FLAGS_METADATA: &[FlagMeta] = &[
+    FlagMeta { long: "--install", short: Some("-i"), aliases: &[], description: "Automatically install / attach hook into shell RC profile", takes_value: false },
+    FlagMeta { long: "--check", short: None, aliases: &[], description: "Only print generated hook without modifying files", takes_value: false },
+];
+
+pub const STOP_FLAGS_METADATA: &[FlagMeta] = &[
+    FlagMeta { long: "--all", short: Some("-a"), aliases: &[], description: "Stop all running Forgum animations across all sessions", takes_value: false },
+    FlagMeta { long: "--force", short: None, aliases: &[], description: "Force kill immediately without waiting for socket shutdown", takes_value: false },
+];
+
+pub const CHECKHEALTH_FLAGS_METADATA: &[FlagMeta] = &[
+    FlagMeta { long: "--json", short: None, aliases: &[], description: "Output raw JSON report instead of formatted terminal report", takes_value: false },
+];
+
+pub const DIAGNOSE_FLAGS_METADATA: &[FlagMeta] = &[
+    FlagMeta { long: "--lines", short: Some("-n"), aliases: &["--limit"], description: "Number of recent log entries to analyze (default: 100)", takes_value: true },
+    FlagMeta { long: "--json", short: None, aliases: &[], description: "Output raw JSON report instead of formatted ANSI report", takes_value: false },
+];
+
+pub const STATUS_LINE_FLAGS_METADATA: &[FlagMeta] = &[
+    FlagMeta { long: "--max-len", short: None, aliases: &[], description: "Maximum visible length in characters (default: 70)", takes_value: true },
+    FlagMeta { long: "--mux", short: None, aliases: &[], description: "Multiplexer widget format: plain, tmux, zellij", takes_value: true },
+];
+
+pub const EFFECT_CHOICES: &[ChoiceMeta] = &[
+    ChoiceMeta { value: "moonwalk", description: "Legendary reverse-glide moonwalk with sliding hooves" },
+    ChoiceMeta { value: "walk", description: "Bovine horizontal walking animation (alias for moonwalk)" },
+    ChoiceMeta { value: "breathe", description: "Gentle breathing idle animation" },
+    ChoiceMeta { value: "float", description: "Drifting levitation animation" },
+    ChoiceMeta { value: "fly", description: "Flying creature animation" },
+    ChoiceMeta { value: "talk", description: "Conversational jaw animation" },
+    ChoiceMeta { value: "sway", description: "Swaying pendulum animation" },
+    ChoiceMeta { value: "pulse", description: "Pulsing scale animation" },
+    ChoiceMeta { value: "glitch", description: "Digital cyberpunk glitch animation" },
+    ChoiceMeta { value: "particles", description: "Ambient particle emitter animation" },
+    ChoiceMeta { value: "dissolve", description: "Dissolve and materialize animation" },
+    ChoiceMeta { value: "matrix", description: "Digital rain stream animation" },
+    ChoiceMeta { value: "squish", description: "Cartoon squash and stretch animation" },
+    ChoiceMeta { value: "abduction", description: "Alien tractor beam abduction animation" },
+    ChoiceMeta { value: "swim", description: "Aquatic swimming locomotion animation" },
+    ChoiceMeta { value: "drift", description: "Submerged aquatic drifting animation" },
+    ChoiceMeta { value: "animal_natural", description: "Unique per-creature natural kinetic animation" },
+    ChoiceMeta { value: "natural", description: "Alias for animal_natural" },
+    ChoiceMeta { value: "random", description: "Randomly select an animation effect each run" },
+    ChoiceMeta { value: "static", description: "Stationary mascot with periodic eye blinks" },
+    ChoiceMeta { value: "aurora", description: "Shimmering polar aurora color wave" },
+];
+
+pub const MOUNTAIN_CHOICES: &[ChoiceMeta] = &[
+    ChoiceMeta { value: "hills", description: "Rolling verdant hills" },
+    ChoiceMeta { value: "peaks", description: "Jagged alpine mountain peaks" },
+    ChoiceMeta { value: "volcano", description: "Active smoldering volcano" },
+    ChoiceMeta { value: "iceberg", description: "Frozen glacier ridges" },
+    ChoiceMeta { value: "skyline", description: "Urban skyscraper silhouette" },
+    ChoiceMeta { value: "seamount", description: "Underwater tectonic ridges" },
+    ChoiceMeta { value: "plateau", description: "Desert mesa and canyon ridges" },
+    ChoiceMeta { value: "crater", description: "Impact rim and astral ridge" },
+    ChoiceMeta { value: "gothic", description: "Spire and cathedral silhouette" },
+    ChoiceMeta { value: "castle", description: "Fortress ramparts and battlements" },
+    ChoiceMeta { value: "garden", description: "Terraced hedge and floral ridge" },
+    ChoiceMeta { value: "none", description: "Disable mountain horizon" },
+    ChoiceMeta { value: "random", description: "Randomly select mountain style" },
+];
+
+pub const ROAD_CHOICES: &[ChoiceMeta] = &[
+    ChoiceMeta { value: "dirt", description: "Countryside dirt trail" },
+    ChoiceMeta { value: "cobblestone", description: "Medieval stone pavement" },
+    ChoiceMeta { value: "magma", description: "Cracked volcanic basalt" },
+    ChoiceMeta { value: "ice", description: "Packed snow and crystalline ice" },
+    ChoiceMeta { value: "seabed", description: "Ripple sands and deep coral" },
+    ChoiceMeta { value: "sidewalk", description: "Paved urban asphalt" },
+    ChoiceMeta { value: "roof", description: "Ceramic roof shingles" },
+    ChoiceMeta { value: "grid", description: "Neon vector cyber grid" },
+    ChoiceMeta { value: "crypt", description: "Dark catacomb flagstones" },
+    ChoiceMeta { value: "savanna", description: "Sun-baked arid trail" },
+    ChoiceMeta { value: "mud", description: "Squishy wet soil" },
+    ChoiceMeta { value: "tracks", description: "Parallel steel railroad ties" },
+    ChoiceMeta { value: "checkerboard", description: "High-contrast dual tiles" },
+    ChoiceMeta { value: "none", description: "Disable ground layer" },
+    ChoiceMeta { value: "random", description: "Randomly select road style" },
+];
+
+pub const ENVIRONMENT_CHOICES: &[ChoiceMeta] = &[
+    ChoiceMeta { value: "pasture", description: "Peaceful open meadows" },
+    ChoiceMeta { value: "inferno", description: "Blazing magma chambers" },
+    ChoiceMeta { value: "ocean", description: "Deep sea aquatic realm" },
+    ChoiceMeta { value: "arctic", description: "Frozen tundra and blizzard" },
+    ChoiceMeta { value: "city", description: "Bustling metropolitan skyline" },
+    ChoiceMeta { value: "forest", description: "Ancient whispering woodlands" },
+    ChoiceMeta { value: "savanna", description: "Sun-drenched golden plains" },
+    ChoiceMeta { value: "swamp", description: "Murky bayou and mist" },
+    ChoiceMeta { value: "space", description: "Deep cosmos and stellar void" },
+    ChoiceMeta { value: "cyber", description: "Neon digital matrix" },
+    ChoiceMeta { value: "graveyard", description: "Foggy gothic cemetery" },
+    ChoiceMeta { value: "jurassic", description: "Prehistoric primeval wilds" },
+    ChoiceMeta { value: "hive", description: "Organic bio-mechanical hive" },
+    ChoiceMeta { value: "throne", description: "Imperial gothic sanctuary" },
+    ChoiceMeta { value: "none", description: "Disable particle effects" },
+    ChoiceMeta { value: "random", description: "Randomly select environment" },
+];
+
+pub const COLOR_MODE_CHOICES: &[ChoiceMeta] = &[
+    ChoiceMeta { value: "natural", description: "Authentic biological color palette unique to each creature" },
+    ChoiceMeta { value: "animal_natural", description: "Alias for natural" },
+    ChoiceMeta { value: "default", description: "Creature natural wildlife colors" },
+    ChoiceMeta { value: "animal", description: "Alias for default" },
+    ChoiceMeta { value: "rainbow", description: "Refined saturated TrueColor OKLCH rainbow wave" },
+    ChoiceMeta { value: "lolcat", description: "Classic 256-color stepped rainbow prism" },
+    ChoiceMeta { value: "solid", description: "Clean crisp monochrome terminal output" },
+    ChoiceMeta { value: "none", description: "Unstyled terminal default text color" },
+];
+
+pub const ACCEL_CHOICES: &[ChoiceMeta] = &[
+    ChoiceMeta { value: "auto", description: "Automatic GPU detection with CPU fallback" },
+    ChoiceMeta { value: "dedicated", description: "Prefer dedicated GPU hardware cores and VRAM (e.g. NVIDIA RTX)" },
+    ChoiceMeta { value: "integrated", description: "Prefer integrated/internal graphics APU (e.g. AMD Radeon / Intel Iris)" },
+    ChoiceMeta { value: "npu", description: "Prefer neural processing unit hardware (DirectML / CoreML / AI Boost)" },
+    ChoiceMeta { value: "cpu", description: "Force pure CPU computing" },
+];
+
+pub const TIME_OF_DAY_CHOICES: &[ChoiceMeta] = &[
+    ChoiceMeta { value: "auto", description: "Dynamic clock synchronization with local system time" },
+    ChoiceMeta { value: "dawn", description: "Early morning sunrise with warm low-angle golden light" },
+    ChoiceMeta { value: "day", description: "High-noon solar brilliance and full daylight exposure" },
+    ChoiceMeta { value: "dusk", description: "Deep crimson twilight sunset and purple horizon gradients" },
+    ChoiceMeta { value: "night", description: "Midnight lunar glow with deep navy indigo shadows" },
+];
+
+pub const SEASON_CHOICES: &[ChoiceMeta] = &[
+    ChoiceMeta { value: "auto", description: "Dynamic calendar synchronization based on local month" },
+    ChoiceMeta { value: "spring", description: "Vernal awakening with blooming sakura petals and lime buds" },
+    ChoiceMeta { value: "summer", description: "Lush peak chlorophyll synthesis with rich deep emerald canopy" },
+    ChoiceMeta { value: "autumn", description: "Golden senescence with amber and scarlet deciduous foliage" },
+    ChoiceMeta { value: "winter", description: "Skeletal defoliation and frosty conifer needles" },
+];
+
+pub const COLORBLIND_CHOICES: &[ChoiceMeta] = &[
+    ChoiceMeta { value: "none", description: "Standard full-color spectrum" },
+    ChoiceMeta { value: "protanopia", description: "Red-weak/blind Daltonization (enhanced blue/amber contrast)" },
+    ChoiceMeta { value: "deuteranopia", description: "Green-weak/blind Daltonization (enhanced yellow/blue contrast)" },
+    ChoiceMeta { value: "tritanopia", description: "Blue-weak/blind Daltonization (enhanced red/cyan contrast)" },
+    ChoiceMeta { value: "achromatopsia", description: "Complete monochrome luminance grayscale" },
+    ChoiceMeta { value: "protanopia_sim", description: "Protanopia LMS simulation filter (inspection mode)" },
+    ChoiceMeta { value: "deuteranopia_sim", description: "Deuteranopia LMS simulation filter (inspection mode)" },
+    ChoiceMeta { value: "tritanopia_sim", description: "Tritanopia LMS simulation filter (inspection mode)" },
+];
+
+pub const SHELL_ATTACH_CHOICES: &[ChoiceMeta] = &[
+    ChoiceMeta { value: "startup", description: "Static Fastfetch-style banner on shell launch (0 prompt latency)" },
+    ChoiceMeta { value: "prompt", description: "Interactive prompt hook updating after each command" },
+    ChoiceMeta { value: "clear", description: "Single banner and re-rendering exclusively after clear/cls" },
+    ChoiceMeta { value: "split", description: "Hardware DECSTBM top margin reservation" },
+    ChoiceMeta { value: "pane", description: "Multiplexer split pane or background daemon" },
+];
+
+pub const ASPECT_CHOICES: &[ChoiceMeta] = &[
+    ChoiceMeta { value: "auto", description: "Dynamic detection from active terminal dimensions" },
+    ChoiceMeta { value: "21:9", description: "Ultrawide panoramic display format" },
+    ChoiceMeta { value: "16:9", description: "Widescreen standard (16:9)" },
+    ChoiceMeta { value: "16:10", description: "Golden tall 16:10 ratio" },
+    ChoiceMeta { value: "4:3", description: "Classic standard 4:3 format" },
+    ChoiceMeta { value: "1:1", description: "Square 1:1 display format" },
+    ChoiceMeta { value: "narrow", description: "Vertical mobile & split pane format" },
+];
+
+pub const ASPECT_MODE_CHOICES: &[ChoiceMeta] = &[
+    ChoiceMeta { value: "preset", description: "Lock to selected aspect preset" },
+    ChoiceMeta { value: "dynamic", description: "Live recalculation on window resize" },
+    ChoiceMeta { value: "auto", description: "Context-aware adaptation" },
+];
+
+pub const SPLIT_MODE_CHOICES: &[ChoiceMeta] = &[
+    ChoiceMeta { value: "decstbm", description: "DECSTBM hardware scroll margins" },
+    ChoiceMeta { value: "native", description: "Native pane split via tmux/wezterm/wt.exe" },
+    ChoiceMeta { value: "precmd", description: "Dynamic inline shell prompt redraw fallback" },
+    ChoiceMeta { value: "seamless", description: "Seamless virtual split margin reservation" },
+    ChoiceMeta { value: "auto", description: "Detect best split mode based on terminal emulator" },
+];
+
+pub const RANDOM_CHOICES: &[ChoiceMeta] = &[
+    ChoiceMeta { value: "all", description: "Randomize mascot, scenery, effect, and thought" },
+    ChoiceMeta { value: "mascot", description: "Randomize animal mascot only" },
+    ChoiceMeta { value: "scenery", description: "Randomize environment, mountain, and road only" },
+    ChoiceMeta { value: "fx", description: "Randomize animation effect only" },
+    ChoiceMeta { value: "thought", description: "Randomize fortune / thought text only" },
+];
+
+pub const PACKAGE_MANAGER_CHOICES: &[ChoiceMeta] = &[
+    ChoiceMeta { value: "cargo", description: "Rust Cargo package manager (`cargo install`)" },
+    ChoiceMeta { value: "brew", description: "Homebrew package manager (`brew upgrade forgum`)" },
+    ChoiceMeta { value: "scoop", description: "Scoop Windows package manager (`scoop update forgum`)" },
+    ChoiceMeta { value: "winget", description: "Windows Package Manager (`winget upgrade forgum`)" },
+    ChoiceMeta { value: "choco", description: "Chocolatey Windows package manager (`choco upgrade forgum`)" },
+    ChoiceMeta { value: "aur", description: "Arch Linux User Repository (`paru` or `yay -S forgum`)" },
+    ChoiceMeta { value: "apt", description: "Debian / Ubuntu APT package repository" },
+    ChoiceMeta { value: "dnf", description: "Fedora / RHEL DNF package repository" },
+    ChoiceMeta { value: "pacman", description: "Arch Linux pacman package repository" },
+    ChoiceMeta { value: "zypper", description: "openSUSE Zypper package repository" },
+    ChoiceMeta { value: "nix", description: "Nix / NixOS package manager" },
+    ChoiceMeta { value: "alpine", description: "Alpine Linux apk package manager" },
+    ChoiceMeta { value: "script", description: "Standalone installer shell script" },
+    ChoiceMeta { value: "purge", description: "Clean slate uninstallation (removes all configs and data)" },
+];
+
+pub const CHANNEL_CHOICES: &[ChoiceMeta] = &[
+    ChoiceMeta { value: "stable", description: "Official production release channel" },
+    ChoiceMeta { value: "beta", description: "Pre-release testing channel" },
+    ChoiceMeta { value: "nightly", description: "Bleeding-edge daily builds" },
+    ChoiceMeta { value: "alpha", description: "Early feature prototype channel" },
+    ChoiceMeta { value: "dev", description: "Development channel synced to main branch" },
+];
+
+pub const MIGRATE_CHOICES: &[ChoiceMeta] = &[
+    ChoiceMeta { value: "json", description: "Serialize configuration to JSON (.json)" },
+    ChoiceMeta { value: "yaml", description: "Serialize configuration to YAML (.yaml)" },
+    ChoiceMeta { value: "toml", description: "Serialize configuration to TOML (.toml)" },
+];
+
+pub const LOG_LEVEL_CHOICES: &[ChoiceMeta] = &[
+    ChoiceMeta { value: "TRACE", description: "Extremely verbose internal execution tracing" },
+    ChoiceMeta { value: "DEBUG", description: "Diagnostic debugging information" },
+    ChoiceMeta { value: "INFO", description: "Standard operational events and lifecycle notices" },
+    ChoiceMeta { value: "WARN", description: "Potential issues or recoverable errors" },
+    ChoiceMeta { value: "ERROR", description: "Critical failures and fatal exceptions" },
+];
+
+pub const RPS_CHOICES: &[ChoiceMeta] = &[
+    ChoiceMeta { value: "rock", description: "Rock (crushes scissors)" },
+    ChoiceMeta { value: "paper", description: "Paper (covers rock)" },
+    ChoiceMeta { value: "scissors", description: "Scissors (cuts paper)" },
+    ChoiceMeta { value: "r", description: "Alias for rock" },
+    ChoiceMeta { value: "p", description: "Alias for paper" },
+    ChoiceMeta { value: "s", description: "Alias for scissors" },
+];
+
+pub const IMAGE_COLOR_CHOICES: &[ChoiceMeta] = &[
+    ChoiceMeta { value: "truecolor", description: "24-bit RGB TrueColor output" },
+    ChoiceMeta { value: "ansi256", description: "Standard 256-color ANSI terminal palette" },
+    ChoiceMeta { value: "grayscale", description: "Monochrome luminance grayscale" },
+    ChoiceMeta { value: "monochrome", description: "Pure unstyled black and white text" },
+];
+
+pub const IMAGE_RAMP_CHOICES: &[ChoiceMeta] = &[
+    ChoiceMeta { value: "standard", description: "Standard ASCII character luminance ramp" },
+    ChoiceMeta { value: "detailed", description: "Extended high-density luminance ramp" },
+    ChoiceMeta { value: "blocks", description: "Unicode block element ramp" },
+];
+
+pub const BATTLE_WINNER_CHOICES: &[ChoiceMeta] = &[
+    ChoiceMeta { value: "0", description: "Random winner based on momentum and combat rolls" },
+    ChoiceMeta { value: "1", description: "Force victory for Fighter 1" },
+    ChoiceMeta { value: "2", description: "Force victory for Fighter 2" },
+];
+
+pub const STATUS_LINE_MUX_CHOICES: &[ChoiceMeta] = &[
+    ChoiceMeta { value: "plain", description: "Plain ANSI text without multiplexer escapes" },
+    ChoiceMeta { value: "tmux", description: "tmux status-right format string" },
+    ChoiceMeta { value: "zellij", description: "Zellij widget format" },
+];
+
+pub const SHELL_POSITIONAL_CHOICES: &[ChoiceMeta] = &[
+    ChoiceMeta { value: "bash", description: "Bourne Again SHell" },
+    ChoiceMeta { value: "zsh", description: "Z Shell with prompt themes and syntax highlighting" },
+    ChoiceMeta { value: "fish", description: "Friendly Interactive Shell" },
+    ChoiceMeta { value: "pwsh", description: "PowerShell Core (cross-platform 7+)" },
+    ChoiceMeta { value: "powershell", description: "Windows PowerShell 5.1" },
+    ChoiceMeta { value: "nushell", description: "Nu structured data shell" },
+    ChoiceMeta { value: "elvish", description: "Elvish expressive shell" },
+    ChoiceMeta { value: "carapace", description: "Carapace multi-shell completer spec" },
+    ChoiceMeta { value: "xonsh", description: "Python-powered shell" },
+    ChoiceMeta { value: "tcsh", description: "C shell with file name completion" },
+    ChoiceMeta { value: "ksh", description: "KornShell" },
+    ChoiceMeta { value: "ion", description: "Redox OS Ion shell" },
+    ChoiceMeta { value: "oil", description: "Oil / OSH shell" },
+    ChoiceMeta { value: "yash", description: "Yet Another Shell (POSIX conforming)" },
+    ChoiceMeta { value: "cmd", description: "Windows Command Prompt (init banner only)" },
+    ChoiceMeta { value: "list", description: "Display supported shells and config paths" },
+];
+
+pub const LIST_CATEGORY_CHOICES: &[ChoiceMeta] = &[
+    ChoiceMeta { value: "all", description: "Inspect all available categories" },
+    ChoiceMeta { value: "animals", description: "View all 106 available animal mascots" },
+    ChoiceMeta { value: "effects", description: "View all kinetic animation effects" },
+    ChoiceMeta { value: "scenery", description: "View mountain, road, and environment styles" },
+    ChoiceMeta { value: "colors", description: "View color modes, palettes, and colorblind filters" },
+    ChoiceMeta { value: "shells", description: "View supported shells and integration hooks" },
+    ChoiceMeta { value: "mountains", description: "View procedural mountain horizon styles" },
+    ChoiceMeta { value: "roads", description: "View procedural road and ground terrain styles" },
+    ChoiceMeta { value: "environments", description: "View atmospheric particle environment systems" },
+    ChoiceMeta { value: "config", description: "View configuration keys and data types" },
+    ChoiceMeta { value: "multiplexers", description: "View supported terminal multiplexers" },
+    ChoiceMeta { value: "eyes", description: "View expressive custom eye presets" },
+    ChoiceMeta { value: "tongue", description: "View expressive custom tongue presets" },
+];
+
+pub const CHANNEL_POSITIONAL_CHOICES: &[ChoiceMeta] = &[
+    ChoiceMeta { value: "get", description: "Display current active release channel" },
+    ChoiceMeta { value: "set", description: "Switch to a specific release channel" },
+    ChoiceMeta { value: "list", description: "List all available release channels" },
+    ChoiceMeta { value: "switch", description: "Alias for set" },
+    ChoiceMeta { value: "stable", description: "Switch directly to stable channel" },
+    ChoiceMeta { value: "beta", description: "Switch directly to beta channel" },
+    ChoiceMeta { value: "nightly", description: "Switch directly to nightly channel" },
+    ChoiceMeta { value: "alpha", description: "Switch directly to alpha channel" },
+    ChoiceMeta { value: "dev", description: "Switch directly to dev channel" },
+];
+
+pub const HERD_POSITIONAL_CHOICES: &[ChoiceMeta] = &[
+    ChoiceMeta { value: "list", description: "List all running daemons" },
+    ChoiceMeta { value: "stop", description: "Stop all (or filtered) daemons" },
+    ChoiceMeta { value: "effect", description: "Set animation effect on daemons" },
+    ChoiceMeta { value: "cow", description: "Set mascot model on daemons" },
+    ChoiceMeta { value: "eyes", description: "Set eyes glyph on daemons" },
+    ChoiceMeta { value: "tongue", description: "Set tongue glyph on daemons" },
+    ChoiceMeta { value: "color", description: "Set color mode on daemons" },
+    ChoiceMeta { value: "speed", description: "Set animation speed multiplier on daemons" },
+    ChoiceMeta { value: "pause", description: "Pause animations on daemons" },
+    ChoiceMeta { value: "resume", description: "Resume animations on daemons" },
+    ChoiceMeta { value: "quiet", description: "Drop all daemons to low FPS idle" },
+    ChoiceMeta { value: "follow", description: "Animate only the currently focused pane" },
+    ChoiceMeta { value: "health", description: "Health check on all daemons" },
+];
+
+pub const TMUX_POSITIONAL_CHOICES: &[ChoiceMeta] = &[
+    ChoiceMeta { value: "install", description: "Print tmux configuration block" },
+    ChoiceMeta { value: "zellij", description: "Print zellij configuration block" },
+    ChoiceMeta { value: "wezterm", description: "Print wezterm configuration block" },
+    ChoiceMeta { value: "screen", description: "Print GNU screen configuration block" },
+    ChoiceMeta { value: "list", description: "List supported multiplexer options" },
+];
+
+pub const THEME_POSITIONAL_CHOICES: &[ChoiceMeta] = &[
+    ChoiceMeta { value: "list", description: "List available themes" },
+    ChoiceMeta { value: "set", description: "Set active mascot theme" },
+    ChoiceMeta { value: "get", description: "Display current active theme" },
+];
+
+pub const CONFIG_KEYS_METADATA: &[ConfigKeyMeta] = &[
+    ConfigKeyMeta { key: "cow", aliases: &["animal"], value_type: "string", description: "Animal mascot name (default, tux, dragon, random...)" },
+    ConfigKeyMeta { key: "effect", aliases: &["animation_type", "anim_type", "fx"], value_type: "string", description: "Animation effect (moonwalk, walk, breathe, float, animal_natural...)" },
+    ConfigKeyMeta { key: "color_mode", aliases: &["color-mode"], value_type: "string", description: "Color rendering mode (natural, animal, rainbow, solid, none)" },
+    ConfigKeyMeta { key: "mountain", aliases: &["mtn"], value_type: "string", description: "Procedural mountain horizon (hills, peaks, volcano, none)" },
+    ConfigKeyMeta { key: "road", aliases: &[], value_type: "string", description: "Ground/road terrain style (dirt, cobblestone, magma, none)" },
+    ConfigKeyMeta { key: "environment", aliases: &["env"], value_type: "string", description: "Atmospheric particle environment (pasture, inferno, ocean, none)" },
+    ConfigKeyMeta { key: "palette", aliases: &[], value_type: "string", description: "Custom hex palette gradient (e.g. '#ff007f,#00f0ff')" },
+    ConfigKeyMeta { key: "accel_mode", aliases: &["accel", "acceleration_mode", "gpu_mode"], value_type: "string", description: "Hardware acceleration mode (auto, dedicated, integrated, npu, cpu)" },
+    ConfigKeyMeta { key: "time_of_day", aliases: &["tod", "time-of-day"], value_type: "string", description: "Solar illumination mode (auto, dawn, day, dusk, night)" },
+    ConfigKeyMeta { key: "season", aliases: &[], value_type: "string", description: "Seasonal foliage phenology (auto, spring, summer, autumn, winter)" },
+    ConfigKeyMeta { key: "aspect", aliases: &["aspect_ratio", "aspect-ratio"], value_type: "string", description: "Viewport aspect ratio preset (auto, 21:9, 16:9, 4:3, 1:1)" },
+    ConfigKeyMeta { key: "aspect_mode", aliases: &["aspect-mode"], value_type: "string", description: "Aspect ratio adaptation mode (preset, dynamic, auto)" },
+    ConfigKeyMeta { key: "colorblind_mode", aliases: &["colorblind", "cvd"], value_type: "string", description: "Color vision deficiency mode (none, protanopia, deuteranopia...)" },
+    ConfigKeyMeta { key: "shell_attach_mode", aliases: &["attach_mode", "shell-attach-mode"], value_type: "string", description: "Shell execution attach mode (startup, prompt, clear, split, pane)" },
+    ConfigKeyMeta { key: "split_mode", aliases: &["split-mode"], value_type: "string", description: "Split adapter mode (decstbm, native, precmd, seamless, auto)" },
+    ConfigKeyMeta { key: "duration", aliases: &[], value_type: "integer", description: "Playback duration in seconds (0 = infinite)" },
+    ConfigKeyMeta { key: "fps", aliases: &[], value_type: "integer", description: "Target frames per second (1-240)" },
+    ConfigKeyMeta { key: "background", aliases: &[], value_type: "boolean", description: "Render above prompt as non-blocking overlay (true/false)" },
+    ConfigKeyMeta { key: "think", aliases: &[], value_type: "boolean", description: "Render thought bubble instead of speech bubble (true/false)" },
+    ConfigKeyMeta { key: "banner", aliases: &["banner_mode", "banner-mode"], value_type: "boolean", description: "Render inline as animated banner above prompt (true/false)" },
+    ConfigKeyMeta { key: "thought_interval", aliases: &["thought-interval"], value_type: "integer", description: "Interval in seconds to rotate fortunes in background mode" },
+    ConfigKeyMeta { key: "split_scroll", aliases: &["split-scroll"], value_type: "boolean", description: "Lock terminal scroll margins below animation (true/false)" },
+    ConfigKeyMeta { key: "reserve_rows", aliases: &["reserve-rows"], value_type: "integer", description: "Reserve top N rows for persistent animation canvas" },
+    ConfigKeyMeta { key: "reserve_cols", aliases: &["reserve-cols"], value_type: "integer", description: "Reserve top N columns for animation canvas" },
+    ConfigKeyMeta { key: "split_ratio", aliases: &["split-ratio"], value_type: "float", description: "Fractional ratio of terminal height to reserve (0.1..0.8)" },
+    ConfigKeyMeta { key: "text", aliases: &[], value_type: "string", description: "Default text inside speech bubble" },
+    ConfigKeyMeta { key: "eyes", aliases: &[], value_type: "string", description: "Custom eyes glyph (e.g. oo, $$, @@)" },
+    ConfigKeyMeta { key: "tongue", aliases: &[], value_type: "string", description: "Custom tongue glyph (e.g. U, ||)" },
+    ConfigKeyMeta { key: "default_shell", aliases: &["default-shell"], value_type: "string", description: "Default shell for hook generation" },
+    ConfigKeyMeta { key: "auto_render_on_prompt", aliases: &["auto-render-on-prompt"], value_type: "boolean", description: "Automatically render cow when prompt appears (true/false)" },
+    ConfigKeyMeta { key: "reduce_motion", aliases: &["reduce-motion", "reduced_motion"], value_type: "boolean", description: "Disable animations, keep gentle fades only (true/false)" },
+    ConfigKeyMeta { key: "text_only", aliases: &["text-only", "fortune_only"], value_type: "boolean", description: "Print fortune text without ASCII mascot art (true/false)" },
+    ConfigKeyMeta { key: "editor", aliases: &[], value_type: "string", description: "Preferred text editor command (nvim, vim, nano, auto)" },
+    ConfigKeyMeta { key: "update_method", aliases: &["update-method"], value_type: "string", description: "Preferred package manager / update method (prompt, auto, scoop...)" },
+    ConfigKeyMeta { key: "check_updates", aliases: &["check-updates", "update_check"], value_type: "boolean", description: "Enable automatic background update check notifications (true/false)" },
+    ConfigKeyMeta { key: "random", aliases: &[], value_type: "string", description: "Universal random mode (all, mascot, scenery, fx, thought, true/false)" },
+];
+
+pub const ALL_ANIMALS: &[&str] = &[
+    "apt", "armadillo", "atat", "bearface", "beavis.zen", "bees", "bill-the-cat",
+    "bud-frogs", "bunny", "cat", "cat2", "catfence", "charizardvice", "charlie",
+    "claw-arm", "corgi", "cower", "cowfee", "cthulhu-mini", "daemon", "default",
+    "docker-whale", "doge", "dolphin", "dragon", "dragon-and-cow", "duck", "ebi_furai",
+    "elephant", "elephant-in-snake", "elephant2", "eyes", "fat-banana", "fat-cow",
+    "fence", "flaming-sheep", "fox", "ghost", "ghostbusters", "glados", "goat",
+    "goat2", "golden-eagle", "hamster", "happy-whale", "hedgehog", "hellokitty",
+    "hippie", "hiya", "hypno", "jellyfish", "jesus", "king", "kiss", "kitten",
+    "kitty", "knight", "koala", "kosh", "lamb", "lamb2", "lobster", "lollerskates",
+    "luke-koala", "mech-and-cow", "meow", "minotaur", "mona-lisa", "moofasa",
+    "mooghidjirah", "moojira", "moose", "mule", "mutilated", "nyan", "octopus",
+    "owl", "panther", "pawn", "periodic-table", "personality-sphere", "pig",
+    "pterodactyl", "pufferfish", "queen", "radioactive-kitty", "ram", "ren",
+    "rhino", "rook", "rooster", "satanic", "sauron", "seahorse", "seahorse-big",
+    "sheep", "shikato", "shrug", "skeleton", "sloth", "small", "smiling-octopus",
+    "snoopy", "snoopyhouse", "snoopysleep", "spidercow", "squid", "squirrel",
+    "stegosaurus", "stimpy", "supermilker", "surgery", "telebears", "three-eyes",
+    "tiger", "tortoise", "turkey", "turtle", "tux", "tux-big", "tweety-bird",
+    "unipony", "vader", "viper", "vulpix", "walrus", "weeping-angel", "whale",
+    "wizard", "wolf", "world", "yoda", "random",
+];
+
+/// Get list of all available subcommands (name, description).
+pub fn all_subcommands() -> Vec<(&'static str, &'static str)> {
+    SUBCOMMAND_METADATA.iter().map(|s| (s.name, s.description)).collect()
+}
+
+/// Get list of all root flags (display, description).
+pub fn all_root_flags() -> Vec<(&'static str, &'static str)> {
+    ROOT_FLAGS_METADATA
+        .iter()
+        .map(|f| (f.long, f.description))
+        .collect()
+}
+
+/// Look up flag metadata slice for a specific subcommand.
+pub fn flag_metas_for_subcommand(subcmd: &str) -> Option<&'static [FlagMeta]> {
+    let metas = match subcmd {
+        "config" => CONFIG_FLAGS_METADATA,
+        "logs" | "log" | "view-logs" | "show-logs" => LOGS_FLAGS_METADATA,
+        "update" | "upgrade" => UPDATE_FLAGS_METADATA,
+        "uninstall" | "deorbit" | "remove" => UNINSTALL_FLAGS_METADATA,
+        "install" | "setup" => INSTALL_FLAGS_METADATA,
+        "battle" | "arena" => BATTLE_FLAGS_METADATA,
+        "rps" | "rps-battle" => RPS_FLAGS_METADATA,
+        "image" => IMAGE_FLAGS_METADATA,
+        "fetch" | "sysinfo" | "info" | "neofetch" | "fastfetch" => FETCH_FLAGS_METADATA,
+        "init" => INIT_FLAGS_METADATA,
+        "stop" | "kill" | "halt" | "reset" | "unreserve" | "clear" | "clear-margins" | "clear_margins" => STOP_FLAGS_METADATA,
+        "checkhealth" | "health" => CHECKHEALTH_FLAGS_METADATA,
+        "diagnose" | "triage" | "bugradar" => DIAGNOSE_FLAGS_METADATA,
+        "status-line" => STATUS_LINE_FLAGS_METADATA,
+        "render" | "think" => ROOT_FLAGS_METADATA,
+        _ => return None,
+    };
+    Some(metas)
+}
+
+/// Look up valid flags for a specific subcommand.
+pub fn flags_for_subcommand(subcmd: &str) -> Option<Vec<(&'static str, &'static str)>> {
+    flag_metas_for_subcommand(subcmd)
+        .map(|metas| metas.iter().map(|f| (f.long, f.description)).collect())
+}
+
+/// Look up valid choices for a specific flag (flag name or short alias).
+pub fn choices_for_flag(flag: &str) -> Option<Vec<(&'static str, &'static str)>> {
+    let clean = flag.trim_start_matches('-');
+    match clean {
+        "effect" | "e" | "anim-type" | "fx" | "anim" | "animation-type" => {
+            Some(EFFECT_CHOICES.iter().map(|c| (c.value, c.description)).collect())
+        }
+        "mountain" => Some(MOUNTAIN_CHOICES.iter().map(|c| (c.value, c.description)).collect()),
+        "road" => Some(ROAD_CHOICES.iter().map(|c| (c.value, c.description)).collect()),
+        "environment" | "env" | "scenery" => {
+            Some(ENVIRONMENT_CHOICES.iter().map(|c| (c.value, c.description)).collect())
+        }
+        "color-mode" => {
+            Some(COLOR_MODE_CHOICES.iter().map(|c| (c.value, c.description)).collect())
+        }
+        "accel" => Some(ACCEL_CHOICES.iter().map(|c| (c.value, c.description)).collect()),
+        "time-of-day" | "tod" => {
+            Some(TIME_OF_DAY_CHOICES.iter().map(|c| (c.value, c.description)).collect())
+        }
+        "season" => Some(SEASON_CHOICES.iter().map(|c| (c.value, c.description)).collect()),
+        "colorblind" | "cvd" => {
+            Some(COLORBLIND_CHOICES.iter().map(|c| (c.value, c.description)).collect())
+        }
+        "shell-attach-mode" | "attach-mode" => {
+            Some(SHELL_ATTACH_CHOICES.iter().map(|c| (c.value, c.description)).collect())
+        }
+        "aspect" | "aspect-ratio" => {
+            Some(ASPECT_CHOICES.iter().map(|c| (c.value, c.description)).collect())
+        }
+        "aspect-mode" => {
+            Some(ASPECT_MODE_CHOICES.iter().map(|c| (c.value, c.description)).collect())
+        }
+        "split-mode" => {
+            Some(SPLIT_MODE_CHOICES.iter().map(|c| (c.value, c.description)).collect())
+        }
+        "random" | "r" => {
+            Some(RANDOM_CHOICES.iter().map(|c| (c.value, c.description)).collect())
+        }
+        "method" => {
+            Some(PACKAGE_MANAGER_CHOICES.iter().map(|c| (c.value, c.description)).collect())
+        }
+        "channel" => Some(CHANNEL_CHOICES.iter().map(|c| (c.value, c.description)).collect()),
+        "migrate" => Some(MIGRATE_CHOICES.iter().map(|c| (c.value, c.description)).collect()),
+        "level" | "l" => {
+            Some(LOG_LEVEL_CHOICES.iter().map(|c| (c.value, c.description)).collect())
+        }
+        "choice" | "c" => Some(RPS_CHOICES.iter().map(|c| (c.value, c.description)).collect()),
+        "color" | "C" => {
+            Some(IMAGE_COLOR_CHOICES.iter().map(|c| (c.value, c.description)).collect())
+        }
+        "ramp" => Some(IMAGE_RAMP_CHOICES.iter().map(|c| (c.value, c.description)).collect()),
+        "winner" => Some(BATTLE_WINNER_CHOICES.iter().map(|c| (c.value, c.description)).collect()),
+        "mux" => Some(STATUS_LINE_MUX_CHOICES.iter().map(|c| (c.value, c.description)).collect()),
+        "cow" | "animal" | "a" => {
+            Some(ALL_ANIMALS.iter().map(|&a| (a, "Mascot character")).collect())
+        }
+        _ => None,
+    }
+}
+
+/// Check if a flag takes a value.
+pub fn flag_takes_value(flag: &str) -> bool {
+    let clean = flag.trim_start_matches('-');
+    matches!(
+        clean,
+        "cow"
+            | "animal"
+            | "c"
+            | "a"
+            | "effect"
+            | "e"
+            | "anim"
+            | "anim-type"
+            | "animation-type"
+            | "fx"
+            | "mountain"
+            | "road"
+            | "environment"
+            | "env"
+            | "scenery"
+            | "color-mode"
+            | "palette"
+            | "p"
+            | "accel"
+            | "time-of-day"
+            | "tod"
+            | "season"
+            | "aspect"
+            | "aspect-ratio"
+            | "aspect-mode"
+            | "colorblind"
+            | "cvd"
+            | "shell-attach-mode"
+            | "attach-mode"
+            | "split-mode"
+            | "duration"
+            | "d"
+            | "fps"
+            | "thought-interval"
+            | "reserve-rows"
+            | "reserve-cols"
+            | "split-ratio"
+            | "text"
+            | "t"
+            | "eyes"
+            | "tongue"
+            | "image"
+            | "config"
+            | "file"
+            | "f"
+            | "random"
+            | "r"
+            | "method"
+            | "channel"
+            | "migrate"
+            | "lines"
+            | "n"
+            | "limit"
+            | "level"
+            | "l"
+            | "filter"
+            | "s"
+            | "grep"
+            | "query"
+            | "search"
+            | "fighter1"
+            | "fighter2"
+            | "name1"
+            | "name2"
+            | "winner"
+            | "choice"
+            | "player"
+            | "cpu"
+            | "width"
+            | "w"
+            | "height"
+            | "H"
+            | "color"
+            | "C"
+            | "ramp"
+            | "save-cow"
+            | "output"
+            | "o"
+            | "telemetry"
+            | "max-len"
+            | "mux"
+    )
+}
+
+/// Format rich LSP diagnostic for invalid flag values.
+pub fn format_invalid_value_error(
+    flag_name: &str,
+    invalid_val: &str,
+    closest: Option<&str>,
+    valid_choices: &[(&str, &str)],
+) -> String {
+    let mut out = format!("❌ Error: Invalid value '{invalid_val}' for flag '{flag_name}'.");
+    if let Some(c) = closest {
+        out.push_str(&format!("\n💡 Did you mean '{c}'?"));
+    }
+    out.push_str(&format!("\n\nValid values for '{flag_name}':"));
+    for (val, desc) in valid_choices {
+        out.push_str(&format!("\n  • {:<16} {}", val, desc));
+    }
+    out
+}
+
+/// Format rich LSP diagnostic for unknown subcommands.
+pub fn format_unknown_subcommand_error(
+    invalid_sub: &str,
+    closest: Option<&str>,
+    available_subcommands: &[(&str, &str)],
+) -> String {
+    let mut out = format!("❌ Error: Unrecognized subcommand '{invalid_sub}'.");
+    if let Some(c) = closest {
+        out.push_str(&format!("\n💡 Did you mean '{c}'?"));
+    }
+    out.push_str("\n\nAvailable subcommands:");
+    for (name, desc) in available_subcommands {
+        out.push_str(&format!("\n  • {:<16} {}", name, desc));
+    }
+    out
+}
+
+/// Format rich LSP diagnostic for unknown flags under a subcommand.
+pub fn format_unknown_subcommand_flag_error(
+    subcmd: &str,
+    invalid_flag: &str,
+    closest: Option<&str>,
+    valid_flags: &[(&str, &str)],
+) -> String {
+    let mut out = format!("❌ Error: Unknown flag '{invalid_flag}' for subcommand '{subcmd}'.");
+    if let Some(c) = closest {
+        out.push_str(&format!("\n💡 Did you mean '{c}'?"));
+    }
+    out.push_str(&format!("\n\nValid flags for '{subcmd}':"));
+    for (flag, desc) in valid_flags {
+        out.push_str(&format!("\n  • {:<20} {}", flag, desc));
+    }
+    out
+}
+
+/// Format rich LSP diagnostic for unknown flags at root.
+pub fn format_unknown_root_flag_error(
+    invalid_flag: &str,
+    closest: Option<&str>,
+    valid_flags: &[(&str, &str)],
+) -> String {
+    let mut out = format!("❌ Error: Unknown flag '{invalid_flag}'.");
+    if let Some(c) = closest {
+        out.push_str(&format!("\n💡 Did you mean '{c}'?"));
+    }
+    out.push_str("\n\nValid flags:");
+    for (flag, desc) in valid_flags {
+        out.push_str(&format!("\n  • {:<26} {}", flag, desc));
+    }
+    out
+}
+
+/// Get list of all available config keys (key, description).
+pub fn all_config_keys() -> Vec<(&'static str, &'static str)> {
+    CONFIG_KEYS_METADATA.iter().map(|k| (k.key, k.description)).collect()
+}
+
+/// Look up valid choices for a specific config key.
+pub fn choices_for_config_key(key: &str) -> Option<Vec<(&'static str, &'static str)>> {
+    let clean = key.trim().to_lowercase().replace('_', "-");
+    match clean.as_str() {
+        "effect" | "animation-type" | "anim-type" | "fx" => choices_for_flag("effect"),
+        "color-mode" => choices_for_flag("color-mode"),
+        "mountain" | "mtn" => choices_for_flag("mountain"),
+        "road" => choices_for_flag("road"),
+        "environment" | "env" => choices_for_flag("environment"),
+        "accel-mode" | "accel" | "acceleration-mode" | "gpu-mode" => choices_for_flag("accel"),
+        "time-of-day" | "tod" => choices_for_flag("time-of-day"),
+        "season" => choices_for_flag("season"),
+        "colorblind-mode" | "colorblind" | "cvd" => choices_for_flag("colorblind"),
+        "shell-attach-mode" | "attach-mode" => choices_for_flag("shell-attach-mode"),
+        "split-mode" => choices_for_flag("split-mode"),
+        "aspect" | "aspect-ratio" => choices_for_flag("aspect"),
+        "aspect-mode" => choices_for_flag("aspect-mode"),
+        "update-method" => choices_for_flag("method"),
+        "cow" | "animal" => choices_for_flag("cow"),
+        "background" | "think" | "banner" | "check-updates" | "update-check" | "split-scroll"
+        | "auto-render-on-prompt" | "reduce-motion" | "reduced-motion" | "text-only" | "fortune-only" => {
+            Some(vec![
+                ("true", "Enable this configuration flag"),
+                ("false", "Disable this configuration flag"),
+            ])
+        }
+        "random" => choices_for_flag("random"),
+        _ => None,
+    }
+}
+
+/// Format rich LSP diagnostic for unknown configuration keys.
+pub fn format_unknown_config_key_error(
+    invalid_key: &str,
+    closest: Option<&str>,
+    available_keys: &[(&str, &str)],
+) -> String {
+    let mut out = format!("❌ Error: Unknown configuration key '{invalid_key}'.");
+    if let Some(c) = closest {
+        out.push_str(&format!("\n💡 Did you mean '{c}'?"));
+    }
+    out.push_str("\n\nSupported configuration keys:");
+    for (name, desc) in available_keys {
+        out.push_str(&format!("\n  • {:<24} {}", name, desc));
+    }
+    out
+}
+
+/// Format rich LSP diagnostic for invalid configuration values.
+pub fn format_invalid_config_value_error(
+    key: &str,
+    invalid_val: &str,
+    closest: Option<&str>,
+    valid_choices: &[(&str, &str)],
+) -> String {
+    let mut out = format!("❌ Error: Invalid value '{invalid_val}' for configuration key '{key}'.");
+    if let Some(c) = closest {
+        out.push_str(&format!("\n💡 Did you mean '{c}'?"));
+    }
+    out.push_str(&format!("\n\nValid values for '{key}':"));
+    for (val, desc) in valid_choices {
+        out.push_str(&format!("\n  • {:<16} {}", val, desc));
+    }
+    out
+}
+
+/// Split command line string into tokens respecting single and double quotes.
+pub fn tokenize_line(line: &str) -> Vec<String> {
+    let mut tokens = Vec::new();
+    let mut current = String::new();
+    let mut in_single = false;
+    let mut in_double = false;
+
+    for ch in line.chars() {
+        match ch {
+            '\'' if !in_double => {
+                in_single = !in_single;
+            }
+            '"' if !in_single => {
+                in_double = !in_double;
+            }
+            ' ' | '\t' if !in_single && !in_double => {
+                if !current.is_empty() {
+                    tokens.push(std::mem::take(&mut current));
+                }
+            }
+            _ => {
+                current.push(ch);
+            }
+        }
+    }
+    if !current.is_empty() {
+        tokens.push(current);
+    }
+    tokens
+}
+
+/// Main LSP context-aware completion resolver.
+///
+/// Computes strictly feasible completion candidates based on the syntax position:
+/// 1. Flag Value Scope: Only candidate values for the specific flag (with rich descriptions).
+/// 2. Subcommand Scope: Only flags belonging to that subcommand (filtering already-used flags).
+/// 3. Positional Scope: Only valid positional choices (e.g. shells for init, categories for list).
+/// 4. Root Scope: Only top-level subcommands and root flags (filtering already-used flags).
+pub fn complete_context(tokens: &[&str], current_word: &str) -> Vec<CompletionCandidate> {
+    let mut filtered_tokens: Vec<&str> = tokens
+        .iter()
+        .copied()
+        .filter(|t| !t.is_empty())
+        .collect();
+
+    // Strip leading binary name if present
+    if let Some(first) = filtered_tokens.first() {
+        let clean = first.trim_end_matches(".exe");
+        if clean.ends_with("forgum") || clean.ends_with("forgum-engine") {
+            filtered_tokens.remove(0);
+        }
+    }
+
+    let mut active_subcommand: Option<&'static str> = None;
+    let mut used_flags: std::collections::HashSet<String> = std::collections::HashSet::new();
+    let mut last_flag_expecting_value: Option<&str> = None;
+
+    let mut i = 0;
+    while i < filtered_tokens.len() {
+        let tok = filtered_tokens[i];
+        if tok.starts_with('-') {
+            used_flags.insert(tok.to_string());
+            if flag_takes_value(tok) {
+                if i + 1 < filtered_tokens.len() && !filtered_tokens[i + 1].starts_with('-') {
+                    // Consumed by next token
+                    i += 1;
+                } else if i + 1 == filtered_tokens.len() {
+                    // Last token in prefix is a flag expecting value!
+                    last_flag_expecting_value = Some(tok);
+                }
+            }
+        } else if active_subcommand.is_none() {
+            // Check if this token matches a known subcommand
+            for sub in SUBCOMMAND_METADATA {
+                if sub.name.eq_ignore_ascii_case(tok)
+                    || sub.aliases.iter().any(|a| a.eq_ignore_ascii_case(tok))
+                {
+                    active_subcommand = Some(sub.name);
+                    break;
+                }
+            }
+        }
+        i += 1;
+    }
+
+    // 1. Flag Value Scope: Previous token was a flag expecting a value
+    if let Some(flag) = last_flag_expecting_value {
+        if let Some(choices) = choices_for_flag(flag) {
+            return choices
+                .into_iter()
+                .filter(|(val, _)| val.starts_with(current_word))
+                .map(|(val, desc)| CompletionCandidate {
+                    name: val,
+                    display: val,
+                    kind: CompletionKind::ParameterValue,
+                    description: desc,
+                })
+                .collect();
+        }
+        return Vec::new();
+    }
+
+    // Helper closure to filter flags not already used
+    let is_flag_unused = |f: &FlagMeta, used: &std::collections::HashSet<String>| -> bool {
+        if used.contains(f.long) {
+            return false;
+        }
+        if let Some(s) = f.short {
+            if used.contains(s) {
+                return false;
+            }
+        }
+        for a in f.aliases {
+            if used.contains(*a) {
+                return false;
+            }
+        }
+        true
+    };
+
+    let mut results = Vec::new();
+
+    // 2. Subcommand Scope
+    if let Some(subcmd) = active_subcommand {
+        // A. Positional choices if applicable
+        match subcmd {
+            "init" | "completions" => {
+                for c in SHELL_POSITIONAL_CHOICES {
+                    if c.value.starts_with(current_word) {
+                        results.push(CompletionCandidate {
+                            name: c.value,
+                            display: c.value,
+                            kind: CompletionKind::Positional,
+                            description: c.description,
+                        });
+                    }
+                }
+            }
+            "list" => {
+                for c in LIST_CATEGORY_CHOICES {
+                    if c.value.starts_with(current_word) {
+                        results.push(CompletionCandidate {
+                            name: c.value,
+                            display: c.value,
+                            kind: CompletionKind::Positional,
+                            description: c.description,
+                        });
+                    }
+                }
+            }
+            "channel" => {
+                for c in CHANNEL_POSITIONAL_CHOICES {
+                    if c.value.starts_with(current_word) {
+                        results.push(CompletionCandidate {
+                            name: c.value,
+                            display: c.value,
+                            kind: CompletionKind::Positional,
+                            description: c.description,
+                        });
+                    }
+                }
+            }
+            "herd" => {
+                for c in HERD_POSITIONAL_CHOICES {
+                    if c.value.starts_with(current_word) {
+                        results.push(CompletionCandidate {
+                            name: c.value,
+                            display: c.value,
+                            kind: CompletionKind::Command,
+                            description: c.description,
+                        });
+                    }
+                }
+            }
+            "tmux" => {
+                for c in TMUX_POSITIONAL_CHOICES {
+                    if c.value.starts_with(current_word) {
+                        results.push(CompletionCandidate {
+                            name: c.value,
+                            display: c.value,
+                            kind: CompletionKind::Command,
+                            description: c.description,
+                        });
+                    }
+                }
+            }
+            "theme" => {
+                for c in THEME_POSITIONAL_CHOICES {
+                    if c.value.starts_with(current_word) {
+                        results.push(CompletionCandidate {
+                            name: c.value,
+                            display: c.value,
+                            kind: CompletionKind::Command,
+                            description: c.description,
+                        });
+                    }
+                }
+            }
+            "config" => {
+                let subcmd_pos = filtered_tokens.iter().position(|t| {
+                    t.eq_ignore_ascii_case("config")
+                });
+                let mut sub_positionals = Vec::new();
+                if let Some(pos) = subcmd_pos {
+                    for tok in &filtered_tokens[pos + 1..] {
+                        if !tok.starts_with('-') {
+                            sub_positionals.push(*tok);
+                        }
+                    }
+                }
+
+                if sub_positionals.len() == 2 && sub_positionals[0].eq_ignore_ascii_case("set") {
+                    let key = sub_positionals[1];
+                    if let Some(choices) = choices_for_config_key(key) {
+                        return choices
+                            .into_iter()
+                            .filter(|(val, _)| val.starts_with(current_word))
+                            .map(|(val, desc)| CompletionCandidate {
+                                name: val,
+                                display: val,
+                                kind: CompletionKind::ParameterValue,
+                                description: desc,
+                            })
+                            .collect();
+                    }
+                    return Vec::new();
+                } else if sub_positionals.len() == 1
+                    && !sub_positionals[0].eq_ignore_ascii_case("set")
+                    && !sub_positionals[0].eq_ignore_ascii_case("get")
+                {
+                    let key = sub_positionals[0];
+                    if let Some(choices) = choices_for_config_key(key) {
+                        return choices
+                            .into_iter()
+                            .filter(|(val, _)| val.starts_with(current_word))
+                            .map(|(val, desc)| CompletionCandidate {
+                                name: val,
+                                display: val,
+                                kind: CompletionKind::ParameterValue,
+                                description: desc,
+                            })
+                            .collect();
+                    }
+                    return Vec::new();
+                } else if sub_positionals.len() == 1
+                    && (sub_positionals[0].eq_ignore_ascii_case("set")
+                        || sub_positionals[0].eq_ignore_ascii_case("get"))
+                {
+                    for k in CONFIG_KEYS_METADATA {
+                        if k.key.starts_with(current_word) {
+                            results.push(CompletionCandidate {
+                                name: k.key,
+                                display: k.key,
+                                kind: CompletionKind::Positional,
+                                description: k.description,
+                            });
+                        }
+                    }
+                    return results;
+                } else if sub_positionals.is_empty() {
+                    if "get".starts_with(current_word) {
+                        results.push(CompletionCandidate {
+                            name: "get",
+                            display: "get",
+                            kind: CompletionKind::Command,
+                            description: "Get current value of a configuration key",
+                        });
+                    }
+                    if "set".starts_with(current_word) {
+                        results.push(CompletionCandidate {
+                            name: "set",
+                            display: "set",
+                            kind: CompletionKind::Command,
+                            description: "Set value of a configuration key",
+                        });
+                    }
+                    for k in CONFIG_KEYS_METADATA {
+                        if k.key.starts_with(current_word) {
+                            results.push(CompletionCandidate {
+                                name: k.key,
+                                display: k.key,
+                                kind: CompletionKind::Positional,
+                                description: k.description,
+                            });
+                        }
+                    }
+                }
+            }
+            _ => {}
+        }
+
+        // B. Subcommand-specific flags
+        let sub_flag_metas: &[FlagMeta] = match subcmd {
+            "config" => CONFIG_FLAGS_METADATA,
+            "logs" => LOGS_FLAGS_METADATA,
+            "update" => UPDATE_FLAGS_METADATA,
+            "uninstall" => UNINSTALL_FLAGS_METADATA,
+            "install" => INSTALL_FLAGS_METADATA,
+            "battle" => BATTLE_FLAGS_METADATA,
+            "rps" => RPS_FLAGS_METADATA,
+            "image" => IMAGE_FLAGS_METADATA,
+            "fetch" => FETCH_FLAGS_METADATA,
+            "init" => INIT_FLAGS_METADATA,
+            "stop" => STOP_FLAGS_METADATA,
+            "checkhealth" => CHECKHEALTH_FLAGS_METADATA,
+            "diagnose" => DIAGNOSE_FLAGS_METADATA,
+            "status-line" => STATUS_LINE_FLAGS_METADATA,
+            "render" | "think" => ROOT_FLAGS_METADATA,
+            _ => &[],
+        };
+
+        for f in sub_flag_metas {
+            if is_flag_unused(f, &used_flags) {
+                if f.long.starts_with(current_word) {
+                    results.push(CompletionCandidate {
+                        name: f.long,
+                        display: f.long,
+                        kind: CompletionKind::ParameterName,
+                        description: f.description,
+                    });
+                }
+                if let Some(s) = f.short {
+                    if s.starts_with(current_word) && !current_word.is_empty() {
+                        results.push(CompletionCandidate {
+                            name: s,
+                            display: s,
+                            kind: CompletionKind::ParameterName,
+                            description: f.description,
+                        });
+                    }
+                }
+            }
+        }
+
+        return results;
+    }
+
+    // 3. Root Scope
+    // If current word starts with '-', offer only root flags
+    if current_word.starts_with('-') {
+        for f in ROOT_FLAGS_METADATA {
+            if is_flag_unused(f, &used_flags) {
+                if f.long.starts_with(current_word) {
+                    results.push(CompletionCandidate {
+                        name: f.long,
+                        display: f.long,
+                        kind: CompletionKind::ParameterName,
+                        description: f.description,
+                    });
+                }
+                if let Some(s) = f.short {
+                    if s.starts_with(current_word) {
+                        results.push(CompletionCandidate {
+                            name: s,
+                            display: s,
+                            kind: CompletionKind::ParameterName,
+                            description: f.description,
+                        });
+                    }
+                }
+            }
+        }
+        return results;
+    }
+
+    // If current word does NOT start with '-', offer subcommands (and root flags if empty)
+    for sub in SUBCOMMAND_METADATA {
+        if sub.name.starts_with(current_word) {
+            results.push(CompletionCandidate {
+                name: sub.name,
+                display: sub.name,
+                kind: CompletionKind::Command,
+                description: sub.description,
+            });
+        }
+    }
+
+    if current_word.is_empty() {
+        for f in ROOT_FLAGS_METADATA {
+            if is_flag_unused(f, &used_flags) {
+                results.push(CompletionCandidate {
+                    name: f.long,
+                    display: f.long,
+                    kind: CompletionKind::ParameterName,
+                    description: f.description,
+                });
+            }
+        }
+    }
+
+    results
+}
+
+/// CLI entry point for `forgum complete-context` execution.
+pub fn handle_complete_context_cli(args: &[String]) {
+    let mut shell = "powershell";
+    let mut line = String::new();
+    let mut word = String::new();
+
+    let mut i = 0;
+    while i < args.len() {
+        match args[i].as_str() {
+            "--powershell" | "-pwsh" => shell = "powershell",
+            "--fish" => shell = "fish",
+            "--zsh" => shell = "zsh",
+            "--bash" => shell = "bash",
+            "--nushell" | "--nu" => shell = "nushell",
+            "--line" => {
+                if i + 1 < args.len() {
+                    line = args[i + 1].clone();
+                    i += 1;
+                }
+            }
+            "--word" => {
+                if i + 1 < args.len() {
+                    word = args[i + 1].clone();
+                    i += 1;
+                }
+            }
+            other if !other.starts_with('-') => {
+                if line.is_empty() {
+                    line = other.to_string();
+                } else if word.is_empty() {
+                    word = other.to_string();
+                }
+            }
+            _ => {}
+        }
+        i += 1;
+    }
+
+    let raw_tokens = tokenize_line(&line);
+    let mut tokens: Vec<&str> = raw_tokens.iter().map(|s| s.as_str()).collect();
+
+    // If word is non-empty and the last token equals word, strip it so tokens are preceding tokens
+    if !word.is_empty() && tokens.last() == Some(&word.as_str()) {
+        tokens.pop();
+    }
+
+    let candidates = complete_context(&tokens, &word);
+
+    match shell {
+        "powershell" => {
+            for c in candidates {
+                println!(
+                    "{}\t{}\t{}\t{}",
+                    c.name,
+                    c.display,
+                    c.kind.as_str(),
+                    c.description
+                );
+            }
+        }
+        "fish" => {
+            for c in candidates {
+                println!("{}\t{}", c.name, c.description);
+            }
+        }
+        "zsh" => {
+            for c in candidates {
+                println!("{}:{}", c.name, c.description);
+            }
+        }
+        "bash" => {
+            for c in candidates {
+                println!("{}", c.name);
+            }
+        }
+        "nushell" => {
+            for c in candidates {
+                println!("{}\t{}", c.name, c.description);
+            }
+        }
+        _ => {
+            for c in candidates {
+                println!("{}\t{}", c.name, c.description);
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod lsp_completion_tests {
+    use super::*;
+
+    #[test]
+    fn test_complete_context_root_subcommands_and_flags() {
+        let results = complete_context(&["forgum"], "");
+        assert!(results.iter().any(|c| c.name == "render" && c.kind == CompletionKind::Command));
+        assert!(results.iter().any(|c| c.name == "config" && c.kind == CompletionKind::Command));
+        assert!(results.iter().any(|c| c.name == "update" && c.kind == CompletionKind::Command));
+        assert!(results.iter().any(|c| c.name == "--cow" && c.kind == CompletionKind::ParameterName));
+    }
+
+    #[test]
+    fn test_complete_context_root_flag_filtering() {
+        let results = complete_context(&["forgum"], "-");
+        assert!(results.iter().all(|c| c.name.starts_with('-')));
+        assert!(results.iter().any(|c| c.name == "--effect"));
+        assert!(!results.iter().any(|c| c.kind == CompletionKind::Command));
+    }
+
+    #[test]
+    fn test_complete_context_filters_already_used_flags() {
+        let results = complete_context(&["forgum", "--cow", "tux"], "-");
+        assert!(!results.iter().any(|c| c.name == "--cow" || c.name == "-c" || c.name == "--animal" || c.name == "-a"));
+        assert!(results.iter().any(|c| c.name == "--effect"));
+    }
+
+    #[test]
+    fn test_complete_context_flag_value_scope_effect() {
+        let results = complete_context(&["forgum", "--effect"], "");
+        assert!(!results.is_empty());
+        assert!(results.iter().all(|c| c.kind == CompletionKind::ParameterValue));
+        assert!(results.iter().any(|c| c.name == "moonwalk"));
+        assert!(results.iter().any(|c| c.name == "breathe"));
+        assert!(!results.iter().any(|c| c.name.starts_with('-')));
+        assert!(!results.iter().any(|c| c.name == "render"));
+    }
+
+    #[test]
+    fn test_complete_context_flag_value_prefix_matching() {
+        let results = complete_context(&["forgum", "-e"], "mo");
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].name, "moonwalk");
+    }
+
+    #[test]
+    fn test_complete_context_subcommand_scope_config() {
+        let results = complete_context(&["forgum", "config"], "--");
+        assert!(results.iter().any(|c| c.name == "--list"));
+        assert!(results.iter().any(|c| c.name == "--tui"));
+        assert!(results.iter().any(|c| c.name == "--migrate"));
+        // Root-only flags must not appear under config
+        assert!(!results.iter().any(|c| c.name == "--banner"));
+        assert!(!results.iter().any(|c| c.name == "--eyes"));
+    }
+
+    #[test]
+    fn test_complete_context_subcommand_flag_deduplication() {
+        let results = complete_context(&["forgum", "config", "--list"], "--");
+        assert!(!results.iter().any(|c| c.name == "--list" || c.name == "-l"));
+        assert!(results.iter().any(|c| c.name == "--tui"));
+        assert!(results.iter().any(|c| c.name == "--migrate"));
+    }
+
+    #[test]
+    fn test_complete_context_update_method_choices() {
+        let results = complete_context(&["forgum", "update", "--method"], "");
+        assert!(results.iter().any(|c| c.name == "cargo"));
+        assert!(results.iter().any(|c| c.name == "brew"));
+        assert!(results.iter().any(|c| c.name == "scoop"));
+        assert!(results.iter().any(|c| c.name == "winget"));
+        assert!(!results.iter().any(|c| c.name.starts_with('-')));
+    }
+
+    #[test]
+    fn test_complete_context_list_positional_categories() {
+        let results = complete_context(&["forgum", "list"], "");
+        assert!(results.iter().any(|c| c.name == "animals"));
+        assert!(results.iter().any(|c| c.name == "effects"));
+        assert!(results.iter().any(|c| c.name == "scenery"));
+        assert!(results.iter().any(|c| c.name == "colors"));
+    }
+
+    #[test]
+    fn test_complete_context_init_positional_shells() {
+        let results = complete_context(&["forgum", "init"], "");
+        assert!(results.iter().any(|c| c.name == "bash"));
+        assert!(results.iter().any(|c| c.name == "zsh"));
+        assert!(results.iter().any(|c| c.name == "fish"));
+        assert!(results.iter().any(|c| c.name == "pwsh"));
+    }
+
+    #[test]
+    fn test_tokenize_line_with_quotes() {
+        let tokens = tokenize_line("forgum --effect moonwalk --text \"hello world\" 'single quoted'");
+        assert_eq!(tokens, vec!["forgum", "--effect", "moonwalk", "--text", "hello world", "single quoted"]);
+    }
+
+    #[test]
+    fn test_complete_context_config_subcommands_and_keys() {
+        let results = complete_context(&["forgum", "config"], "");
+        assert!(results.iter().any(|c| c.name == "get"));
+        assert!(results.iter().any(|c| c.name == "set"));
+        assert!(results.iter().any(|c| c.name == "effect"));
+        assert!(results.iter().any(|c| c.name == "color_mode"));
+        assert!(results.iter().any(|c| c.name == "mountain"));
+        assert!(results.iter().any(|c| c.name == "--list"));
+    }
+
+    #[test]
+    fn test_complete_context_config_set_keys() {
+        let results = complete_context(&["forgum", "config", "set"], "");
+        assert!(results.iter().any(|c| c.name == "effect"));
+        assert!(results.iter().any(|c| c.name == "color_mode"));
+        assert!(results.iter().any(|c| c.name == "cow"));
+        assert!(results.iter().any(|c| c.name == "update_method"));
+        assert!(!results.iter().any(|c| c.name == "set" || c.name == "get"));
+    }
+
+    #[test]
+    fn test_complete_context_config_get_keys() {
+        let results = complete_context(&["forgum", "config", "get"], "");
+        assert!(results.iter().any(|c| c.name == "effect"));
+        assert!(results.iter().any(|c| c.name == "fps"));
+        assert!(results.iter().any(|c| c.name == "duration"));
+        assert!(!results.iter().any(|c| c.name == "set" || c.name == "get"));
+    }
+
+    #[test]
+    fn test_complete_context_config_set_effect_values() {
+        let results = complete_context(&["forgum", "config", "set", "effect"], "");
+        assert!(!results.is_empty());
+        assert!(results.iter().all(|c| c.kind == CompletionKind::ParameterValue));
+        assert!(results.iter().any(|c| c.name == "moonwalk"));
+        assert!(results.iter().any(|c| c.name == "walk"));
+        assert!(results.iter().any(|c| c.name == "breathe"));
+        assert!(!results.iter().any(|c| c.name.starts_with('-')));
+    }
+
+    #[test]
+    fn test_complete_context_config_set_color_mode_values() {
+        let results = complete_context(&["forgum", "config", "set", "color_mode"], "");
+        assert!(results.iter().any(|c| c.name == "natural"));
+        assert!(results.iter().any(|c| c.name == "rainbow"));
+        assert!(results.iter().any(|c| c.name == "solid"));
+    }
+
+    #[test]
+    fn test_complete_context_config_set_boolean_values() {
+        let results = complete_context(&["forgum", "config", "set", "background"], "");
+        assert_eq!(results.len(), 2);
+        assert!(results.iter().any(|c| c.name == "true"));
+        assert!(results.iter().any(|c| c.name == "false"));
+    }
+}
+

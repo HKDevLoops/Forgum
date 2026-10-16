@@ -127,6 +127,28 @@ pub fn log(level: LogLevel, target: &str, message: &str) {
     log_diagnostic(level, target, message, None, None);
 }
 
+/// Rotates historical log files up to `max_generations` (e.g. .5 deleted, .4 -> .5, ..., .1 -> .2, active -> .1).
+fn rotate_log_file(path: &std::path::Path, max_bytes: u64, max_generations: usize) {
+    if let Ok(meta) = fs::metadata(path) {
+        if meta.len() > max_bytes {
+            let Some(parent) = path.parent() else { return };
+            let Some(filename) = path.file_name().and_then(|f| f.to_str()) else { return };
+
+            for gen in (1..max_generations).rev() {
+                let src = parent.join(format!("{filename}.{gen}"));
+                let dst = parent.join(format!("{filename}.{}", gen + 1));
+                if src.exists() {
+                    let _ = fs::remove_file(&dst);
+                    let _ = fs::rename(&src, &dst);
+                }
+            }
+            let first_dst = parent.join(format!("{filename}.1"));
+            let _ = fs::remove_file(&first_dst);
+            let _ = fs::rename(path, &first_dst);
+        }
+    }
+}
+
 /// Log a structured message with explicit user remediation hint and developer context.
 pub fn log_diagnostic(
     level: LogLevel,
@@ -166,14 +188,12 @@ pub fn log_diagnostic(
     }
 
     const MAX_LOG_SIZE: u64 = 10 * 1024 * 1024; // 10 MB
+    const MAX_GENERATIONS: usize = 5;
 
-    // 1. Text log: [2026-08-20 11:00:00.123] [INFO] [target] Message (Hint: ...)
+    // Rotate text and JSONL logs if size exceeds 10 MB (up to 5 generations preserved)
     let text_path = log_dir.join("forgum.log");
-    if let Ok(meta) = fs::metadata(&text_path) {
-        if meta.len() > MAX_LOG_SIZE {
-            let _ = fs::rename(&text_path, log_dir.join("forgum.log.1"));
-        }
-    }
+    rotate_log_file(&text_path, MAX_LOG_SIZE, MAX_GENERATIONS);
+
     if let Ok(mut file) = OpenOptions::new()
         .create(true)
         .append(true)
@@ -197,11 +217,7 @@ pub fn log_diagnostic(
 
     // 2. JSONL log: {"timestamp":"...","level":"...","target":"...","message":"...", ...}
     let jsonl_path = log_dir.join("forgum.jsonl");
-    if let Ok(meta) = fs::metadata(&jsonl_path) {
-        if meta.len() > MAX_LOG_SIZE {
-            let _ = fs::rename(&jsonl_path, log_dir.join("forgum.jsonl.1"));
-        }
-    }
+    rotate_log_file(&jsonl_path, MAX_LOG_SIZE, MAX_GENERATIONS);
     if let Ok(mut file) = OpenOptions::new()
         .create(true)
         .append(true)
@@ -809,5 +825,41 @@ mod tests {
         assert!(report.contains("FOR THE USER"));
         assert!(report.contains("FOR DEVELOPERS"));
         assert!(report.contains("Mascot Art Lookup Failure"));
+    }
+
+    #[test]
+    fn test_rotate_log_file_multi_generation() {
+        let temp_dir = tempfile::tempdir().expect("tempdir");
+        let log_file = temp_dir.path().join("forgum.log");
+
+        // Write 100 bytes to log_file
+        fs::write(&log_file, vec![b'A'; 100]).expect("write");
+
+        // Threshold is 50 bytes, max 3 generations
+        rotate_log_file(&log_file, 50, 3);
+        assert!(!log_file.exists());
+        assert!(temp_dir.path().join("forgum.log.1").exists());
+        assert_eq!(fs::read(temp_dir.path().join("forgum.log.1")).unwrap().len(), 100);
+
+        // Write again to log_file
+        fs::write(&log_file, vec![b'B'; 100]).expect("write B");
+        rotate_log_file(&log_file, 50, 3);
+        assert!(temp_dir.path().join("forgum.log.2").exists());
+        assert_eq!(fs::read(temp_dir.path().join("forgum.log.2")).unwrap()[0], b'A');
+        assert_eq!(fs::read(temp_dir.path().join("forgum.log.1")).unwrap()[0], b'B');
+
+        // Write a 3rd time
+        fs::write(&log_file, vec![b'C'; 100]).expect("write C");
+        rotate_log_file(&log_file, 50, 3);
+        assert!(temp_dir.path().join("forgum.log.3").exists());
+        assert_eq!(fs::read(temp_dir.path().join("forgum.log.3")).unwrap()[0], b'A');
+
+        // Write a 4th time: .3 (original A) should be evicted because max_generations is 3
+        fs::write(&log_file, vec![b'D'; 100]).expect("write D");
+        rotate_log_file(&log_file, 50, 3);
+        assert!(!temp_dir.path().join("forgum.log.4").exists());
+        assert_eq!(fs::read(temp_dir.path().join("forgum.log.1")).unwrap()[0], b'D');
+        assert_eq!(fs::read(temp_dir.path().join("forgum.log.2")).unwrap()[0], b'C');
+        assert_eq!(fs::read(temp_dir.path().join("forgum.log.3")).unwrap()[0], b'B');
     }
 }

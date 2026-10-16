@@ -84,10 +84,10 @@ pub use package_manager::{
     fetch_remote_channel_version, format_update_notice_box, get_funky_latest_version_quote,
     is_newer_version, local_release_binary_path, parse_version_from_cargo_toml,
     parse_version_from_release_json, prune_shadow_installation, read_receipt, read_update_cache, record_receipt,
-    reconcile_package_manager_migration, rollback_binary, select_update_method_interactive, should_spawn_background_check,
+    reconcile_package_manager_migration, rollback_binary, select_update_action_interactive, select_update_method_interactive, should_spawn_background_check,
     spawn_background_update_check, verify_binary_signature, write_receipt, write_update_cache,
     GitRepoStatus, PackageManager, ParsedSemVer, Receipt, ReleaseChannel, ShadowInstallation,
-    UpdateCheckCache, UpdateNotice, FORGUM_RELEASE_PUBLIC_KEY,
+    UpdateActionChoice, UpdateCheckCache, UpdateNotice, FORGUM_RELEASE_PUBLIC_KEY,
 };
 pub use paths::{
     config_dir, config_path, control_socket_path, daemon_state_path, data_dir, detect_config_file,
@@ -120,8 +120,8 @@ pub use spawn::{
     kill_process, prefer_fork_exec, process_is_alive, spawn_detached, DetachedChild,
 };
 pub use telemetry::{
-    is_telemetry_allowed, record_active_pulse, record_installed, record_tried,
-    set_telemetry_consent, Metric,
+    is_telemetry_allowed, load_local_stats, record_active_pulse, record_installed, record_tried,
+    set_telemetry_consent, LocalStats, Metric,
 };
 pub use uninstaller::{perform_uninstallation, UninstallMode, UninstallReport};
 pub use vulkan_metal::{
