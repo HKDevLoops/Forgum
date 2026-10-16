@@ -396,7 +396,11 @@ jobs:
           echo "=========================================================="
           # 6. Synchronize package manager manifests (Scoop, WinGet, Homebrew, PKGBUILD)
           echo ">> 6. Synchronizing package manager manifests with computed SHA-256 hashes..."
-          python3 ../scripts/update-package-manifests.py --manifest SHA256SUMS --version "$VERSION" --root ..
+          if [ -f ../packaging/scripts/update-package-manifests.py ]; then
+            python3 ../packaging/scripts/update-package-manifests.py --manifest SHA256SUMS --version "$VERSION" --root ..
+          elif [ -f ../scripts/update-package-manifests.py ]; then
+            python3 ../scripts/update-package-manifests.py --manifest SHA256SUMS --version "$VERSION" --root ..
+          fi
           cp ../packaging/scoop/forgum.json ./forgum-scoop.json
           cp ../packaging/winget/HKDevLoops.Forgum.yaml ./forgum-winget.yaml
           cp ../packaging/homebrew/forgum.rb ./forgum-homebrew.rb

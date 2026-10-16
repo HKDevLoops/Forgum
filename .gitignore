@@ -95,7 +95,8 @@ TODO*.md
 TODO_MASTER_AUDIT_AND_REMEDIATION.md
 
 # --- Out-of-Project Helper Scripts & Workflows ---
-/scripts/
+/scripts/*
+!/scripts/update-package-manifests.py
 /workflows/
 commit_push.ps1
 raise_prs.ps1
