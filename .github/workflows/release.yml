@@ -379,7 +379,9 @@ jobs:
           for sha_file in *.sha256; do
             if [ -f "$sha_file" ]; then
               echo "Checking $sha_file..."
-              sha256sum -c "$sha_file" || { echo "::error::Checksum failed for $sha_file"; exit 1; }
+              sed -E 's|  .*/([^/]+)$|  \1|' "$sha_file" > "${sha_file}.normalized"
+              sha256sum -c "${sha_file}.normalized" || { echo "::error::Checksum failed for $sha_file"; exit 1; }
+              rm -f "${sha_file}.normalized"
             fi
           done
 

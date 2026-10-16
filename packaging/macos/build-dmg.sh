@@ -70,11 +70,14 @@ rm -f "$OUTPUT_DMG"
 if command -v hdiutil >/dev/null 2>&1; then
   echo ">> Generating compressed UDZO disk image: ${DMG_NAME}..."
   hdiutil create -volname "Forgum ${VERSION}" -srcfolder "$STAGE_DIR" -ov -format UDZO "$OUTPUT_DMG"
-  if command -v shasum >/dev/null 2>&1; then
-    shasum -a 256 "$OUTPUT_DMG" > "${OUTPUT_DMG}.sha256"
-  elif command -v sha256sum >/dev/null 2>&1; then
-    sha256sum "$OUTPUT_DMG" > "${OUTPUT_DMG}.sha256"
-  fi
+  (
+    cd "${REPO_ROOT}"
+    if command -v shasum >/dev/null 2>&1; then
+      shasum -a 256 "${DMG_NAME}" > "${DMG_NAME}.sha256"
+    elif command -v sha256sum >/dev/null 2>&1; then
+      sha256sum "${DMG_NAME}" > "${DMG_NAME}.sha256"
+    fi
+  )
   echo ">> Successfully generated: ${OUTPUT_DMG}"
 else
   echo ">> Warning: hdiutil not found (only available on macOS). Packaging as tarball fallback..."
