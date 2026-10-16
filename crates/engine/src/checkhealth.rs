@@ -247,7 +247,7 @@ pub fn run_health_check(explicit_config: Option<&Path>) -> HealthReport {
             ),
             details: shadows.iter().map(|s| s.display_line()).collect(),
             suggestion: Some(
-                "Remove or uninstall shadowed versions to prevent PATH conflicts across package managers."
+                "Run `forgum prune` to remove duplicate/shadowed installations (or `forgum prune --dry-run` to preview)."
                     .to_string(),
             ),
         });

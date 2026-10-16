@@ -535,6 +535,17 @@ pub enum Commands {
         #[arg(long, hide = true)]
         background_worker: bool,
     },
+    /// Detect and prune duplicate or shadowed Forgum installations across package managers.
+    #[command(name = "prune", alias = "prune-duplicates", alias = "prune-shadows", alias = "clean-duplicates")]
+    Prune {
+        /// Automatically confirm pruning without interactive prompts.
+        #[arg(short = 'y', long, alias = "yes", alias = "force")]
+        yes: bool,
+
+        /// Display duplicate installations that would be removed without actually deleting them.
+        #[arg(long, alias = "dry-run")]
+        dry_run: bool,
+    },
     /// View, switch, or manage release channels (stable, alpha, nightly, dev).
     #[command(alias = "channels")]
     Channel {
@@ -1154,6 +1165,7 @@ pub enum Command {
     Install,
     Uninstall,
     Update,
+    Prune,
     Channel,
     Sweep,
     Stop,
@@ -1557,6 +1569,7 @@ pub fn parse_args(argv: Vec<String>) -> Result<(Args, Option<Commands>), CliErro
         }
         Some(Commands::Fetch { .. }) => (Command::Fetch, None, false),
         Some(Commands::Telemetry { .. }) => (Command::Telemetry, None, false),
+        Some(Commands::Prune { .. }) => (Command::Prune, None, false),
         Some(Commands::Version) => (Command::Version, None, false),
     };
 

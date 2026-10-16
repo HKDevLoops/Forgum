@@ -539,6 +539,9 @@ fn run_inner() -> ExitCode {
             &args,
         ),
 
+        // ── prune ──────────────────────────────────────────────────
+        Some(cli::Commands::Prune { yes, dry_run }) => handle_prune_command(yes, dry_run),
+
         // ── channel ────────────────────────────────────────────────
         Some(cli::Commands::Channel { action, name }) => {
             handle_channel_command(action.as_deref(), name.as_deref())
@@ -2972,6 +2975,9 @@ fn handle_update_command(
                 }
                 println!("\n\x1b[1;32m✓ Update completed successfully.\x1b[0m");
                 let _ = forgum_platform::clear_update_cache();
+                if let Ok(recon_msg) = forgum_platform::reconcile_package_manager_migration(chosen_pm) {
+                    println!("\x1b[36m>> {recon_msg}\x1b[0m");
+                }
                 ExitCode::SUCCESS
             }
             Err(err) => {
@@ -2992,6 +2998,95 @@ fn handle_update_command(
                 }
             }
         }
+    }
+}
+
+fn handle_prune_command(yes: bool, dry_run: bool) -> ExitCode {
+    let shadows = forgum_platform::detect_shadow_installations();
+    let active: Vec<_> = shadows.iter().filter(|s| s.is_active).collect();
+    let inactive: Vec<_> = shadows.iter().filter(|s| !s.is_active).collect();
+
+    println!("\x1b[1;35m==============================================================================\x1b[0m");
+    println!("\x1b[1mforgum prune\x1b[0m — Installation Reconciliation & Duplicate Cleaner");
+    println!("\x1b[1;35m==============================================================================\x1b[0m\n");
+
+    if let Some(act) = active.first() {
+        println!("\x1b[1;32m[Active Installation]\x1b[0m");
+        println!("  • Path:    {}", act.path.display());
+        println!("  • Manager: {}", act.source.name());
+        println!("  • Version: {}", act.version.as_deref().unwrap_or("unknown"));
+        println!();
+    }
+
+    if inactive.is_empty() {
+        println!("\x1b[1;32m✓ Single clean installation: No duplicate or shadowed Forgum binaries detected.\x1b[0m\n");
+        return ExitCode::SUCCESS;
+    }
+
+    println!("\x1b[1;33m⚠️  Detected {} duplicate/shadowed installation(s):\x1b[0m", inactive.len());
+    for (i, inst) in inactive.iter().enumerate() {
+        println!(
+            "  [{}] {} ({}, {})",
+            i + 1,
+            inst.path.display(),
+            inst.source.name(),
+            inst.version.as_deref().map(|v| format!("v{v}")).unwrap_or_else(|| "unknown".into())
+        );
+    }
+    println!();
+
+    if dry_run {
+        println!("\x1b[36m[Dry-run mode] Would prune the following binaries:\x1b[0m");
+        for inst in &inactive {
+            println!("  • Would remove: {}", inst.path.display());
+        }
+        println!("\nRun `forgum prune` (or `forgum prune --yes`) to execute removal.\n");
+        return ExitCode::SUCCESS;
+    }
+
+    let should_prune = if yes {
+        true
+    } else {
+        use std::io::Write;
+        print!("\x1b[1;33mPrune all duplicate/shadowed installations now? [y/N]: \x1b[0m");
+        let _ = std::io::stdout().flush();
+        let mut input = String::new();
+        if std::io::stdin().read_line(&mut input).is_ok() {
+            let trimmed = input.trim().to_ascii_lowercase();
+            trimmed == "y" || trimmed == "yes"
+        } else {
+            false
+        }
+    };
+
+    if !should_prune {
+        println!("\n\x1b[90mPruning cancelled. You can manually remove shadowed binaries using:\x1b[0m");
+        for inst in &inactive {
+            println!("  {}", inst.manual_removal_command());
+        }
+        println!();
+        return ExitCode::SUCCESS;
+    }
+
+    println!("\n\x1b[36m>> Pruning duplicate installations...\x1b[0m");
+    let mut any_errors = false;
+    for inst in &inactive {
+        match forgum_platform::prune_shadow_installation(&inst.path) {
+            Ok(msg) => println!("  \x1b[1;32m✓\x1b[0m {msg}"),
+            Err(e) => {
+                any_errors = true;
+                eprintln!("  \x1b[1;31m✗\x1b[0m Failed to prune '{}': {e}", inst.path.display());
+                println!("    Manual command: {}", inst.manual_removal_command());
+            }
+        }
+    }
+
+    if any_errors {
+        eprintln!("\n\x1b[1;33mSome binaries could not be removed automatically. See manual commands above.\x1b[0m\n");
+        ExitCode::from(1)
+    } else {
+        println!("\n\x1b[1;32m✓ All duplicate installations pruned successfully. Your system is now clean.\x1b[0m\n");
+        ExitCode::SUCCESS
     }
 }
 

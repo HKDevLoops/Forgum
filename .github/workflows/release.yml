@@ -375,9 +375,13 @@ jobs:
             fi
           done
           echo "=========================================================="
-          echo "MASTER SHA256SUMS MANIFEST:"
-          cat SHA256SUMS
-          echo "=========================================================="
+          # 6. Synchronize package manager manifests (Scoop, WinGet, Homebrew, PKGBUILD)
+          echo ">> 6. Synchronizing package manager manifests with computed SHA-256 hashes..."
+          python3 ../scripts/update-package-manifests.py --manifest SHA256SUMS --version "$VERSION" --root ..
+          cp ../packaging/scoop/forgum.json ./forgum-scoop.json
+          cp ../packaging/winget/HKDevLoops.Forgum.yaml ./forgum-winget.yaml
+          cp ../packaging/homebrew/forgum.rb ./forgum-homebrew.rb
+          cp ../packaging/pacman/PKGBUILD ./forgum-PKGBUILD
 
           echo "✓ ALL AUTOMATED RELEASE VERIFICATION GATES PASSED (APPROVED)"
 
@@ -385,12 +389,21 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: release-checksums
-          path: verify-artifacts/SHA256SUMS
+          path: |
+            verify-artifacts/SHA256SUMS
+            verify-artifacts/forgum-scoop.json
+            verify-artifacts/forgum-winget.yaml
+            verify-artifacts/forgum-homebrew.rb
+            verify-artifacts/forgum-PKGBUILD
 
   release:
     name: Create GitHub Release
     needs: [version-check, build, packages, packages-win, verify-release-artifacts]
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
     steps:
       - uses: actions/checkout@v4
 
@@ -400,6 +413,12 @@ jobs:
           pattern: release-*
           merge-multiple: true
           path: artifacts
+
+      - name: Generate build provenance attestations
+        uses: actions/attest-build-provenance@v2
+        continue-on-error: true
+        with:
+          subject-path: 'artifacts/*.*'
 
       - name: Create release
         uses: softprops/action-gh-release@v2

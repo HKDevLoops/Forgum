@@ -70,6 +70,8 @@ Whenever a new version `X.Y.Z-beta` is authorized by the user, **EVERY SINGLE ON
 | [`.github/workflows/release.yml`](file:///Z:/Projects/Forgum/.github/workflows/release.yml#L158-L165) | macOS DMG artifact name | `forgum-${VERSION}-macos-${ARCH}.dmg` | Double-clickable macOS disk image with built-in installer. |
 | [`.github/workflows/release.yml`](file:///Z:/Projects/Forgum/.github/workflows/release.yml#L272-L375) | `verify-release-artifacts` | Automated verification job | Runs smoke tests, .deb/.rpm lints, and checksum checks before release approval. |
 | [`.github/workflows/release.yml`](file:///Z:/Projects/Forgum/.github/workflows/release.yml#L368-L385) | Master checksum manifest | `SHA256SUMS` & `*.sha256` | Cryptographic SHA-256 verification across all release assets. |
+| [`.github/workflows/release.yml`](file:///Z:/Projects/Forgum/.github/workflows/release.yml#L400-L415) | GitHub Artifact Attestation | `actions/attest-build-provenance@v2` | Cryptographic Sigstore / SLSA build provenance signing for all release artifacts. |
+| [`scripts/update-package-manifests.py`](file:///Z:/Projects/Forgum/scripts/update-package-manifests.py) | Manifest Synchronizer | `python scripts/update-package-manifests.py` | Automatically populates exact per-target SHA-256 checksums from `SHA256SUMS` into Scoop, WinGet, Homebrew, and Arch PKGBUILD manifests. |
 | [`docs/index.html`](file:///Z:/Projects/Forgum/docs/index.html) | Universal Web Download Portal | Static HTML/CSS/JS | GitHub Pages download portal with OS autodetection and copyable terminal commands. |
 
 ### E. Multi-Channel Package Manifests (All Supported Managers)
@@ -210,5 +212,6 @@ If an issue occurs during an upgrade or installation, use this diagnostic checkl
    - Git tag `vX.Y.Z-beta` was not pushed, or the GitHub Actions build is still running or failed.
    - Check `gh run view` to ensure the release job completed and uploaded the tarball.
 4. **Installer reports shadow version conflict**:
-   - Run `forgum update --check` or `forgum checkhealth`.
-   - Remove lingering shadow binaries in `/usr/bin/forgum` or `target/release/forgum` that belong to older package managers.
+   - Run `forgum prune --dry-run` to preview duplicate and shadowed binaries.
+   - Run `forgum prune` (or `forgum prune --yes`) to clean up inactive binaries safely.
+   - Note: on WSL environments, Windows host executables (`/mnt/*`, `.exe`) are automatically exempted from shadow detection.

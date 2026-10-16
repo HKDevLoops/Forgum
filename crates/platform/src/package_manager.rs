@@ -1504,6 +1504,19 @@ impl ShadowInstallation {
             self.source.name()
         )
     }
+
+    /// Generates the canonical platform-specific command to remove this duplicate binary manually.
+    #[must_use]
+    pub fn manual_removal_command(&self) -> String {
+        #[cfg(windows)]
+        {
+            format!("Remove-Item -Force '{}'", self.path.display())
+        }
+        #[cfg(not(windows))]
+        {
+            format!("sudo rm '{}'", self.path.display())
+        }
+    }
 }
 
 /// Helper to strip Windows verbatim `\\?\` prefix if present.
@@ -1540,6 +1553,11 @@ pub fn detect_shadow_installations() -> Vec<ShadowInstallation> {
         for dir in std::env::split_paths(&path_var) {
             #[cfg(windows)]
             {
+                let dir_str = dir.to_string_lossy();
+                // On Windows, ignore WSL virtual paths
+                if dir_str.starts_with(r"\\wsl") || dir_str.starts_with(r"//wsl") {
+                    continue;
+                }
                 let names = [
                     "forgum.exe",
                     "forgum.cmd",
@@ -1556,6 +1574,13 @@ pub fn detect_shadow_installations() -> Vec<ShadowInstallation> {
             }
             #[cfg(unix)]
             {
+                let is_wsl_env = crate::terminal::is_wsl();
+                let dir_str = dir.to_string_lossy();
+                // In WSL, Windows host paths are mounted under /mnt/ and shared into PATH.
+                // We MUST ignore Windows host paths in WSL per architecture mandate.
+                if is_wsl_env && (dir_str.starts_with("/mnt/") || dir_str.contains("/mnt/c/") || dir_str.contains("/mnt/d/")) {
+                    continue;
+                }
                 let candidate = dir.join("forgum");
                 if candidate.is_file() {
                     candidate_paths.push(candidate);
@@ -1647,9 +1672,29 @@ pub fn detect_shadow_installations() -> Vec<ShadowInstallation> {
     let mut has_active = false;
 
     for candidate in candidate_paths {
+        #[cfg(unix)]
+        {
+            if crate::terminal::is_wsl() {
+                let cand_str = candidate.to_string_lossy().to_ascii_lowercase();
+                if cand_str.starts_with("/mnt/") || cand_str.ends_with(".exe") || cand_str.ends_with(".cmd") || cand_str.ends_with(".bat") {
+                    continue;
+                }
+            }
+        }
+
         let canon = std::fs::canonicalize(&candidate)
             .map(|p| strip_verbatim(&p))
             .unwrap_or_else(|_| strip_verbatim(&candidate));
+
+        // Skip in-tree developer build target artifacts (target/debug, target/release, target/debug/deps)
+        // when they are not the active binary.
+        let canon_str = canon.to_string_lossy();
+        if (canon_str.contains(r"target\debug") || canon_str.contains("target/debug")
+            || canon_str.contains(r"target\release") || canon_str.contains("target/release"))
+            && current_canon.as_ref().map(|c| c != &canon).unwrap_or(true)
+        {
+            continue;
+        }
 
         if !seen_canonical.insert(canon.clone()) {
             continue;
@@ -1691,6 +1736,130 @@ pub fn detect_shadow_installations() -> Vec<ShadowInstallation> {
     }
 
     detected
+}
+
+/// Prunes / removes an individual shadowed or duplicate Forgum installation from disk.
+pub fn prune_shadow_installation(path: &Path) -> Result<String, PlatformError> {
+    if !path.exists() {
+        return Ok(format!("Path '{}' does not exist or was already removed.", path.display()));
+    }
+
+    // Protection: never prune the currently running executable via prune!
+    if let Ok(cur_exe) = std::env::current_exe() {
+        if let (Ok(cur_canon), Ok(target_canon)) = (std::fs::canonicalize(&cur_exe), std::fs::canonicalize(path)) {
+            if cur_canon == target_canon {
+                return Err(PlatformError::InvalidArgument(format!(
+                    "Cannot prune active binary currently running at '{}'.",
+                    path.display()
+                )));
+            }
+        }
+    }
+
+    match std::fs::remove_file(path) {
+        Ok(()) => {
+            // Also check for Windows companion shim (e.g. scoop shim or bat/cmd)
+            #[cfg(windows)]
+            {
+                let path_str = path.to_string_lossy();
+                if path_str.contains(r"scoop\shims") {
+                    let shim_shim = path.with_extension("shim");
+                    if shim_shim.is_file() {
+                        let _ = std::fs::remove_file(shim_shim);
+                    }
+                }
+            }
+            Ok(format!("Successfully removed duplicate binary at '{}'.", path.display()))
+        }
+        Err(e) if e.kind() == std::io::ErrorKind::PermissionDenied => {
+            #[cfg(unix)]
+            {
+                Err(PlatformError::Io(std::io::Error::new(
+                    std::io::ErrorKind::PermissionDenied,
+                    format!(
+                        "Permission denied removing '{}'. Run with elevated privileges:\n  sudo rm '{}'",
+                        path.display(),
+                        path.display()
+                    ),
+                )))
+            }
+            #[cfg(windows)]
+            {
+                Err(PlatformError::Io(std::io::Error::new(
+                    std::io::ErrorKind::PermissionDenied,
+                    format!(
+                        "Access denied removing '{}'. Run PowerShell as Administrator:\n  Remove-Item -Force '{}'",
+                        path.display(),
+                        path.display()
+                    ),
+                )))
+            }
+        }
+        Err(e) => Err(PlatformError::Io(e)),
+    }
+}
+
+/// Reconciles location mismatch when a user migrates or updates from a standalone binary
+/// to a package manager (e.g. Scoop, WinGet, Homebrew, Pacman, APT, etc.).
+///
+/// Ensures the package-manager managed binary becomes authoritative in PATH and decommissions
+/// any shadowed standalone binary to prevent stale version execution.
+pub fn reconcile_package_manager_migration(target_pm: PackageManager) -> Result<String, PlatformError> {
+    if target_pm == PackageManager::DirectBinary {
+        return Ok("Standalone binary channel confirmed.".to_string());
+    }
+
+    let all_installations = detect_shadow_installations();
+    let pm_inst = all_installations.iter().find(|s| s.source == target_pm);
+
+    if let Some(pm_binary) = pm_inst {
+        let pm_path = &pm_binary.path;
+        let mut decommissioned = Vec::new();
+
+        for inst in &all_installations {
+            if inst.source == PackageManager::DirectBinary && inst.path != *pm_path {
+                // If old standalone binary is present, rename or remove it so PM binary takes priority
+                let old_path = &inst.path;
+                let bak_path = old_path.with_extension("standalone.decommissioned");
+                if std::fs::rename(old_path, &bak_path).is_ok() || std::fs::remove_file(old_path).is_ok() {
+                    decommissioned.push(old_path.display().to_string());
+                }
+            }
+        }
+
+        // Record receipt pointing to the new package manager and path
+        let receipt = Receipt {
+            version: env!("CARGO_PKG_VERSION").to_string(),
+            installer_source: target_pm,
+            bin_path: pm_path.clone(),
+            timestamp: std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_secs())
+                .unwrap_or(0),
+            channel: ReleaseChannel::Stable,
+        };
+        let _ = write_receipt(&receipt);
+
+        if !decommissioned.is_empty() {
+            Ok(format!(
+                "Reconciled package manager migration: Forgum is now managed by {} at '{}'. Decommissioned previous standalone binary at {}.",
+                target_pm.name(),
+                pm_path.display(),
+                decommissioned.join(", ")
+            ))
+        } else {
+            Ok(format!(
+                "Forgum is verified and managed by {} at '{}'.",
+                target_pm.name(),
+                pm_path.display()
+            ))
+        }
+    } else {
+        Ok(format!(
+            "Package manager upgrade executed for {}.",
+            target_pm.name()
+        ))
+    }
 }
 
 /// Helper to query the version of an external Forgum binary.
