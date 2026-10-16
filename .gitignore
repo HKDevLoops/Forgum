@@ -66,12 +66,24 @@ kilo.json
 testsprite_tests/
 graphify-out/
 .planning/
+MARKDOWN_RULES.md
+.markdownlint.json
 session*.md
 worklog*.md
 NOTES*.md
 notes*.md
 PR*.md
 commit_msg*.txt
+/scratch*.md
+/SCRATCH*.md
+/temp*.md
+/TEMP*.md
+/test*.md
+/TEST*.md
+/audit*.md
+/AUDIT*.md
+/report*.md
+/REPORT*.md
 *.prep
 *.prep.*
 prep/
@@ -98,8 +110,15 @@ TODO_MASTER_AUDIT_AND_REMEDIATION.md
 /scripts/*
 !/scripts/update-package-manifests.py
 /workflows/
-commit_push.ps1
-raise_prs.ps1
+/commit_push.ps1
+/raise_prs.ps1
+/scratch*.ps1
+/scratch*.sh
+/scratch*.py
+/temp*.ps1
+/temp*.sh
+/temp*.py
+/test_scratch*.*
 
 # --- Node / Web Scratch (if any) ---
 package.json

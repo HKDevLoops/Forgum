@@ -108,7 +108,7 @@ All agents must follow this exact sequential procedure when executing a release:
 flowchart TD
     S1["1. Human Authority Check<br/>Verify explicit user command"] --> S2["2. Multi-Manifest Audit<br/>Update all 25 files to X.Y.Z-beta"]
     S2 --> S3["3. LF Line Ending Verification<br/>Ensure install.sh has 0 CR bytes"]
-    S3 --> S4["4. Local Release Build<br/>cargo build --release -p forgum-engine --bin forgum"]
+    S3 --> S4["4. Local Release Build<br/>cargo build --release --bin forgum"]
     S4 --> S5["5. Workspace Verification<br/>cargo test & clippy pass"]
     S5 --> S6["6. Dual Branch Push<br/>git push origin dev && git push origin dev:main"]
     S6 --> S7["7. Triplet Tag Push<br/>git push origin vX.Y.Z-beta X.Y.Z-beta X.Y.Zbeta"]
@@ -137,7 +137,7 @@ flowchart TD
 #### Step 4: Local Release Binary Rebuild
 * Rebuild the local release binary so that shadow scans on the developer machine immediately report the new version:
   ```bash
-  cargo build --release -p forgum-engine --bin forgum
+  cargo build --release --bin forgum
   ```
 * Verify local binary version:
   ```bash
