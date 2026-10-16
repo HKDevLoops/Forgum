@@ -11,6 +11,9 @@ function Stop-ForgumDaemon {
     [CmdletBinding()]
     param()
 
+    $session = Get-ForgumSessionId
+    $daemonPath = Get-ForgumDaemonStatePath -SessionId $session
+
     # Delegate directly to canonical Rust binary session management if forgum is available
     $exe = Get-Command forgum -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source -First 1
     if (-not $exe) {
@@ -29,11 +32,11 @@ function Stop-ForgumDaemon {
     }
     if ($exe) {
         & $exe stop
+        if (Test-Path -LiteralPath $daemonPath) {
+            Remove-Item -LiteralPath $daemonPath -Force -ErrorAction SilentlyContinue
+        }
         return
     }
-
-    $session = Get-ForgumSessionId
-    $daemonPath = Get-ForgumDaemonStatePath -SessionId $session
 
     if (-not (Test-Path -LiteralPath $daemonPath)) {
         Write-Verbose "No daemon state file found at $daemonPath"

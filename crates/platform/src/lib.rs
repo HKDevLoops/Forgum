@@ -92,9 +92,9 @@ pub use package_manager::{
     FORGUM_RELEASE_PUBLIC_KEY,
 };
 pub use paths::{
-    config_dir, config_path, control_socket_path, daemon_state_path, data_dir, detect_config_file,
-    detect_session_id, is_canonical, log_dir, open_folder_in_desktop, runtime_dir, ConfigPaths,
-    ShellKind,
+    candidate_runtime_dirs, config_dir, config_path, control_socket_path, daemon_state_path,
+    data_dir, detect_config_file, detect_session_id, is_canonical, log_dir, open_folder_in_desktop,
+    runtime_dir, ConfigPaths, ShellKind,
 };
 #[cfg(unix)]
 pub use platform_unix::parent_pid;

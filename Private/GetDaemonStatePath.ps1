@@ -21,7 +21,9 @@ function Get-ForgumDaemonStatePath {
         [Parameter(Mandatory)] [string] $SessionId
     )
 
-    if ($IsWindows -or $env:OS -eq 'Windows_NT') {
+    if ($env:FORGUM_RUNTIME) {
+        $base = $env:FORGUM_RUNTIME
+    } elseif ($IsWindows -or $env:OS -eq 'Windows_NT') {
         $base = if ($env:LOCALAPPDATA) { $env:LOCALAPPDATA } else { Join-Path $env:USERPROFILE "AppData\Local" }
         $base = Join-Path $base "Forgum"
     } else {

@@ -95,8 +95,9 @@ fn chrono_free_timestamp() -> String {
 pub fn cleanup_daemon_state(session_id: &str) {
     let path = forgum_platform::daemon_state_path(session_id);
     let _ = std::fs::remove_file(path);
-    if let Ok(rt) = forgum_platform::runtime_dir() {
-        let _ = std::fs::remove_file(rt.join("daemon.json"));
+    for dir in forgum_platform::candidate_runtime_dirs() {
+        let _ = std::fs::remove_file(dir.join(format!("daemon-{}.json", session_id)));
+        let _ = std::fs::remove_file(dir.join("daemon.json"));
     }
 }
 

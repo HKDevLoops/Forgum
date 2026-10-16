@@ -421,6 +421,38 @@ fn sanitize_session_id(sid: &str) -> String {
 
 fn require_safe_session_id(_sid: &str) {}
 
+/// Compute all candidate runtime directories where daemon state or sockets might reside.
+#[must_use]
+pub fn candidate_runtime_dirs() -> Vec<PathBuf> {
+    let mut dirs = Vec::new();
+    if let Ok(rt) = runtime_dir() {
+        dirs.push(rt);
+    }
+    #[cfg(windows)]
+    {
+        if let Ok(local) = std::env::var("LOCALAPPDATA") {
+            let p = PathBuf::from(local).join("Forgum");
+            if !dirs.contains(&p) {
+                dirs.push(p);
+            }
+        }
+    }
+    #[cfg(unix)]
+    {
+        if let Ok(tmp) = std::env::var("TMPDIR") {
+            let p = PathBuf::from(tmp).join("Forgum");
+            if !dirs.contains(&p) {
+                dirs.push(p);
+            }
+        }
+        let fallback = PathBuf::from("/tmp/Forgum");
+        if !dirs.contains(&fallback) {
+            dirs.push(fallback);
+        }
+    }
+    dirs
+}
+
 /// Compute the path to a daemon state file for a given session ID.
 ///
 /// On Unix: `$XDG_RUNTIME_DIR/Forgum/daemon-{id}.json`

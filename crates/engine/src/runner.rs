@@ -2740,10 +2740,15 @@ fn handle_stop_command(all: bool, force: bool) -> ExitCode {
         state_paths.push(session_path.clone());
     }
 
-    if let Ok(rt) = forgum_platform::runtime_dir() {
+    for rt in forgum_platform::candidate_runtime_dirs() {
         let generic = rt.join("daemon.json");
         if generic.exists() && !state_paths.contains(&generic) {
             state_paths.push(generic);
+        }
+
+        let specific = rt.join(format!("daemon-{session_id}.json"));
+        if specific.exists() && !state_paths.contains(&specific) {
+            state_paths.push(specific);
         }
 
         if all || state_paths.is_empty() {
@@ -2800,12 +2805,15 @@ fn handle_stop_command(all: bool, force: bool) -> ExitCode {
     }
 
     // Clean up any remaining socket or state files in runtime directory
-    if let Ok(rt) = forgum_platform::runtime_dir() {
+    for rt in forgum_platform::candidate_runtime_dirs() {
         if let Ok(entries) = std::fs::read_dir(&rt) {
             for entry in entries.flatten() {
                 let name = entry.file_name();
                 let name_str = name.to_string_lossy();
-                if name_str.starts_with("daemon") || name_str.ends_with(".sock") {
+                if name_str.starts_with("daemon")
+                    || name_str.ends_with(".sock")
+                    || name_str.ends_with(".pipe")
+                {
                     let _ = std::fs::remove_file(entry.path());
                 }
             }
