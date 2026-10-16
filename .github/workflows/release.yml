@@ -178,7 +178,7 @@ jobs:
         run: |
           VERSION="${{ needs.version-check.outputs.version }}"
           chmod +x packaging/macos/build-dmg.sh
-          ./packaging/macos/build-dmg.sh "${VERSION}"
+          ./packaging/macos/build-dmg.sh "${VERSION}" "${{ matrix.target }}"
 
       - name: Upload artifacts
         # Skip upload for the build_only i686 lane: it produces no packaged archive and

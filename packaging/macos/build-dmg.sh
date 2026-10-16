@@ -17,11 +17,17 @@ else
   VERSION="$(grep -m1 '^version' "${REPO_ROOT}/Cargo.toml" | sed -E 's/.*"([^"]+)".*/\1/')"
 fi
 
-ARCH="$(uname -m)"
-case "$ARCH" in
-  arm64|aarch64) MAC_ARCH="arm64" ;;
-  x86_64|amd64)  MAC_ARCH="x86_64" ;;
-  *)             MAC_ARCH="$ARCH" ;;
+# Arch/target: second CLI arg, else derive from uname -m
+if [ $# -ge 2 ] && [ -n "${2:-}" ]; then
+  RAW_ARCH="$2"
+else
+  RAW_ARCH="$(uname -m)"
+fi
+
+case "$RAW_ARCH" in
+  *arm64*|*aarch64*)      MAC_ARCH="arm64" ;;
+  *x86_64*|*amd64*|*x64*) MAC_ARCH="x64" ;;
+  *)                      MAC_ARCH="$RAW_ARCH" ;;
 esac
 
 DMG_NAME="forgum-${VERSION}-macos-${MAC_ARCH}.dmg"
@@ -31,14 +37,15 @@ trap 'rm -rf "$STAGE_DIR"' EXIT
 echo ">> Staging Forgum v${VERSION} (${MAC_ARCH}) for DMG disk image creation..."
 
 # Locate or build the release binary
-BIN_PATH="${REPO_ROOT}/target/release/forgum"
-if [ ! -f "$BIN_PATH" ]; then
-  if [ -f "${REPO_ROOT}/target/${ARCH}-apple-darwin/release/forgum" ]; then
-    BIN_PATH="${REPO_ROOT}/target/${ARCH}-apple-darwin/release/forgum"
-  else
-    echo ">> Building release binary natively via cargo..."
-    cargo build --release --locked -p forgum-engine --bin forgum
-  fi
+BIN_PATH=""
+if [ -f "${REPO_ROOT}/target/${RAW_ARCH}/release/forgum" ]; then
+  BIN_PATH="${REPO_ROOT}/target/${RAW_ARCH}/release/forgum"
+elif [ -f "${REPO_ROOT}/target/release/forgum" ]; then
+  BIN_PATH="${REPO_ROOT}/target/release/forgum"
+else
+  echo ">> Building release binary natively via cargo..."
+  cargo build --release --locked -p forgum-engine --bin forgum
+  BIN_PATH="${REPO_ROOT}/target/release/forgum"
 fi
 
 cp "$BIN_PATH" "${STAGE_DIR}/forgum"
