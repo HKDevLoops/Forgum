@@ -169,12 +169,7 @@ pub fn is_parent_shell_in_foreground(parent_pid: Option<u32>) -> bool {
         unsafe { libc::tcgetpgrp(tty_fd) }
     } else {
         // Try opening /dev/tty with O_CLOEXEC
-        let dev_tty = unsafe {
-            libc::open(
-                c"/dev/tty".as_ptr(),
-                libc::O_RDONLY | libc::O_CLOEXEC,
-            )
-        };
+        let dev_tty = unsafe { libc::open(c"/dev/tty".as_ptr(), libc::O_RDONLY | libc::O_CLOEXEC) };
         if dev_tty >= 0 {
             let pgrp = unsafe { libc::tcgetpgrp(dev_tty) };
             unsafe { libc::close(dev_tty) };
