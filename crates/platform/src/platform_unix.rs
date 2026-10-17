@@ -171,7 +171,7 @@ pub fn is_parent_shell_in_foreground(parent_pid: Option<u32>) -> bool {
         // Try opening /dev/tty with O_CLOEXEC
         let dev_tty = unsafe {
             libc::open(
-                b"/dev/tty\0".as_ptr() as *const libc::c_char,
+                c"/dev/tty".as_ptr(),
                 libc::O_RDONLY | libc::O_CLOEXEC,
             )
         };
