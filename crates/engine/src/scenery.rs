@@ -1,7 +1,7 @@
 //! Per-animal thematic scenery engine.
 //!
 //! Generates layered procedural ASCII/ANSI backdrops (Mountain, Road, Environment)
-//! tailored to each of the 106 creatures or customized via CLI flags.
+//! tailored to each of the 132 creatures or customized via CLI flags.
 
 use crate::dna::BaseAnim;
 use crate::framebuffer::{Cell, Color, FrameBuffer};

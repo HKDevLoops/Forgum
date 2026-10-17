@@ -278,6 +278,40 @@ pub fn probe_windows_gpus_registry() -> Vec<(String, String, Option<u64>)> {
     results
 }
 
+/// Returns `true` if the parent shell process is currently the active foreground
+/// process in the terminal/console. If an editor (e.g. `nvim`, `vim`, `emacs`, `nano`)
+/// or another foreground command is running in the console, this returns `false`.
+#[allow(unsafe_code)]
+#[must_use]
+pub fn is_parent_shell_in_foreground(parent_pid: Option<u32>) -> bool {
+    use windows_sys::Win32::System::Console::GetConsoleProcessList;
+
+    let ppid = match parent_pid {
+        Some(pid) if pid > 0 => pid,
+        _ => return true,
+    };
+    let my_pid = std::process::id();
+
+    let mut pids = [0u32; 64];
+    let count = unsafe { GetConsoleProcessList(pids.as_mut_ptr(), pids.len() as u32) };
+    if count == 0 {
+        return true;
+    }
+
+    let slice_len = (count as usize).min(pids.len());
+    let active_pids = &pids[..slice_len];
+
+    // If there is any PID attached to the console that is NOT us and NOT the parent shell,
+    // an interactive child command/editor is running in the console!
+    for &pid in active_pids {
+        if pid != 0 && pid != my_pid && pid != ppid {
+            return false;
+        }
+    }
+
+    true
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

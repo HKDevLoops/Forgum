@@ -97,9 +97,9 @@ pub use paths::{
     runtime_dir, ConfigPaths, ShellKind,
 };
 #[cfg(unix)]
-pub use platform_unix::parent_pid;
+pub use platform_unix::{is_parent_shell_in_foreground, parent_pid};
 #[cfg(windows)]
-pub use platform_windows::parent_pid;
+pub use platform_windows::{is_parent_shell_in_foreground, parent_pid};
 pub use protocol::{
     lookup_config_schema, ConfigFormat, ConfigSchemaField, KeybindingsConfig, RandomSetting,
     SceneConfig, FORGUM_CONFIG_SCHEMA,

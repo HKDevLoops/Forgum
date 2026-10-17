@@ -227,6 +227,7 @@ pub fn render_loop_background(
         max_frames,
         overlay_rows,
         overlay_cols,
+        forgum_platform::parent_pid(),
     )
 }
 

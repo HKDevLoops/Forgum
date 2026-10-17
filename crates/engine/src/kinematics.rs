@@ -385,55 +385,60 @@ impl AsciiRigMap {
             }
         }
 
-        // 2. Flood fill from borders to mark exterior whitespace as ExteriorTransparent
-        let mut queue = std::collections::VecDeque::new();
-        let mut visited = vec![false; width * height];
-
-        for x in 0..width {
-            // top border
-            if grid[0][x] == ' ' {
-                visited[x] = true;
-                queue.push_back((x, 0));
-            }
-            // bottom border
-            let b_idx = (height - 1) * width + x;
-            if grid[height - 1][x] == ' ' && !visited[b_idx] {
-                visited[b_idx] = true;
-                queue.push_back((x, height - 1));
-            }
-        }
-
+        // Pre-compute horizontal bounding hull for each row (first and last non-space glyph)
+        let mut row_hulls: Vec<Option<(usize, usize)>> = Vec::with_capacity(height);
         for y in 0..height {
-            // left border
-            let l_idx = y * width;
-            if grid[y][0] == ' ' && !visited[l_idx] {
-                visited[l_idx] = true;
-                queue.push_back((0, y));
-            }
-            // right border
-            let r_idx = y * width + (width - 1);
-            if grid[y][width - 1] == ' ' && !visited[r_idx] {
-                visited[r_idx] = true;
-                queue.push_back((width - 1, y));
+            let first = grid[y].iter().position(|&c| c != ' ');
+            let last = grid[y].iter().rposition(|&c| c != ' ');
+            match (first, last) {
+                (Some(f), Some(l)) => row_hulls.push(Some((f, l))),
+                _ => row_hulls.push(None),
             }
         }
 
-        while let Some((cx, cy)) = queue.pop_front() {
-            let idx = cy * width + cx;
-            cells[idx].mask = CellMask::ExteriorTransparent;
+        // 2. Mark cells as ExteriorTransparent vs InteriorOpaque:
+        // By Mandate 2.C (Occlusion Integrity), any whitespace inside the animal's silhouette
+        // (x >= h_min && x <= h_max) on head/torso rows (above leg_row) MUST be InteriorOpaque.
+        // Cells outside the horizontal hull (x < h_min || x > h_max) or whitespace between legs
+        // on the leg row (y + cow_start >= segments.leg_row && segments.leg_row > 0) are ExteriorTransparent.
+        for y in 0..height {
+            let hull = row_hulls[y];
+            let is_leg_or_lower = y + cow_start >= segments.leg_row && segments.leg_row > 0;
+            for x in 0..width {
+                let idx = y * width + x;
+                if grid[y][x] == ' ' {
+                    let is_enclosed_head = if y == 0 {
+                        let left = &grid[0][..x];
+                        let right = &grid[0][(x + 1)..];
+                        let has_parens = left.contains(&'(') && right.contains(&')');
+                        let has_brackets = left.contains(&'[') && right.contains(&']');
+                        let adj_eye = (x > 0
+                            && matches!(
+                                grid[0][x - 1],
+                                'o' | 'O' | '@' | '^' | '*' | '$' | 'x' | 'X' | '=' | '0'
+                            ))
+                            || (x + 1 < width
+                                && matches!(
+                                    grid[0][x + 1],
+                                    'o' | 'O' | '@' | '^' | '*' | '$' | 'x' | 'X' | '=' | '0'
+                                ));
+                        has_parens || has_brackets || adj_eye
+                    } else {
+                        true
+                    };
 
-            // 4-neighborhood
-            let neighbors: [(i32, i32); 4] = [(-1, 0), (1, 0), (0, -1), (0, 1)];
-            for (dx, dy) in neighbors {
-                let nx = cx as i32 + dx;
-                let ny = cy as i32 + dy;
-                if nx >= 0 && nx < width as i32 && ny >= 0 && ny < height as i32 {
-                    let unx = nx as usize;
-                    let uny = ny as usize;
-                    let n_idx = uny * width + unx;
-                    if !visited[n_idx] && grid[uny][unx] == ' ' {
-                        visited[n_idx] = true;
-                        queue.push_back((unx, uny));
+                    if let Some((h_min, h_max)) = hull {
+                        if x >= h_min && x <= h_max {
+                            if is_leg_or_lower || !is_enclosed_head {
+                                cells[idx].mask = CellMask::ExteriorTransparent;
+                            } else {
+                                cells[idx].mask = CellMask::InteriorOpaque;
+                            }
+                        } else {
+                            cells[idx].mask = CellMask::ExteriorTransparent;
+                        }
+                    } else {
+                        cells[idx].mask = CellMask::ExteriorTransparent;
                     }
                 }
             }
@@ -833,6 +838,7 @@ pub struct CellDeformation {
 #[derive(Debug, Clone)]
 pub struct CartoonRig {
     pub segments: AnatomicalSegments,
+    pub rig_map: Option<AsciiRigMap>,
     /// Spring-damper displacement for buoyant dialogue bubble
     pub bubble_offset_x: f32,
     pub bubble_vel_x: f32,
@@ -851,6 +857,7 @@ impl CartoonRig {
     pub fn new(segments: AnatomicalSegments) -> Self {
         Self {
             segments,
+            rig_map: None,
             bubble_offset_x: 0.0,
             bubble_vel_x: 0.0,
             bubble_offset_y: 0.0,
@@ -861,6 +868,12 @@ impl CartoonRig {
             tail_amplitude: 0.85,
             head_bob_amplitude: 0.45,
         }
+    }
+
+    #[must_use]
+    pub fn with_rig_map(mut self, rig_map: AsciiRigMap) -> Self {
+        self.rig_map = Some(rig_map);
+        self
     }
 
     /// Advance spring-damper bubble physics and harmonic phases by `dt` seconds.

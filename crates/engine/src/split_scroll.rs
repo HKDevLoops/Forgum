@@ -91,6 +91,133 @@ pub fn compute_reserved_dimensions(
     compute_reserved_dimensions_with_cols(total_cols, total_rows, mascot_lines, 0, config)
 }
 
+/// Lifecycle state of the split-overlay guard.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SplitOverlayState {
+    Active,
+    Suspended,
+}
+
+/// Guard managing DECSTBM split-overlay margin lifecycle and background editor isolation.
+///
+/// Invariants:
+/// 1. When an interactive editor or command (nvim, vim, emacs, nano, etc.) takes the
+///    foreground in the terminal, DECSTBM margins are immediately reset to full screen
+///    (`\x1b[r`) and split overlay rendering is suspended (0 bytes written to tty).
+/// 2. When the parent shell returns to the foreground, DECSTBM margins are re-asserted,
+///    the reserved banner area is cleared, and a full frame redraw is signaled.
+#[derive(Debug)]
+pub struct SplitOverlayGuard {
+    parent_pid: Option<u32>,
+    top_margin: usize,
+    bottom_margin: usize,
+    overlay_rows: usize,
+    pub state: SplitOverlayState,
+    last_check: std::time::Instant,
+    just_resumed: bool,
+    check_interval: std::time::Duration,
+}
+
+impl SplitOverlayGuard {
+    pub fn new(
+        parent_pid: Option<u32>,
+        top_margin: usize,
+        bottom_margin: usize,
+        overlay_rows: usize,
+    ) -> Self {
+        Self {
+            parent_pid,
+            top_margin,
+            bottom_margin,
+            overlay_rows,
+            state: SplitOverlayState::Active,
+            last_check: std::time::Instant::now() - std::time::Duration::from_millis(100),
+            just_resumed: false,
+            check_interval: std::time::Duration::from_millis(20),
+        }
+    }
+
+    pub fn update_dimensions(
+        &mut self,
+        top_margin: usize,
+        bottom_margin: usize,
+        overlay_rows: usize,
+    ) {
+        self.top_margin = top_margin;
+        self.bottom_margin = bottom_margin;
+        self.overlay_rows = overlay_rows;
+    }
+
+    /// Force the next `should_render` call to immediately re-evaluate the foreground process check.
+    pub fn force_check(&mut self) {
+        self.last_check = std::time::Instant::now() - self.check_interval;
+    }
+
+    /// Check if the split overlay should write output to the terminal.
+    ///
+    /// Returns `true` if overlay rendering should proceed.
+    /// Returns `false` if overlay rendering is suspended due to an active editor/command.
+    pub fn should_render<W: Write>(&mut self, out: &mut W) -> bool {
+        let now = std::time::Instant::now();
+        if now.duration_since(self.last_check) >= self.check_interval {
+            self.last_check = now;
+            let is_fg = forgum_platform::is_parent_shell_in_foreground(self.parent_pid);
+
+            match self.state {
+                SplitOverlayState::Active => {
+                    if !is_fg {
+                        // Shell lost foreground to an interactive editor/command!
+                        // Unconditionally reset DECSTBM margins so the editor has full screen.
+                        let _ = out.write_all(b"\x1b[r\x1b[?6l\x1b[?69l\x1b[0m\x1b[?25h");
+                        let _ = out.flush();
+                        self.state = SplitOverlayState::Suspended;
+                        self.just_resumed = false;
+                        return false;
+                    }
+                }
+                SplitOverlayState::Suspended => {
+                    if is_fg {
+                        // Shell returned to foreground!
+                        // Re-assert DECSTBM margins with cursor save/restore.
+                        let _ = out.write_all(
+                            format!(
+                                "\x1b7\x1b[?6l\x1b[{};{}r\x1b8",
+                                self.top_margin, self.bottom_margin
+                            )
+                            .as_bytes(),
+                        );
+                        // Clear the reserved banner area
+                        for y in 1..=self.overlay_rows {
+                            let _ =
+                                out.write_all(format!("\x1b7\x1b[{y};1H\x1b[2K\x1b8").as_bytes());
+                        }
+                        let _ = out.flush();
+                        self.state = SplitOverlayState::Active;
+                        self.just_resumed = true;
+                        return true;
+                    } else {
+                        return false;
+                    }
+                }
+            }
+        }
+
+        self.state == SplitOverlayState::Active
+    }
+
+    /// Returns `true` once if the guard just transitioned from `Suspended` to `Active`,
+    /// indicating that the caller should perform a full damage repaint.
+    pub fn take_just_resumed(&mut self) -> bool {
+        let r = self.just_resumed;
+        self.just_resumed = false;
+        r
+    }
+
+    pub fn is_suspended(&self) -> bool {
+        self.state == SplitOverlayState::Suspended
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

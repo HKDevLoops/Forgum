@@ -71,7 +71,7 @@ pub struct Cli {
         visible_alias = "animal",
         value_name = "NAME",
         help = "Animal mascot name (default, tux, dragon...). Run 'forgum list animals'",
-        long_help = "Animal mascot name to render (e.g. default, tux, dragon, stegosaurus, bunny, corgi, ghost, elephant, octopus, random). Run 'forgum list animals' to inspect all 106 available mascots."
+        long_help = "Animal mascot name to render (e.g. default, tux, dragon, stegosaurus, bunny, corgi, ghost, elephant, octopus, random). Run 'forgum list animals' to inspect all 132 available mascots."
     )]
     pub cow: Option<String>,
 
@@ -2559,7 +2559,7 @@ pub fn generate_command_suggestion(query: &str) -> Option<String> {
     let q = query.trim().trim_start_matches('-').to_lowercase();
     match q.as_str() {
         "cow" | "cows" | "animal" | "animals" | "mascot" | "mascots" => Some(
-            "💡 Did you mean:\n  • forgum --animal <name>      (render a specific animal mascot)\n  • forgum list animals         (view all 106 available animals)\n  • forgum list                 (view all available options)".to_string()
+            "💡 Did you mean:\n  • forgum --animal <name>      (render a specific animal mascot)\n  • forgum list animals         (view all 132 available animals)\n  • forgum list                 (view all available options)".to_string()
         ),
         "effect" | "effects" | "anim" | "animation" | "animations" | "motion" => Some(
             "💡 Did you mean:\n  • forgum --effect <name>      (set animation effect: walk, breathe, float...)\n  • forgum list effects         (view all available effects)".to_string()

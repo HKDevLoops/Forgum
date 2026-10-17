@@ -217,6 +217,7 @@ pub fn run_tui(
                             return Ok(());
                         }
                         app::Action::Save => {
+                            app.enforce_animation_effect_consistency();
                             let fmt = app.config_format();
                             let text = app
                                 .config()
@@ -271,8 +272,10 @@ pub fn run_tui(
 
                             app.config_path = Some(target_path);
                             app.mark_saved();
+                            broadcast_daemon_reload(app.config());
                         }
                         app::Action::SaveAndQuit => {
+                            app.enforce_animation_effect_consistency();
                             let fmt = app.config_format();
                             let text = app
                                 .config()
@@ -299,6 +302,7 @@ pub fn run_tui(
                             fs::write(&target_path, text)
                                 .with_context(|| format!("write {}", target_path.display()))?;
 
+                            broadcast_daemon_reload(app.config());
                             shutdown_for_closure.store(true, std::sync::atomic::Ordering::Relaxed);
                             return Ok(());
                         }
@@ -629,4 +633,25 @@ fn command_exists(cmd: &str) -> bool {
         }
     }
     false
+}
+
+/// Broadcast updated configuration parameters to active background daemons via control socket.
+fn broadcast_daemon_reload(config: &forgum_platform::SceneConfig) {
+    let session_id = forgum_platform::detect_session_id();
+    let socket_path = forgum_platform::control_socket_path(&session_id);
+    if let Ok(mut conn) = forgum_platform::DaemonSocket::connect(&socket_path) {
+        let _ = conn.write_response(&format!(
+            "{{\"cmd\":\"EFFECT\",\"arg\":\"{}\"}}\n",
+            config.effect
+        ));
+        let _ = conn.write_response(&format!("{{\"cmd\":\"COW\",\"arg\":\"{}\"}}\n", config.cow));
+        let _ = conn.write_response(&format!(
+            "{{\"cmd\":\"TEXT\",\"arg\":\"{}\"}}\n",
+            config.text
+        ));
+        let _ = conn.write_response(&format!(
+            "{{\"cmd\":\"COLOR\",\"arg\":\"{}\"}}\n",
+            config.color_mode
+        ));
+    }
 }

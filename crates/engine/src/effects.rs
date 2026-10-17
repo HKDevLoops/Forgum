@@ -397,6 +397,7 @@ pub struct BreatheEffect {
     instinct: AnimalInstinct,
     mouth_pos: Option<(usize, usize)>,
     eye_landmarks: Vec<(usize, usize)>,
+    rig_map: crate::kinematics::AsciiRigMap,
 }
 
 impl BreatheEffect {
@@ -417,6 +418,15 @@ impl BreatheEffect {
             cow_start_line,
             &eye_landmarks,
         ));
+        let segments = crate::kinematics::AnatomicalSegments::detect(
+            &cow_text,
+            cow_start_line,
+            eye_landmarks.first().copied(),
+            mouth_pos,
+            None,
+            cow_text.lines().count().saturating_sub(1),
+        );
+        let rig_map = crate::kinematics::AsciiRigMap::build(&cow_text, cow_start_line, &segments);
 
         Self {
             cow_text,
@@ -431,6 +441,7 @@ impl BreatheEffect {
             instinct,
             mouth_pos,
             eye_landmarks,
+            rig_map,
         }
     }
 }
@@ -551,8 +562,21 @@ impl Effect for BreatheEffect {
                     }
                     _ => {}
                 }
-
-                draw_char_with_hull(fb, x, y, x, hull, ch, cell_fg);
+                if y < self.cow_start_line {
+                    draw_char_with_hull(fb, x, y, x, hull, ch, cell_fg);
+                } else {
+                    draw_char_with_rig_hull(
+                        fb,
+                        x,
+                        y,
+                        x,
+                        rel_y,
+                        hull,
+                        Some(&self.rig_map),
+                        ch,
+                        cell_fg,
+                    );
+                }
                 x += 1;
             }
             y += 1;
@@ -800,7 +824,8 @@ impl FloatEffect {
             None,
             h.saturating_sub(1),
         );
-        let rig = crate::kinematics::CartoonRig::new(segments);
+        let rig_map = crate::kinematics::AsciiRigMap::build(&cow_text, cow_start_line, &segments);
+        let rig = crate::kinematics::CartoonRig::new(segments).with_rig_map(rig_map);
         Self {
             cow_text,
             line_offsets,
@@ -968,17 +993,43 @@ impl Effect for FloatEffect {
                             Color::WHITE,
                             '-',
                         );
-                        draw_char_with_hull(fb, uxi, draw_y, x, hull, '-', cell_fg);
+                        draw_char_with_rig_hull(
+                            fb,
+                            uxi,
+                            draw_y,
+                            x,
+                            rel_y,
+                            hull,
+                            self.rig.rig_map.as_ref(),
+                            '-',
+                            cell_fg,
+                        );
                         if !is_landmark && chars_iter.peek().copied() == Some(ch) {
                             let _ = chars_iter.next();
                             if uxi + 1 < fb.width {
-                                draw_char_with_hull(fb, uxi + 1, draw_y, x + 1, hull, '-', cell_fg);
+                                draw_char_with_rig_hull(
+                                    fb,
+                                    uxi + 1,
+                                    draw_y,
+                                    x + 1,
+                                    rel_y,
+                                    hull,
+                                    self.rig.rig_map.as_ref(),
+                                    '-',
+                                    cell_fg,
+                                );
                             }
                             x += 2;
                             continue;
                         }
                         x += 1;
                         continue;
+                    }
+
+                    // Wing flexing / continuous organic morphing:
+                    if ch == '^' || ch == '~' || ch == '-' || ch == '_' || ch == 'v' {
+                        let wing_shear = ((time * 3.5).sin() * 0.5) as f64;
+                        ch = crate::kinematics::morph_ascii_glyph(ch, 0.0, wing_shear);
                     }
 
                     // Hovering levitation shimmer on horns/ears or back:
@@ -1000,7 +1051,17 @@ impl Effect for FloatEffect {
                         ch,
                     )
                     .scale_luminance(def.luminance_mult);
-                    draw_char_with_hull(fb, uxi, draw_y, x, hull, ch, cell_fg);
+                    draw_char_with_rig_hull(
+                        fb,
+                        uxi,
+                        draw_y,
+                        x,
+                        rel_y,
+                        hull,
+                        self.rig.rig_map.as_ref(),
+                        ch,
+                        cell_fg,
+                    );
                 }
                 x += 1;
             }
@@ -1308,7 +1369,8 @@ impl WalkEffect {
             tail_pos,
             leg_line_idx,
         );
-        let rig = crate::kinematics::CartoonRig::new(segments);
+        let rig_map = crate::kinematics::AsciiRigMap::build(&cow_text, cow_start, &segments);
+        let rig = crate::kinematics::CartoonRig::new(segments).with_rig_map(rig_map);
         let leg_partition = crate::kinematics::QuadrupedLegPartition::partition(
             &leg_cols,
             segments.head_col,
@@ -1479,13 +1541,30 @@ impl Effect for WalkEffect {
                                         sc,
                                     )
                                     .scale_luminance(def.luminance_mult);
-                                    draw_char_with_hull(fb, uxi, uyi, x + k, hull, sc, cell_fg);
+                                    draw_char_with_rig_hull(
+                                        fb,
+                                        uxi,
+                                        uyi,
+                                        x + k,
+                                        animal_rel_y,
+                                        hull,
+                                        self.rig.rig_map.as_ref(),
+                                        sc,
+                                        cell_fg,
+                                    );
                                 }
                             }
                         }
                         skip_until = x + 4;
                         continue;
                     }
+                }
+
+                if (display_ch == '/' || display_ch == '\\' || display_ch == '|')
+                    && y >= self.leg_line_idx.saturating_sub(1)
+                {
+                    let leg_shear = ((stride * 2.0 * std::f32::consts::PI).sin() * 0.45) as f64;
+                    display_ch = crate::kinematics::morph_ascii_glyph(display_ch, leg_shear, 0.0);
                 }
 
                 let def = if is_multisegment {
@@ -1514,7 +1593,17 @@ impl Effect for WalkEffect {
                             display_ch,
                         )
                         .scale_luminance(def.luminance_mult);
-                        draw_char_with_hull(fb, uxi, uyi, x, hull, display_ch, cell_fg);
+                        draw_char_with_rig_hull(
+                            fb,
+                            uxi,
+                            uyi,
+                            x,
+                            animal_rel_y,
+                            hull,
+                            self.rig.rig_map.as_ref(),
+                            display_ch,
+                            cell_fg,
+                        );
                     }
                 }
             }
@@ -2785,10 +2874,70 @@ pub(crate) fn find_line_hull(line: &str) -> Option<(usize, usize)> {
     Some((start, last))
 }
 
-/// Render a cell respecting bounding-hull occlusion:
-/// - If `ch != ' '`: draws the character with fg color.
-/// - If `ch == ' '` and inside hull: draws opaque blank to prevent background scenery bleed.
-/// - If `ch == ' '` and outside hull (leading or trailing): leaves framebuffer untouched so scenery shows.
+/// Render a cell respecting 2D biomechanical rig mask and bounding-hull occlusion:
+/// - If `ch != ' '`: draws the character with `fg` color.
+/// - If `ch == ' '`:
+///   - If `rig_map` is available:
+///     - `CellMask::InteriorOpaque`: draws opaque blank to prevent background scenery bleed inside torso (Mandate 2.C).
+///     - `CellMask::ExteriorMoat`: applies ambient occlusion moat to existing background scenery.
+///     - `CellMask::ExteriorTransparent`: leaves framebuffer untouched so scenery shows naturally between legs/wings!
+///   - If `rig_map` is None: falls back to 1D `hull` bounds.
+#[inline]
+pub(crate) fn draw_char_with_rig_hull(
+    fb: &mut FrameBuffer,
+    x: usize,
+    y: usize,
+    orig_col: usize,
+    animal_rel_y: usize,
+    hull: Option<(usize, usize)>,
+    rig_map: Option<&crate::kinematics::AsciiRigMap>,
+    ch: char,
+    fg: Color,
+) {
+    if x >= fb.width || y >= fb.height {
+        return;
+    }
+    if ch != ' ' {
+        let _ = fb.set(x, y, Cell::new(ch, fg));
+        return;
+    }
+
+    if let Some(rig) = rig_map {
+        if let Some(meta) = rig.get(orig_col, animal_rel_y) {
+            match meta.mask {
+                crate::kinematics::CellMask::InteriorOpaque => {
+                    let _ = fb.set(x, y, Cell::new(' ', Color::WHITE));
+                }
+                crate::kinematics::CellMask::ExteriorMoat => {
+                    let existing = fb.get(x, y);
+                    if existing.ch != ' ' {
+                        let (moat_ch, moat_fg) = crate::kinematics::apply_ambient_occlusion_moat(
+                            existing.ch,
+                            (existing.fg.r, existing.fg.g, existing.fg.b),
+                            (0, 0, 0),
+                        );
+                        let _ = fb.set(
+                            x,
+                            y,
+                            Cell::new(moat_ch, Color::rgb(moat_fg.0, moat_fg.1, moat_fg.2)),
+                        );
+                    }
+                }
+                crate::kinematics::CellMask::ExteriorTransparent
+                | crate::kinematics::CellMask::GlyphOpaque => {}
+            }
+            return;
+        }
+    }
+
+    if let Some((start, end)) = hull {
+        if orig_col >= start && orig_col <= end {
+            let _ = fb.set(x, y, Cell::new(' ', Color::WHITE));
+        }
+    }
+}
+
+/// Legacy helper: render a cell respecting 1D bounding-hull occlusion.
 #[inline]
 pub(crate) fn draw_char_with_hull(
     fb: &mut FrameBuffer,
@@ -2799,16 +2948,7 @@ pub(crate) fn draw_char_with_hull(
     ch: char,
     fg: Color,
 ) {
-    if x >= fb.width || y >= fb.height {
-        return;
-    }
-    if ch != ' ' {
-        let _ = fb.set(x, y, Cell::new(ch, fg));
-    } else if let Some((start, end)) = hull {
-        if orig_col >= start && orig_col <= end {
-            let _ = fb.set(x, y, Cell::new(' ', Color::WHITE));
-        }
-    }
+    draw_char_with_rig_hull(fb, x, y, orig_col, 0, hull, None, ch, fg);
 }
 
 /// Pre-compute byte offsets for each line in text (for zero-alloc iteration).
@@ -3146,6 +3286,15 @@ fn render_text_offset_palette(
     time: f32,
 ) {
     let cow_start_line = find_cow_start_line(text);
+    let segments = crate::kinematics::AnatomicalSegments::detect(
+        text,
+        cow_start_line,
+        None,
+        None,
+        None,
+        text.lines().count().saturating_sub(1),
+    );
+    let rig_map = crate::kinematics::AsciiRigMap::build(text, cow_start_line, &segments);
 
     // Zero-allocation streaming scanline render with bounding-hull occlusion masking.
     for (y, line) in text.lines().enumerate() {
@@ -3181,7 +3330,21 @@ fn render_text_offset_palette(
             } else {
                 resolve_fg_palette_char(color_mode, palette, x, animal_rel_y, time, fg, ch)
             };
-            draw_char_with_hull(fb, uxi, uyi, x, Some((hull_start, hull_end)), ch, cell_fg);
+            if is_bubble_line {
+                draw_char_with_hull(fb, uxi, uyi, x, Some((hull_start, hull_end)), ch, cell_fg);
+            } else {
+                draw_char_with_rig_hull(
+                    fb,
+                    uxi,
+                    uyi,
+                    x,
+                    animal_rel_y,
+                    Some((hull_start, hull_end)),
+                    Some(&rig_map),
+                    ch,
+                    cell_fg,
+                );
+            }
         }
     }
 }

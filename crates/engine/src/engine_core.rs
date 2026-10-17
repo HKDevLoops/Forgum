@@ -940,6 +940,7 @@ struct RenderState {
     overlay_rows: usize,
     _total_rows: usize,
     split_scroll: bool,
+    guard: Option<crate::split_scroll::SplitOverlayGuard>,
 }
 
 impl RenderState {
@@ -956,6 +957,7 @@ impl RenderState {
             overlay_rows: rows,
             _total_rows: rows,
             split_scroll: false,
+            guard: None,
         }
     }
 
@@ -972,6 +974,7 @@ impl RenderState {
             overlay_rows: rows,
             _total_rows: rows,
             split_scroll: false,
+            guard: None,
         }
     }
 
@@ -980,8 +983,20 @@ impl RenderState {
         overlay_rows: usize,
         total_rows: usize,
         split_scroll: bool,
+        parent_pid: Option<u32>,
         out: OutputHandle,
     ) -> Self {
+        let scroll_top = overlay_rows + 1;
+        let guard = if split_scroll {
+            Some(crate::split_scroll::SplitOverlayGuard::new(
+                parent_pid,
+                scroll_top,
+                total_rows,
+                overlay_rows,
+            ))
+        } else {
+            None
+        };
         Self {
             front: vec![Cell::default(); cols * overlay_rows],
             renderer: renderer::create_overlay_renderer(),
@@ -994,11 +1009,18 @@ impl RenderState {
             overlay_rows,
             _total_rows: total_rows,
             split_scroll,
+            guard,
         }
     }
 
     /// Render a frame received from the SIM thread.
     fn render_frame(&mut self, frame: &Arc<Frame>) -> Result<(), Box<dyn std::error::Error>> {
+        if let Some(ref mut guard) = self.guard {
+            if !guard.should_render(&mut self.out) {
+                return Ok(());
+            }
+        }
+
         let dims_changed = self.cols != frame.cols || self.rows != frame.rows;
         let expected = frame.cols * frame.rows;
         if self.front.len() != expected || dims_changed {
@@ -1015,6 +1037,9 @@ impl RenderState {
                 let _ = self.out.write_all(
                     format!("\x1b7\x1b[?6l\x1b[{scroll_top};{total_rows}r\x1b8").as_bytes(),
                 );
+                if let Some(ref mut guard) = self.guard {
+                    guard.update_dimensions(scroll_top, total_rows, frame.rows);
+                }
             }
             if self.overlay_rows > frame.rows {
                 for y in (frame.rows + 1)..=self.overlay_rows {
@@ -1045,7 +1070,16 @@ impl RenderState {
             let _ = self.out.write_all(b"\x1b[2J\x1b[H");
         }
 
-        let damage = &frame.damage;
+        let just_resumed = self.guard.as_mut().is_some_and(|g| g.take_just_resumed());
+        let full_damage: Vec<(usize, usize)>;
+        let damage = if just_resumed {
+            full_damage = (0..frame.cols)
+                .flat_map(|x| (0..frame.rows).map(move |y| (x, y)))
+                .collect();
+            &full_damage[..]
+        } else {
+            &frame.damage[..]
+        };
 
         if !damage.is_empty() {
             let sync = forgum_platform::detect_sync_support();
@@ -1452,6 +1486,7 @@ pub fn run_engine_overlay(
     max_frames: u64,
     overlay_rows: usize,
     overlay_cols: usize,
+    parent_pid: Option<u32>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let caps = forgum_platform::detect_capabilities();
     let total_cols = caps.width.max(20) as usize;
@@ -1510,7 +1545,8 @@ pub fn run_engine_overlay(
         active_composed,
     );
 
-    let render_state = RenderState::new_overlay(cols, rows, total_rows, can_split_scroll, out);
+    let render_state =
+        RenderState::new_overlay(cols, rows, total_rows, can_split_scroll, parent_pid, out);
 
     if let Some(external_rx) = cmd_rx {
         let tx = control_tx.clone();

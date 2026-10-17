@@ -135,6 +135,85 @@ pub fn stdin_has_data() -> bool {
     ret > 0 && (pfd.revents & libc::POLLIN) != 0
 }
 
+/// Returns `true` if the parent shell process is currently the active foreground
+/// process in the terminal. If an editor (e.g. `nvim`, `vim`, `emacs`, `nano`)
+/// or another foreground command is running in the shell, this returns `false`.
+#[cfg(target_family = "unix")]
+#[allow(unsafe_code)]
+#[must_use]
+pub fn is_parent_shell_in_foreground(parent_pid: Option<u32>) -> bool {
+    let ppid = match parent_pid {
+        Some(pid) if pid > 0 => pid as libc::pid_t,
+        _ => return true,
+    };
+
+    // First check: does the parent shell process still exist?
+    let shell_pgid = unsafe { libc::getpgid(ppid) };
+    if shell_pgid < 0 {
+        // Parent process no longer exists or access denied
+        return false;
+    }
+
+    // Determine tty fd to check foreground process group
+    let tty_fd = if unsafe { libc::isatty(libc::STDIN_FILENO) } == 1 {
+        libc::STDIN_FILENO
+    } else if unsafe { libc::isatty(libc::STDOUT_FILENO) } == 1 {
+        libc::STDOUT_FILENO
+    } else if unsafe { libc::isatty(libc::STDERR_FILENO) } == 1 {
+        libc::STDERR_FILENO
+    } else {
+        -1
+    };
+
+    let fg_pgid = if tty_fd >= 0 {
+        unsafe { libc::tcgetpgrp(tty_fd) }
+    } else {
+        // Try opening /dev/tty with O_CLOEXEC
+        let dev_tty = unsafe {
+            libc::open(
+                b"/dev/tty\0".as_ptr() as *const libc::c_char,
+                libc::O_RDONLY | libc::O_CLOEXEC,
+            )
+        };
+        if dev_tty >= 0 {
+            let pgrp = unsafe { libc::tcgetpgrp(dev_tty) };
+            unsafe { libc::close(dev_tty) };
+            pgrp
+        } else {
+            -1
+        }
+    };
+
+    if fg_pgid > 0 {
+        // If foreground pgrp matches shell's pgrp, the shell itself is in the foreground!
+        // When an interactive editor or command runs in the foreground, fg_pgid != shell_pgid.
+        return fg_pgid == shell_pgid;
+    }
+
+    // Fallback on Linux: check if parent process has running/sleeping child processes
+    #[cfg(target_os = "linux")]
+    {
+        if let Ok(children_str) =
+            std::fs::read_to_string(format!("/proc/{ppid}/task/{ppid}/children"))
+        {
+            for child_pid_str in children_str.split_whitespace() {
+                if let Ok(cpid) = child_pid_str.parse::<u32>() {
+                    if let Ok(stat) = std::fs::read_to_string(format!("/proc/{cpid}/stat")) {
+                        let parts: Vec<&str> = stat.split_whitespace().collect();
+                        if parts.len() > 2
+                            && (parts[2] == "R" || parts[2] == "S" || parts[2] == "D")
+                        {
+                            return false;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    true
+}
+
 #[cfg(test)]
 #[cfg(target_family = "unix")]
 mod tests {

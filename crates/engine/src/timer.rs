@@ -130,7 +130,7 @@ mod tests {
     }
 
     #[test]
-    fn timer_cow_failure_shows叉() {
+    fn timer_cow_failure_shows_cross() {
         let result = TimerResult {
             command: "cargo test".to_string(),
             duration_secs: 0.5,

@@ -1383,7 +1383,7 @@ pub fn render_help(category: Option<&str>) -> String {
                 "cow <name>",
                 "--cow / -c <name>",
                 "forgum cow dragon",
-                "Select animal mascot from 106 creatures (default, tux, dragon, corgi, etc.).",
+                "Select animal mascot from 132 creatures (default, tux, dragon, corgi, etc.).",
             ],
             vec![
                 "cows / animals",

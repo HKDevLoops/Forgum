@@ -716,3 +716,37 @@ fn invariant_uv_pinned_palette_zero_color_swimming() {
         );
     }
 }
+
+// ── Invariant 16: Split Overlay Suspends When Foreground Changes ───
+
+#[test]
+fn invariant_split_overlay_suspends_when_foreground_pgid_changes() {
+    use forgum_engine::split_scroll::{SplitOverlayGuard, SplitOverlayState};
+
+    let mut guard = SplitOverlayGuard::new(None, 11, 24, 10);
+    assert!(!guard.is_suspended());
+
+    let mut buf = Vec::new();
+    let should_render = guard.should_render(&mut buf);
+    // When parent shell is in foreground (or None in standalone test), rendering proceeds and 0 bytes are emitted
+    assert!(should_render);
+    assert!(buf.is_empty());
+
+    // When state is set to Suspended:
+    guard.state = SplitOverlayState::Suspended;
+    assert!(guard.is_suspended());
+
+    // Transitioning from Suspended back to Active emits margin re-assertion sequences
+    // and reserved row clearance:
+    guard.force_check();
+    let res = guard.should_render(&mut buf);
+    assert!(res, "Should resume rendering when shell is active");
+    assert!(
+        guard.take_just_resumed(),
+        "Must report just_resumed after returning from suspension"
+    );
+    assert!(
+        buf.starts_with(b"\x1b7\x1b[?6l\x1b[11;24r\x1b8"),
+        "Must re-assert DECSTBM margins upon returning to shell"
+    );
+}

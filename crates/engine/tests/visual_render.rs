@@ -1,4 +1,4 @@
-//! Visual rendering test — renders ALL 106 cows with their DNA profiles
+//! Visual rendering test — renders ALL 132 mascots with their DNA profiles
 //! into PNG images for quality inspection.
 //!
 //! Run with: cargo test --test visual_render -- --nocapture
@@ -179,7 +179,7 @@ h1 { color: #ff8800; }
 </head>
 <body>
 <h1>Forgum Visual Render Gallery</h1>
-<p>106 cows x 60 frames. Each image shows frame 30 (mid-animation).</p>
+<p>132 mascots x 60 frames. Each image shows frame 30 (mid-animation).</p>
 <div class="grid">
 "#,
     );

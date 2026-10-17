@@ -4,7 +4,7 @@
 //! - Zellij-style top header with mode badge, tab bar (1-5), and bottom shortcut pills.
 //! - LazyGit-style multi-pane workspace: contextual entity selector on the left,
 //!   real-time 30 FPS live holographic preview + inspector/action log on the right.
-//! - 5 rich tabs: Mascots (106 cows), Scenery & Roads, Animation & FX, Shell Installer, and Config.
+//! - 5 rich tabs: Mascots (132 mascots), Scenery & Roads, Animation & FX, Shell Installer, and Config.
 //! - 100% in-memory: DOES NOT depend on any config file existing!
 //! - Interactive Shell Installer Wizard: detects installed shells on host, reports
 //!   hook/completion status, and performs one-click install/uninstall with live logging.
@@ -1459,6 +1459,19 @@ impl ConfigApp {
         &self.config
     }
 
+    /// Auto-synchronize animation type (`static` vs `dynamic`) with chosen effect
+    /// to prevent invalid combinations from being saved to disk and causing CLI parse issues.
+    pub fn enforce_animation_effect_consistency(&mut self) {
+        let eff = self.config.effect.to_lowercase();
+        if eff == "static" || eff == "none" {
+            self.config.animation = Some("static".to_string());
+            self.config.animation_type = None;
+        } else {
+            self.config.animation = Some("dynamic".to_string());
+            self.config.animation_type = Some(self.config.effect.clone());
+        }
+    }
+
     pub fn config_format(&self) -> ConfigFormat {
         ConfigFormat::from_extension(&self.format_dropdown.current()).unwrap_or(self.format)
     }
@@ -2112,41 +2125,50 @@ impl ConfigApp {
                         self.commit_config_edit();
                         self.editing_config = false;
                     }
-                    let mode_w = 1 + match self.current_tab {
-                        Tab::Mascots => 13,
-                        Tab::Scenery => 13,
-                        Tab::Effects => 20,
-                        Tab::Installer => 21,
-                        Tab::Config => 19,
-                        Tab::Studio => 28,
-                    };
-                    let mut cur = mode_w + 1;
+                    let bp = Breakpoint::from_size(term_w, term_h);
                     let mut clicked_tab = None;
-                    for tab in Tab::ALL {
-                        let w = tab.title().len() as u16;
-                        if mouse.column >= cur && mouse.column < cur + w {
-                            clicked_tab = Some(tab);
-                            break;
+
+                    if bp == Breakpoint::Compact {
+                        if mouse.row == 0 {
+                            let mode_w = ratatui::text::Span::raw(format!(
+                                "[{}]",
+                                self.current_tab.compact_mode_label()
+                            ))
+                            .width() as u16;
+                            let mut cur = mode_w + 1;
+                            for tab in Tab::ALL {
+                                let w =
+                                    ratatui::text::Span::raw(tab.compact_title()).width() as u16;
+                                if mouse.column >= cur && mouse.column < cur + w {
+                                    clicked_tab = Some(tab);
+                                    break;
+                                }
+                                cur += w;
+                            }
                         }
-                        cur += w + 1;
+                    } else if mouse.row == 1 {
+                        // In standard mode, header content is rendered on line 1 inside the rounded border (x starts at 1)
+                        let mode_w = ratatui::text::Span::raw(format!(
+                            " {} ",
+                            self.current_tab.mode_label()
+                        ))
+                        .width() as u16;
+                        let mut cur = 1 + mode_w + 1;
+                        for tab in Tab::ALL {
+                            let w = ratatui::text::Span::raw(tab.title()).width() as u16;
+                            if mouse.column >= cur && mouse.column < cur + w {
+                                clicked_tab = Some(tab);
+                                break;
+                            }
+                            cur += w + 1;
+                        }
                     }
-                    let tab = if let Some(t) = clicked_tab {
-                        t
-                    } else if mouse.column < 26 {
-                        Tab::Mascots
-                    } else if mouse.column < 46 {
-                        Tab::Scenery
-                    } else if mouse.column < 62 {
-                        Tab::Effects
-                    } else if mouse.column < 82 {
-                        Tab::Installer
-                    } else if mouse.column < 100 {
-                        Tab::Config
-                    } else {
-                        Tab::Studio
-                    };
-                    self.current_tab = tab;
-                    self.status_message = format!("Switched to {}", tab.mode_label());
+
+                    if let Some(tab) = clicked_tab {
+                        self.current_tab = tab;
+                        self.h_scroll = 0;
+                        self.status_message = format!("Switched to {}", tab.mode_label());
+                    }
                     return Ok(None);
                 }
 

@@ -3268,7 +3268,7 @@ pub const LIST_CATEGORY_CHOICES: &[ChoiceMeta] = &[
     },
     ChoiceMeta {
         value: "animals",
-        description: "View all 106 available animal mascots",
+        description: "View all 132 available animal mascots",
     },
     ChoiceMeta {
         value: "effects",
