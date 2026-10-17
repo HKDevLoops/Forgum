@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.0.10-beta] - 2026-10-17
+
+### Added
+- **Hardened Split-Terminal Engine & Viewport Bounds Guards (`crates/platform/src/mux.rs`, `crates/engine/src/split.rs`)**:
+  - Implemented dynamic DECSTBM top-margin tracking with graceful fallback when hardware margins are unsupported (`SPLIT-001`).
+  - Added robust minimum terminal height threshold validation (`>= 12` lines) preventing panics in constricted viewport environments (`SPLIT-005`).
+  - Implemented automatic raw-mode terminal teardown and cursor restoration on unexpected process signal exits (`SPLIT-003`).
+
+### Fixed
+- **Kinematic Particle Physics & 240Hz High-Precision Interpolation (`crates/engine/src/scenery.rs`, `crates/engine/src/battle.rs`)**:
+  - Clamped particle emitter boundary trajectories to prevent sub-pixel underflows and frame overflows (`ANIM-002`, `ANIM-003`).
+  - Normalized sway frequency harmonic decay across high-refresh rates up to 240Hz (`ANIM-005`).
+- **TUI Dashboard Navigation & Configuration Sync (`crates/engine/src/tui_app.rs`)**:
+  - Resolved focus state desynchronization and keyboard stepping bugs across numeric sliders and enum selectors (`TUI-001` through `TUI-014`).
+  - Preserved color mode toggle state persistence across session re-entries without config corruption.
+- **Security & Input Sanitization (`crates/engine/src/runner.rs`, `crates/engine/src/dna.rs`)**:
+  - Enforced strict canonical path resolution and traversal validation when importing custom cow art assets (`SEC-002`).
+  - Sanitized fortune phrase inputs against arbitrary escape sequence injections (`SEC-001`).
+- **Packaging, Shell Integration & Cross-Platform Parity**:
+  - Synchronized and validated all 25 packaging manifests (Gentoo, RPM, Winget, Homebrew, Scoop, Guix, Debian, WiX MSI, PKGBUILD, Chocolatey, Nix).
+  - Maintained zero CRLF invariant across shell scripts (`install.sh`).
+
 ## [0.0.9-beta] - 2026-10-16
 
 ### Added

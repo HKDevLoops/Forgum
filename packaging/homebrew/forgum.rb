@@ -3,7 +3,7 @@ class Forgum < Formula
   homepage "https://github.com/HKDevLoops/Forgum"
   license "MIT"
 
-  version "0.0.9-beta"
+  version "0.0.10-beta"
 
   stable do
     on_macos do

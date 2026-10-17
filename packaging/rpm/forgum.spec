@@ -1,5 +1,5 @@
 Name:           forgum
-Version:        0.0.9
+Version:        0.0.10
 Release:        1%{?dist}
 Summary:        Cross-platform ANSI animation mascot and shell integration engine
 
@@ -19,6 +19,8 @@ install -m 755 forgum %{buildroot}%{_bindir}/forgum
 %{_bindir}/forgum
 
 %changelog
+* Sat Oct 17 2026 harish2222 <harish2222@users.noreply.github.com> - 0.0.10-1
+- Release 0.0.10 beta: Split-screen editor isolation, 240Hz biomechanical rigging, TUI mouse hit-testing, and invariant stabilization
 * Fri Oct 16 2026 harish2222 <harish2222@users.noreply.github.com> - 0.0.9-1
 - Release 0.0.9 beta: LSP context autocompletion, diagnostic error recovery, unified config API, and liquid motion battles
 * Tue Oct 13 2026 harish2222 <harish2222@users.noreply.github.com> - 0.0.8-1

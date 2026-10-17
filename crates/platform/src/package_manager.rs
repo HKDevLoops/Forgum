@@ -2673,16 +2673,16 @@ mod tests {
     #[test]
     fn test_format_update_notice_box_styling() {
         let notice = UpdateNotice {
-            current_version: "0.0.8-beta".to_string(),
-            latest_version: "0.0.9-beta".to_string(),
+            current_version: "0.0.9-beta".to_string(),
+            latest_version: "0.0.10-beta".to_string(),
             channel: ReleaseChannel::Stable,
             update_command: "forgum update".to_string(),
             pm_update_command: Some("sudo zypper update forgum".to_string()),
         };
 
         let box_str = format_update_notice_box(&notice);
-        assert!(box_str.contains("0.0.8-beta"));
         assert!(box_str.contains("0.0.9-beta"));
+        assert!(box_str.contains("0.0.10-beta"));
         assert!(box_str.contains("forgum update"));
         assert!(box_str.contains("sudo zypper update forgum"));
     }
@@ -2691,7 +2691,7 @@ mod tests {
     fn test_clear_update_cache_removes_file() {
         let cache = UpdateCheckCache {
             last_checked: 1700000000,
-            latest_version: "0.0.9-beta".to_string(),
+            latest_version: "0.0.10-beta".to_string(),
             channel: ReleaseChannel::Dev,
         };
         let _ = write_update_cache(&cache);
