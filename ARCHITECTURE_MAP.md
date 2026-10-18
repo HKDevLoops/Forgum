@@ -139,6 +139,34 @@ graph TD
 
 ---
 
+## 1.5 Split-Screen Editor Isolation, TUI Keybindings & Invariant Stabilization (0.0.10-beta)
+
+- **Split-Screen Editor Isolation (`crates/tui/src/app.rs`)**:
+  - Pressing `o`, `Ctrl+O`, or `Ctrl+E` in the TUI cleanly suspends terminal raw mode, spawns the user's preferred editor (`nvim`, `vim`, `nano`, `code`, `notepad`), and automatically reloads configuration updates upon exit.
+  - Modeless navigation discipline adheres to LazyGit/Zellij standards with canonical shortcuts (`gg`, `G`, `Ctrl+d`, `Ctrl+u`, `gt`, `gT`, `ZZ`, `ZQ`, `?`).
+- **User-Definable Keybinding Remapping (`crates/platform/src/keybindings.rs`)**:
+  - Added `[keybindings]` table support across TOML/JSON/YAML with roundtrip serialization and runtime fallback.
+- **Universal NPU Microarchitecture Probing (`crates/platform/src/gpu.rs`)**:
+  - Probing routines for Intel AI Boost, AMD XDNA (Ryzen AI), Apple Neural Engine (ANE), and Qualcomm Hexagon (Snapdragon X Elite).
+
+---
+
+## 1.6 2D Alignment Test Oracle, Crash-Safe Emergency VT Restore & Bounded Diagnostics (0.0.11-beta)
+
+- **2D Alignment Test Oracle (`crates/engine/tests/exact_alignment_oracle.rs`)**:
+  - Exact coordinate-grid assertions for 0-column wall drift, Unicode EastAsianWidth & ZWJ multi-codepoint cell widths, and single-ray thought tethers (`thoughts_glyph = " "`).
+  - Timer prompt alignment (`crates/engine/src/timer.rs`) utilizing precise display widths and 1-column status indicators (`✗`).
+- **Crash-Safe Emergency VT Restore Hook (`crates/platform/src/guards.rs`)**:
+  - Idempotent emergency terminal restoration (`emergency_restore_terminal_idempotent`) writing raw VT escape sequences (`EMERGENCY_VT_RESTORE_BYTES`), restoring alternate screens, cursor visibility, mouse tracking, bracketed paste, and DECSTBM scroll margins even during abnormal thread panics.
+- **Bounded Diagnostic Log Rotation (`crates/engine/src/logger.rs`)**:
+  - Capped active log files at 2MB with 2-generation rotation and bounded `VecDeque` ring-buffer reader (`MEM-LEAK-006`), eliminating disk exhaustion risks.
+- **Perceptual Lightness Floor in OKLab Space (`crates/platform/src/terminal_theme.rs`)**:
+  - Automatically elevates background/foreground text contrast on dark terminal backgrounds ($L \ge 0.40$), guaranteeing AAA readability.
+- **Standardized sysexits.h Codes & Descriptive IO Context (`crates/platform/src/error.rs`)**:
+  - Replaced generic error codes with standardized `sysexits.h` exit statuses (`EX_USAGE`, `EX_DATAERR`, `EX_CONFIG`, `EX_IOERR`) and rich filesystem operation context.
+
+---
+
 ## 2. Universal Hardware Acceleration Architecture (2006 to 2026)
 
 ### A. GPU Microarchitecture Timeline & Vendor Classification

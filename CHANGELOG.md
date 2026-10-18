@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.0.11-beta] - 2026-10-18
+
+### Added
+- **Exact Sub-Column & 2D Coordinate-Grid Test Oracle (`crates/engine/tests/exact_alignment_oracle.rs`)**:
+  - Implemented deterministic terminal cell width oracle enforcing Unicode Standard Annex #11 (*EastAsianWidth*) and UAX #29 grapheme cluster rules (`0` for control/ZWJ/combining marks, `2` for East Asian Wide/Fullwidth/CJK/Emoji, `1` for ASCII/Box drawing).
+  - Added strict 0-column wall drift assertions across speech and thought bubble borders, preventing single-column right-border misalignment.
+  - Implemented Single-Ray Tether Invariant assertions verifying that thought bubble connector rows strictly emit $\le 1$ tether circle per row (`VIS-001`).
+  - Added full test coverage for catalog mascots (`default`, `cat`, `dragon`, `sheep`, `elephant`, `bunny`, `turtle`) and timer border formatting.
+- **Crash-Safe Emergency VT State Restoration & Panic Hook (`crates/platform/src/guards.rs`, `crates/platform/src/lib.rs`)**:
+  - Implemented `EMERGENCY_VT_RESTORE_BYTES` atomic byte sequence resetting DEC 2026 synchronized updates (`\x1b[?2026l`), X11/SGR mouse tracking (`\x1b[?1000l`..`\x1b[?1015l`), bracketed paste (`\x1b[?2004l`), DECSTBM scroll margins (`\x1b[r`), alternate screen buffer (`\x1b[?1049l`), and SGR attributes + cursor (`\x1b[0m\x1b[?25h`).
+  - Added `mark_vt_dirty()`, `emergency_restore_terminal_idempotent()`, and `install_crash_safe_vt_hook()`, guarding terminal states against unexpected worker thread (`sim_thread`/`render_thread`) panics and signal teardown.
+- **Context-Rich Platform Error Diagnostics & Deterministic Exit Codes (`crates/platform/src/error.rs`)**:
+  - Added `PlatformError::IoContext { op, path, source }` providing explicit operation and path context on file and socket failures.
+  - Standardized `sysexits.h` POSIX exit codes across `PlatformError` and `EngineError` (`64` EX_USAGE, `65` EX_DATAERR, `71` EX_OSERR, `78` EX_CONFIG).
+
+### Fixed
+- **Visual & Kinematics Remediation (`crates/engine/src/runner.rs`, `crates/engine/src/engine_core.rs`, `crates/engine/src/cow.rs`)**:
+  - Suppressed duplicate `$thoughts` expansion in `.cow` template processing by using `" "` when `is_thought` is active, completely resolving duplicate diagonal connector trails alongside dynamic thought tethers (`VIS-001`).
+  - Enforced `str_display_width` and `char_display_width` across `display_cmd`, `duration_str`, and failure status symbol in `timer.rs`, replacing 2-column wide symbol `叉` (U+53C9) with 1-column `✗` (U+2717) to eliminate border misalignment (`SMALL-001`, `SMALL-002`).
+  - Implemented OKLab perceptual lightness elevation (`elevate_oklab_lightness`, $L \ge 0.40$) in `terminal_theme.rs`, resolving dark navy `#1D3580` contrast washout against dark/acrylic terminal themes (`VIS-003`).
+- **Memory Handling & Zero-Allocation Hot-Path Caps (`crates/engine/src/logger.rs`)**:
+  - Capped active log files at 2MB (`MAX_LOG_SIZE = 2 * 1024 * 1024`) with automatic 2-generation rotation (`forgum.log` $\to$ `forgum.log.1`).
+  - Replaced unbounded log entry accumulation in `read_recent_logs()` with a bounded `VecDeque` ring buffer, preventing memory spikes on long-running daemon sessions (`MEM-LEAK-006`).
+- **Concurrent Test Synchronization (`crates/platform/src/audio_bell.rs`)**:
+  - Added test lock synchronization across audio bell unit tests to eliminate concurrent cooldown atomic race conditions during parallel workspace test runs.
+
 ## [0.0.10-beta] - 2026-10-17
 
 ### Added
