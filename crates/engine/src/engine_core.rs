@@ -1270,21 +1270,29 @@ impl RenderState {
     /// Render a frame received from the SIM thread (legacy compatibility).
     #[allow(dead_code)]
     fn render_frame(&mut self, frame: &Arc<Frame>) -> Result<(), Box<dyn std::error::Error>> {
-        self.render_parts(&frame.cells, &frame.damage, frame.cols, frame.rows, frame.full_redraw)
+        self.render_parts(
+            &frame.cells,
+            &frame.damage,
+            frame.cols,
+            frame.rows,
+            frame.full_redraw,
+        )
     }
 
     /// Render a recycled slot received from the SIM thread.
     fn render_slot(&mut self, slot: &FrameBufferSlot) -> Result<(), Box<dyn std::error::Error>> {
-        self.render_parts(&slot.cells, &slot.damage, slot.cols, slot.rows, slot.full_redraw)
+        self.render_parts(
+            &slot.cells,
+            &slot.damage,
+            slot.cols,
+            slot.rows,
+            slot.full_redraw,
+        )
     }
 }
 
 /// The RENDER thread entry point.
-fn render_thread(
-    mut state: RenderState,
-    handoff: Arc<LatestFrameHandoff>,
-    shutdown: ShutdownFlag,
-) {
+fn render_thread(mut state: RenderState, handoff: Arc<LatestFrameHandoff>, shutdown: ShutdownFlag) {
     while !shutdown.is_shutdown() {
         match handoff.frame_rx.recv_timeout(Duration::from_millis(50)) {
             Ok(slot) => {
@@ -1530,7 +1538,9 @@ pub fn run_engine(
 
     if config.profile {
         let total_time = sim_start.elapsed().as_secs_f64();
-        let rendered_frames = FRAME_COUNT.load(Ordering::Relaxed).saturating_sub(start_frames);
+        let rendered_frames = FRAME_COUNT
+            .load(Ordering::Relaxed)
+            .saturating_sub(start_frames);
         let dropped = handoff.dropped_frames.load(Ordering::Relaxed);
         let avg_fps = if total_time > 0.0 {
             rendered_frames as f64 / total_time
@@ -1680,7 +1690,9 @@ pub fn run_engine_banner(
 
     if config.profile {
         let total_time = sim_start.elapsed().as_secs_f64();
-        let rendered_frames = FRAME_COUNT.load(Ordering::Relaxed).saturating_sub(start_frames);
+        let rendered_frames = FRAME_COUNT
+            .load(Ordering::Relaxed)
+            .saturating_sub(start_frames);
         let dropped = handoff.dropped_frames.load(Ordering::Relaxed);
         let avg_fps = if total_time > 0.0 {
             rendered_frames as f64 / total_time
@@ -1886,7 +1898,9 @@ pub fn run_engine_overlay(
 
     if config.profile {
         let total_time = sim_start.elapsed().as_secs_f64();
-        let rendered_frames = FRAME_COUNT.load(Ordering::Relaxed).saturating_sub(start_frames);
+        let rendered_frames = FRAME_COUNT
+            .load(Ordering::Relaxed)
+            .saturating_sub(start_frames);
         let dropped = handoff.dropped_frames.load(Ordering::Relaxed);
         let avg_fps = if total_time > 0.0 {
             rendered_frames as f64 / total_time

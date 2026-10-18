@@ -712,7 +712,10 @@ pub fn set_config_value(config: &mut SceneConfig, key: &str, value: &str) -> Res
                 ("ascii", "Standard character grid 1x1"),
                 ("halfblock", "Half-block rendering 1x2 (upper/lower)"),
                 ("braille", "Braille dot matrix 2x4 sub-cell canvas"),
-                ("hybrid", "ASCII mascot with Braille particle / fluid effects"),
+                (
+                    "hybrid",
+                    "ASCII mascot with Braille particle / fluid effects",
+                ),
             ];
             validate_choice(key, choices, val_trimmed)?;
             config.render_mode = Some(val_trimmed.to_string());

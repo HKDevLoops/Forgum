@@ -422,7 +422,9 @@ impl SubCellCanvas {
     #[must_use]
     pub fn new(cell_width: usize, cell_height: usize, mode: SubCellMode) -> Self {
         let (pw, ph) = match mode {
-            SubCellMode::Braille2x4 | SubCellMode::HybridLiquid => (cell_width * 2, cell_height * 4),
+            SubCellMode::Braille2x4 | SubCellMode::HybridLiquid => {
+                (cell_width * 2, cell_height * 4)
+            }
             SubCellMode::HalfBlock1x2 => (cell_width, cell_height * 2),
             SubCellMode::Ascii1x1 => (cell_width, cell_height),
         };
@@ -444,7 +446,9 @@ impl SubCellCanvas {
     #[must_use]
     pub fn pixel_dimensions(&self) -> (usize, usize) {
         match self.mode {
-            SubCellMode::Braille2x4 | SubCellMode::HybridLiquid => (self.cell_width * 2, self.cell_height * 4),
+            SubCellMode::Braille2x4 | SubCellMode::HybridLiquid => {
+                (self.cell_width * 2, self.cell_height * 4)
+            }
             SubCellMode::HalfBlock1x2 => (self.cell_width, self.cell_height * 2),
             SubCellMode::Ascii1x1 => (self.cell_width, self.cell_height),
         }
@@ -475,12 +479,7 @@ impl SubCellCanvas {
                         let mut sum_b = 0u32;
                         let mut active_count = 0u32;
 
-                        let dot_bits = [
-                            [0x01, 0x08],
-                            [0x02, 0x10],
-                            [0x04, 0x20],
-                            [0x40, 0x80],
-                        ];
+                        let dot_bits = [[0x01, 0x08], [0x02, 0x10], [0x04, 0x20], [0x40, 0x80]];
 
                         for (dy, row_bits) in dot_bits.iter().enumerate() {
                             let py = cy * 4 + dy;
@@ -506,7 +505,8 @@ impl SubCellCanvas {
                                 (sum_b / active_count) as u8,
                             );
                             if quant_bits > 0 {
-                                let (qr, qg, qb) = quantize_rgb(avg_col.r, avg_col.g, avg_col.b, quant_bits);
+                                let (qr, qg, qb) =
+                                    quantize_rgb(avg_col.r, avg_col.g, avg_col.b, quant_bits);
                                 avg_col.r = qr;
                                 avg_col.g = qg;
                                 avg_col.b = qb;
