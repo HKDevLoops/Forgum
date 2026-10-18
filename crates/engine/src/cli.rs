@@ -445,6 +445,32 @@ pub struct Cli {
     )]
     pub no_check_updates: bool,
 
+    /// Synchronize terminal bell chime on command completion or prompt alert.
+    #[arg(
+        long,
+        global = true,
+        help = "Enable synchronized terminal bell chime on command completion / prompt alert"
+    )]
+    pub chime: bool,
+
+    /// Mute all auditory terminal chimes and audio cues.
+    #[arg(
+        long,
+        short = 'q',
+        visible_alias = "quiet",
+        global = true,
+        help = "Mute all auditory terminal chimes and audio cues"
+    )]
+    pub silent: bool,
+
+    /// Generate mascot speech or thoughts via local offline neural dialogue inference.
+    #[arg(
+        long,
+        global = true,
+        help = "Generate mascot dialogue via offline local neural inference"
+    )]
+    pub ai: bool,
+
     /// Positional speech message text (cowsay compatibility).
     #[arg(value_name = "MESSAGE", num_args = 0..)]
     pub message: Vec<String>,
@@ -647,14 +673,7 @@ pub enum Commands {
         #[arg(long, alias = "cat", alias = "dump")]
         raw: bool,
         /// Filter/search logs by keyword or substring.
-        #[arg(
-            short = 's',
-            short_alias = 'q',
-            long,
-            alias = "grep",
-            alias = "query",
-            alias = "search"
-        )]
+        #[arg(short = 's', long, alias = "grep", alias = "query", alias = "search")]
         filter: Option<String>,
         /// Clear/truncate existing log files.
         #[arg(long, alias = "clean")]
@@ -912,8 +931,70 @@ pub enum Commands {
         #[command(subcommand)]
         sub: TelemetrySub,
     },
+    /// Generate offline mascot dialogue via local neural inference (DirectML, CoreML, NPU, SimdCpu).
+    #[command(name = "ai", alias = "neural", alias = "think-ai")]
+    Ai {
+        #[command(subcommand)]
+        sub: Option<AiSub>,
+        /// Optional prompt or topic for the mascot.
+        #[arg(trailing_var_arg = true)]
+        prompt: Vec<String>,
+    },
+    /// Custom mascot asset marketplace & pack importer (isolated DNA verification, hot-reloading).
+    #[command(name = "pack", alias = "packs", alias = "marketplace")]
+    Pack {
+        #[command(subcommand)]
+        sub: PackSub,
+    },
     /// Print version and build information.
     Version,
+}
+
+#[derive(Debug, Clone, Subcommand, PartialEq, Eq)]
+pub enum AiSub {
+    /// Generate neural thought or speech based on prompt or context.
+    Generate {
+        /// Topic or prompt for dialogue.
+        #[arg(trailing_var_arg = true)]
+        prompt: Vec<String>,
+    },
+    /// Show neural hardware accelerator status and provider report.
+    Status,
+}
+
+#[derive(Debug, Clone, Subcommand, PartialEq, Eq)]
+pub enum PackSub {
+    /// Initialize a new scaffolded mascot pack template.
+    Init {
+        /// Name of the pack to scaffold.
+        name: String,
+        /// Target directory path (defaults to ./<name>).
+        target_dir: Option<PathBuf>,
+    },
+    /// Verify a mascot pack against the 6-stage security & integrity pipeline.
+    Verify {
+        /// Path to .forgum-pack file or pack directory.
+        path: PathBuf,
+    },
+    /// Import and compile a verified mascot pack into the user catalog.
+    Import {
+        /// Path to .forgum-pack file or pack directory.
+        path: PathBuf,
+    },
+    /// Export an installed mascot pack into an archive or directory.
+    Export {
+        /// Mascot name or pack directory.
+        name: String,
+        /// Output destination path.
+        output: Option<PathBuf>,
+    },
+    /// List all installed custom mascot packs.
+    List,
+    /// Remove an installed custom mascot pack.
+    Remove {
+        /// Mascot pack identifier or name.
+        name: String,
+    },
 }
 
 #[derive(Debug, Subcommand)]
@@ -1189,6 +1270,8 @@ pub enum Command {
     Moonwalk,
     Fetch,
     Telemetry,
+    Ai,
+    Pack,
     Version,
     Unknown(String),
 }
@@ -1244,6 +1327,9 @@ pub struct Args {
     pub colorblind: Option<String>,
     pub check_updates: bool,
     pub no_check_updates: bool,
+    pub chime: bool,
+    pub silent: bool,
+    pub ai: bool,
 }
 
 /// Error type returned by `parse_args`, carrying the intended process exit code.
@@ -1653,6 +1739,15 @@ pub fn parse_args(argv: Vec<String>) -> Result<(Args, Option<Commands>), CliErro
         }
         Some(Commands::Fetch { .. }) => (Command::Fetch, None, false),
         Some(Commands::Telemetry { .. }) => (Command::Telemetry, None, false),
+        Some(Commands::Ai { prompt, .. }) => {
+            let txt = if prompt.is_empty() {
+                None
+            } else {
+                Some(prompt.join(" "))
+            };
+            (Command::Ai, txt, false)
+        }
+        Some(Commands::Pack { .. }) => (Command::Pack, None, false),
         Some(Commands::Prune { .. }) => (Command::Prune, None, false),
         Some(Commands::Version) => (Command::Version, None, false),
     };
@@ -1719,6 +1814,9 @@ pub fn parse_args(argv: Vec<String>) -> Result<(Args, Option<Commands>), CliErro
         colorblind: cli.colorblind,
         check_updates: cli.check_updates,
         no_check_updates: cli.no_check_updates,
+        chime: cli.chime,
+        silent: cli.silent,
+        ai: cli.ai,
     };
 
     Ok((args, cli.command))

@@ -91,6 +91,24 @@ pub fn load_cow_with_landmarks(
             return (expanded, final_landmarks);
         }
     }
+    // 2b. Try installed marketplace packs.
+    if let Ok(packs_dir) = forgum_platform::marketplace::packs_dir() {
+        let pack_cow = packs_dir.join(resolved).join(format!("{resolved}.cow"));
+        if let Ok(raw) = forgum_platform::read_text_file_compatible(&pack_cow) {
+            crate::log_debug!(
+                "cow",
+                "Loaded marketplace pack mascot '{resolved}' from {}",
+                pack_cow.display()
+            );
+            let (expanded, landmarks) = expand_cow_with_landmarks(&raw, eyes, tongue, thoughts);
+            let final_landmarks = if landmarks.is_empty() {
+                detect_cow_eyes(&expanded, 0)
+            } else {
+                landmarks
+            };
+            return (expanded, final_landmarks);
+        }
+    }
     // 3. Try compile-time embedded built-in mascot catalog (100% zero-disk resilience).
     if let Some(embedded) = forgum_platform::embedded_cows::get_embedded_cow(resolved) {
         crate::log_debug!("cow", "Loaded embedded built-in mascot '{resolved}'");
@@ -152,6 +170,11 @@ pub fn resolve_cow_name(cow_name: &str, data_dir: &Path) -> String {
         }
         if forgum_platform::embedded_cows::get_embedded_cow(cow_name).is_some() {
             return cow_name.to_string();
+        }
+        if let Ok(packs_dir) = forgum_platform::marketplace::packs_dir() {
+            if packs_dir.join(cow_name).join(&cow_file).exists() {
+                return cow_name.to_string();
+            }
         }
         // Mascot not found: find closest match among available cows
         let mut available_names: Vec<String> =
@@ -1008,21 +1031,48 @@ pub fn compose_scene_with_mode(cow_text: &str, bubble_text: &str, is_thought: bo
             }
         }
 
-        // Skip leading standalone thought pointer lines so total circles are clean
-        let leading_blanks = cow_lines
-            .iter()
-            .take(3)
-            .take_while(|l| l.trim().is_empty())
-            .count();
-        let standalone_lines = cow_lines[leading_blanks..]
-            .iter()
-            .take_while(|l| l.trim() == "o" || l.trim() == "o ")
-            .count();
-        if standalone_lines > 0 {
-            let remaining = cow_lines[leading_blanks + standalone_lines..].join("\n");
-            result.push_str(&remaining);
-            return result;
+        // Clean up duplicate thought stem 'o' circles from cow art lines (VIS-001)
+        let mut cleaned_lines = Vec::new();
+        let mut skipped_standalone = 0;
+        let mut processed_art_lines = 0;
+
+        for line in cow_lines.iter() {
+            let trimmed = line.trim();
+            // Drop standalone 'o' lines at the top of the cow (up to 3)
+            if processed_art_lines == 0
+                && (trimmed == "o" || trimmed == "o ")
+                && skipped_standalone < 3
+            {
+                skipped_standalone += 1;
+                continue;
+            }
+            // Blank out embedded leading thought 'o' from template $thoughts on the first 3 lines
+            if processed_art_lines < 3 {
+                if let Some(pos) = line.find('o') {
+                    let prefix = &line[..pos];
+                    let suffix = &line[pos + 1..];
+                    if prefix.chars().all(|c| c.is_whitespace())
+                        && (suffix.is_empty()
+                            || suffix.starts_with(' ')
+                            || suffix.starts_with('\t'))
+                    {
+                        let mut new_line = line.to_string();
+                        new_line.replace_range(pos..=pos, " ");
+                        cleaned_lines.push(new_line);
+                        if !trimmed.is_empty() {
+                            processed_art_lines += 1;
+                        }
+                        continue;
+                    }
+                }
+            }
+            cleaned_lines.push(line.to_string());
+            if !trimmed.is_empty() {
+                processed_art_lines += 1;
+            }
         }
+        result.push_str(&cleaned_lines.join("\n"));
+        return result;
     } else {
         let has_pointer = cow_lines.iter().take(4).any(|line| {
             let trimmed = line.trim_start();

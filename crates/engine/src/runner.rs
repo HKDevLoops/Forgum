@@ -1507,6 +1507,7 @@ fn run_inner() -> ExitCode {
             if !result.stderr.is_empty() {
                 eprintln!("{}", result.stderr);
             }
+            forgum_engine::chime::maybe_chime_timer(args.chime, args.silent, result.exit_code == 0);
             ExitCode::from(result.exit_code as u8)
         }
 
@@ -1551,6 +1552,7 @@ fn run_inner() -> ExitCode {
                 let output = forgum_engine::battle::run_battle(&n1, &n2);
                 print!("{output}");
             }
+            forgum_engine::chime::maybe_chime_battle_impact(args.chime, args.silent);
             ExitCode::SUCCESS
         }
 
@@ -1851,6 +1853,188 @@ fn run_inner() -> ExitCode {
                 });
             }
             render_subcommand(custom_args)
+        }
+
+        // ── ai ───────────────────────────────────────────────────────
+        Some(cli::Commands::Ai { sub, prompt }) => {
+            let data = match data_dir() {
+                Ok(d) => d,
+                Err(e) => {
+                    eprintln!("{PROGRAM}: cannot find data directory: {e}");
+                    return ExitCode::from(78);
+                }
+            };
+            if let Some(cli::AiSub::Status) = sub {
+                let hw = forgum_platform::neural::probe_neural_hardware();
+                println!("\x1b[1;36m━━━ Forgum Neural Dialogue Acceleration Status ━━━\x1b[0m");
+                println!("Backend:         {}", hw.backend);
+                println!("Device:          {}", hw.device_name);
+                println!("NPU Detected:    {}", if hw.is_npu { "Yes" } else { "No" });
+                println!("Max Batch:       {} tokens", hw.max_batch_tokens);
+                println!("Speed Est.:      {:.1} tok/s", hw.estimated_tokens_per_sec);
+                println!(
+                    "Weights Cap:     {} MB (mmap page-cache)",
+                    forgum_platform::neural::MAX_NEURAL_WEIGHTS_BYTES / (1024 * 1024)
+                );
+                println!(
+                    "KV Arena Cap:    {} KB (fixed ring buffer)",
+                    forgum_platform::neural::MAX_KV_ARENA_BYTES / 1024
+                );
+                println!("Memory Safety:   < 100MB RAM Mandate Strictly Enforced");
+                return ExitCode::SUCCESS;
+            }
+
+            let topic = if !prompt.is_empty() {
+                Some(prompt.join(" "))
+            } else if let Some(cli::AiSub::Generate { prompt: gen_p }) = sub {
+                if !gen_p.is_empty() {
+                    Some(gen_p.join(" "))
+                } else {
+                    None
+                }
+            } else {
+                None
+            };
+
+            let cow_name = args.cow.as_deref().unwrap_or("default");
+            let engine = forgum_engine::neural_dialogue::NeuralDialogueEngine::new(&data);
+            let speech_text = engine.generate_thought(cow_name, topic.as_deref());
+
+            if args.banner || args.background || args.effect.is_some() {
+                let mut scene = match build_scene_config(&args) {
+                    Ok(s) => s,
+                    Err(e) => {
+                        eprintln!("{PROGRAM}: {e}");
+                        return ExitCode::from(65);
+                    }
+                };
+                scene.text = speech_text;
+                render_subcommand_with_scene(args, scene)
+            } else {
+                let eyes = args.eyes.as_deref().unwrap_or("oo");
+                let tongue = args.tongue.as_deref().unwrap_or(" ");
+                let cow_text = cow::load_cow(
+                    cow_name,
+                    &data,
+                    eyes,
+                    tongue,
+                    if args.think { "o" } else { "\\\\" },
+                );
+                let output = if args.think {
+                    cow::compose_thought_scene(&cow_text, &speech_text)
+                } else {
+                    cow::compose_scene(&cow_text, &speech_text)
+                };
+                print!("{output}");
+                forgum_engine::chime::maybe_chime_greet(args.chime, args.silent);
+                ExitCode::SUCCESS
+            }
+        }
+
+        // ── pack ─────────────────────────────────────────────────────
+        Some(cli::Commands::Pack { sub }) => {
+            match sub {
+                cli::PackSub::Init { name, target_dir } => {
+                    match forgum_engine::pack_importer::scaffold_pack(&name, target_dir.as_deref())
+                    {
+                        Ok(dir) => {
+                            println!(
+                                "\x1b[1;32m✓\x1b[0m Scaffolded mascot pack '{name}' at {}",
+                                dir.display()
+                            );
+                            println!("  Edit '{}.cow' and 'manifest.json' then run 'forgum pack verify {}'", name, dir.display());
+                            ExitCode::SUCCESS
+                        }
+                        Err(e) => {
+                            eprintln!("{PROGRAM}: pack init: {e}");
+                            ExitCode::from(1)
+                        }
+                    }
+                }
+                cli::PackSub::Verify { path } => {
+                    match forgum_engine::pack_importer::verify_pack_path(&path) {
+                        Ok(manifest) => {
+                            println!("\x1b[1;32m✓\x1b[0m 6-Stage Security & Integrity Verification PASSED for '{}'", manifest.pack_id);
+                            println!("  Author:     {}", manifest.author);
+                            println!("  Version:    {}", manifest.version);
+                            println!("  Habitat:    {:?}", manifest.habitat);
+                            println!("  Base Anim:  {:?}", manifest.base_anim);
+                            println!("  Palette:    {:?}", manifest.palette_hex);
+                            println!("  Signature:  {}", manifest.dna_signature);
+                            ExitCode::SUCCESS
+                        }
+                        Err(e) => {
+                            eprintln!("\x1b[1;31m✗\x1b[0m Pack verification failed: {e}");
+                            ExitCode::from(1)
+                        }
+                    }
+                }
+                cli::PackSub::Import { path } => {
+                    match forgum_engine::pack_importer::import_mascot_pack_file(&path) {
+                        Ok(dest) => {
+                            println!(
+                                "\x1b[1;32m✓\x1b[0m Successfully imported mascot pack to {}",
+                                dest.display()
+                            );
+                            println!(
+                                "  You can now use it via: forgum --cow {}",
+                                path.file_name().and_then(|s| s.to_str()).unwrap_or("name")
+                            );
+                            ExitCode::SUCCESS
+                        }
+                        Err(e) => {
+                            eprintln!("{PROGRAM}: pack import: {e}");
+                            ExitCode::from(1)
+                        }
+                    }
+                }
+                cli::PackSub::Export { name, output } => {
+                    match forgum_engine::pack_importer::export_mascot_pack(&name, output.as_deref())
+                    {
+                        Ok(dest) => {
+                            println!("\x1b[1;32m✓\x1b[0m Successfully exported mascot pack '{name}' to {}", dest.display());
+                            ExitCode::SUCCESS
+                        }
+                        Err(e) => {
+                            eprintln!("{PROGRAM}: pack export: {e}");
+                            ExitCode::from(1)
+                        }
+                    }
+                }
+                cli::PackSub::List => {
+                    let packs = forgum_engine::pack_importer::list_installed_packs();
+                    if packs.is_empty() {
+                        println!("No custom mascot packs currently installed.");
+                        println!("Run 'forgum pack init <name>' to create one.");
+                    } else {
+                        println!(
+                            "\x1b[1;36mInstalled Mascot Packs ({} total):\x1b[0m",
+                            packs.len()
+                        );
+                        for p in &packs {
+                            println!(
+                                "  • \x1b[1;32m{}\x1b[0m v{} by {} ({:?})",
+                                p.pack_id, p.version, p.author, p.habitat
+                            );
+                        }
+                    }
+                    ExitCode::SUCCESS
+                }
+                cli::PackSub::Remove { name } => {
+                    match forgum_engine::pack_importer::remove_installed_pack(&name) {
+                        Ok(()) => {
+                            println!(
+                                "\x1b[1;32m✓\x1b[0m Successfully removed mascot pack '{name}'"
+                            );
+                            ExitCode::SUCCESS
+                        }
+                        Err(e) => {
+                            eprintln!("{PROGRAM}: pack remove: {e}");
+                            ExitCode::from(1)
+                        }
+                    }
+                }
+            }
         }
 
         // ── version ──────────────────────────────────────────────────
@@ -3353,13 +3537,18 @@ pub fn resolve_scene_randomness(
             && explicit_args.text.is_none());
 
     if should_randomize_thought {
-        let fortunes = fortune::load_fortunes(data_dir);
-        if !fortunes.is_empty() {
-            if let Some(picked) = coords.pick_from_slice(&fortunes, coords.u_thought) {
-                scene.text = picked.clone();
+        if explicit_args.ai {
+            let engine = forgum_engine::neural_dialogue::NeuralDialogueEngine::new(data_dir);
+            scene.text = engine.generate_thought(&scene.cow, None);
+        } else {
+            let fortunes = fortune::load_fortunes(data_dir);
+            if !fortunes.is_empty() {
+                if let Some(picked) = coords.pick_from_slice(&fortunes, coords.u_thought) {
+                    scene.text = picked.clone();
+                }
+            } else if let Some(f) = fortune::random_fortune(data_dir) {
+                scene.text = f;
             }
-        } else if let Some(f) = fortune::random_fortune(data_dir) {
-            scene.text = f;
         }
     }
 }
@@ -3783,7 +3972,10 @@ fn render_subcommand_with_scene(
     };
 
     match result {
-        Ok(()) => ExitCode::SUCCESS,
+        Ok(()) => {
+            forgum_engine::chime::maybe_chime_greet(args.chime, args.silent);
+            ExitCode::SUCCESS
+        }
         Err(e) => {
             eprintln!("{PROGRAM}: {e}");
             ExitCode::from(71)

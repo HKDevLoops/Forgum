@@ -983,7 +983,7 @@ pub fn render_mountain_with_tod(
         MountainStyle::Volcano => Color::rgb(55, 50, 50),
         MountainStyle::Iceberg => Color::rgb(55, 115, 125),
         MountainStyle::Skyline => Color::rgb(42, 54, 62),
-        MountainStyle::Seamount => Color::rgb(15, 42, 85),
+        MountainStyle::Seamount => Color::rgb(75, 107, 158),
         MountainStyle::Plateau => Color::rgb(90, 72, 65),
         MountainStyle::Crater => Color::rgb(52, 68, 78),
         MountainStyle::Gothic => Color::rgb(50, 32, 95),
@@ -2398,9 +2398,28 @@ pub fn render_trees_with_animal_and_tod_and_season(
                 time,
                 t_idx,
             );
+            let chars: Vec<char> = s.chars().collect();
+            let first_non_space = chars.iter().position(|&c| c != ' ');
+            let last_non_space = chars.iter().rposition(|&c| c != ' ');
+
             let mut fb_guard = fb_cell.borrow_mut();
-            for (i, c) in s.chars().enumerate() {
+            for (i, &c) in chars.iter().enumerate() {
                 if c == ' ' {
+                    if let (Some(first), Some(last)) = (first_non_space, last_non_space) {
+                        if i > first && i < last {
+                            let px = screen_x + dx_start + sway + (i as isize);
+                            if px >= 0 && (px as usize) < width {
+                                let py = (tree_base_y as isize) + dy;
+                                if py >= 0 && (py as usize) < fb_guard.height {
+                                    let _ = fb_guard.set(
+                                        px as usize,
+                                        py as usize,
+                                        Cell::new(' ', Color::TRANSPARENT),
+                                    );
+                                }
+                            }
+                        }
+                    }
                     continue;
                 }
                 let px = screen_x + dx_start + sway + (i as isize);
@@ -4375,9 +4394,9 @@ impl SceneryCache {
         let cur_season = season.unwrap_or_default().resolve();
         let anim_h = animal_height.unwrap_or(12);
 
-        // Quantize time into 100ms buckets so elements drift naturally while
-        // caching ~96% of frames at 240Hz.
-        let time_bucket = (time * 10.0).floor() as u32;
+        // Quantize time into sub-millisecond buckets so elements drift continuously
+        // and smoothly up to 240Hz liquid refresh rate.
+        let time_bucket = (time * 240.0).floor() as u32;
 
         let key = SceneryCacheKey {
             width: w,

@@ -32,6 +32,8 @@ pub enum BoundsMode {
 pub struct KinematicBody {
     pub x: f32,
     pub y: f32,
+    pub prev_x: f32,
+    pub prev_y: f32,
     pub vx: f32,
     pub vy: f32,
     pub ax: f32,
@@ -50,6 +52,8 @@ impl KinematicBody {
         Self {
             x: 0.0,
             y: 0.0,
+            prev_x: 0.0,
+            prev_y: 0.0,
             vx: 0.0,
             vy: 0.0,
             ax: 0.0,
@@ -74,10 +78,15 @@ impl KinematicBody {
         let max_y = rows.saturating_sub(self.height) as f32;
         self.x = self.x.clamp(0.0, max_x.max(0.0));
         self.y = self.y.clamp(0.0, max_y.max(0.0));
+        self.prev_x = self.x;
+        self.prev_y = self.y;
     }
 
     /// Advance kinematic physics by `dt` seconds given terminal dimensions.
     pub fn update(&mut self, dt: f32, total_time: f32, cols: usize, rows: usize) {
+        self.prev_x = self.x;
+        self.prev_y = self.y;
+
         let max_x = cols.saturating_sub(self.width) as f32;
         let max_y = rows.saturating_sub(self.height) as f32;
 
@@ -191,6 +200,64 @@ impl KinematicBody {
         self.y.round() as i32
     }
 
+    /// Continuous subpixel-interpolated column position for factor `alpha` in [0.0, 1.0].
+    #[must_use]
+    pub fn interpolated_x(&self, alpha: f32) -> f32 {
+        let a = alpha.clamp(0.0, 1.0);
+        if (self.x - self.prev_x).abs() > (self.width as f32).max(10.0) {
+            self.x
+        } else {
+            self.prev_x + (self.x - self.prev_x) * a
+        }
+    }
+
+    /// Continuous subpixel-interpolated row position for factor `alpha` in [0.0, 1.0].
+    #[must_use]
+    pub fn interpolated_y(&self, alpha: f32) -> f32 {
+        let a = alpha.clamp(0.0, 1.0);
+        if (self.y - self.prev_y).abs() > (self.height as f32).max(10.0) {
+            self.y
+        } else {
+            self.prev_y + (self.y - self.prev_y) * a
+        }
+    }
+
+    /// Floor integer column anchor corresponding to continuous interpolated_x.
+    #[must_use]
+    pub fn screen_x_interpolated(&self, alpha: f32) -> i32 {
+        self.interpolated_x(alpha).floor() as i32
+    }
+
+    /// Floor integer row anchor corresponding to continuous interpolated_y.
+    #[must_use]
+    pub fn screen_y_interpolated(&self, alpha: f32) -> i32 {
+        self.interpolated_y(alpha).floor() as i32
+    }
+
+    /// Fractional subcell column offset in [0.0, 1.0) with micro-resolution (1/1000th cell precision).
+    #[must_use]
+    pub fn subcell_offset_x(&self, alpha: f32) -> f32 {
+        let ix = self.interpolated_x(alpha);
+        let frac = ix - ix.floor();
+        if frac < 0.0 {
+            (frac + 1.0).clamp(0.0, 1.0)
+        } else {
+            frac.clamp(0.0, 1.0)
+        }
+    }
+
+    /// Fractional subcell row offset in [0.0, 1.0) with micro-resolution.
+    #[must_use]
+    pub fn subcell_offset_y(&self, alpha: f32) -> f32 {
+        let iy = self.interpolated_y(alpha);
+        let frac = iy - iy.floor();
+        if frac < 0.0 {
+            (frac + 1.0).clamp(0.0, 1.0)
+        } else {
+            frac.clamp(0.0, 1.0)
+        }
+    }
+
     /// Calculate stride phase [0.0, 1.0) coupled to ground displacement.
     /// Eliminates treadmill slipping.
     #[must_use]
@@ -201,6 +268,23 @@ impl KinematicBody {
             step_length.abs()
         };
         let phase = (self.x.abs() / step) % 1.0;
+        if phase < 0.0 {
+            phase + 1.0
+        } else {
+            phase
+        }
+    }
+
+    /// Calculate continuous stride phase [0.0, 1.0) with subpixel interpolation down to 1/1000th cell.
+    #[must_use]
+    pub fn stride_phase_subpixel(&self, step_length: f32, alpha: f32) -> f32 {
+        let step = if step_length.abs() < 0.001 {
+            1.0
+        } else {
+            step_length.abs()
+        };
+        let ix = self.interpolated_x(alpha);
+        let phase = (ix.abs() / step) % 1.0;
         if phase < 0.0 {
             phase + 1.0
         } else {

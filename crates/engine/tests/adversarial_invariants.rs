@@ -750,3 +750,234 @@ fn invariant_split_overlay_suspends_when_foreground_pgid_changes() {
         "Must re-assert DECSTBM margins upon returning to shell"
     );
 }
+
+// ── Invariant 17: Single Thought Tether & Spring Bubble Tracking ────
+
+#[test]
+fn invariant_single_thought_tether_and_spring_bubble_tracking() {
+    use forgum_engine::cow::{compose_scene_with_mode, load_cow};
+    use forgum_engine::kinematics::CartoonRig;
+
+    let dd = data_dir();
+    // Load standard cow template with $thoughts expanded as 'o'
+    let cow_raw = load_cow("default", &dd, "oo", "  ", "o");
+    let scene = compose_scene_with_mode(&cow_raw, "Testing thought bubble tethering", true);
+
+    // Verify thought tether: exactly 3 connector circles between bubble and cow crest
+    let lines: Vec<&str> = scene.lines().collect();
+    let cow_crest_idx = lines
+        .iter()
+        .position(|l| l.contains("^__^"))
+        .expect("cow crest present");
+    let bubble_bottom_idx = lines[..cow_crest_idx]
+        .iter()
+        .rposition(|l| l.contains('(') && l.contains(')'))
+        .expect("bubble bottom border present");
+
+    assert!(cow_crest_idx > bubble_bottom_idx);
+    let tether_lines: Vec<&str> = lines[bubble_bottom_idx + 1..cow_crest_idx]
+        .iter()
+        .copied()
+        .filter(|l| !l.trim().is_empty())
+        .collect();
+
+    // Tether lines must contain exactly 3 connector circles (VIS-001)
+    assert_eq!(
+        tether_lines.len(),
+        3,
+        "Expected exactly 3 thought bubble connector lines (VIS-001)"
+    );
+    for line in &tether_lines {
+        assert_eq!(
+            line.trim(),
+            "o",
+            "Each thought connector line must be a single 'o' without stray tokens"
+        );
+    }
+
+    // Verify spring-damper bubble physics settles under zero acceleration
+    let segments =
+        forgum_engine::kinematics::AnatomicalSegments::detect(&cow_raw, 0, None, None, None, 1);
+    let mut rig = CartoonRig::new(segments);
+    rig.update(0.1, 10.0); // velocity impulse
+    assert!(rig.bubble_offset_x != 0.0 || rig.bubble_vel_x != 0.0);
+    for _ in 0..60 {
+        rig.update(0.05, 0.0); // settle
+    }
+    assert!(
+        rig.bubble_vel_x.abs() < 5.0,
+        "Bubble spring-damper must settle over time"
+    );
+}
+
+// ── Invariant 18: Neural Inference & Audio Bell Strict Guardrails ───
+
+#[test]
+fn invariant_neural_inference_and_audio_bell_strict_guardrails() {
+    use forgum_engine::neural_dialogue::{
+        probe_neural_hardware, sanitize_neural_token_stream, NeuralDialogueEngine,
+        MAX_KV_ARENA_BYTES, MAX_NEURAL_WEIGHTS_BYTES,
+    };
+    use forgum_platform::audio_bell::{emit_synchronized_chime, is_chime_permitted, ChimeEvent};
+
+    // 1. Mandate A & I: Memory limits for neural models
+    const {
+        assert!(
+            MAX_NEURAL_WEIGHTS_BYTES <= 38 * 1024 * 1024,
+            "Neural weights cap must be <= 38MB to guarantee < 100MB resident RAM"
+        );
+        assert!(
+            MAX_KV_ARENA_BYTES <= 8 * 1024 * 1024,
+            "KV cache arena must be <= 8MB"
+        );
+    }
+
+    // 2. Hardware probe executes fast and returns valid backend
+    let hw = probe_neural_hardware();
+    assert!(!hw.device_name.is_empty());
+    assert!(hw.max_batch_tokens >= 32);
+
+    // 3. SEC-NEURAL-001..003: Token stream sanitization
+    let dirty_tokens = "\x1b[31mRed\x1b[0m \x1b]52;c;evil\x07 \u{2600} \x00\x08Safe\nThought";
+    let cleaned = sanitize_neural_token_stream(dirty_tokens);
+    assert!(!cleaned.contains("\x1b"));
+    assert!(!cleaned.contains("\x07"));
+    assert!(!cleaned.contains('\u{2600}'));
+    assert!(!cleaned.contains('\x00'));
+    assert!(cleaned.contains("Safe"));
+
+    // 4. Fallback dialogue generation
+    let dd = data_dir();
+    let engine = NeuralDialogueEngine::new(&dd);
+    let thought = engine.generate_thought("default", Some("rust language"));
+    assert!(!thought.is_empty());
+    assert!(!thought.contains("\x1b"));
+
+    // 5. Audio / Bell Chime Silence Guards (AUDIO-GUARD-001..005)
+    assert!(
+        !is_chime_permitted(true, false, true, true),
+        "Must mute when cli_silent"
+    );
+    assert!(
+        !is_chime_permitted(false, true, true, true),
+        "Must mute when config_silent"
+    );
+    assert!(
+        !is_chime_permitted(false, false, false, true),
+        "Must mute when not a TTY (pipe guard)"
+    );
+    assert!(
+        !is_chime_permitted(false, false, true, false),
+        "Must mute when editor in foreground"
+    );
+
+    // Verify zero bytes written when muted
+    let mut out = Vec::new();
+    let res = emit_synchronized_chime(
+        &mut out,
+        ChimeEvent::CommandSuccess,
+        true, // cli_silent
+        false,
+        true,
+        true,
+    );
+    assert!(res.is_ok());
+    assert!(
+        out.is_empty(),
+        "Zero bytes must be emitted when chime is muted"
+    );
+}
+
+// ── Invariant 19: Custom Mascot Pack Verifier Zero Catalog Poisoning ──
+
+#[test]
+fn invariant_custom_mascot_pack_verifier_zero_catalog_poisoning() {
+    use forgum_engine::dna::{BaseAnim, Habitat};
+    use forgum_engine::pack_importer::{
+        compute_pack_dna_signature, verify_and_compile_mascot_pack, MascotPackManifest,
+        PackVerifyError,
+    };
+
+    let valid_palette = [
+        "#112233".to_string(),
+        "#445566".to_string(),
+        "#778899".to_string(),
+        "#AABBCC".to_string(),
+        "#DDEEFF".to_string(),
+    ];
+    let valid_cow = " (oo)\n (  )\n || ||\n";
+    let valid_sig = compute_pack_dna_signature("custom_pack", valid_cow, &valid_palette);
+
+    let mut manifest = MascotPackManifest {
+        pack_id: "custom_pack".to_string(),
+        author: "Tester".to_string(),
+        version: "1.0.0".to_string(),
+        dna_signature: valid_sig.clone(),
+        habitat: Habitat::Terrestrial,
+        base_anim: BaseAnim::Walk,
+        palette_hex: valid_palette.clone(),
+    };
+
+    // 1. Valid pack compiles successfully into AsciiRigMap
+    let compile_res = verify_and_compile_mascot_pack("custom_pack", valid_cow, &manifest);
+    assert!(
+        compile_res.is_ok(),
+        "Valid pack must pass 6-stage verification: {compile_res:?}"
+    );
+
+    // 2. Unsafe path identifiers (Zip-Slip / path traversal) rejected (SEC-PACK-001)
+    assert_eq!(
+        verify_and_compile_mascot_pack("../evil", valid_cow, &manifest).unwrap_err(),
+        PackVerifyError::UnsafePathIdentifier("../evil".to_string())
+    );
+    assert_eq!(
+        verify_and_compile_mascot_pack("pack/nested", valid_cow, &manifest).unwrap_err(),
+        PackVerifyError::UnsafePathIdentifier("pack/nested".to_string())
+    );
+
+    // 3. Forbidden terminal escapes rejected (SEC-PACK-002)
+    let osc_cow = " (oo) \x1b]52;c;evil\x07";
+    assert_eq!(
+        verify_and_compile_mascot_pack("custom_pack", osc_cow, &manifest).unwrap_err(),
+        PackVerifyError::ForbiddenTerminalEscapeSequence
+    );
+
+    // 4. CP437 mojibake rejected (BUG-006)
+    let mojibake_cow = " (oo) \u{2602}";
+    assert_eq!(
+        verify_and_compile_mascot_pack("custom_pack", mojibake_cow, &manifest).unwrap_err(),
+        PackVerifyError::Cp437MojibakeDetected('\u{2602}')
+    );
+
+    // 5. Invalid hex palette rejected
+    manifest.palette_hex[0] = "NOT_HEX".to_string();
+    assert_eq!(
+        verify_and_compile_mascot_pack("custom_pack", valid_cow, &manifest).unwrap_err(),
+        PackVerifyError::InvalidHexPaletteSlot("NOT_HEX".to_string())
+    );
+    manifest.palette_hex = valid_palette;
+
+    // 6. Signature mismatch rejected
+    manifest.dna_signature = "invalid_sig".to_string();
+    assert_eq!(
+        verify_and_compile_mascot_pack("custom_pack", valid_cow, &manifest).unwrap_err(),
+        PackVerifyError::SignatureMismatch
+    );
+
+    // 7. Rule D (Zero Catalog Poisoning): Ensure all 132 canonical mascots are intact
+    let dd = data_dir();
+    let disk_cows: Vec<String> = std::fs::read_dir(dd.join("Cows"))
+        .unwrap()
+        .filter_map(|e| e.ok())
+        .filter(|e| e.path().extension().is_some_and(|ext| ext == "cow"))
+        .map(|e| e.path().file_stem().unwrap().to_string_lossy().to_string())
+        .collect();
+    assert_eq!(disk_cows.len(), 132);
+    for cow_name in &disk_cows {
+        let loaded = load_cow(cow_name, &dd, "oo", "  ", "\\\\");
+        assert!(
+            !loaded.is_empty(),
+            "Canonical mascot '{cow_name}' must remain valid"
+        );
+    }
+}

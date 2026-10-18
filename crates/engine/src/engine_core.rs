@@ -325,7 +325,7 @@ impl SimState {
     }
 
     /// Render simulation snapshot at current elapsed clock into front buffer to ship to RENDER.
-    pub fn tick_render(&mut self, _alpha: f32, elapsed_secs: f32) -> Arc<Frame> {
+    pub fn tick_render(&mut self, alpha: f32, elapsed_secs: f32) -> Arc<Frame> {
         // Phase 1.6: O(1) mass-dealloc of last frame's scratch.
         self.arena.reset();
 
@@ -437,8 +437,9 @@ impl SimState {
             Some(season),
         );
 
-        // Render into back buffer on top of scenery.
-        self.effect.render(&mut self.fb, self.elapsed);
+        // Render into back buffer on top of scenery with continuous subpixel interpolation.
+        self.effect
+            .render_subpixel(&mut self.fb, self.elapsed, alpha);
 
         // Apply Color Vision Deficiency (CVD) translation filter if configured
         if let Some(ref cb_str) = self.config.colorblind_mode {
@@ -835,11 +836,7 @@ fn sim_thread(
                     battery_throttled = true;
                 } else if pct >= 30.0 && battery_throttled {
                     sim.scheduler.set_speed(user_speed);
-                    governor.set_fps(
-                        ((target_fps as f32) * user_speed)
-                            .round()
-                            .clamp(1.0, 1000.0) as u32,
-                    );
+                    governor.set_fps(target_fps);
                     battery_throttled = false;
                 }
             }
@@ -866,8 +863,6 @@ fn sim_thread(
                     user_speed = s;
                     if !battery_throttled {
                         sim.scheduler.set_speed(s);
-                        governor
-                            .set_fps(((target_fps as f32) * s).round().clamp(1.0, 1000.0) as u32);
                     }
                 }
                 ControlMsg::Resize { cols, rows } => {
@@ -905,7 +900,7 @@ fn sim_thread(
 
         // Decoupled fixed-timestep simulation step
         let (alpha, elapsed_secs) = governor.step_simulation(|dt| {
-            sim.tick_physics(dt as f32);
+            sim.tick_physics(dt as f32 * user_speed);
         });
 
         // Frame snapshot generation with sub-pixel interpolation clock
@@ -986,7 +981,7 @@ impl RenderState {
         parent_pid: Option<u32>,
         out: OutputHandle,
     ) -> Self {
-        let scroll_top = overlay_rows + 1;
+        let scroll_top = (overlay_rows + 2).min(total_rows);
         let guard = if split_scroll {
             Some(crate::split_scroll::SplitOverlayGuard::new(
                 parent_pid,
@@ -1033,7 +1028,7 @@ impl RenderState {
             let total_rows = forgum_platform::terminal_size().1 as usize;
             self._total_rows = total_rows;
             if total_rows > frame.rows + 2 {
-                let scroll_top = frame.rows + 1;
+                let scroll_top = (frame.rows + 2).min(total_rows);
                 let _ = self.out.write_all(
                     format!("\x1b7\x1b[?6l\x1b[{scroll_top};{total_rows}r\x1b8").as_bytes(),
                 );

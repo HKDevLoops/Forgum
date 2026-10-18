@@ -18,6 +18,11 @@ pub trait Effect: Send + Sync {
     /// Render the current frame into `fb`.
     fn render(&self, fb: &mut FrameBuffer, time: f32);
 
+    /// Render the current frame into `fb` with continuous subpixel interpolation factor `alpha` in `[0.0, 1.0]`.
+    fn render_subpixel(&self, fb: &mut FrameBuffer, time: f32, _alpha: f32) {
+        self.render(fb, time);
+    }
+
     /// Returns true when a one-shot effect is finished.
     fn is_done(&self) -> bool {
         false
@@ -450,9 +455,14 @@ impl Effect for BreatheEffect {
     fn update(&mut self, _dt: f32, _cols: usize, _rows: usize) {}
 
     fn render(&self, fb: &mut FrameBuffer, time: f32) {
+        self.render_subpixel(fb, time, 1.0);
+    }
+
+    fn render_subpixel(&self, fb: &mut FrameBuffer, time: f32, _alpha: f32) {
         let t = (time * self.speed + self.phase) % 1.0;
         let eased = (self.easing_fn)(t);
         let is_inhale = eased > 0.4;
+        let breath_lum = 0.88 + 0.12 * eased;
 
         // Eye-blink cycle (~every 3.8s)
         let blink_cycle = (time * 0.26 + self.phase) % 1.0;
@@ -534,7 +544,8 @@ impl Effect for BreatheEffect {
                     time,
                     Color::WHITE,
                     ch,
-                );
+                )
+                .scale_luminance(breath_lum);
 
                 // Natural Instinct signature highlights:
                 match self.instinct {
@@ -881,6 +892,10 @@ impl Effect for FloatEffect {
     }
 
     fn render(&self, fb: &mut FrameBuffer, time: f32) {
+        self.render_subpixel(fb, time, 1.0);
+    }
+
+    fn render_subpixel(&self, fb: &mut FrameBuffer, time: f32, alpha: f32) {
         let t = (time * self.speed + self.phase) % 1.0;
         let hover_intensity = (self.easing_fn)(t);
         let hover_pulse = hover_intensity > 0.5;
@@ -890,6 +905,9 @@ impl Effect for FloatEffect {
         let bob_raw =
             (time * self.speed * std::f32::consts::TAU + self.phase).sin() * self.amp.float * 2.0;
         let bob_offset: i32 = bob_raw.round() as i32;
+
+        let x_off = self.body.screen_x_interpolated(alpha);
+        let sub_x = self.body.subcell_offset_x(alpha);
 
         // Periodic eye-blink:
         let blink_cycle = (time * 0.24 + self.phase) % 1.0;
@@ -974,7 +992,7 @@ impl Effect for FloatEffect {
                         luminance_mult: 1.0,
                     }
                 };
-                let xi = x as i32 + def.dx;
+                let xi = x as i32 + x_off + def.dx;
                 if xi >= 0 && (xi as usize) < fb.width {
                     let uxi = xi as usize;
 
@@ -993,7 +1011,7 @@ impl Effect for FloatEffect {
                             Color::WHITE,
                             '-',
                         );
-                        draw_char_with_rig_hull(
+                        draw_char_with_rig_hull_subpixel(
                             fb,
                             uxi,
                             draw_y,
@@ -1003,11 +1021,12 @@ impl Effect for FloatEffect {
                             self.rig.rig_map.as_ref(),
                             '-',
                             cell_fg,
+                            sub_x,
                         );
                         if !is_landmark && chars_iter.peek().copied() == Some(ch) {
                             let _ = chars_iter.next();
                             if uxi + 1 < fb.width {
-                                draw_char_with_rig_hull(
+                                draw_char_with_rig_hull_subpixel(
                                     fb,
                                     uxi + 1,
                                     draw_y,
@@ -1017,6 +1036,7 @@ impl Effect for FloatEffect {
                                     self.rig.rig_map.as_ref(),
                                     '-',
                                     cell_fg,
+                                    sub_x,
                                 );
                             }
                             x += 2;
@@ -1051,7 +1071,7 @@ impl Effect for FloatEffect {
                         ch,
                     )
                     .scale_luminance(def.luminance_mult);
-                    draw_char_with_rig_hull(
+                    draw_char_with_rig_hull_subpixel(
                         fb,
                         uxi,
                         draw_y,
@@ -1061,6 +1081,7 @@ impl Effect for FloatEffect {
                         self.rig.rig_map.as_ref(),
                         ch,
                         cell_fg,
+                        sub_x,
                     );
                 }
                 x += 1;
@@ -1418,10 +1439,14 @@ impl Effect for WalkEffect {
     }
 
     fn render(&self, fb: &mut FrameBuffer, time: f32) {
+        self.render_subpixel(fb, time, 1.0);
+    }
+
+    fn render_subpixel(&self, fb: &mut FrameBuffer, time: f32, alpha: f32) {
         // Stride-Velocity Coupling strictly coupled to linear velocity vx (eliminating treadmill sliding)
         let step_len = (8.0 / self.speed.max(0.1)).clamp(2.0, 16.0);
         let disp = if self.body.x.abs() > 0.001 {
-            self.body.x.abs()
+            self.body.stride_phase_subpixel(step_len, alpha) * step_len
         } else {
             (self.body.vx * time).abs()
         };
@@ -1440,8 +1465,9 @@ impl Effect for WalkEffect {
         let chew_cycle = (time * 0.36 + self.phase) % 1.0;
         let is_chewing = chew_cycle > 0.40 && chew_cycle < 0.65;
 
-        let x_off = self.body.screen_x();
-        let y_off = self.body.screen_y();
+        let x_off = self.body.screen_x_interpolated(alpha);
+        let y_off = self.body.screen_y_interpolated(alpha);
+        let sub_x = self.body.subcell_offset_x(alpha);
 
         let mut y = 0usize;
         for_each_line(&self.cow_text, &self.line_offsets, |line| {
@@ -1460,7 +1486,7 @@ impl Effect for WalkEffect {
                         let uyi = yi as usize;
                         if uyi < fb.height && uxi < fb.width {
                             let cell_fg = resolve_bubble_line_char_fg(line, x, ch);
-                            draw_char_with_hull(fb, uxi, uyi, x, hull, ch, cell_fg);
+                            draw_char_with_hull_subpixel(fb, uxi, uyi, x, hull, ch, cell_fg, sub_x);
                         }
                     }
                 }
@@ -1541,7 +1567,7 @@ impl Effect for WalkEffect {
                                         sc,
                                     )
                                     .scale_luminance(def.luminance_mult);
-                                    draw_char_with_rig_hull(
+                                    draw_char_with_rig_hull_subpixel(
                                         fb,
                                         uxi,
                                         uyi,
@@ -1551,6 +1577,7 @@ impl Effect for WalkEffect {
                                         self.rig.rig_map.as_ref(),
                                         sc,
                                         cell_fg,
+                                        sub_x,
                                     );
                                 }
                             }
@@ -1593,7 +1620,7 @@ impl Effect for WalkEffect {
                             display_ch,
                         )
                         .scale_luminance(def.luminance_mult);
-                        draw_char_with_rig_hull(
+                        draw_char_with_rig_hull_subpixel(
                             fb,
                             uxi,
                             uyi,
@@ -1603,6 +1630,7 @@ impl Effect for WalkEffect {
                             self.rig.rig_map.as_ref(),
                             display_ch,
                             cell_fg,
+                            sub_x,
                         );
                     }
                 }
@@ -2209,6 +2237,10 @@ impl Effect for FlyEffect {
     }
 
     fn render(&self, fb: &mut FrameBuffer, time: f32) {
+        self.render_subpixel(fb, time, 1.0);
+    }
+
+    fn render_subpixel(&self, fb: &mut FrameBuffer, time: f32, alpha: f32) {
         if self.is_nyan {
             self.render_nyan(fb, time);
             return;
@@ -2222,6 +2254,9 @@ impl Effect for FlyEffect {
         let blink_cycle = (time * 0.28 + self.phase) % 1.0;
         let is_blinking = blink_cycle < 0.04;
 
+        let x_off = self.body.screen_x_interpolated(alpha);
+        let sub_x = self.body.subcell_offset_x(alpha);
+
         let mut y = 0usize;
         for_each_line(&self.cow_text, &self.line_offsets, |line| {
             let line = line.trim_end_matches(['\r', '\n']);
@@ -2230,25 +2265,30 @@ impl Effect for FlyEffect {
             }
             let hull = find_line_hull(line);
 
-            // Speech/thought bubble: strictly anchored at (0, 0), completely untouched
+            // Speech/thought bubble: shifts synchronously with moving creature
             if y < self.cow_start_line {
                 for (x, ch) in line.chars().enumerate() {
-                    if x < fb.width {
+                    let xi = x as i32 + x_off;
+                    if xi >= 0 && (xi as usize) < fb.width {
+                        let uxi = xi as usize;
                         let cell_fg = resolve_bubble_cell_fg(ch);
-                        draw_char_with_hull(fb, x, y, x, hull, ch, cell_fg);
+                        draw_char_with_hull_subpixel(fb, uxi, y, x, hull, ch, cell_fg, sub_x);
                     }
                 }
                 y += 1;
                 return;
             }
 
-            // Creature lines: flap wings/horns in place and blink eyes (zero-allocation)
+            // Creature lines: flap wings/horns and blink eyes with subpixel interpolation
             let mut chars_iter = line.chars().peekable();
             let mut x = 0usize;
             while let Some(mut ch) = chars_iter.next() {
-                if x >= fb.width {
-                    break;
+                let xi = x as i32 + x_off;
+                if xi < 0 || (xi as usize) >= fb.width {
+                    x += 1;
+                    continue;
                 }
+                let uxi = xi as usize;
 
                 // Eye blinking across all eye landmarks:
                 let is_landmark = self.eye_landmarks.contains(&(y, x));
@@ -2264,11 +2304,20 @@ impl Effect for FlyEffect {
                         Color::WHITE,
                         '-',
                     );
-                    draw_char_with_hull(fb, x, y, x, hull, '-', cell_fg);
+                    draw_char_with_hull_subpixel(fb, uxi, y, x, hull, '-', cell_fg, sub_x);
                     if !is_landmark && chars_iter.peek().copied() == Some(ch) {
                         let _ = chars_iter.next();
-                        if x + 1 < fb.width {
-                            draw_char_with_hull(fb, x + 1, y, x + 1, hull, '-', cell_fg);
+                        if uxi + 1 < fb.width {
+                            draw_char_with_hull_subpixel(
+                                fb,
+                                uxi + 1,
+                                y,
+                                x + 1,
+                                hull,
+                                '-',
+                                cell_fg,
+                                sub_x,
+                            );
                         }
                         x += 2;
                         continue;
@@ -2290,7 +2339,7 @@ impl Effect for FlyEffect {
                     Color::WHITE,
                     ch,
                 );
-                draw_char_with_hull(fb, x, y, x, hull, ch, cell_fg);
+                draw_char_with_hull_subpixel(fb, uxi, y, x, hull, ch, cell_fg, sub_x);
                 x += 1;
             }
             y += 1;
@@ -2654,6 +2703,10 @@ impl Effect for SwayEffect {
     fn update(&mut self, _dt: f32, _cols: usize, _rows: usize) {}
 
     fn render(&self, fb: &mut FrameBuffer, time: f32) {
+        self.render_subpixel(fb, time, 1.0);
+    }
+
+    fn render_subpixel(&self, fb: &mut FrameBuffer, time: f32, _alpha: f32) {
         let t = (time * self.speed + self.phase) % 1.0;
         let eased = (self.easing_fn)(t);
         let total_lines = self.line_offsets.len().max(1);
@@ -2909,7 +2962,7 @@ pub(crate) fn draw_char_with_rig_hull(
                     let _ = fb.set(x, y, Cell::new(' ', Color::WHITE));
                 }
                 crate::kinematics::CellMask::ExteriorMoat => {
-                    let existing = fb.get(x, y);
+                    let existing = fb.get_back(x, y);
                     if existing.ch != ' ' {
                         let (moat_ch, moat_fg) = crate::kinematics::apply_ambient_occlusion_moat(
                             existing.ch,
@@ -2935,6 +2988,98 @@ pub(crate) fn draw_char_with_rig_hull(
             let _ = fb.set(x, y, Cell::new(' ', Color::WHITE));
         }
     }
+}
+
+/// Render a cell respecting rig-aware bounding-hull occlusion and continuous TrueColor spatial subpixel anti-aliasing.
+///
+/// * `sub_x` — continuous fractional horizontal subcell offset in `[0.0, 1.0)`.
+#[inline]
+pub(crate) fn draw_char_with_rig_hull_subpixel(
+    fb: &mut FrameBuffer,
+    x: usize,
+    y: usize,
+    orig_col: usize,
+    animal_rel_y: usize,
+    hull: Option<(usize, usize)>,
+    rig_map: Option<&crate::kinematics::AsciiRigMap>,
+    ch: char,
+    fg: Color,
+    sub_x: f32,
+) {
+    if x >= fb.width || y >= fb.height {
+        return;
+    }
+    let sub_x = sub_x.clamp(0.0, 0.9999);
+    if ch != ' ' {
+        let primary_lum = (1.0 - sub_x * 0.35).clamp(0.65, 1.0);
+        let primary_fg = fg.scale_luminance(primary_lum);
+        let _ = fb.set(x, y, Cell::new(ch, primary_fg));
+
+        if sub_x > 0.05 && x + 1 < fb.width {
+            let existing = fb.get_back(x + 1, y);
+            if existing.ch == ' ' {
+                let bleed_lum = (sub_x * 0.45).clamp(0.0, 0.45);
+                let bleed_fg = fg.scale_luminance(bleed_lum);
+                let _ = fb.set(x + 1, y, Cell::new(ch, bleed_fg));
+            }
+        }
+        return;
+    }
+
+    if let Some(rig) = rig_map {
+        if let Some(meta) = rig.get(orig_col, animal_rel_y) {
+            match meta.mask {
+                crate::kinematics::CellMask::InteriorOpaque => {
+                    let _ = fb.set(x, y, Cell::new(' ', Color::WHITE));
+                    if sub_x > 0.5 && x + 1 < fb.width {
+                        let _ = fb.set(x + 1, y, Cell::new(' ', Color::WHITE));
+                    }
+                }
+                crate::kinematics::CellMask::ExteriorMoat => {
+                    let existing = fb.get_back(x, y);
+                    if existing.ch != ' ' {
+                        let (moat_ch, moat_fg) = crate::kinematics::apply_ambient_occlusion_moat(
+                            existing.ch,
+                            (existing.fg.r, existing.fg.g, existing.fg.b),
+                            (0, 0, 0),
+                        );
+                        let _ = fb.set(
+                            x,
+                            y,
+                            Cell::new(moat_ch, Color::rgb(moat_fg.0, moat_fg.1, moat_fg.2)),
+                        );
+                    }
+                }
+                crate::kinematics::CellMask::ExteriorTransparent
+                | crate::kinematics::CellMask::GlyphOpaque => {}
+            }
+            return;
+        }
+    }
+
+    if let Some((start, end)) = hull {
+        if orig_col >= start && orig_col <= end {
+            let _ = fb.set(x, y, Cell::new(' ', Color::WHITE));
+            if sub_x > 0.5 && x + 1 < fb.width {
+                let _ = fb.set(x + 1, y, Cell::new(' ', Color::WHITE));
+            }
+        }
+    }
+}
+
+/// Render a cell respecting 1D bounding-hull occlusion and continuous TrueColor spatial subpixel anti-aliasing.
+#[inline]
+pub(crate) fn draw_char_with_hull_subpixel(
+    fb: &mut FrameBuffer,
+    x: usize,
+    y: usize,
+    orig_col: usize,
+    hull: Option<(usize, usize)>,
+    ch: char,
+    fg: Color,
+    sub_x: f32,
+) {
+    draw_char_with_rig_hull_subpixel(fb, x, y, orig_col, 0, hull, None, ch, fg, sub_x);
 }
 
 /// Legacy helper: render a cell respecting 1D bounding-hull occlusion.
@@ -3532,7 +3677,11 @@ impl Effect for CompoundSignatureEffect {
     }
 
     fn render(&self, fb: &mut FrameBuffer, time: f32) {
-        self.base_effect.render(fb, time);
+        self.render_subpixel(fb, time, 1.0);
+    }
+
+    fn render_subpixel(&self, fb: &mut FrameBuffer, time: f32, alpha: f32) {
+        self.base_effect.render_subpixel(fb, time, alpha);
 
         if self.dna.particles.rate > 0 {
             self.pool

@@ -33,6 +33,7 @@
 
 #![doc(html_root_url = "https://docs.rs/forgum-platform/0.0.10-beta")]
 
+pub mod audio_bell;
 pub mod biome;
 pub mod compute;
 pub mod daemon_socket;
@@ -40,7 +41,9 @@ pub mod encoding;
 pub mod error;
 pub mod gpu;
 pub mod guards;
+pub mod marketplace;
 pub mod mux;
+pub mod neural;
 pub mod output;
 pub mod package_manager;
 pub mod paths;
@@ -68,13 +71,25 @@ pub mod platform_unix;
 pub mod platform_windows;
 
 // Re-exports for ergonomic callers.
+pub use audio_bell::{
+    emit_synchronized_chime, is_chime_permitted, reset_chime_cooldown_for_test, ChimeEvent,
+    MIN_CHIME_COOLDOWN_MS,
+};
 pub use compute::{get_compute_engine, init_compute_engine, ComputeEngine};
 pub use daemon_socket::{DaemonSocket, SocketConnection};
 pub use encoding::{decode_text_compatible, read_text_file_compatible, sanitize_and_normalize};
 pub use error::PlatformError;
 pub use gpu::{detect_gpu_devices, resolve_acceleration, AccelerationMode, GpuDeviceType, GpuInfo};
 pub use guards::{AltScreenGuard, CursorShowGuard, RawModeGuard, TimerResolutionGuard};
+pub use marketplace::{
+    is_safe_pack_identifier, list_installed_packs, pack_directory, packs_dir,
+    remove_installed_pack, sanitize_pack_id,
+};
 pub use mux::{detect_mux, Mux};
+pub use neural::{
+    probe_neural_hardware, sanitize_neural_token_stream, NeuralBackend, NeuralHardwareReport,
+    MAX_KV_ARENA_BYTES, MAX_NEURAL_WEIGHTS_BYTES,
+};
 pub use output::{open_output, OutputHandle, OutputTarget};
 pub use package_manager::{
     atomic_replace_binary, atomic_replace_binary_verified, check_for_updates_cached,

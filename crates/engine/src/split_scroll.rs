@@ -186,8 +186,9 @@ impl SplitOverlayGuard {
                             )
                             .as_bytes(),
                         );
-                        // Clear the reserved banner area
-                        for y in 1..=self.overlay_rows {
+                        // Clear the reserved banner area including separator row (VIS-006)
+                        let clear_limit = self.top_margin.saturating_sub(1).max(self.overlay_rows);
+                        for y in 1..=clear_limit {
                             let _ =
                                 out.write_all(format!("\x1b7\x1b[{y};1H\x1b[2K\x1b8").as_bytes());
                         }

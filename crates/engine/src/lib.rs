@@ -10,6 +10,7 @@
 pub mod battle;
 pub mod capture_rasterizer;
 pub mod checkhealth;
+pub mod chime;
 pub mod cli;
 pub mod color;
 pub mod completions;
@@ -35,7 +36,9 @@ pub mod kinematics;
 pub mod kitty;
 pub mod logger;
 pub mod metrics;
+pub mod neural_dialogue;
 pub mod options_table;
+pub mod pack_importer;
 pub mod particles;
 pub mod protocol;
 pub mod protocol_io;
