@@ -339,7 +339,7 @@ impl SimState {
             self.last_thought_rotate = Instant::now();
             if let Some(new_thought) = crate::fortune::random_fortune(&self.data_dir) {
                 self.config.text = new_thought;
-                let thoughts_glyph = if self.config.think { "o" } else { "\\" };
+                let thoughts_glyph = if self.config.think { " " } else { "\\" };
                 let cow_raw = crate::cow::load_cow(
                     &self.config.cow,
                     &self.data_dir,
@@ -509,7 +509,7 @@ impl SimState {
                 self.config.effect = name.clone();
                 self.cow_dna = new_dna;
                 // Recreate effect with the composed cow scene (bubble + cow)
-                let thoughts_glyph = if self.config.think { "o" } else { "\\" };
+                let thoughts_glyph = if self.config.think { " " } else { "\\" };
                 let cow_raw = crate::cow::load_cow(
                     &self.config.cow,
                     &self.data_dir,
@@ -542,7 +542,7 @@ impl SimState {
             ControlMsg::Cow(name) => {
                 // Reload cow art and recreate the effect.
                 self.config.cow = crate::cow::resolve_cow_name(name, &self.data_dir);
-                let thoughts_glyph = if self.config.think { "o" } else { "\\" };
+                let thoughts_glyph = if self.config.think { " " } else { "\\" };
                 let cow_text = crate::cow::load_cow(
                     &self.config.cow,
                     &self.data_dir,
@@ -606,7 +606,7 @@ impl SimState {
             ControlMsg::Text(text) => {
                 // Recompose the scene with new text and recreate the effect.
                 self.config.text = text.clone();
-                let thoughts_glyph = if self.config.think { "o" } else { "\\" };
+                let thoughts_glyph = if self.config.think { " " } else { "\\" };
                 let cow_text = crate::cow::load_cow(
                     &self.config.cow,
                     &self.data_dir,
@@ -636,7 +636,7 @@ impl SimState {
                 // Switch bubble style to thought bubble (o) and recompose scene with new thought text.
                 self.config.think = true;
                 self.config.text = text.clone();
-                let thoughts_glyph = "o";
+                let thoughts_glyph = " ";
                 let cow_text = crate::cow::load_cow(
                     &self.config.cow,
                     &self.data_dir,
@@ -661,7 +661,7 @@ impl SimState {
             }
             ControlMsg::Eyes(eyes) => {
                 self.config.eyes = eyes.clone();
-                let thoughts_glyph = if self.config.think { "o" } else { "\\" };
+                let thoughts_glyph = if self.config.think { " " } else { "\\" };
                 let cow_text = crate::cow::load_cow(
                     &self.config.cow,
                     &self.data_dir,
@@ -689,7 +689,7 @@ impl SimState {
             }
             ControlMsg::Tongue(tongue) => {
                 self.config.tongue = tongue.clone();
-                let thoughts_glyph = if self.config.think { "o" } else { "\\" };
+                let thoughts_glyph = if self.config.think { " " } else { "\\" };
                 let cow_text = crate::cow::load_cow(
                     &self.config.cow,
                     &self.data_dir,
@@ -729,7 +729,7 @@ impl SimState {
                             natural_hexes.iter().map(|&s| s.to_string()).collect();
                     }
                 }
-                let thoughts_glyph = if self.config.think { "o" } else { "\\" };
+                let thoughts_glyph = if self.config.think { " " } else { "\\" };
                 let cow_text = crate::cow::load_cow(
                     &self.config.cow,
                     &self.data_dir,
@@ -1168,6 +1168,8 @@ pub fn run_engine(
     cmd_rx: &Option<crossbeam_channel::Receiver<ControlCmd>>,
     max_frames: u64,
 ) -> Result<String, Box<dyn std::error::Error>> {
+    forgum_platform::install_crash_safe_vt_hook(shutdown.clone());
+
     // Probe terminal size.
     let caps = forgum_platform::detect_capabilities();
     let cols = caps.width.max(1) as usize;
@@ -1356,6 +1358,8 @@ pub fn run_engine_banner(
     max_frames: u64,
     banner_rows: usize,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    forgum_platform::install_crash_safe_vt_hook(shutdown.clone());
+
     let caps = forgum_platform::detect_capabilities();
     let cols = caps.width.max(20) as usize;
     let rows = banner_rows.max(1);

@@ -189,10 +189,10 @@ pub fn log_diagnostic(
         let _ = fs::create_dir_all(&log_dir);
     }
 
-    const MAX_LOG_SIZE: u64 = 10 * 1024 * 1024; // 10 MB
-    const MAX_GENERATIONS: usize = 5;
+    const MAX_LOG_SIZE: u64 = 2 * 1024 * 1024; // 2 MB
+    const MAX_GENERATIONS: usize = 2;
 
-    // Rotate text and JSONL logs if size exceeds 10 MB (up to 5 generations preserved)
+    // Rotate text and JSONL logs if size exceeds 2 MB (2 generations preserved)
     let text_path = log_dir.join("forgum.log");
     rotate_log_file(&text_path, MAX_LOG_SIZE, MAX_GENERATIONS);
 
@@ -292,7 +292,8 @@ pub fn read_recent_logs(
 
     let file = fs::File::open(jsonl_path)?;
     let reader = BufReader::new(file);
-    let mut entries: Vec<LogEntry> = Vec::new();
+    let mut ring: std::collections::VecDeque<LogEntry> =
+        std::collections::VecDeque::with_capacity(if max_lines > 0 { max_lines } else { 128 });
 
     for line in reader.lines() {
         let line = match line {
@@ -310,16 +311,14 @@ pub fn read_recent_logs(
                     }
                 }
             }
-            entries.push(entry);
+            if max_lines > 0 && ring.len() >= max_lines {
+                ring.pop_front();
+            }
+            ring.push_back(entry);
         }
     }
 
-    if entries.len() > max_lines && max_lines > 0 {
-        let start = entries.len() - max_lines;
-        entries = entries.split_off(start);
-    }
-
-    Ok(entries)
+    Ok(ring.into())
 }
 
 /// Get the active log file paths.

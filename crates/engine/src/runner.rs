@@ -3164,7 +3164,7 @@ fn handle_think_command(mut args: cli::Args, thought: Vec<String>) -> ExitCode {
     scene.text = thought_text;
     resolve_scene_randomness(&mut scene, &data, &args);
 
-    let thoughts_glyph = "o";
+    let thoughts_glyph = " ";
     let cow_text = cow::load_cow(
         &scene.cow,
         &data,
@@ -3866,6 +3866,7 @@ fn render_subcommand_with_scene(
 
     // ── FOREGROUND MODE ──
     let shutdown = ShutdownFlag::new();
+    forgum_platform::install_crash_safe_vt_hook(shutdown.clone());
 
     let out = match OutputHandle::open() {
         Ok(o) => o,
@@ -3875,7 +3876,7 @@ fn render_subcommand_with_scene(
         }
     };
 
-    let thoughts_glyph = if is_thought { "o" } else { "\\" };
+    let thoughts_glyph = if is_thought { " " } else { "\\" };
     let cow_text = if let Some(img_path) = &scene.image {
         let term_w = crossterm::terminal::size()
             .map(|s| s.0 as usize)
@@ -4111,7 +4112,7 @@ fn run_daemon_child(args: cli::Args) -> ExitCode {
     }
 
     scene.cow = cow::resolve_cow_name(&scene.cow, &data);
-    let thoughts_glyph = if is_thought { "o" } else { "\\" };
+    let thoughts_glyph = if is_thought { " " } else { "\\" };
     let cow_text = cow::load_cow(
         &scene.cow,
         &data,
@@ -4162,6 +4163,7 @@ fn run_daemon_child(args: cli::Args) -> ExitCode {
 
     let instance_id = std::process::id();
     let shutdown = ShutdownFlag::new();
+    forgum_platform::install_crash_safe_vt_hook(shutdown.clone());
 
     let is_overlay_mode = scene.background
         || scene.split_scroll

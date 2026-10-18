@@ -51,19 +51,29 @@ pub fn render_timer_cow(result: &TimerResult) -> String {
     let status_symbol = if result.exit_code == 0 { "✓" } else { "✗" };
 
     let max_cmd_len = 36;
-    let cmd_chars: Vec<char> = result.command.chars().collect();
-    let display_cmd: String = if cmd_chars.len() > max_cmd_len {
-        let truncated: String = cmd_chars[..max_cmd_len.saturating_sub(3)].iter().collect();
-        format!("{truncated}...")
-    } else {
-        result.command.clone()
-    };
+    let mut display_cmd = String::new();
+    let mut cur_w = 0;
+    for ch in result.command.chars() {
+        let cw = crate::cow::char_display_width(ch);
+        if cur_w + cw > max_cmd_len {
+            display_cmd.push_str("...");
+            break;
+        }
+        display_cmd.push(ch);
+        cur_w += cw;
+    }
+    if display_cmd.is_empty() {
+        display_cmd = result.command.clone();
+    }
 
-    let inner_width = 46.max(display_cmd.chars().count() + duration_str.chars().count() + 8);
+    let cmd_w = crate::cow::str_display_width(&display_cmd);
+    let dur_w = crate::cow::str_display_width(&duration_str);
+    let sym_w = crate::cow::str_display_width(status_symbol);
+
+    let inner_width = 46.max(cmd_w + dur_w + sym_w + 8);
     let top_border = format!("  +{}+", "-".repeat(inner_width));
     let bottom_border = format!("  +{}+", "-".repeat(inner_width));
-    let spaces_needed =
-        inner_width.saturating_sub(display_cmd.chars().count() + duration_str.chars().count() + 6);
+    let spaces_needed = inner_width.saturating_sub(sym_w + cmd_w + dur_w + 6);
     let padding = " ".repeat(spaces_needed);
 
     let status_line = format!("  |  {status_symbol} {display_cmd}{padding} {duration_str}  |");

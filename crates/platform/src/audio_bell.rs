@@ -107,8 +107,11 @@ pub fn reset_chime_cooldown_for_test() {
 mod tests {
     use super::*;
 
+    static TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
     #[test]
     fn test_silence_guards_cli_and_config() {
+        let _lock = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         reset_chime_cooldown_for_test();
         assert!(!is_chime_permitted(true, false, true, true));
         assert!(!is_chime_permitted(false, true, true, true));
@@ -116,6 +119,7 @@ mod tests {
 
     #[test]
     fn test_silence_guards_tty_and_editor() {
+        let _lock = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         reset_chime_cooldown_for_test();
         assert!(!is_chime_permitted(false, false, false, true));
         assert!(!is_chime_permitted(false, false, true, false));
@@ -123,6 +127,7 @@ mod tests {
 
     #[test]
     fn test_chime_permitted_when_clean() {
+        let _lock = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         reset_chime_cooldown_for_test();
         // Clear any interfering env vars for testing
         let _guard = std::env::var_os("NO_COLOR");
@@ -140,6 +145,7 @@ mod tests {
 
     #[test]
     fn test_emit_synchronized_chime_writes_expected_bytes() {
+        let _lock = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         reset_chime_cooldown_for_test();
         std::env::remove_var("NO_COLOR");
         std::env::remove_var("FORGUM_SILENT");
@@ -173,6 +179,7 @@ mod tests {
 
     #[test]
     fn test_piped_output_emits_zero_bytes() {
+        let _lock = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         reset_chime_cooldown_for_test();
         let mut buf = Vec::new();
         emit_synchronized_chime(

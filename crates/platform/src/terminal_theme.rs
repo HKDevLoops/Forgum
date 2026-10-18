@@ -467,6 +467,57 @@ pub fn elevate_luminance(r: u8, g: u8, b: u8, min_lum: f32) -> (u8, u8, u8) {
     }
 }
 
+/// Enforce a minimum OKLab perceptual lightness floor (L >= min_lightness, e.g. 0.40)
+/// on dark terminal themes so dark navy and deep blue scenery elements never wash out against dark backgrounds (VIS-003).
+#[must_use]
+pub fn elevate_oklab_lightness(r: u8, g: u8, b: u8, min_l: f32) -> (u8, u8, u8) {
+    let r_lin = (r as f32 / 255.0).powf(2.2);
+    let g_lin = (g as f32 / 255.0).powf(2.2);
+    let b_lin = (b as f32 / 255.0).powf(2.2);
+
+    let l = 0.4122214708 * r_lin + 0.5363325363 * g_lin + 0.0514459929 * b_lin;
+    let m = 0.2119034982 * r_lin + 0.6806995451 * g_lin + 0.1073969566 * b_lin;
+    let s = 0.0883024619 * r_lin + 0.2817188376 * g_lin + 0.6299787005 * b_lin;
+
+    let l_ = l.cbrt();
+    let m_ = m.cbrt();
+    let s_ = s.cbrt();
+
+    let cur_l = 0.2104542553 * l_ + 0.7936177850 * m_ - 0.0040720468 * s_;
+
+    if cur_l < min_l && cur_l > 0.0001 {
+        let scale = (min_l / cur_l).clamp(1.0, 4.0);
+        let target_l_ = l_ * scale;
+        let target_m_ = m_ * scale;
+        let target_s_ = s_ * scale;
+
+        let target_l = target_l_ * target_l_ * target_l_;
+        let target_m = target_m_ * target_m_ * target_m_;
+        let target_s = target_s_ * target_s_ * target_s_;
+
+        let r_out = 4.0767439362 * target_l - 3.3077115913 * target_m + 0.2309699292 * target_s;
+        let g_out = -1.2684380046 * target_l + 2.6097574011 * target_m - 0.3413193965 * target_s;
+        let b_out = -0.0041960863 * target_l - 0.7034186147 * target_m + 1.7076147010 * target_s;
+
+        (
+            (r_out.max(0.0).powf(1.0 / 2.2) * 255.0)
+                .clamp(0.0, 255.0)
+                .round() as u8,
+            (g_out.max(0.0).powf(1.0 / 2.2) * 255.0)
+                .clamp(0.0, 255.0)
+                .round() as u8,
+            (b_out.max(0.0).powf(1.0 / 2.2) * 255.0)
+                .clamp(0.0, 255.0)
+                .round() as u8,
+        )
+    } else if cur_l <= 0.0001 {
+        let val = (min_l.powf(2.2) * 255.0).clamp(0.0, 255.0).round() as u8;
+        (val, val, val)
+    } else {
+        (r, g, b)
+    }
+}
+
 /// Calculate perceived luminance (0-255) using standard Rec. 601 coefficients.
 #[must_use]
 pub fn calculate_luminance(r: u8, g: u8, b: u8) -> u8 {

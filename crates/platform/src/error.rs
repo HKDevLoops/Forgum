@@ -13,6 +13,14 @@ pub enum PlatformError {
     #[error("I/O error: {0}")]
     Io(#[from] std::io::Error),
 
+    #[error("I/O error during {op}{}: {source}", path.as_ref().map(|p| format!(" on {}", p.display())).unwrap_or_default())]
+    IoContext {
+        op: &'static str,
+        path: Option<PathBuf>,
+        #[source]
+        source: std::io::Error,
+    },
+
     #[error("terminal is not a TTY and no fallback (e.g. /dev/tty, CONOUT$) is available")]
     NoTerminal,
 
@@ -46,6 +54,11 @@ pub enum PlatformError {
 }
 
 impl PlatformError {
+    /// Constructs a context-rich I/O error variant.
+    pub fn io_context(op: &'static str, path: Option<PathBuf>, source: std::io::Error) -> Self {
+        Self::IoContext { op, path, source }
+    }
+
     /// Exit code to use when surfacing this error from the engine binary.
     ///
     /// - I/O, terminal-not-found, path-escape, config-conflict: `78` (`EX_CONFIG` — configuration error).
@@ -55,7 +68,11 @@ impl PlatformError {
     #[must_use]
     pub fn exit_code(&self) -> i32 {
         match self {
-            Self::Io(_) | Self::NoTerminal | Self::PathEscape(_) | Self::ConfigConflict(_) => 78,
+            Self::Io(_)
+            | Self::IoContext { .. }
+            | Self::NoTerminal
+            | Self::PathEscape(_)
+            | Self::ConfigConflict(_) => 78,
             Self::ConfigEncoding(_) | Self::ConfigParse { .. } => 65,
             Self::SignalRegistration { .. } | Self::Detach(_) => 71,
             Self::Unsupported(_) | Self::InvalidArgument(_) => 64,

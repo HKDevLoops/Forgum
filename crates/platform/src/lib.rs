@@ -80,7 +80,11 @@ pub use daemon_socket::{DaemonSocket, SocketConnection};
 pub use encoding::{decode_text_compatible, read_text_file_compatible, sanitize_and_normalize};
 pub use error::PlatformError;
 pub use gpu::{detect_gpu_devices, resolve_acceleration, AccelerationMode, GpuDeviceType, GpuInfo};
-pub use guards::{AltScreenGuard, CursorShowGuard, RawModeGuard, TimerResolutionGuard};
+pub use guards::{
+    emergency_restore_terminal_idempotent, install_crash_safe_vt_hook, mark_vt_dirty,
+    AltScreenGuard, CursorShowGuard, RawModeGuard, TimerResolutionGuard,
+    EMERGENCY_VT_RESTORE_BYTES,
+};
 pub use marketplace::{
     is_safe_pack_identifier, list_installed_packs, pack_directory, packs_dir,
     remove_installed_pack, sanitize_pack_id,
