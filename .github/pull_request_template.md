@@ -47,7 +47,7 @@
 
 ---
 
-## 🛡️ Core Operating Mandates (AGENTS.md Compliance)
+## 🛡️ Core Architectural Mandates (ARCHITECTURE_MAP.md Compliance)
 
 Every pull request must strictly abide by the 9 architectural mandates:
 

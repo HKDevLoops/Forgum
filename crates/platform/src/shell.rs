@@ -320,6 +320,62 @@ impl Shell {
             Shell::Carapace | Shell::Cmd => None,
         }
     }
+
+    /// Return the canonical executable binary name for this shell.
+    pub fn binary_name(&self) -> &'static str {
+        match self {
+            Shell::Pwsh => "pwsh",
+            Shell::PowerShell => "powershell",
+            Shell::Bash => "bash",
+            Shell::Zsh => "zsh",
+            Shell::Fish => "fish",
+            Shell::Nushell => "nu",
+            Shell::Cmd => "cmd",
+            Shell::Elvish => "elvish",
+            Shell::Carapace => "carapace",
+            Shell::Xonsh => "xonsh",
+            Shell::Tcsh => "tcsh",
+            Shell::Ksh => "ksh",
+            Shell::Ion => "ion",
+            Shell::Oil => "osh",
+            Shell::Yash => "yash",
+        }
+    }
+
+    /// Check if this shell executable is installed and available in system PATH or standard locations.
+    pub fn is_available(&self) -> bool {
+        let bin = self.binary_name();
+
+        #[cfg(windows)]
+        {
+            if matches!(self, Shell::PowerShell) {
+                let sys_ps =
+                    Path::new("C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe");
+                if sys_ps.exists() {
+                    return true;
+                }
+            }
+            if matches!(self, Shell::Cmd) {
+                return true;
+            }
+            std::process::Command::new("where.exe")
+                .arg(bin)
+                .output()
+                .map(|o| o.status.success())
+                .unwrap_or(false)
+        }
+        #[cfg(not(windows))]
+        {
+            if matches!(self, Shell::Cmd) {
+                return false;
+            }
+            std::process::Command::new("which")
+                .arg(bin)
+                .output()
+                .map(|o| o.status.success())
+                .unwrap_or(false)
+        }
+    }
 }
 
 impl fmt::Display for Shell {

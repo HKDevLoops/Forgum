@@ -1382,7 +1382,7 @@ impl ConfigApp {
                 let rc = shell.shell_rc_path();
                 let comp = shell.completions_script_path();
 
-                let is_available = Self::check_shell_binary(shell);
+                let is_available = shell.is_available();
 
                 let is_hook_installed = rc
                     .as_ref()
@@ -1402,44 +1402,6 @@ impl ConfigApp {
                 }
             })
             .collect()
-    }
-
-    /// Check if a given shell executable is available in PATH.
-    fn check_shell_binary(shell: Shell) -> bool {
-        let bin = match shell {
-            Shell::Pwsh => "pwsh",
-            Shell::PowerShell => "powershell",
-            Shell::Bash => "bash",
-            Shell::Zsh => "zsh",
-            Shell::Fish => "fish",
-            Shell::Nushell => "nu",
-            Shell::Cmd => "cmd",
-            Shell::Elvish => "elvish",
-            Shell::Carapace => "carapace",
-            Shell::Xonsh => "xonsh",
-            Shell::Tcsh => "tcsh",
-            Shell::Ksh => "ksh",
-            Shell::Ion => "ion",
-            Shell::Oil => "osh",
-            Shell::Yash => "yash",
-        };
-
-        #[cfg(windows)]
-        {
-            std::process::Command::new("where.exe")
-                .arg(bin)
-                .output()
-                .map(|o| o.status.success())
-                .unwrap_or(false)
-        }
-        #[cfg(not(windows))]
-        {
-            std::process::Command::new("which")
-                .arg(bin)
-                .output()
-                .map(|o| o.status.success())
-                .unwrap_or(false)
-        }
     }
 
     pub fn tick(&mut self, dt: f32) {

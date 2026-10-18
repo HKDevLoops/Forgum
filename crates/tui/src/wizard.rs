@@ -136,6 +136,9 @@ impl InstallerWizard {
     }
 
     pub fn handle_key(&mut self, key: KeyEvent) -> bool {
+        if key.kind != event::KeyEventKind::Press {
+            return false;
+        }
         if key.modifiers.contains(event::KeyModifiers::CONTROL) && key.code == KeyCode::Char('c') {
             return true;
         }
@@ -850,15 +853,16 @@ impl InstallerWizard {
         let mut lines = vec![
             Line::from(""),
             Line::from(Span::styled(
-                "  TRANSPARENT COMMUNITY MOTIVATION COUNTER",
+                "  ✦ A HEARTFELT REQUEST TO OUR COMMUNITY ✦",
                 Style::default().fg(theme::SUPERNOVA_GOLD).add_modifier(Modifier::BOLD),
             )),
             Line::from(""),
             Line::from(vec![
                 Span::raw("  Forgum includes an anonymous, aggregate counter system created "),
-                Span::styled("purely for developer motivation and curiosity", Style::default().fg(theme::STARFIRE_PINK).add_modifier(Modifier::BOLD)),
+                Span::styled("purely for developer motivation and team morale", Style::default().fg(theme::STARFIRE_PINK).add_modifier(Modifier::BOLD)),
                 Span::raw("."),
             ]),
+            Line::from("  Seeing fellow developers use Forgum gives our team immense motivation to build and ship updates!"),
             Line::from("  It tracks exactly THREE public aggregate numbers displayed on the repository README:"),
             Line::from(""),
             Line::from(vec![
@@ -1316,6 +1320,9 @@ impl UninstallerWizard {
     }
 
     pub fn handle_key(&mut self, key: KeyEvent) -> bool {
+        if key.kind != event::KeyEventKind::Press {
+            return false;
+        }
         if key.modifiers.contains(event::KeyModifiers::CONTROL) && key.code == KeyCode::Char('c') {
             return true;
         }

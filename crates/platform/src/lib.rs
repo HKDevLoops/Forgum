@@ -37,6 +37,7 @@ pub mod audio_bell;
 pub mod biome;
 pub mod compute;
 pub mod daemon_socket;
+pub mod editor;
 pub mod encoding;
 pub mod error;
 pub mod gpu;
@@ -77,6 +78,9 @@ pub use audio_bell::{
 };
 pub use compute::{get_compute_engine, init_compute_engine, ComputeEngine};
 pub use daemon_socket::{DaemonSocket, SocketConnection};
+pub use editor::{
+    detect_installed_editors, find_editor_binary, find_neovim, open_in_editor, EditorInfo,
+};
 pub use encoding::{decode_text_compatible, read_text_file_compatible, sanitize_and_normalize};
 pub use error::PlatformError;
 pub use gpu::{detect_gpu_devices, resolve_acceleration, AccelerationMode, GpuDeviceType, GpuInfo};

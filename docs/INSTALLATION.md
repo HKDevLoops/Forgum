@@ -49,7 +49,7 @@ When launched in an interactive terminal, the installer executes the **Celestial
    - Scans active shells on your system (Bash, Zsh, Fish, Pwsh, PowerShell, Nu, Elvish, Cmd).
    - Allows selecting which shells should receive prompt and startup hooks.
 5. **Motivation Telemetry Consent**:
-   - Explicit opt-in/opt-out for transparent usage metrics.
+   - Transparent opt-in requesting permission to increment anonymous README motivation counters (+1 to public GitHub badges) as encouragement for the maintainer and team, with 100% zero personal data.
 
 ---
 

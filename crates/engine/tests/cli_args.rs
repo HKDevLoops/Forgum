@@ -446,7 +446,7 @@ fn completions_list_and_default_subcommand() {
     assert!(matches!(
         cmd_def,
         Some(Commands::Completions {
-            shell: forgum_engine::cli::ShellArg::List
+            shell: forgum_engine::cli::ShellArg::Update
         })
     ));
 }

@@ -3,7 +3,7 @@
 //! Provides `forgum options [category]` (animals, effects, scenery, colors, all)
 //! with adaptive column sizing, word wrapping (CSS flexbox/Tailwind model), and Unicode box borders.
 
-use crate::cow::{str_display_width, wrap_words};
+use crate::cow::{char_display_width, str_display_width, wrap_words};
 
 /// Format an adaptive Unicode or ASCII table.
 pub fn format_table(headers: &[&str], rows: &[Vec<&str>]) -> String {
@@ -12,7 +12,7 @@ pub fn format_table(headers: &[&str], rows: &[Vec<&str>]) -> String {
     }
 
     let (term_w, _) = forgum_platform::terminal_size();
-    let total_width = (term_w as usize).max(60);
+    let total_width = (term_w as usize).clamp(60, 110);
 
     // Border and padding overhead: 1 border per col + 1 on end, plus 2 spaces padding per col
     let num_cols = headers.len();
@@ -43,8 +43,23 @@ pub fn format_table(headers: &[&str], rows: &[Vec<&str>]) -> String {
 
     // Last column takes remaining width
     let last_col_idx = num_cols.saturating_sub(1);
-    let remaining = available_content.saturating_sub(used_for_initial).max(18);
-    col_widths[last_col_idx] = remaining;
+    let remaining = available_content.saturating_sub(used_for_initial);
+    if remaining < 18 && available_content > 24 {
+        let deficit = 18 - remaining;
+        let mut recovered = 0;
+        for w in col_widths.iter_mut().take(last_col_idx) {
+            let can_shrink = (*w).saturating_sub(8);
+            let shrink = can_shrink.min(deficit.saturating_sub(recovered));
+            *w -= shrink;
+            recovered += shrink;
+            if recovered >= deficit {
+                break;
+            }
+        }
+        col_widths[last_col_idx] = (remaining + recovered).max(12);
+    } else {
+        col_widths[last_col_idx] = remaining.max(18);
+    }
 
     let use_unicode = true;
 
@@ -120,9 +135,26 @@ pub fn format_table(headers: &[&str], rows: &[Vec<&str>]) -> String {
                     .map(|s| s.as_str())
                     .unwrap_or("");
                 let line_w = str_display_width(line_str);
-                out.push_str(line_str);
-                for _ in line_w..*w {
-                    out.push(' ');
+                if line_w > *w {
+                    let mut truncated = String::new();
+                    let mut tw = 0;
+                    for ch in line_str.chars() {
+                        let cw = char_display_width(ch);
+                        if tw + cw > *w {
+                            break;
+                        }
+                        truncated.push(ch);
+                        tw += cw;
+                    }
+                    out.push_str(&truncated);
+                    for _ in tw..*w {
+                        out.push(' ');
+                    }
+                } else {
+                    out.push_str(line_str);
+                    for _ in line_w..*w {
+                        out.push(' ');
+                    }
                 }
                 out.push(' ');
                 out.push(vt);
@@ -214,6 +246,18 @@ pub fn render_options(category: &str) -> String {
         || cat == "aspect_ratio"
         || cat == "ratio"
         || cat == "ratios";
+    let show_accel = show_all
+        || cat == "accel"
+        || cat == "gpu"
+        || cat == "hardware"
+        || cat == "acceleration"
+        || cat == "npu";
+    let show_render_mode = show_all
+        || cat == "render-mode"
+        || cat == "render_mode"
+        || cat == "rendermode"
+        || cat == "subcell"
+        || cat == "raster";
 
     if !show_animals
         && !show_effects
@@ -230,6 +274,8 @@ pub fn render_options(category: &str) -> String {
         && !show_tongue
         && !show_logs
         && !show_aspects
+        && !show_accel
+        && !show_render_mode
     {
         out.push_str(&format!(
             "\n\x1b[1;33mUnknown options category '{category}'.\x1b[0m\n\n\
@@ -244,6 +290,8 @@ pub fn render_options(category: &str) -> String {
               • \x1b[1mtod\x1b[0m            - Atmospheric solar illumination (--time-of-day / --tod)\n\
               • \x1b[1mseason\x1b[0m         - Phenological seasonal foliage (--season)\n\
               • \x1b[1maspects\x1b[0m        - Viewport aspect ratio formats (--aspect)\n\
+              • \x1b[1maccel\x1b[0m          - Hardware acceleration modes (--accel)\n\
+              • \x1b[1mrender-mode\x1b[0m    - Sub-cell rasterization modes (--render-mode)\n\
               • \x1b[1mcolors\x1b[0m         - Chromatic color modes and hex palettes (--color-mode)\n\
               • \x1b[1mshells\x1b[0m         - Supported shells, config paths, and tab completion\n\
               • \x1b[1mconfig\x1b[0m         - Supported configuration keys, types, and schema\n\
@@ -750,6 +798,75 @@ pub fn render_options(category: &str) -> String {
             ],
         ];
         out.push_str(&format_table(&a_headers, &a_rows));
+    }
+
+    if show_accel {
+        out.push_str("\n\x1b[1;35m━━━ Hardware Acceleration Modes (--accel) ━━━\x1b[0m\n");
+        let accel_headers = [
+            "Accel Mode",
+            "Hardware Target",
+            "Probing & Runtime Behavior",
+        ];
+        let accel_rows = vec![
+            vec![
+                "auto",
+                "Dedicated > Integrated > NPU > CPU",
+                "Automated <0.1ms registry / DRM probing prioritizing discrete GPU and NPU before CPU",
+            ],
+            vec![
+                "dedicated",
+                "Dedicated Discrete GPU (NVIDIA / AMD / Intel Arc)",
+                "Hardware compute offload targeting Vulkan 1.3 / Apple Metal 3 queues",
+            ],
+            vec![
+                "integrated",
+                "Integrated APU (AMD Radeon / Intel Iris / Apple GPU)",
+                "Zero-copy shared memory compute with minimal host CPU power draw",
+            ],
+            vec![
+                "npu",
+                "Neural Processing Unit (Intel AI Boost / AMD XDNA / Apple ANE)",
+                "DirectML and NPU compute offload sparing discrete graphics resources",
+            ],
+            vec![
+                "cpu",
+                "Native Multi-Threaded SIMD Engine",
+                "Infallible zero-allocation CPU compute strictly respecting the <100MB RAM ceiling",
+            ],
+        ];
+        out.push_str(&format_table(&accel_headers, &accel_rows));
+    }
+
+    if show_render_mode {
+        out.push_str("\n\x1b[1;35m━━━ Sub-Cell Rasterization Modes (--render-mode) ━━━\x1b[0m\n");
+        let rm_headers = [
+            "Render Mode",
+            "Pixel Geometry",
+            "Visual Resolution & Characteristics",
+        ];
+        let rm_rows = vec![
+            vec![
+                "ascii",
+                "1×1 Character Grid",
+                "Classic standard terminal monospace characters with maximum compatibility",
+            ],
+            vec![
+                "braille",
+                "2×4 Subpixel Dots (U+2800..U+28FF)",
+                "High-density mathematical curve plotting with sub-cell precision",
+            ],
+            vec![
+                "half-block",
+                "1×2 Half Blocks (▀, ▄)",
+                "Sharp vertical 2× resolution rasterization with truecolor cell backgrounds",
+            ],
+            vec![
+                "hybrid",
+                "Dynamic Liquid Hybrid",
+                "Adaptive sub-cell blending with run-length ANSI bandwidth compression",
+            ],
+        ];
+        out.push_str(&format_table(&rm_headers, &rm_rows));
     }
 
     if show_colors {
@@ -1299,6 +1416,10 @@ pub fn render_help(category: Option<&str>) -> String {
                     | "accel"
                     | "gpu"
                     | "aspect"
+                    | "aspects"
+                    | "render-mode"
+                    | "render_mode"
+                    | "rendermode"
                     | "split"
                     | "banner"
             )
@@ -1530,6 +1651,12 @@ pub fn render_help(category: Option<&str>) -> String {
                 "Aspect ratio adaptation strategy: preset, dynamic (recomputes on resize), auto.",
             ],
             vec![
+                "render-mode <m>",
+                "--render-mode <m>",
+                "forgum --render-mode braille",
+                "Sub-cell rasterization mode: ascii, braille, half-block, hybrid.",
+            ],
+            vec![
                 "banner",
                 "--banner / -B",
                 "forgum --banner",
@@ -1755,5 +1882,53 @@ mod tests {
         let help_mascots = render_help(Some("mascots"));
         assert!(help_mascots.contains("Mascot & Kinematics Control"));
         assert!(!help_mascots.contains("Display, Timing & Hardware Acceleration"));
+    }
+
+    #[test]
+    fn render_options_accel_and_render_mode() {
+        let text_accel = render_options("accel");
+        assert!(text_accel.contains("Hardware Acceleration Modes"));
+        assert!(text_accel.contains("auto"));
+        assert!(text_accel.contains("dedicated"));
+        assert!(text_accel.contains("npu"));
+
+        let text_rm = render_options("render-mode");
+        assert!(text_rm.contains("Sub-Cell Rasterization Modes"));
+        assert!(text_rm.contains("braille"));
+        assert!(text_rm.contains("hybrid"));
+
+        let text_all = render_options("all");
+        assert!(text_all.contains("Hardware Acceleration Modes"));
+        assert!(text_all.contains("Sub-Cell Rasterization Modes"));
+    }
+
+    #[test]
+    fn test_format_table_border_alignment_invariance() {
+        let headers = ["Col A", "Column B (Longer Title)", "Description"];
+        let rows = vec![
+            vec!["val1", "Short", "A simple cell description."],
+            vec![
+                "val2",
+                "A very long cell text that requires word wrapping",
+                "Another description with Unicode ✓.",
+            ],
+        ];
+        let table = format_table(&headers, &rows);
+        let border_lines: Vec<&str> = table
+            .lines()
+            .filter(|l| {
+                l.starts_with('┌') || l.starts_with('├') || l.starts_with('└') || l.starts_with('│')
+            })
+            .collect();
+        assert!(border_lines.len() >= 4);
+        let visible_w = |s: &str| str_display_width(&crate::status_line::strip_ansi(s));
+        let expected_w = visible_w(border_lines[0]);
+        for (i, line) in border_lines.iter().enumerate() {
+            let w = visible_w(line);
+            assert_eq!(
+                w, expected_w,
+                "Table line {i} ('{line}') visible width {w} != expected {expected_w}"
+            );
+        }
     }
 }

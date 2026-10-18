@@ -28,13 +28,15 @@ Forgum tracks only **three aggregate public counters**, displayed live on the pr
 
 ---
 
-## 3. Transparent User Consent in the Setup Wizard
+## 3. Transparent User Consent in the Setup Wizard & Installation
 
-When you launch the Celestial Installation Wizard (`install.ps1`, `install.sh`, or `forgum install`), you are greeted by an explicit, transparent permission screen:
+During installation (via the interactive TUI wizard, `install.sh`, `install.ps1`, or headless prompts on a TTY), users are presented with a friendly request to enable anonymous motivation telemetry:
 
 ```
   ✦ MOTIVATION & CURIOSITY TELEMETRY NOTICE ✦
   Forgum includes an anonymous aggregate counter purely for developer motivation.
+  By enabling this, you provide a motivating +1 to our public README badges,
+  showing the maintainer and team that real developers enjoy this tool.
   
   [Y] Allow Motivation Counter (+1 to GitHub README badge)
   [N] Decline (Keep strictly offline & private)
@@ -158,3 +160,15 @@ The aggregate counters and official downloads are publicly visible on shields.io
   `https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fcountapi.mileshilliard.com%2Fapi%2Fv1%2Fget%2Fhkdevloops_forgum_users_tried&query=%24.value&label=Users%20Tried&color=F59E0B&style=for-the-badge&logo=starship`
 - **Privacy Guarantee**:  
   `https://img.shields.io/badge/Telemetry-100%25%20Transparent%20%26%20Private-success?style=for-the-badge&logo=shield`
+
+---
+
+## 9. Diagnostic Triage & Feedback Routing
+
+Forgum includes an integrated diagnostic triage engine (`forgum diagnose` / `forgum logs -D`) that assists users in gathering terminal environment context and error signatures.
+
+To help the maintainer and development team review, triage, and resolve issues effectively, please use the structured issue tags when filing reports on GitHub:
+- **`[feedback]`**: For general user feedback, ideas, suggestions, and feature requests (labeled `feedback`).
+- **`[bug]`**: For defect reports, crashes, rendering bugs, or unexpected shell behavior (labeled `bug`).
+
+This separation ensures the development team can prioritize critical fixes while systematically incorporating community feedback.

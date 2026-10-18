@@ -190,7 +190,7 @@ forgum() {{
   "$__FORGUM_ENGINE" render \
     --config "$__FORGUM_CONFIG" \
     --text "$text" \
-    --background --duration 0{extra}
+    --background{extra}
 }}
 
 forgum-init() {{
@@ -223,7 +223,7 @@ __forgum_clear() {{
   if [ -f "$__FORGUM_CONFIG" ]; then
     local mode; mode=$(grep -E -i -o '"?shell_attach_mode"?\s*[:=]\s*[^,}}]*' "$__FORGUM_CONFIG" 2>/dev/null | awk -F'[:=]' '{{print $2}}' | tr -d ' "' | tr -d "'")
     if [ "$mode" = "clear" ]; then
-      "$__FORGUM_ENGINE" render --banner 2>/dev/null
+      "$__FORGUM_ENGINE" render --banner --config "$__FORGUM_CONFIG" 2>/dev/null
     fi
   fi
 }}
@@ -275,12 +275,12 @@ __forgum_precmd() {{
       case "$mode" in
         prompt|reactive)
           if [ ! -f "$state" ]; then
-            "$__FORGUM_ENGINE" render --background --daemon --duration 0{extra} >/dev/null 2>&1
+            "$__FORGUM_ENGINE" render --config "$__FORGUM_CONFIG" --background --daemon --duration 0{extra} >/dev/null 2>&1
           fi
           ;;
         split)
           if [ ! -f "$state" ]; then
-            "$__FORGUM_ENGINE" render --split-scroll --daemon --duration 0{extra} >/dev/null 2>&1
+            "$__FORGUM_ENGINE" render --config "$__FORGUM_CONFIG" --split-scroll --daemon --duration 0{extra} >/dev/null 2>&1
           fi
           ;;
         pane) ;;
@@ -297,9 +297,11 @@ fi
 if [ -f "$__FORGUM_CONFIG" ]; then
   __forgum_init_mode=$(grep -E -i -o '"?shell_attach_mode"?\s*[:=]\s*[^,}}]*' "$__FORGUM_CONFIG" 2>/dev/null | awk -F'[:=]' '{{print $2}}' | tr -d ' "' | tr -d "'")
   if [ "$__forgum_init_mode" = "startup" ] || [ "$__forgum_init_mode" = "clear" ] || [ "$__forgum_init_mode" = "banner" ]; then
-    "$__FORGUM_ENGINE" render --banner --duration 0 2>/dev/null
+    "$__FORGUM_ENGINE" render --banner --config "$__FORGUM_CONFIG" 2>/dev/null
   fi
   unset __forgum_init_mode
+else
+  "$__FORGUM_ENGINE" render --banner --duration 0 2>/dev/null
 fi
 # <<< forgum <<<
 "#
@@ -349,7 +351,7 @@ forgum() {{
   "$__FORGUM_ENGINE" render \
     --config "$__FORGUM_CONFIG" \
     --text "$text" \
-    --background --duration 0{extra}
+    --background{extra}
 }}
 
 forgum-init() {{
@@ -381,7 +383,7 @@ __forgum_clear() {{
   if [ -f "$__FORGUM_CONFIG" ]; then
     local mode; mode=$(grep -E -i -o '"?shell_attach_mode"?\s*[:=]\s*[^,}}]*' "$__FORGUM_CONFIG" 2>/dev/null | awk -F'[:=]' '{{print $2}}' | tr -d ' "' | tr -d "'")
     if [ "$mode" = "clear" ]; then
-      "$__FORGUM_ENGINE" render --banner 2>/dev/null
+      "$__FORGUM_ENGINE" render --banner --config "$__FORGUM_CONFIG" 2>/dev/null
     fi
   fi
 }}
@@ -449,9 +451,11 @@ add-zsh-hook preexec __forgum_preexec 2>/dev/null || {{
 if [ -f "$__FORGUM_CONFIG" ]; then
   __forgum_init_mode=$(grep -E -i -o '"?shell_attach_mode"?\s*[:=]\s*[^,}}]*' "$__FORGUM_CONFIG" 2>/dev/null | awk -F'[:=]' '{{print $2}}' | tr -d ' "' | tr -d "'")
   if [ "$__forgum_init_mode" = "startup" ] || [ "$__forgum_init_mode" = "clear" ] || [ "$__forgum_init_mode" = "banner" ]; then
-    "$__FORGUM_ENGINE" render --banner --duration 0 2>/dev/null
+    "$__FORGUM_ENGINE" render --banner --config "$__FORGUM_CONFIG" 2>/dev/null
   fi
   unset __forgum_init_mode
+else
+  "$__FORGUM_ENGINE" render --banner --duration 0 2>/dev/null
 fi
 # <<< forgum <<<
 "#
@@ -497,7 +501,7 @@ function forgum
     if not set -q argv[1]
         set text ($__forgum_engine fortune 2>/dev/null)
     end
-    $__forgum_engine render --config $__forgum_config --text "$text" --background --duration 0{extra}
+    $__forgum_engine render --config $__forgum_config --text "$text" --background{extra}
 end
 
 function forgum-init
@@ -532,7 +536,7 @@ function clear
     if test -f "$__forgum_config"
         set -l mode (grep -E -i -o '"?shell_attach_mode"?\s*[:=]\s*[^,}}]*' "$__forgum_config" 2>/dev/null | awk -F'[:=]' '{{print $2}}' | tr -d ' "' | tr -d "'")
         if test "$mode" = "clear"
-            $__forgum_engine render --banner 2>/dev/null
+            $__forgum_engine render --banner --config $__forgum_config 2>/dev/null
         end
     end
 end
@@ -593,8 +597,10 @@ end
 if test -f "$__forgum_config"
     set -l __forgum_init_mode (grep -E -i -o '"?shell_attach_mode"?\s*[:=]\s*[^,}}]*' "$__forgum_config" 2>/dev/null | awk -F'[:=]' '{{print $2}}' | tr -d ' "' | tr -d "'")
     if test "$__forgum_init_mode" = "startup" -o "$__forgum_init_mode" = "clear" -o "$__forgum_init_mode" = "banner"
-        $__forgum_engine render --banner --duration 0 2>/dev/null
+        $__forgum_engine render --banner --config $__forgum_config 2>/dev/null
     end
+else
+    $__forgum_engine render --banner --duration 0 2>/dev/null
 end
 # <<< forgum <<<
 "#
@@ -645,7 +651,7 @@ function forgum {{
         }}
     }}
     $text = if ($Args) {{ ($Args -join ' ') }} else {{ & $__ForgumEngine fortune 2>$null }}
-    & $__ForgumEngine render --config $__ForgumConfig --text $text --background --duration 0{extra}
+    & $__ForgumEngine render --config $__ForgumConfig --text $text --background{extra}
 }}
 
 function forgum-init {{
@@ -680,7 +686,7 @@ function global:Clear-Host {{
             }}
         }} catch {{ }}
     }}
-    [Console]::Clear()
+    try {{{{ [Console]::Clear() }}}} catch {{{{ }}}}
     if (Test-Path $__ForgumConfig) {{
         try {{
             $rawCfg = Get-Content $__ForgumConfig -Raw -EA SilentlyContinue
@@ -688,7 +694,7 @@ function global:Clear-Host {{
                 $modeMatch = [regex]::Match($rawCfg, '(?i)"?shell_attach_mode"?\s*[:=]\s*["'']?([^"''\r\n,}}]+)')
                 $mode = if ($modeMatch.Success) {{ $modeMatch.Groups[1].Value.Trim().Trim('"').Trim("'") }} else {{ 'startup' }}
                 if ($mode -eq 'clear') {{
-                    & $__ForgumEngine render --banner 2>$null
+                    & $__ForgumEngine render --banner --config $__ForgumConfig 2>$null
                 }}
             }}
         }} catch {{ }}
@@ -778,10 +784,12 @@ if (Test-Path $__ForgumConfig) {{
             $modeMatch = [regex]::Match($rawCfg, '(?i)"?shell_attach_mode"?\s*[:=]\s*["'']?([^"''\r\n,}}]+)')
             $mode = if ($modeMatch.Success) {{ $modeMatch.Groups[1].Value.Trim().Trim('"').Trim("'") }} else {{ 'startup' }}
             if ($mode -in @('startup', 'clear', 'banner')) {{
-                & $__ForgumEngine render --banner --duration 0 2>$null
+                & $__ForgumEngine render --banner --config $__ForgumConfig 2>$null
             }}
         }}
     }} catch {{ }}
+}} else {{
+    & $__ForgumEngine render --banner --duration 0 2>$null
 }}
 # <<< forgum <<<
 "#
@@ -807,7 +815,7 @@ doskey forgum="{engine}" $*
 doskey forgum-init="{engine}" init $*
 doskey cls=cls ^& "%_FORGUM_ENGINE%" render --banner
 prompt $_FORGUM_OLD_PROMPT$G & "%_FORGUM_ENGINE%" sweep
-"%_FORGUM_ENGINE%" render --banner --duration 0 2>nul
+"%_FORGUM_ENGINE%" render --banner 2>nul
 rem <<< forgum <<<
 "#
     )
@@ -857,7 +865,7 @@ function forgum {{
         }}
     }}
     $text = if ($Args) {{ ($Args -join ' ') }} else {{ & $__ForgumEngine fortune 2>$null }}
-    & $__ForgumEngine render --config $__ForgumConfig --text $text --background --duration 0{extra}
+    & $__ForgumEngine render --config $__ForgumConfig --text $text --background{extra}
 }}
 
 function forgum-init {{
@@ -892,7 +900,7 @@ function global:Clear-Host {{
             }}
         }} catch {{ }}
     }}
-    [Console]::Clear()
+    try {{{{ [Console]::Clear() }}}} catch {{{{ }}}}
     if (Test-Path $__ForgumConfig) {{
         try {{
             $rawCfg = Get-Content $__ForgumConfig -Raw -EA SilentlyContinue
@@ -900,7 +908,7 @@ function global:Clear-Host {{
                 $modeMatch = [regex]::Match($rawCfg, '(?i)"?shell_attach_mode"?\s*[:=]\s*["'']?([^"''\r\n,}}]+)')
                 $mode = if ($modeMatch.Success) {{ $modeMatch.Groups[1].Value.Trim().Trim('"').Trim("'") }} else {{ 'startup' }}
                 if ($mode -eq 'clear') {{
-                    & $__ForgumEngine render --banner 2>$null
+                    & $__ForgumEngine render --banner --config $__ForgumConfig 2>$null
                 }}
             }}
         }} catch {{ }}
@@ -990,10 +998,12 @@ if (Test-Path $__ForgumConfig) {{
             $modeMatch = [regex]::Match($rawCfg, '(?i)"?shell_attach_mode"?\s*[:=]\s*["'']?([^"''\r\n,}}]+)')
             $mode = if ($modeMatch.Success) {{ $modeMatch.Groups[1].Value.Trim().Trim('"').Trim("'") }} else {{ 'startup' }}
             if ($mode -in @('startup', 'clear', 'banner')) {{
-                & $__ForgumEngine render --banner --duration 0 2>$null
+                & $__ForgumEngine render --banner --config $__ForgumConfig 2>$null
             }}
         }}
     }} catch {{ }}
+}} else {{
+    & $__ForgumEngine render --banner --duration 0 2>$null
 }}
 # <<< forgum <<<
 "#
@@ -1008,7 +1018,7 @@ var __forgum_engine = '{engine}'
 fn forgum {{|@args|
   if (eq (count $args) 0) {{{{
     var text = ($__forgum_engine fortune 2>/dev/null)
-    $__forgum_engine render --text $text --background --duration 0{extra}
+    $__forgum_engine render --text $text --background{extra}
   }}}} else {{{{
     $__forgum_engine $@args
   }}}}
@@ -1033,7 +1043,7 @@ fn generate_nushell_hook(engine: &str, extra: &str) -> String {
 def --wrapped forgum [...rest] {{
     if ($rest | is-empty) {{
         let text = (^"{engine}" fortune | complete).stdout
-        ^"{engine}" render --text $text --background --duration 0{extra}
+        ^"{engine}" render --text $text --background{extra}
     }} else {{
         ^"{engine}" ...$rest
     }}
@@ -1053,7 +1063,7 @@ fn generate_xonsh_hook(engine: &str, extra: &str) -> String {
 def _forgum_cmd(args, stdin=None):
     if not args:
         text = !({engine} fortune).output
-        !({engine} render --text @(text.strip()) --background --duration 0{extra})
+        !({engine} render --text @(text.strip()) --background{extra})
     else:
         !({engine} @(args))
 
@@ -1081,7 +1091,7 @@ fn generate_tcsh_hook(engine: &str, extra: &str) -> String {
     format!(
         r#"# >>> forgum (tcsh) >>>
 # Generated by forgum init tcsh — do not edit by hand
-alias forgum '{engine} render --background --duration 0{extra}'
+alias forgum '{engine} render --background{extra}'
 alias forgum-init '{engine} init'
 alias precmd '{engine} sweep'
 # <<< forgum <<<
@@ -1096,7 +1106,7 @@ fn generate_ksh_hook(engine: &str, extra: &str) -> String {
 forgum() {{
     if [ $# -eq 0 ]; then
         text="$({engine} fortune 2>/dev/null)"
-        {engine} render --text "$text" --background --duration 0{extra}
+        {engine} render --text "$text" --background{extra}
     else
         {engine} "$@"
     fi
@@ -1115,7 +1125,7 @@ fn generate_ion_hook(engine: &str, extra: &str) -> String {
 fn forgum
     if test (len @args) -eq 0
         let text = $({engine} fortune)
-        {engine} render --text "$text" --background --duration 0{extra}
+        {engine} render --text "$text" --background{extra}
     else
         {engine} @args
     end
@@ -1135,7 +1145,7 @@ fn generate_oil_hook(engine: &str, extra: &str) -> String {
 proc forgum(...args) {{
     if (len(args) === 0) {{
         var text = $({engine} fortune)
-        {engine} render --text "$text" --background --duration 0{extra}
+        {engine} render --text "$text" --background{extra}
     }} else {{
         {engine} @args
     }}
@@ -1156,7 +1166,7 @@ fn generate_yash_hook(engine: &str, extra: &str) -> String {
 function forgum() {{
     if [ $# -eq 0 ]; then
         text="$({engine} fortune 2>/dev/null)"
-        {engine} render --text "$text" --background --duration 0{extra}
+        {engine} render --text "$text" --background{extra}
     else
         {engine} "$@"
     fi
@@ -1257,7 +1267,7 @@ mod tests {
         assert!(hook.contains("PROMPT_COMMAND"));
         assert!(hook.contains("/usr/local/bin/forgum-engine"));
         assert!(hook.contains("--background"));
-        assert!(hook.contains("--duration 0"));
+        assert!(hook.contains("--config"));
     }
 
     #[test]

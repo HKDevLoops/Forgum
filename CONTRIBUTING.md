@@ -75,7 +75,7 @@ podman-compose -f podman-compose.test.yml up --abort-on-container-exit
 
 ## 🛡️ Crucial standards & architectural mandates (Rules A–I)
 
-Every pull request must comply with the official Forgum Operating Guidelines (`AGENTS.md`):
+Every pull request must comply with the official Forgum Architectural Guidelines (`ARCHITECTURE_MAP.md`):
 
 ### Rule A: Single Source of Truth for Mascot DNA
 `data/Cows/animations.json` is the authoritative definition of creature kinematics, particle emitters, stride speed, and glowing auras. Scenery generators, effects wrappers, and CLI resolvers must never override or discard an animal's DNA base animation. All creature effects must be wrapped in `CompoundSignatureEffect` so particle pools and radial glows render as designed.

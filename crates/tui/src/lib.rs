@@ -302,6 +302,30 @@ pub fn run_tui(
                             fs::write(&target_path, text)
                                 .with_context(|| format!("write {}", target_path.display()))?;
 
+                            // Remove conflicting alternate format configs in the directory to satisfy mutual exclusivity
+                            if let Some(target_dir) = target_path.parent() {
+                                let canonical_target = target_path.canonicalize().ok();
+                                for candidate in [
+                                    "config.json",
+                                    "forgum.json",
+                                    "config.yaml",
+                                    "config.yml",
+                                    "forgum.yaml",
+                                    "forgum.yml",
+                                    "config.toml",
+                                    "forgum.toml",
+                                ] {
+                                    let old = target_dir.join(candidate);
+                                    let is_same = match (&canonical_target, old.canonicalize()) {
+                                        (Some(c_tgt), Ok(c_old)) => c_tgt == &c_old,
+                                        _ => old.file_name() == target_path.file_name(),
+                                    };
+                                    if !is_same && old.exists() {
+                                        let _ = fs::remove_file(old);
+                                    }
+                                }
+                            }
+
                             broadcast_daemon_reload(app.config());
                             shutdown_for_closure.store(true, std::sync::atomic::Ordering::Relaxed);
                             return Ok(());

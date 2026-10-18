@@ -1,14 +1,14 @@
 # Forgum Release, Tagging & Multi-Channel Upgrader Audit Map
 
-> **MANDATORY DIRECTIVE FOR ALL AI AGENTS & DEPLOYMENT SPECIALISTS**:
-> Before cutting any release, updating version numbers, modifying shell scripts, altering package manifests, or touching upgrader routines, agents **MUST** consult and follow this document without deviation.
+> **CORE RELEASE DIRECTIVE & DEPLOYMENT PROTOCOL**:
+> Before cutting any release, updating version numbers, modifying shell scripts, altering package manifests, or touching upgrader routines, maintainers and deployment engineers **MUST** consult and follow this document without deviation.
 > This map defines the definitive single source of truth for all version locations, expected formatting, network endpoints, line ending constraints, and the invariant 7-step release verification protocol.
 
 ---
 
 ## 1. Post-Mortem Analysis of Historical Upgrader Failures
 
-To prevent regressions, all agents must understand the four distinct failure modes that historically affected `forgum update` and standalone installations:
+To prevent regressions, all maintainers must understand the four distinct failure modes that historically affected `forgum update` and standalone installations:
 
 ```
 ┌────────────────────────────────────────────────────────────────────────────────────────┐

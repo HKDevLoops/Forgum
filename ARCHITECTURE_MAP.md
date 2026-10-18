@@ -1,8 +1,8 @@
 # Forgum Master Architecture & Codebase Map (`ARCHITECTURE_MAP.md`)
 
-> **MANDATORY DIRECTIVE FOR ALL AI AGENTS**:
-> Before executing broad searches with `ripgrep`, `grep`, or exploratory find commands, agents **MUST** inspect this document.
-> It contains the authoritative map of all file locations, key functions, data structures, execution pipelines, keyword indices, and graphical Mermaid mind maps for the entire Forgum repository.
+> **CORE ENGINEERING SPECIFICATION & CODEBASE MAP**:
+> Before modifying subsystem pipelines or implementing features, contributors and developers **MUST** inspect this document.
+> It contains the authoritative map of all file locations, key functions, data structures, execution pipelines, keyword indices, and graphical Mermaid system charts for the entire Forgum repository.
 
 ---
 
@@ -498,11 +498,11 @@ forgum config --tui
 
 ---
 
-## 6. Fast-Path Navigation Rules for AI Agents
+## 6. Core Developer Invariants & Architecture Guidelines
 
-1. **Direct File Navigation**: Use the tables in Section 4 to jump directly to target files via their URI paths rather than running speculative `ripgrep` scans across the workspace.
+1. **Direct Subsystem Navigation**: Use the tables in Section 4 to locate target files and subsystems directly rather than running speculative scans across the workspace.
 2. **Strict Single Keyword**: All user-facing commands and binary calls must route strictly through `forgum`.
 3. **Hardware Acceleration Invariant**: Hardware acceleration must always provide seamless fallback to CPU with zero crashes.
 4. **Memory Constraint**: Any render loop modifications must strictly operate with zero heap allocations and maintain <100MB resident RAM.
-5. **No Autonomous Tagging**: AI agents must never autonomously bump versions or create Git tags without explicit user instructions.
+5. **No Autonomous Tagging**: Contributors and automation scripts must never autonomously bump versions or create Git tags without explicit user authorization.
 6. **Release & Upgrader Audit Invariant**: All releases, tag creation, script edits, and manifest synchronizations must strictly follow [`docs/RELEASE_AND_UPGRADE_AUDIT_MAP.md`](file:///Z:/Projects/Forgum/docs/RELEASE_AND_UPGRADE_AUDIT_MAP.md), verifying dual-branch push (`dev` + `main`), triplet tags (`vX.Y.Z-beta`, `X.Y.Z-beta`, `X.Y.Zbeta`), prebuilt asset availability, and 0 CRLF carriage returns.

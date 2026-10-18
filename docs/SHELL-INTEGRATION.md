@@ -269,6 +269,34 @@ forgum checkhealth
    - Cause: In rare cases with older tmux versions, margins require resetting.
    - Fix: Run `reset` or `printf '\033[r'` to restore full-window scrolling.
 
+---
+
+## Autocompletions & Interactive Multi-Shell Updater
+
+Forgum includes complete tab-completion generators for 15 shells, supporting all subcommands, `--accel`, `--render-mode`, `--contrast-mode`, and option parameters.
+
+### Inspection & Interactive Update
+```bash
+# Launch interactive shell completion updater:
+forgum completions
+# or:
+forgum completions update
+
+# Check completion freshness across all installed shells:
+forgum completions check
+
+# List all supported shells:
+forgum completions list
+```
+
+### How the Interactive Updater Works
+1. **Shell Detection**: Probes which shells are installed on your system (PowerShell, Pwsh, Bash, Zsh, Fish, Nushell, Elvish, Xonsh).
+2. **Freshness Inspection**: Checks whether completions are `Up to date`, `Outdated`, or `Not installed yet`.
+3. **Multi-Choice Menu**: Renders an interactive prompt allowing you to update completions for specific shells or all installed shells simultaneously.
+4. **Upgrade Integration**: Whenever you upgrade Forgum (`forgum update`), the engine automatically verifies your completion files and prompts you to update them so new features and flags are immediately available in tab completion.
+
+---
+
 ## Troubleshooting
 
 ### Cow doesn't appear

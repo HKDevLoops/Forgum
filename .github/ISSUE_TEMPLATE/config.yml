@@ -6,6 +6,6 @@ contact_links:
   - name: "📖 Official Documentation & Guides"
     url: https://github.com/HKDevLoops/Forgum/tree/main/docs
     about: "Read comprehensive setup, shell integration, telemetry, and architecture manuals."
-  - name: "🛫 Flight Checklist & Governance"
-    url: https://github.com/HKDevLoops/Forgum/blob/main/AGENTS.md
-    about: "Review the mandatory operating guidelines, architecture mandates, and testing rules."
+  - name: "🛫 Architectural Blueprint & Governance"
+    url: https://github.com/HKDevLoops/Forgum/blob/main/ARCHITECTURE_MAP.md
+    about: "Review the architectural blueprints, system mandates, and verification standards."

@@ -150,6 +150,231 @@ pub fn generate_completion_script(shell: Shell, cmd: &mut clap::Command) -> Stri
     }
 }
 
+/// Freshness status of shell tab completions on the user's host system.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ShellCompletionStatus {
+    /// Completion script is installed and matches the current version generator.
+    UpToDate,
+    /// Completion script is installed, but content differs from the current version generator.
+    Outdated,
+    /// Shell binary is installed and available on host, but completion script is not installed.
+    AvailableNotInstalled,
+    /// Shell binary is not available on this system.
+    NotAvailable,
+}
+
+impl ShellCompletionStatus {
+    pub fn badge(&self) -> &'static str {
+        match self {
+            Self::UpToDate => "\x1b[1;32m[Up to date]\x1b[0m",
+            Self::Outdated => "\x1b[1;33m[OUTDATED - Update Available]\x1b[0m",
+            Self::AvailableNotInstalled => "\x1b[1;36m[Available - Not Installed]\x1b[0m",
+            Self::NotAvailable => "\x1b[90m[Shell Not Installed]\x1b[0m",
+        }
+    }
+}
+
+/// Inspection record for a specific shell's completion status.
+#[derive(Debug, Clone)]
+pub struct ShellCompletionInspection {
+    pub shell: Shell,
+    pub status: ShellCompletionStatus,
+    pub script_path: Option<PathBuf>,
+    pub rc_path: Option<PathBuf>,
+}
+
+/// Inspect the completion freshness status of a specific shell.
+pub fn inspect_shell_completion(
+    shell: Shell,
+    cmd: &mut clap::Command,
+) -> ShellCompletionInspection {
+    let script_path = shell.completions_script_path();
+    let rc_path = shell.shell_rc_path();
+    let is_available = shell.is_available();
+
+    let status = match &script_path {
+        Some(path) if path.exists() => {
+            let expected = generate_completion_script(shell, cmd);
+            match std::fs::read_to_string(path) {
+                Ok(existing) if existing == expected => ShellCompletionStatus::UpToDate,
+                _ => ShellCompletionStatus::Outdated,
+            }
+        }
+        _ => {
+            if is_available {
+                ShellCompletionStatus::AvailableNotInstalled
+            } else {
+                ShellCompletionStatus::NotAvailable
+            }
+        }
+    };
+
+    ShellCompletionInspection {
+        shell,
+        status,
+        script_path,
+        rc_path,
+    }
+}
+
+/// Inspect the completion freshness status across all supported shells.
+pub fn inspect_all_shells_completion_status(
+    cmd: &mut clap::Command,
+) -> Vec<ShellCompletionInspection> {
+    Shell::ALL
+        .iter()
+        .filter(|&&s| s != Shell::Cmd)
+        .map(|&shell| inspect_shell_completion(shell, cmd))
+        .collect()
+}
+
+/// Interactively prompt the user with a multi-choice menu to update shell completions
+/// for available shells on the system.
+pub fn interactive_update_completions(
+    cmd: &mut clap::Command,
+    force_interactive: bool,
+) -> io::Result<()> {
+    let inspections = inspect_all_shells_completion_status(cmd);
+    let available_or_installed: Vec<_> = inspections
+        .into_iter()
+        .filter(|i| i.status != ShellCompletionStatus::NotAvailable)
+        .collect();
+
+    if available_or_installed.is_empty() {
+        println!("\x1b[33mNo supported shells detected on this system.\x1b[0m");
+        return Ok(());
+    }
+
+    let needs_update: Vec<_> = available_or_installed
+        .iter()
+        .filter(|i| {
+            i.status == ShellCompletionStatus::Outdated
+                || i.status == ShellCompletionStatus::AvailableNotInstalled
+        })
+        .collect();
+
+    if needs_update.is_empty() {
+        println!("\n\x1b[1;32m✓ All shell completions are up to date across your available shells:\x1b[0m");
+        for inst in &available_or_installed {
+            let path_str = inst
+                .script_path
+                .as_ref()
+                .map(|p| p.display().to_string())
+                .unwrap_or_else(|| "active".to_string());
+            println!(
+                "  \x1b[36m•\x1b[0m {:<12} \x1b[32m[Up to date]\x1b[0m \x1b[90m({})\x1b[0m",
+                inst.shell, path_str
+            );
+        }
+        println!();
+        return Ok(());
+    }
+
+    let is_tty = forgum_platform::terminal::detect_capabilities().is_tty || force_interactive;
+
+    println!("\n\x1b[1;35m━━━ Forgum Universal Shell Completions Manager ━━━\x1b[0m");
+    println!("Detected shell environments and completion status on your system:\n");
+
+    for (idx, item) in available_or_installed.iter().enumerate() {
+        let num = idx + 1;
+        let badge = item.status.badge();
+        let target_path = item
+            .script_path
+            .as_ref()
+            .map(|p| p.display().to_string())
+            .unwrap_or_else(|| "standard path".into());
+        println!(
+            "  \x1b[1m[{num}]\x1b[0m {:<12} {:<32} \x1b[90m({})\x1b[0m",
+            item.shell, badge, target_path
+        );
+    }
+
+    if !is_tty {
+        let outdated_existing: Vec<_> = available_or_installed
+            .iter()
+            .filter(|i| i.status == ShellCompletionStatus::Outdated)
+            .collect();
+        if !outdated_existing.is_empty() {
+            println!(
+                "\n\x1b[36m>> Non-interactive mode: Automatically updating {} outdated shell completion(s)...\x1b[0m",
+                outdated_existing.len()
+            );
+            for item in outdated_existing {
+                let res = install_completions(item.shell, cmd)?;
+                print!("{}", res.message);
+            }
+        }
+        return Ok(());
+    }
+
+    println!("\n\x1b[1;37mUpdate shell completions?\x1b[0m");
+    println!("  \x1b[1;32m[A]\x1b[0m Update all available shells (Recommended)");
+    println!(
+        "  \x1b[1;36m[1..{}]\x1b[0m Select specific shells (comma-separated, e.g. 1, 2)",
+        available_or_installed.len()
+    );
+    println!("  \x1b[1;31m[S]\x1b[0m Skip for now\n");
+    print!("\x1b[1;33mSelect [A]: \x1b[0m");
+    let _ = io::Write::flush(&mut io::stdout());
+
+    let mut input = String::new();
+    if io::stdin().read_line(&mut input).is_err() {
+        return Ok(());
+    }
+    let choice = input.trim().to_lowercase();
+
+    let selected_indices: Vec<usize> = if choice.is_empty()
+        || choice == "a"
+        || choice == "all"
+        || choice == "y"
+        || choice == "yes"
+    {
+        (0..available_or_installed.len()).collect()
+    } else if choice == "s" || choice == "skip" || choice == "n" || choice == "no" || choice == "q"
+    {
+        println!(
+            "\x1b[90mCompletions update skipped. You can run 'forgum completions' at any time.\x1b[0m\n"
+        );
+        return Ok(());
+    } else {
+        choice
+            .split(&[',', ' ', ';'][..])
+            .filter_map(|s| s.trim().parse::<usize>().ok())
+            .filter(|&n| n >= 1 && n <= available_or_installed.len())
+            .map(|n| n - 1)
+            .collect()
+    };
+
+    if selected_indices.is_empty() {
+        println!("\x1b[90mNo valid shells selected. Completions update skipped.\x1b[0m\n");
+        return Ok(());
+    }
+
+    println!("\n\x1b[36m>> Installing / updating selected shell completions...\x1b[0m\n");
+    let mut updated_count = 0;
+    for idx in selected_indices {
+        let item = &available_or_installed[idx];
+        match install_completions(item.shell, cmd) {
+            Ok(res) => {
+                print!("{}", res.message);
+                updated_count += 1;
+            }
+            Err(e) => {
+                eprintln!(
+                    "  \x1b[1;31m✗\x1b[0m Failed to update completions for {}: {e}",
+                    item.shell
+                );
+            }
+        }
+    }
+
+    println!(
+        "\n\x1b[1;32m✓ Successfully configured completions for {} shell(s).\x1b[0m\n",
+        updated_count
+    );
+    Ok(())
+}
+
 fn generate_bash_completions(cmd: &mut clap::Command) -> String {
     let mut buf = Vec::new();
     generate(shells::Bash, cmd, "forgum", &mut buf);
@@ -168,6 +393,8 @@ _forgum_accel="auto dedicated integrated npu cpu"
 _forgum_attach_modes="startup prompt clear split pane"
 _forgum_aspects="auto 21:9 16:9 16:10 4:3 1:1 narrow"
 _forgum_aspect_modes="preset dynamic auto"
+_forgum_render_modes="ascii braille halfblock hybrid"
+_forgum_contrast_modes="standard acrylic_glass high_contrast vibrant"
 _forgum_colorblind="none protanopia deuteranopia tritanopia achromatopsia protanopia_sim deuteranopia_sim tritanopia_sim"
 _forgum_time_of_day="auto dawn day dusk night"
 _forgum_seasons="auto spring summer autumn winter"
@@ -232,6 +459,14 @@ _forgum_custom_complete() {
             ;;
         --aspect-mode)
             COMPREPLY=( $(compgen -W "$_forgum_aspect_modes" -- "$cur") )
+            return 0
+            ;;
+        --render-mode)
+            COMPREPLY=( $(compgen -W "$_forgum_render_modes" -- "$cur") )
+            return 0
+            ;;
+        --contrast-mode|--contrast)
+            COMPREPLY=( $(compgen -W "$_forgum_contrast_modes" -- "$cur") )
             return 0
             ;;
     esac
@@ -509,6 +744,18 @@ _forgum_seasons=(
     'autumn:Golden senescence and deciduous transition to fiery amber and scarlet'
     'winter:Skeletal defoliation of broadleaf trees and frosted evergreen needles'
 )
+_forgum_render_modes=(
+    'ascii:Standard character grid 1x1'
+    'halfblock:Half-block rendering 1x2 (upper/lower)'
+    'braille:Braille dot matrix 2x4 sub-cell canvas'
+    'hybrid:ASCII mascot with Braille particle / fluid effects'
+)
+_forgum_contrast_modes=(
+    'standard:Default background contrast profile'
+    'acrylic_glass:Elevated luminance and saturation for transparent/glass terminals'
+    'high_contrast:High-contrast accessibility luminance boost'
+    'vibrant:Saturated chromatic elevation'
+)
 
 _forgum_lsp_complete() {
     local -a lsp_items
@@ -549,6 +796,8 @@ complete -c forgum -n '__fish_forgum_no_subcommand' -a 'options' -d 'Display ava
 complete -c forgum -n '__fish_forgum_no_subcommand' -a 'completions' -d 'Install shell completions and attach to profile'
 complete -c forgum -n '__fish_forgum_no_subcommand' -a 'init' -d 'Generate shell integration hook'
 complete -c forgum -n '__fish_forgum_no_subcommand' -a 'tui' -d 'Launch interactive terminal UI'
+complete -c forgum -n '__fish_forgum_no_subcommand' -a 'list' -d 'List available options for animals, scenery, effects, colors'
+complete -c forgum -n '__fish_forgum_no_subcommand' -a 'ls' -d 'List available options for animals, scenery, effects, colors (alias for list)'
 complete -c forgum -n '__fish_forgum_no_subcommand' -a 'status' -d 'Print engine status'
 complete -c forgum -n '__fish_forgum_no_subcommand' -a 'doctor' -d 'Diagnose configuration and capabilities'
 complete -c forgum -n '__fish_forgum_no_subcommand' -a 'checkhealth' -d 'Run comprehensive system health check'
@@ -595,6 +844,8 @@ complete -c forgum -l aspect-mode -d 'Aspect ratio adaptation mode' -x -a 'prese
 complete -c forgum -l time-of-day -d 'Atmospheric solar illumination mode' -x -a 'auto	"Dynamic clock synchronization with local time" dawn	"Sunrise with warm low-angle golden light" day	"High-noon solar brilliance and daylight" dusk	"Crimson twilight sunset and purple horizon" night	"Midnight lunar glow with deep indigo shadows"'
 complete -c forgum -l tod -d 'Atmospheric solar illumination mode' -x -a 'auto	"Dynamic clock synchronization with local time" dawn	"Sunrise with warm low-angle golden light" day	"High-noon solar brilliance and daylight" dusk	"Crimson twilight sunset and purple horizon" night	"Midnight lunar glow with deep indigo shadows"'
 complete -c forgum -l season -d 'Phenological seasonal foliage mode' -x -a 'auto	"Dynamic calendar synchronization" spring	"Vernal awakening with blooming sakura petals" summer	"Lush peak chlorophyll synthesis" autumn	"Golden senescence with amber and scarlet" winter	"Skeletal defoliation and frosty conifer needles"'
+complete -c forgum -l render-mode -d 'Sub-cell rasterization mode' -x -a 'ascii	"Standard character grid 1x1" halfblock	"Half-block rendering 1x2" braille	"Braille dot matrix 2x4 sub-cell canvas" hybrid	"ASCII mascot with Braille particles"'
+complete -c forgum -l contrast-mode -l contrast -d 'Background contrast profile' -x -a 'standard	"Default background contrast profile" acrylic_glass	"Elevated luminance for glass terminals" high_contrast	"High-contrast accessibility luminance boost" vibrant	"Saturated chromatic elevation"'
 "#.to_string()
 }
 
@@ -897,6 +1148,20 @@ Register-ArgumentCompleter -Native -CommandName 'forgum' -ScriptBlock {
         'winter' = 'Skeletal defoliation and frosty conifer needles'
     }
 
+    $renderModes = @{
+        'ascii' = 'Strict standard 1x1 cell ASCII character mapping'
+        'halfblock' = '2x vertical sub-cell block elements (▀, ▄, █)'
+        'braille' = '2x4 dot matrix braille patterns (⣿) with 8x spatial density'
+        'hybrid' = 'Adaptive combination of braille outlines and halfblock fills'
+    }
+
+    $contrastModes = @{
+        'standard' = 'Direct luminance preservation without dynamic curve boosting'
+        'acrylic_glass' = 'Elevated luminance & saturation optimized for glass terminals'
+        'high_contrast' = 'Extreme binary contrast clamping for high-visibility accessibility'
+        'vibrant' = 'Chroma amplification and contrast expansion'
+    }
+
     $targetMap = $null
     switch ($prevWord) {
         { $_ -in '--effect', '-e' } { $targetMap = $effects }
@@ -912,6 +1177,8 @@ Register-ArgumentCompleter -Native -CommandName 'forgum' -ScriptBlock {
         { $_ -in '--shell-attach-mode', '--attach-mode' } { $targetMap = $attachModes }
         { $_ -in '--aspect', '--aspect-ratio' } { $targetMap = $aspects }
         '--aspect-mode' { $targetMap = $aspectModes }
+        '--render-mode' { $targetMap = $renderModes }
+        { $_ -in '--contrast-mode', '--contrast' } { $targetMap = $contrastModes }
     }
 
     if ($targetMap) {
@@ -928,13 +1195,15 @@ Register-ArgumentCompleter -Native -CommandName 'forgum' -ScriptBlock {
         '--duration', '--fps', '--thought-interval', '--split-scroll',
         '--reserve-rows', '--reserve-cols', '--split-ratio',
         '--eyes', '--tongue', '--palette', '--accel', '--shell-attach-mode',
-        '--aspect', '--aspect-ratio', '--aspect-mode'
+        '--aspect', '--aspect-ratio', '--aspect-mode', '--render-mode', '--contrast-mode', '--contrast'
     )
     $subcommands = @(
-        'render', 'think', 'fortune', 'options', 'completions', 'init', 'tui',
+        'render', 'think', 'fortune', 'options', 'list', 'ls', 'completions', 'init', 'tui',
         'status', 'doctor', 'checkhealth', 'config', 'logs', 'herd', 'theme',
         'demo', 'showcase', 'say', 'moo', 'vibe', 'touch-grass', 'chad',
-        'zoomies', 'yeet', 'moonwalk'
+        'zoomies', 'yeet', 'moonwalk', 'update', 'install', 'uninstall', 'channel',
+        'remote', 'battle', 'rps', 'sweep', 'stop', 'image', 'fetch', 'telemetry',
+        'status-line', 'tmux', 'version'
     )
 
     if ($wordToComplete -like '-*') {
@@ -986,7 +1255,28 @@ export extern "forgum" [
     --time-of-day: string@"nu_forgum_time_of_day"      # Atmospheric solar illumination mode
     --tod: string@"nu_forgum_time_of_day"              # Atmospheric solar illumination mode
     --season: string@"nu_forgum_season"                # Phenological seasonal foliage mode
+    --render-mode: string@"nu_forgum_render_modes"     # Sub-cell rasterization mode
+    --contrast-mode: string@"nu_forgum_contrast_modes" # Adaptive luminance contrast correction
+    --contrast: string@"nu_forgum_contrast_modes"      # Alias for contrast-mode
 ]
+
+def "nu_forgum_render_modes" [] {
+    [
+        { value: "ascii", description: "Strict standard 1x1 cell ASCII character mapping" },
+        { value: "halfblock", description: "2x vertical sub-cell block elements (▀, ▄, █)" },
+        { value: "braille", description: "2x4 dot matrix braille patterns (⣿) with 8x density" },
+        { value: "hybrid", description: "Adaptive combination of braille outlines and halfblock fills" }
+    ]
+}
+
+def "nu_forgum_contrast_modes" [] {
+    [
+        { value: "standard", description: "Direct luminance preservation without curve boosting" },
+        { value: "acrylic_glass", description: "Elevated luminance & saturation for glass terminals" },
+        { value: "high_contrast", description: "Extreme binary contrast clamping for accessibility" },
+        { value: "vibrant", description: "Chroma amplification and contrast expansion" }
+    ]
+}
 
 def "nu_forgum_season" [] {
     [
@@ -2025,6 +2315,14 @@ pub const ROOT_FLAGS_METADATA: &[FlagMeta] = &[
         short: None,
         aliases: &[],
         description: "Sub-cell rasterization mode (ascii, halfblock, braille, hybrid)",
+        takes_value: true,
+    },
+    FlagMeta {
+        long: "--contrast-mode",
+        short: None,
+        aliases: &["--contrast"],
+        description:
+            "Background contrast profile (standard, acrylic_glass, high_contrast, vibrant)",
         takes_value: true,
     },
     FlagMeta {
@@ -3353,6 +3651,22 @@ pub const LIST_CATEGORY_CHOICES: &[ChoiceMeta] = &[
     ChoiceMeta {
         value: "tongue",
         description: "View expressive custom tongue presets",
+    },
+    ChoiceMeta {
+        value: "aspects",
+        description: "View viewport aspect ratio formats",
+    },
+    ChoiceMeta {
+        value: "accel",
+        description: "View hardware acceleration modes (GPU/NPU/CPU)",
+    },
+    ChoiceMeta {
+        value: "render-mode",
+        description: "View sub-cell rasterization modes",
+    },
+    ChoiceMeta {
+        value: "logs",
+        description: "View structured logging and bug radar options",
     },
 ];
 

@@ -364,8 +364,17 @@ pub fn read_raw_log() -> Result<String, std::io::Error> {
 }
 
 /// Launch the user's default system editor or file explorer to inspect logs.
+///
+/// Priority:
+/// 1. If `open_directory` is true, open the log directory in the host system file manager.
+/// 2. If `open_directory` is false:
+///    - Checks if Neovim (`nvim`) is available as the primary default editor.
+///    - If found: opens the log file in Neovim.
+///    - If not found: presents an informative notice encouraging Neovim installation,
+///      and presents an interactive multi-choice menu allowing the user to pick an existing editor,
+///      print the log paths, or dump raw contents.
 pub fn open_log_in_system(open_directory: bool) -> Result<std::path::PathBuf, std::io::Error> {
-    let (dir, text, _) = get_log_paths().ok_or_else(|| {
+    let (dir, text, jsonl) = get_log_paths().ok_or_else(|| {
         std::io::Error::new(
             std::io::ErrorKind::NotFound,
             "Unable to resolve forgum log directory",
@@ -376,12 +385,132 @@ pub fn open_log_in_system(open_directory: bool) -> Result<std::path::PathBuf, st
     let _ = fs::create_dir_all(&dir);
 
     let target_path = if open_directory || !text.is_file() {
-        dir
+        dir.clone()
     } else {
-        text
+        text.clone()
     };
 
-    forgum_platform::open_in_system_viewer(&target_path)?;
+    if open_directory {
+        forgum_platform::open_in_system_viewer(&target_path)?;
+        return Ok(target_path);
+    }
+
+    // 1. Check if Neovim is available as the default editor
+    if let Some(nvim) = forgum_platform::find_neovim() {
+        println!("\x1b[1;36m>> Opening Forgum log in Neovim (default editor)...\x1b[0m\n");
+        let status = forgum_platform::open_in_editor(&nvim, &target_path);
+        match status {
+            Ok(()) => {
+                println!("\x1b[1;32m✓\x1b[0m Closed Forgum log viewer.");
+                return Ok(target_path);
+            }
+            Err(e) => {
+                eprintln!(
+                    "\x1b[33mNotice: Neovim failed to launch ({e}). Falling back...\x1b[0m\n"
+                );
+            }
+        }
+    }
+
+    // 2. Neovim was not found: show recommendation & request to install
+    println!("\n\x1b[1;33m⚠️  Neovim ('nvim') was not found on your system.\x1b[0m");
+    println!("\x1b[1;36m💡 Neovim is the recommended default editor for Forgum logs (syntax highlighting, folding, real-time tailing).\x1b[0m");
+    println!("   \x1b[1;37mConsider installing Neovim for optimal log viewing:\x1b[0m");
+    println!("     • Windows:  \x1b[1mscoop install neovim\x1b[0m   OR   \x1b[1mwinget install Neovim.Neovim\x1b[0m");
+    println!("     • macOS:    \x1b[1mbrew install neovim\x1b[0m");
+    println!("     • Linux:    \x1b[1msudo apt install neovim\x1b[0m   OR   \x1b[1msudo pacman -S neovim\x1b[0m\n");
+
+    let available = forgum_platform::detect_installed_editors();
+    let other_editors: Vec<_> = available
+        .into_iter()
+        .filter(|e| e.command != "nvim")
+        .collect();
+
+    let is_tty = forgum_platform::terminal::detect_capabilities().is_tty;
+    if !is_tty {
+        // Non-interactive fallback: display paths
+        println!("\x1b[1;36m━━━ Forgum Log Paths ━━━\x1b[0m");
+        println!("  • Text Log:      {}", target_path.display());
+        println!("  • JSONL Log:     {}", jsonl.display());
+        println!("  • Log Directory: {}\n", dir.display());
+        return Ok(target_path);
+    }
+
+    // 3. Interactive menu for available editors or path display
+    println!("\x1b[1;37mSelect an action or available editor to view logs:\x1b[0m");
+    for (idx, ed) in other_editors.iter().enumerate() {
+        let num = idx + 1;
+        let mode = if ed.is_terminal { "terminal" } else { "GUI" };
+        println!(
+            "  \x1b[1m[{num}]\x1b[0m Open with {} (`{}`) \x1b[90m[{mode}]\x1b[0m",
+            ed.name, ed.command
+        );
+    }
+    println!(
+        "  \x1b[1;32m[P]\x1b[0m Print absolute paths to log files and directory (Recommended)"
+    );
+    println!("  \x1b[1;36m[C]\x1b[0m Dump raw text log directly into terminal (cat)");
+    println!("  \x1b[1;31m[S]\x1b[0m Skip / Cancel\n");
+    print!("\x1b[1;33mSelect [P]: \x1b[0m");
+    let _ = std::io::stdout().flush();
+
+    let mut input = String::new();
+    if std::io::stdin().read_line(&mut input).is_err() {
+        return Ok(target_path);
+    }
+    let choice = input.trim().to_lowercase();
+
+    if choice.is_empty() || choice == "p" || choice == "path" || choice == "paths" {
+        println!("\n\x1b[1;36m━━━ Forgum Log Paths ━━━\x1b[0m");
+        println!("  • Text Log:      {}", target_path.display());
+        println!("  • JSONL Log:     {}", jsonl.display());
+        println!("  • Log Directory: {}\n", dir.display());
+        return Ok(target_path);
+    }
+
+    if choice == "c" || choice == "cat" || choice == "raw" {
+        println!(
+            "\n\x1b[1;36m━━━ Forgum Raw Text Log ({}) ━━━\x1b[0m\n",
+            target_path.display()
+        );
+        if let Ok(content) = fs::read_to_string(&target_path) {
+            print!("{content}");
+        } else {
+            println!("\x1b[90m(Log file is empty)\x1b[0m");
+        }
+        println!();
+        return Ok(target_path);
+    }
+
+    if choice == "s" || choice == "skip" || choice == "q" || choice == "cancel" {
+        println!("\x1b[90mLog inspection cancelled.\x1b[0m\n");
+        return Ok(target_path);
+    }
+
+    if let Ok(idx) = choice.parse::<usize>() {
+        if idx >= 1 && idx <= other_editors.len() {
+            let ed = &other_editors[idx - 1];
+            println!(
+                "\x1b[1;36m>> Opening Forgum log with {}...\x1b[0m\n",
+                ed.name
+            );
+            match forgum_platform::open_in_editor(ed, &target_path) {
+                Ok(()) => {
+                    println!("\x1b[1;32m✓\x1b[0m Closed Forgum log viewer ({})", ed.name);
+                    return Ok(target_path);
+                }
+                Err(e) => {
+                    eprintln!("\x1b[1;31m✗ Failed to launch {}: {e}\x1b[0m", ed.name);
+                }
+            }
+        }
+    }
+
+    // Default fallback
+    println!("\n\x1b[1;36m━━━ Forgum Log Paths ━━━\x1b[0m");
+    println!("  • Text Log:      {}", target_path.display());
+    println!("  • JSONL Log:     {}", jsonl.display());
+    println!("  • Log Directory: {}\n", dir.display());
 
     Ok(target_path)
 }
@@ -749,6 +878,21 @@ pub fn format_diagnostic_report(report: &DiagnosticReport) -> String {
                 num, dev_hint
             ));
         }
+    }
+
+    // Section 3: GitHub Community Feedback & Bug Reporting Triage
+    out.push_str("\x1b[1;36m┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫\x1b[0m\n");
+    out.push_str("\x1b[1;36m┃\x1b[0m \x1b[1;33m▶ MAINTAINER SUPPORT & GITHUB ISSUE TRIAGE\x1b[0m                                             \x1b[1;36m┃\x1b[0m\n");
+    if report.errors_count > 0 || !report.uprising_bugs.is_empty() {
+        out.push_str("\x1b[1;36m┃\x1b[0m  \x1b[1;31m🐛 Found a Bug or Unexpected Behavior?\x1b[0m                                                \x1b[1;36m┃\x1b[0m\n");
+        out.push_str("\x1b[1;36m┃\x1b[0m     Please open an issue on GitHub tagged with \x1b[1;31m[bug]\x1b[0m (label: 'bug'):                     \x1b[1;36m┃\x1b[0m\n");
+        out.push_str("\x1b[1;36m┃\x1b[0m     \x1b[4;36mhttps://github.com/HKDevLoops/Forgum/issues/new?template=bug_report.md&labels=bug\x1b[0m     \x1b[1;36m┃\x1b[0m\n");
+        out.push_str("\x1b[1;36m┃\x1b[0m     \x1b[90mTip: Attach the diagnostic block above or 'forgum log -o' to assist the maintainer.\x1b[0m    \x1b[1;36m┃\x1b[0m\n");
+    } else {
+        out.push_str("\x1b[1;36m┃\x1b[0m  \x1b[1;32m💡 Have Feedback, Praise, or Feature Ideas?\x1b[0m                                              \x1b[1;36m┃\x1b[0m\n");
+        out.push_str("\x1b[1;36m┃\x1b[0m     We'd love to hear from you! Open an issue with tag \x1b[1;32m[feedback]\x1b[0m (label: 'feedback'):    \x1b[1;36m┃\x1b[0m\n");
+        out.push_str("\x1b[1;36m┃\x1b[0m     \x1b[4;36mhttps://github.com/HKDevLoops/Forgum/issues/new?template=feature_request.md&labels=feedback\x1b[0m\x1b[1;36m┃\x1b[0m\n");
+        out.push_str("\x1b[1;36m┃\x1b[0m     \x1b[90mYour feedback directly motivates the maintainer and team to keep improving Forgum!\x1b[0m     \x1b[1;36m┃\x1b[0m\n");
     }
 
     out.push_str("\x1b[1;36m┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛\x1b[0m\n");

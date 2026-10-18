@@ -476,7 +476,32 @@ fn run_inner() -> ExitCode {
             if let Some(t) = telemetry {
                 let allowed = matches!(t.to_lowercase().as_str(), "allow" | "yes" | "1" | "true");
                 let _ = forgum_platform::set_telemetry_consent(allowed);
+            } else if headless {
+                let caps = forgum_platform::terminal::detect_capabilities();
+                if caps.is_tty {
+                    use std::io::Write;
+                    println!("\n\x1b[1;35m✦ Forgum Community Motivation Telemetry ✦\x1b[0m");
+                    println!("We kindly request your support: Forgum collects anonymous, aggregate usage counts");
+                    println!("(zero personal data, no IPs, no hardware IDs, strictly +1 to GitHub README counter).");
+                    println!("This provides vital motivation to the maintainer and team to keep building!");
+                    print!("\x1b[1;36mWould you like to support the team by enabling this? [Y/n]: \x1b[0m");
+                    let _ = std::io::stdout().flush();
+                    let mut input = String::new();
+                    if std::io::stdin().read_line(&mut input).is_ok() {
+                        let trimmed = input.trim().to_lowercase();
+                        let allowed = trimmed.is_empty() || trimmed == "y" || trimmed == "yes";
+                        let _ = forgum_platform::set_telemetry_consent(allowed);
+                        if allowed {
+                            println!("\x1b[32m✓ Thank you for supporting the maintainer and team!\x1b[0m\n");
+                        } else {
+                            println!(
+                                "\x1b[90mTelemetry declined (kept strictly offline).\x1b[0m\n"
+                            );
+                        }
+                    }
+                }
             }
+
             if headless {
                 forgum_platform::record_tried();
                 if let Ok(d) = forgum_platform::paths::config_dir() {
@@ -705,13 +730,7 @@ fn run_inner() -> ExitCode {
 
             if open {
                 match forgum_engine::logger::open_log_in_system(false) {
-                    Ok(opened_path) => {
-                        println!(
-                            "Opened log in default system viewer: {}",
-                            opened_path.display()
-                        );
-                        return ExitCode::SUCCESS;
-                    }
+                    Ok(_) => return ExitCode::SUCCESS,
                     Err(e) => {
                         eprintln!("{PROGRAM}: unable to open log viewer: {e}");
                         return ExitCode::from(1);
@@ -843,21 +862,55 @@ fn run_inner() -> ExitCode {
 
         // ── completions <shell> ──────────────────────────────────────
         Some(cli::Commands::Completions { shell }) => {
-            if matches!(shell, cli::ShellArg::List) {
-                let table = forgum_engine::options_table::render_options("shells");
-                print!("{table}");
-                return ExitCode::SUCCESS;
-            }
             let mut cmd = forgum_engine::cli::Cli::command();
-            let shell: Shell = shell.into();
-            match forgum_engine::completions::install_completions(shell, &mut cmd) {
-                Ok(res) => {
-                    print!("{}", res.message);
+            match shell {
+                cli::ShellArg::Update => {
+                    match forgum_engine::completions::interactive_update_completions(&mut cmd, true)
+                    {
+                        Ok(()) => ExitCode::SUCCESS,
+                        Err(e) => {
+                            eprintln!("{PROGRAM}: completions update error: {e}");
+                            ExitCode::from(71)
+                        }
+                    }
+                }
+                cli::ShellArg::Check => {
+                    let inspections =
+                        forgum_engine::completions::inspect_all_shells_completion_status(&mut cmd);
+                    println!("\n\x1b[1;35m━━━ Forgum Shell Completions Status ━━━\x1b[0m\n");
+                    for item in inspections {
+                        let path_str = item
+                            .script_path
+                            .as_ref()
+                            .map(|p| p.display().to_string())
+                            .unwrap_or_else(|| "N/A".to_string());
+                        println!(
+                            "  {:<14} {:<34} \x1b[90m({})\x1b[0m",
+                            item.shell,
+                            item.status.badge(),
+                            path_str
+                        );
+                    }
+                    println!();
                     ExitCode::SUCCESS
                 }
-                Err(e) => {
-                    eprintln!("{PROGRAM}: completions installation error: {e}");
-                    ExitCode::from(71)
+                cli::ShellArg::List => {
+                    let table = forgum_engine::options_table::render_options("shells");
+                    print!("{table}");
+                    ExitCode::SUCCESS
+                }
+                other => {
+                    let target_shell: Shell = other.into();
+                    match forgum_engine::completions::install_completions(target_shell, &mut cmd) {
+                        Ok(res) => {
+                            print!("{}", res.message);
+                            ExitCode::SUCCESS
+                        }
+                        Err(e) => {
+                            eprintln!("{PROGRAM}: completions installation error: {e}");
+                            ExitCode::from(71)
+                        }
+                    }
                 }
             }
         }
@@ -2471,6 +2524,11 @@ fn handle_channel_command(action: Option<&str>, name: Option<&str>) -> ExitCode 
     }
 }
 
+fn prompt_completions_update_after_upgrade() {
+    let mut cmd = forgum_engine::cli::Cli::command();
+    let _ = forgum_engine::completions::interactive_update_completions(&mut cmd, false);
+}
+
 fn handle_update_command(
     check: bool,
     channel_flag: Option<&str>,
@@ -2656,6 +2714,7 @@ fn handle_update_command(
                         Ok(msg) => {
                             println!("{msg}");
                             println!("\n\x1b[1;32m✓ Git update and rebuild completed successfully.\x1b[0m");
+                            prompt_completions_update_after_upgrade();
                             return ExitCode::SUCCESS;
                         }
                         Err(e) => {
@@ -2758,6 +2817,7 @@ fn handle_update_command(
             Ok(msg) => {
                 println!("\n\x1b[1;32m✓ {msg}\x1b[0m");
                 let _ = forgum_platform::clear_update_cache();
+                prompt_completions_update_after_upgrade();
                 ExitCode::SUCCESS
             }
             Err(err) => {
@@ -2778,6 +2838,7 @@ fn handle_update_command(
                 {
                     println!("\x1b[36m>> {recon_msg}\x1b[0m");
                 }
+                prompt_completions_update_after_upgrade();
                 ExitCode::SUCCESS
             }
             Err(err) => {
@@ -2793,6 +2854,7 @@ fn handle_update_command(
                             "\n\x1b[1;32m✓ Standalone fallback update succeeded: {msg}\x1b[0m"
                         );
                         let _ = forgum_platform::clear_update_cache();
+                        prompt_completions_update_after_upgrade();
                         ExitCode::SUCCESS
                     }
                     Err(fallback_err) => {

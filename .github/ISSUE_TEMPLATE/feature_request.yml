@@ -7,7 +7,7 @@ body:
     attributes:
       value: |
         We welcome well-reasoned feature proposals that align with Forgum's vision of lightweight, high-performance terminal animations and celestial aesthetics.
-        Please review the architectural mandates in `AGENTS.md` before submitting.
+        Please review the architectural mandates in `ARCHITECTURE_MAP.md` before submitting.
 
   - type: textarea
     id: problem-or-motivation

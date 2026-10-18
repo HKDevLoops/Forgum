@@ -62,6 +62,11 @@ docs/superpowers/
 .gemini/
 .kilo/
 kilo.json
+AGENTS.md
+GEMINI.md
+CLAUDE.md
+agent.md
+.github/copilot-instructions.md
 .system_generated/
 testsprite_tests/
 graphify-out/

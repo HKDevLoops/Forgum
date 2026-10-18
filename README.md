@@ -781,6 +781,29 @@ All injected shell hooks strictly maintain standard marker isolation (`# >>> for
 | **Oil (`osh/ysh`)** | `forgum init oil --install` | `forgum completions oil > ~/.config/oil/yshrc` | `~/.config/oil/yshrc` |
 | **Yash** | `forgum init yash --install` | `forgum completions yash > ~/.yashrc` | `~/.yashrc` |
 
+### 🔄 Universal Shell Completions & Auto-Updater
+
+Forgum provides intelligent autocompletions across Bash, Zsh, Fish, PowerShell, Nushell, Elvish, and Xonsh.
+
+```bash
+# Launch interactive shell completion updater:
+forgum completions
+# or explicitly:
+forgum completions update
+
+# Check freshness of installed completions across all detected shells:
+forgum completions check
+
+# List all supported shells for completion:
+forgum completions list
+
+# Output completion script for a specific shell (e.g. zsh, fish, pwsh):
+forgum completions zsh
+```
+
+- **Interactive Multi-Choice Menu**: When running `forgum completions update` (or `forgum completions`), Forgum scans your PC for installed shells, checks whether scripts are `Up to date`, `Outdated`, or `Not installed`, and presents an interactive selection menu allowing you to update completions for any or all installed shells.
+- **Automatic Prompt on Upgrades**: Whenever you upgrade Forgum (`forgum update`), the engine automatically verifies your completion files and prompts you to update them so new commands and arguments are immediately available.
+
 ### 🌟 Awesome-Shell & Multiplexer Matrix
 
 Forgum provides native interoperability with terminal multiplexers and utilities from [`alebcay/awesome-shell`](https://github.com/alebcay/awesome-shell):
@@ -859,12 +882,38 @@ Forgum logs all events with microsecond precision to both human-readable text an
 # View recent logs in a formatted table
 forgum logs
 
-# Filter by severity
+# Filter by severity (trace, debug, info, warn, error)
 forgum logs --level warn
 
-# Live follow logs
+# Live follow logs in real-time
 forgum logs -f
+
+# Open engine log in your editor (defaults to Neovim):
+forgum log -o
+# or:
+forgum logs --open
+
+# Run automated diagnostic triage and health report:
+forgum diagnose
+# or:
+forgum logs -D
 ```
+
+### 📝 Default Editor & Interactive Log Menu (`forgum log -o`)
+- **Default Editor**: `forgum log -o` prioritizes **Neovim (`nvim`)** for viewing logs with full syntax highlighting.
+- **Graceful Fallback Menu**: If Neovim is not installed, Forgum presents an interactive selection menu with:
+  1. Installation instructions for Neovim across package managers (`scoop`, `winget`, `brew`, `apt`, `pacman`).
+  2. Detected text editors on your system (`vim`, `nano`, `code`, `hx`, `notepad`, etc.) with quick number-key selection.
+  3. Option `[P]` to display exact log file paths on disk.
+  4. Option `[C]` to dump raw logs directly to your console.
+
+### 🩺 Diagnostic Triage & GitHub Issue Reporting (`forgum diagnose`)
+When troubleshooting unexpected behavior or crashes, run `forgum diagnose` (or `forgum logs -D`). The diagnostic detector runs a 3-section automated audit:
+1. **Recent Error & Warning Events**: Captures recent engine warnings and stack traces.
+2. **Environment & Host Heuristics**: Audits terminal capabilities, 24-bit TrueColor support, and OS details.
+3. **GitHub Issue Triage & Direct Links**:
+   - **Bugs & Crashes**: Pre-formatted issue link with the `[bug]` title prefix and `bug` label.
+   - **Feedback & Ideas**: Pre-formatted issue link with the `[feedback]` title prefix and `feedback` label to directly motivate and guide the maintainers and team.
 
 ---
 

@@ -289,7 +289,11 @@ pub fn render_loop_banner(
     let line_count = (cow_foot + 4).max(cow_display.lines().count() + 3).max(6);
     let banner_rows = line_count.min((rows as usize).saturating_sub(1)).max(1);
 
-    let max_frames = compute_max_frames(config.duration, config.fps);
+    let max_frames = if config.duration == 0 {
+        1 // Fastfetch-style static banner burst: render 1 frame and terminate cleanly in <10ms
+    } else {
+        compute_max_frames(config.duration, config.fps)
+    };
 
     // Reserve space inline: print banner_rows newlines, then move up and save origin
     for _ in 0..banner_rows {

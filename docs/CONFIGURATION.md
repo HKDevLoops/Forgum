@@ -165,6 +165,9 @@ forgum config fps 60
 | `fps` | `integer` | `30` | Target frame rate (1-120) |
 | `duration` | `integer` | `3` | Playback duration in seconds (0 = infinite in background) |
 | `shell_attach_mode` | `string` | `"split"` | Shell rendering mode (`split`, `banner`, `reactive`, `manual`) |
+| `split_mode` | `string` | `"seamless"` | Split viewport mode (`seamless`, `decstbm`, `native-api`, `precmd-fallback`, `disabled`) |
+| `editor` | `string` | `"nvim"` | Preferred text editor for logs (`forgum log -o`) and configs; falls back gracefully to detected editors |
+| `telemetry` | `boolean` | `true` | Anonymous aggregate motivation counter opt-in (zero personal data) |
 | `auto_render_on_prompt` | `boolean` | `true` | Automatically render mascot on each prompt execution |
 | `startup_animation` | `boolean` | `true` | Play animation on new terminal window spawn |
 | `startup_animation_once_per_day` | `boolean` | `false` | Limit startup animation to once per calendar day |

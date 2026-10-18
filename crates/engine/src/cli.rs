@@ -631,8 +631,8 @@ pub enum Commands {
     },
     /// Generate shell completion scripts and attach to shell profile.
     Completions {
-        /// Target shell, or 'list' to view supported shells.
-        #[arg(value_enum, default_value = "list")]
+        /// Target shell, or 'update' to check and update available shells, 'check' to verify status, or 'list' to view supported shells.
+        #[arg(value_enum, default_value = "update")]
         shell: ShellArg,
     },
     /// List available options for animals, effects, scenery, colors, or shells in structured tables.
@@ -1206,7 +1206,7 @@ pub enum ThemeSub {
     Seasonal,
 }
 
-#[derive(Debug, Clone, Copy, ValueEnum)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
 pub enum ShellArg {
     Bash,
     Zsh,
@@ -1224,6 +1224,12 @@ pub enum ShellArg {
     Ion,
     Oil,
     Yash,
+    /// Interactively check and update shell completions for available shells.
+    #[value(name = "update", alias = "sync", alias = "upgrade")]
+    Update,
+    /// Check completion script freshness status across all available shells without modifying.
+    #[value(name = "check", alias = "status")]
+    Check,
     /// List all supported shells and their configuration paths.
     List,
 }
@@ -1231,7 +1237,7 @@ pub enum ShellArg {
 impl From<ShellArg> for Shell {
     fn from(arg: ShellArg) -> Self {
         match arg {
-            ShellArg::Bash | ShellArg::List => Shell::Bash,
+            ShellArg::Bash | ShellArg::Update | ShellArg::Check | ShellArg::List => Shell::Bash,
             ShellArg::Zsh => Shell::Zsh,
             ShellArg::Fish => Shell::Fish,
             ShellArg::Pwsh => Shell::Pwsh,
@@ -1368,6 +1374,69 @@ pub struct CliError {
     pub message: String,
 }
 
+fn is_positional_subcommand(s: &str) -> bool {
+    let lower = s.to_ascii_lowercase();
+    matches!(
+        lower.as_str(),
+        "config"
+            | "init"
+            | "theme"
+            | "herd"
+            | "say"
+            | "think"
+            | "timer"
+            | "battle"
+            | "arena"
+            | "rps"
+            | "rps-battle"
+            | "image"
+            | "channel"
+            | "channels"
+            | "options"
+            | "list"
+            | "ls"
+            | "show"
+            | "completions"
+            | "diagnose"
+            | "triage"
+            | "bugradar"
+            | "logs"
+            | "log"
+            | "view-logs"
+            | "show-logs"
+            | "update"
+            | "upgrade"
+            | "install"
+            | "setup"
+            | "wizard"
+            | "installer"
+            | "uninstall"
+            | "remove"
+            | "deorbit"
+            | "uninstaller"
+            | "doctor"
+            | "checkhealth"
+            | "health"
+            | "tui"
+            | "menu"
+            | "ui"
+            | "studio"
+            | "fetch"
+            | "telemetry"
+            | "moo"
+            | "vibe"
+            | "touch-grass"
+            | "chad"
+            | "zoomies"
+            | "yeet"
+            | "moonwalk"
+            | "sweep"
+            | "stop"
+            | "tmux"
+            | "status-line"
+    )
+}
+
 /// Normalize CLI tokens so subcommands without '--' (e.g. `forgum cow tux`, `forgum cows`,
 /// Normalize command-line arguments so subcommands and options passed without '--' (e.g.
 /// `forgum cow tux`, `forgum effect walk`, `forgum fps 60`, `forgum duration 5`)
@@ -1380,9 +1449,25 @@ pub fn normalize_argv(argv: &[String]) -> Vec<String> {
     normalized.push(argv[0].clone());
 
     let mut i = 1;
+    let mut in_subcommand = false;
     while i < argv.len() {
         let token = &argv[i];
         let token_lower = token.to_ascii_lowercase();
+
+        // If we have encountered a subcommand with positional arguments, do not rewrite subsequent tokens!
+        if in_subcommand {
+            normalized.push(token.clone());
+            i += 1;
+            continue;
+        }
+
+        // Check if the current token is a subcommand that takes positional arguments
+        if !token.starts_with('-') && is_positional_subcommand(token) {
+            in_subcommand = true;
+            normalized.push(token.clone());
+            i += 1;
+            continue;
+        }
 
         // If the preceding token was an option or command expecting an argument, keep this token as-is!
         if let Some(prev) = normalized.last() {
@@ -2689,20 +2774,56 @@ pub fn validate_cli_values(cli: &Cli, command: &Option<Commands>) -> Result<(), 
                 let valid_cats = &[
                     "all",
                     "animals",
+                    "animal",
+                    "cows",
+                    "cow",
                     "effects",
+                    "effect",
+                    "animations",
+                    "animation",
                     "scenery",
-                    "colors",
-                    "shells",
                     "mountains",
+                    "mountain",
                     "roads",
+                    "road",
                     "environments",
+                    "environment",
+                    "env",
+                    "tod",
+                    "time-of-day",
+                    "season",
+                    "seasons",
+                    "colors",
+                    "color",
+                    "palette",
+                    "palettes",
+                    "shells",
+                    "shell",
                     "config",
+                    "settings",
                     "multiplexers",
+                    "mux",
+                    "tmux",
                     "eyes",
+                    "eye",
                     "tongue",
+                    "tongues",
+                    "aspects",
+                    "aspect",
+                    "accel",
+                    "gpu",
+                    "render-mode",
+                    "rendermode",
+                    "render_mode",
+                    "logs",
+                    "log",
                 ];
                 if !valid_cats.iter().any(|c| c.eq_ignore_ascii_case(category)) {
-                    let closest = find_closest_match(category, valid_cats);
+                    let canonical_cats: Vec<&str> = crate::completions::LIST_CATEGORY_CHOICES
+                        .iter()
+                        .map(|c| c.value)
+                        .collect();
+                    let closest = find_closest_match(category, &canonical_cats);
                     let choices: Vec<(&str, &str)> = crate::completions::LIST_CATEGORY_CHOICES
                         .iter()
                         .map(|c| (c.value, c.description))
@@ -3145,6 +3266,24 @@ mod tests {
 
         let (a6, _) = parse(&["forgum", "effect", "walk"]);
         assert_eq!(a6.effect, Some("walk".to_string()));
+
+        let (_, c1) = parse(&["forgum", "config", "duration", "5"]);
+        match c1 {
+            Some(Commands::Config { key, value, .. }) => {
+                assert_eq!(key, Some("duration".to_string()));
+                assert_eq!(value, Some("5".to_string()));
+            }
+            _ => panic!("expected Commands::Config, got {c1:?}"),
+        }
+
+        let (_, c2) = parse(&["forgum", "config", "fps", "60"]);
+        match c2 {
+            Some(Commands::Config { key, value, .. }) => {
+                assert_eq!(key, Some("fps".to_string()));
+                assert_eq!(value, Some("60".to_string()));
+            }
+            _ => panic!("expected Commands::Config, got {c2:?}"),
+        }
     }
 
     #[test]

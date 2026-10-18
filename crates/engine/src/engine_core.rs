@@ -1316,6 +1316,11 @@ fn render_thread(mut state: RenderState, handoff: Arc<LatestFrameHandoff>, shutd
             }
         }
     }
+    // Drain final frame if pending so 1-frame bursts are never dropped
+    if let Ok(slot) = handoff.frame_rx.try_recv() {
+        let _ = state.render_slot(&slot);
+        let _ = handoff.recycle_tx.try_send(slot);
+    }
     shutdown.trigger();
 
     // Clear and restore terminal on exit.
@@ -1662,6 +1667,8 @@ pub fn run_engine_banner(
     let cur_rows = rows;
     let deadline = if config.duration > 0 {
         Some(Instant::now() + Duration::from_secs(config.duration as u64))
+    } else if max_frames == 1 {
+        Some(Instant::now() + Duration::from_millis(500))
     } else {
         None
     };
@@ -1682,7 +1689,7 @@ pub fn run_engine_banner(
                 rows: cur_rows as u16,
             });
         }
-        std::thread::sleep(Duration::from_millis(50));
+        std::thread::sleep(Duration::from_millis(10));
     }
 
     let _ = sim_handle.join();
