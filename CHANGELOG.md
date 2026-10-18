@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.0.12-beta] - 2026-10-18
+
+### Added
+- **Authoritative Continuous Timeline & Shortest-Arc Lerp (`crates/engine/src/engine_core.rs`)**:
+  - Implemented `AuthoritativeTimeline` with continuous `f64` elapsed seconds to eliminate frame dropping and clock drift during terminal multiplexer resize or load spikes.
+  - Added `SimSnapshot` with shortest-arc circular stride and angular interpolation: $\Delta\theta = ((\theta_{\text{target}} - \theta_{\text{prev}} + 0.5) \pmod{1.0}) - 0.5$.
+- **Zero-Allocation Triple-Buffered Frame Recycling (`crates/engine/src/engine_core.rs`)**:
+  - Implemented `LatestFrameHandoff` and recycled `FrameBufferSlot` pool replacing `Arc<Frame>` clones and bounded synchronization channels.
+  - Sim thread renders in-place into recycled buffer slots with zero heap allocations per frame; drops intermediate frames atomically under rendering lag so the render thread always consumes the freshest frame.
+- **Sub-Cell Rasterization Modes (`crates/engine/src/framebuffer.rs`)**:
+  - Added `SubCellMode` and `SubCellCanvas` supporting Braille $2\times 4$ subpixel patterns (`U+2800..U+28FF`), Half-Block $1\times 2$ characters (`▀`, `▄`), ASCII $1\times 1$, and HybridLiquid modes.
+  - Exposed via `--render-mode <ascii|half-block|braille|hybrid>`, configuration key `render_mode`, and all 15 shell completions.
+- **Run-Length Coalescing & Color Quantization (`crates/engine/src/framebuffer.rs`)**:
+  - Implemented `quantize_rgb` with overflow-safe `u16` arithmetic supporting 0, 4, 8, and 16-bit palettes via `--color-quant <0|4|8|16>`.
+  - Coalesces identical color runs across terminal output to reduce escape sequence overhead by up to 40%.
+- **Live Telemetry & Diagnostics Profiler (`crates/engine/src/engine_core.rs`)**:
+  - Added `--profile` CLI flag and `profile: bool` configuration property reporting total run time, rendered frame count, average FPS, and dropped frame metrics.
+
+### Fixed
+- **Visual Defect Remediation Suite (`VIS-001` - `VIS-006`)**:
+  - Eliminated duplicate thought bubble connector stem circles in `runner.rs` by passing `" "` glyph when `--think` is active (`VIS-001`).
+  - Refined quadruped torso and leg classification in `kinematics.rs` (`is_pure_leg_row`) to preserve `InteriorOpaque` convex-hull fill, preventing mountain scenery bleed-through on stegosaurus and cattle bellies (`VIS-002`).
+  - Elevated minimum OKLab scenery contrast floor to $L \ge 0.45$ in `scenery.rs` to prevent dark navy washout on dark themes (`VIS-003`).
+  - Added transparent interior occlusion to tree trunk and fork rendering in `scenery.rs` to block background mountain peaks (`VIS-004`).
+  - Anchored stationary speech bubbles at `(0, y)` for in-place hover/float effects while preserving synchronized horizontal tracking for `WalkEffect` in `effects.rs` (`VIS-005`).
+  - Enforced a $+2$ row margin offset in `run_engine_overlay` (`engine_core.rs`) to guarantee a 1-row air gap above the shell prompt line (`VIS-006`).
+- **Terminal Margin Restoration & Panic Hygiene (`crates/engine/src/split_scroll.rs`)**:
+  - Implemented RAII `Drop` for `SplitOverlayGuard` unconditionally restoring DECSTBM margins (`\x1b[r`), origin mode (`\x1b[?6l`), left-right margins (`\x1b[?69l`), SGR attributes (`\x1b[0m`), and cursor visibility (`\x1b[?25h`).
+
 ## [0.0.11-beta] - 2026-10-18
 
 ### Added

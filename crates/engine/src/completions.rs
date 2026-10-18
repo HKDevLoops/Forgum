@@ -2013,6 +2013,27 @@ pub const ROOT_FLAGS_METADATA: &[FlagMeta] = &[
         description: "Display available options in structured tables",
         takes_value: false,
     },
+    FlagMeta {
+        long: "--profile",
+        short: None,
+        aliases: &["--profiler"],
+        description: "Enable frame timing & memory telemetry profiler",
+        takes_value: false,
+    },
+    FlagMeta {
+        long: "--render-mode",
+        short: None,
+        aliases: &[],
+        description: "Sub-cell rasterization mode (ascii, halfblock, braille, hybrid)",
+        takes_value: true,
+    },
+    FlagMeta {
+        long: "--color-quant",
+        short: None,
+        aliases: &[],
+        description: "ANSI 24-bit color quantization depth in bits (0=off, 4, 8, 16)",
+        takes_value: true,
+    },
 ];
 
 pub const CONFIG_FLAGS_METADATA: &[FlagMeta] = &[
@@ -3194,6 +3215,25 @@ pub const STATUS_LINE_MUX_CHOICES: &[ChoiceMeta] = &[
     },
 ];
 
+pub const RENDER_MODE_CHOICES: &[ChoiceMeta] = &[
+    ChoiceMeta {
+        value: "ascii",
+        description: "Standard character grid 1x1",
+    },
+    ChoiceMeta {
+        value: "halfblock",
+        description: "Half-block rendering 1x2 (upper/lower)",
+    },
+    ChoiceMeta {
+        value: "braille",
+        description: "Braille dot matrix 2x4 sub-cell canvas",
+    },
+    ChoiceMeta {
+        value: "hybrid",
+        description: "ASCII mascot with Braille particle / fluid effects",
+    },
+];
+
 pub const SHELL_POSITIONAL_CHOICES: &[ChoiceMeta] = &[
     ChoiceMeta {
         value: "bash",
@@ -3665,6 +3705,24 @@ pub const CONFIG_KEYS_METADATA: &[ConfigKeyMeta] = &[
         value_type: "string",
         description: "Universal random mode (all, mascot, scenery, fx, thought, true/false)",
     },
+    ConfigKeyMeta {
+        key: "profile",
+        aliases: &["profiler"],
+        value_type: "boolean",
+        description: "Enable frame timing & memory telemetry profiler (true/false)",
+    },
+    ConfigKeyMeta {
+        key: "render_mode",
+        aliases: &["render-mode"],
+        value_type: "choice",
+        description: "Sub-cell rasterization mode (ascii, halfblock, braille, hybrid)",
+    },
+    ConfigKeyMeta {
+        key: "color_quant",
+        aliases: &["color-quant"],
+        value_type: "integer",
+        description: "ANSI 24-bit color quantization depth in bits (0=off, 4, 8, 16)",
+    },
 ];
 
 pub const ALL_ANIMALS: &[&str] = &[
@@ -3997,6 +4055,12 @@ pub fn choices_for_flag(flag: &str) -> Option<Vec<(&'static str, &'static str)>>
                 .map(|&a| (a, "Mascot character"))
                 .collect(),
         ),
+        "render-mode" => Some(
+            RENDER_MODE_CHOICES
+                .iter()
+                .map(|c| (c.value, c.description))
+                .collect(),
+        ),
         _ => None,
     }
 }
@@ -4006,7 +4070,9 @@ pub fn flag_takes_value(flag: &str) -> bool {
     let clean = flag.trim_start_matches('-');
     matches!(
         clean,
-        "cow"
+        "render-mode"
+            | "color-quant"
+            | "cow"
             | "animal"
             | "c"
             | "a"
@@ -4202,6 +4268,11 @@ pub fn choices_for_config_key(key: &str) -> Option<Vec<(&'static str, &'static s
             ("false", "Disable this configuration flag"),
         ]),
         "random" => choices_for_flag("random"),
+        "render-mode" | "render_mode" => choices_for_flag("render-mode"),
+        "profile" | "profiler" => Some(vec![
+            ("true", "Enable frame timing & memory telemetry profiler"),
+            ("false", "Disable profiler"),
+        ]),
         _ => None,
     }
 }

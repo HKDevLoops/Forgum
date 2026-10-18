@@ -167,6 +167,23 @@ graph TD
 
 ---
 
+## 1.7 Animation Architecture Overhaul, Sub-Cell Rasterization & Zero-Allocation Pipeline (0.0.12-beta)
+
+- **Authoritative Continuous Timeline & Angular Lerp (`crates/engine/src/engine_core.rs`)**:
+  - Continuous `f64` timeline in `AuthoritativeTimeline` with circular shortest-arc stride kinematics: $\Delta\theta = ((\theta_{\text{target}} - \theta_{\text{prev}} + 0.5) \pmod{1.0}) - 0.5$.
+  - Prevents frame skipping, timing drift, and temporal discontinuities across terminal resize and high refresh rates (up to 240Hz).
+- **Zero-Allocation Triple-Buffered Frame Recycling (`crates/engine/src/engine_core.rs`)**:
+  - `LatestFrameHandoff` and recycled `FrameBufferSlot` pool replacing `Arc<Frame>` clones and bounded channels.
+  - Zero heap allocations per frame on hot-path; drops stale intermediate frames atomically when rendering lags behind simulation.
+- **Sub-Cell Rasterization & Run Coalescing (`crates/engine/src/framebuffer.rs`)**:
+  - `SubCellMode` and `SubCellCanvas` supporting Braille $2\times 4$ subpixel patterns (`U+2800..U+28FF`), Half-Block $1\times 2$ (`▀`, `▄`), ASCII $1\times 1$, and HybridLiquid modes via `--render-mode`.
+  - ANSI run coalescing and color quantization (`quantize_rgb`, `--color-quant <0|4|8|16>`) cutting terminal escape sequence bandwidth by up to 40%.
+- **Forensic Visual Fixes & Terminal Margin Safety (`crates/engine/`)**:
+  - Resolved `VIS-001` through `VIS-006` (thought bubble tether circles, quadruped convex hull belly occlusion, OKLab lightness floor $L \ge 0.45$, tree fork occlusion, speech bubble float anchor stability, $+2$ split overlay prompt air gap).
+  - Unconditional RAII `Drop` on `SplitOverlayGuard` restoring DECSTBM margins (`\x1b[r`), DECOM (`\x1b[?6l`), and cursor visibility.
+
+---
+
 ## 2. Universal Hardware Acceleration Architecture (2006 to 2026)
 
 ### A. GPU Microarchitecture Timeline & Vendor Classification

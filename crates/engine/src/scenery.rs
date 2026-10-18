@@ -2477,13 +2477,18 @@ pub fn render_trees_with_animal_and_tod_and_season(
                 );
                 let center = trunk_center + sway;
                 let mut plot_cell = |dx: isize, dy: isize, ch: char, col: Color| {
-                    if ch == ' ' {
-                        return;
-                    }
                     let px = screen_x + dx;
                     if px >= 0 && (px as usize) < width {
                         let py = (tree_base_y as isize) + dy;
                         if py >= 0 && (py as usize) < fb_guard.height {
+                            if ch == ' ' {
+                                let _ = fb_guard.set(
+                                    px as usize,
+                                    py as usize,
+                                    Cell::new(' ', Color::TRANSPARENT),
+                                );
+                                return;
+                            }
                             let _ = fb_guard.set(
                                 px as usize,
                                 py as usize,
@@ -4321,11 +4326,16 @@ pub fn render_scenery_full_with_tod_and_season(
 }
 
 /// Compress background scenery luminance to maintain >3.5:1 figure-ground contrast against foreground mascots.
+/// Applies an OKLab perceptual lightness floor so dark navy / deep blue scenery never drops below L=0.45 (VIS-003).
 #[inline]
 pub fn compress_scenery_contrast(fb: &mut FrameBuffer) {
     for cell in fb.back.iter_mut() {
         if cell.ch != ' ' && cell.fg != Color::WHITE {
-            cell.fg = cell.fg.scale_luminance(0.52);
+            let scaled = cell.fg.scale_luminance(0.52);
+            let (r, g, b) = forgum_platform::terminal_theme::elevate_oklab_lightness(
+                scaled.r, scaled.g, scaled.b, 0.45,
+            );
+            cell.fg = Color::rgb(r, g, b);
         }
     }
 }

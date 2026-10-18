@@ -209,6 +209,18 @@ pub struct SceneConfig {
     /// Custom TUI keybindings configuration mapping.
     #[serde(default)]
     pub keybindings: Option<KeybindingsConfig>,
+
+    /// Performance and frame timing diagnostic profiler mode.
+    #[serde(default)]
+    pub profile: bool,
+
+    /// Sub-cell rendering mode: "ascii", "halfblock", "braille", "hybrid".
+    #[serde(default)]
+    pub render_mode: Option<String>,
+
+    /// Color quantization bits for ANSI run coalescing: 0 (disabled), 4, 8, 16.
+    #[serde(default)]
+    pub color_quant: Option<u8>,
 }
 
 /// Custom TUI keybindings configuration.
@@ -523,6 +535,9 @@ impl Default for SceneConfig {
             update_method: None,
             check_updates: true,
             keybindings: None,
+            profile: false,
+            render_mode: None,
+            color_quant: None,
         }
     }
 }
@@ -646,6 +661,9 @@ define_forgum_config! {
     field: update_method, type: Option<String>, default: None, category: "System", label: "update_method", desc: "Package manager or channel update method", aliases: ["update-method", "update_channel"];
     field: check_updates, type: bool, default: default_check_updates(), category: "System", label: "check_updates", desc: "Check for release updates on startup", aliases: ["check-updates", "update_check"];
     field: keybindings, type: Option<KeybindingsConfig>, default: None, category: "System", label: "keybindings", desc: "Custom TUI navigation and action keybindings";
+    field: profile, type: bool, default: false, category: "Display", label: "profile", desc: "Live frame telemetry profiler summary on exit";
+    field: render_mode, type: Option<String>, default: None, category: "Display", label: "render_mode", desc: "Sub-cell rendering canvas mode (ascii, halfblock, braille, hybrid)";
+    field: color_quant, type: Option<u8>, default: None, category: "Display", label: "color_quant", desc: "Color bit quantization for ANSI escape sequence coalescing (0, 4, 8, 16)";
 }
 
 #[cfg(test)]
@@ -802,6 +820,9 @@ mod tests {
             update_method: Some("prompt".into()),
             check_updates: true,
             keybindings: None,
+            profile: true,
+            render_mode: Some("braille".into()),
+            color_quant: Some(8),
         };
 
         for format in [ConfigFormat::Json, ConfigFormat::Yaml, ConfigFormat::Toml] {

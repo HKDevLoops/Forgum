@@ -488,6 +488,8 @@ impl AsciiRigMap {
         for y in 0..height {
             let hull = row_hulls[y];
             let is_leg_or_lower = y + cow_start >= segments.leg_row && segments.leg_row > 0;
+            let has_body_span = grid[y].iter().any(|&c| matches!(c, '_' | '-' | '='));
+            let is_pure_leg_row = is_leg_or_lower && !has_body_span;
             for x in 0..width {
                 let idx = y * width + x;
                 if grid[y][x] == ' ' {
@@ -513,7 +515,7 @@ impl AsciiRigMap {
 
                     if let Some((h_min, h_max)) = hull {
                         if x >= h_min && x <= h_max {
-                            if is_leg_or_lower || !is_enclosed_head {
+                            if is_pure_leg_row || !is_enclosed_head {
                                 cells[idx].mask = CellMask::ExteriorTransparent;
                             } else {
                                 cells[idx].mask = CellMask::InteriorOpaque;

@@ -1,5 +1,5 @@
 Name:           forgum
-Version:        0.0.11
+Version:        0.0.12
 Release:        1%{?dist}
 Summary:        Cross-platform ANSI animation mascot and shell integration engine
 
@@ -19,6 +19,8 @@ install -m 755 forgum %{buildroot}%{_bindir}/forgum
 %{_bindir}/forgum
 
 %changelog
+* Sun Oct 18 2026 harish2222 <harish2222@users.noreply.github.com> - 0.0.12-1
+- Release 0.0.12 beta: Authoritative continuous timeline, zero-allocation triple-buffered recycling pool, sub-cell rasterization (braille/half-block), and VIS-001..VIS-006 forensic fixes
 * Sun Oct 18 2026 harish2222 <harish2222@users.noreply.github.com> - 0.0.11-1
 - Release 0.0.11 beta: 2D alignment test oracle, crash-safe emergency VT restore, bounded log rotation, OKLab perceptual lightness, and sysexits.h codes
 * Sat Oct 17 2026 harish2222 <harish2222@users.noreply.github.com> - 0.0.10-1

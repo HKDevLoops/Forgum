@@ -944,7 +944,7 @@ impl Effect for FloatEffect {
 
             let hull = find_line_hull(line);
 
-            // Speech/thought bubble: strictly anchored at (0, y) — no bob shift.
+            // Speech/thought bubble: strictly anchored at (0, y) — no bob shift or drift.
             if y < self.cow_start_line {
                 for (x, ch) in line.chars().enumerate() {
                     if x < fb.width {

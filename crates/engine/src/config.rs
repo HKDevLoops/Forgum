@@ -206,6 +206,9 @@ pub fn merge(base: SceneConfig, overlay: SceneConfig) -> SceneConfig {
         keybindings: overlay.keybindings.or(base.keybindings),
         update_method: overlay.update_method.or(base.update_method),
         check_updates: overlay.check_updates,
+        profile: overlay.profile || base.profile,
+        render_mode: overlay.render_mode.or(base.render_mode),
+        color_quant: overlay.color_quant.or(base.color_quant),
     }
 }
 
@@ -285,6 +288,14 @@ pub fn get_config_value(config: &SceneConfig, key: &str) -> Result<String, Strin
             Some(forgum_platform::protocol::RandomSetting::List(l)) => l.join(","),
             None => "false".to_string(),
         }),
+        "profile" | "profiler" => Ok(config.profile.to_string()),
+        "render-mode" | "render_mode" => {
+            Ok(config.render_mode.as_deref().unwrap_or("ascii").to_string())
+        }
+        "color-quant" | "color_quant" => Ok(config
+            .color_quant
+            .map(|q| q.to_string())
+            .unwrap_or_else(|| "0".to_string())),
         other => {
             let keys = supported_config_keys();
             let key_names: Vec<&str> = keys.iter().map(|(k, _)| *k).collect();
@@ -681,6 +692,39 @@ pub fn set_config_value(config: &mut SceneConfig, key: &str, value: &str) -> Res
                     val_trimmed.to_string(),
                 ));
             }
+        }
+        "profile" | "profiler" => {
+            config.profile = val_trimmed.parse::<bool>().map_err(|_| {
+                let bool_choices = &[
+                    ("true", "Enable frame timing & memory telemetry profiler"),
+                    ("false", "Disable profiler"),
+                ];
+                crate::completions::format_invalid_config_value_error(
+                    key,
+                    val_trimmed,
+                    None,
+                    bool_choices,
+                )
+            })?;
+        }
+        "render-mode" | "render_mode" => {
+            let choices = &[
+                ("ascii", "Standard character grid 1x1"),
+                ("halfblock", "Half-block rendering 1x2 (upper/lower)"),
+                ("braille", "Braille dot matrix 2x4 sub-cell canvas"),
+                ("hybrid", "ASCII mascot with Braille particle / fluid effects"),
+            ];
+            validate_choice(key, choices, val_trimmed)?;
+            config.render_mode = Some(val_trimmed.to_string());
+        }
+        "color-quant" | "color_quant" => {
+            let q = val_trimmed.parse::<u8>().map_err(|e| {
+                format!("❌ Error: Invalid integer value '{val_trimmed}' for configuration key '{key}': {e}")
+            })?;
+            if q != 0 && q != 4 && q != 8 && q != 16 {
+                return Err(format!("❌ Error: Invalid color quantization '{q}' for '{key}'. Valid values are 0 (disabled), 4, 8, 16."));
+            }
+            config.color_quant = if q == 0 { None } else { Some(q) };
         }
         other => {
             let keys = supported_config_keys();

@@ -471,6 +471,32 @@ pub struct Cli {
     )]
     pub ai: bool,
 
+    /// Enable frame timing & memory telemetry profiler.
+    #[arg(
+        long,
+        global = true,
+        help = "Enable frame timing, FPS, and memory telemetry profiler"
+    )]
+    pub profile: bool,
+
+    /// Sub-cell rasterization mode (ascii, halfblock, braille, hybrid).
+    #[arg(
+        long = "render-mode",
+        global = true,
+        value_name = "MODE",
+        help = "Sub-cell rasterization mode (ascii, halfblock, braille, hybrid)"
+    )]
+    pub render_mode: Option<String>,
+
+    /// ANSI 24-bit color quantization depth in bits (0=off, 4, 8, 16).
+    #[arg(
+        long = "color-quant",
+        global = true,
+        value_name = "BITS",
+        help = "ANSI 24-bit color quantization depth in bits (0=off, 4, 8, 16)"
+    )]
+    pub color_quant: Option<u8>,
+
     /// Positional speech message text (cowsay compatibility).
     #[arg(value_name = "MESSAGE", num_args = 0..)]
     pub message: Vec<String>,
@@ -1330,6 +1356,9 @@ pub struct Args {
     pub chime: bool,
     pub silent: bool,
     pub ai: bool,
+    pub profile: bool,
+    pub render_mode: Option<String>,
+    pub color_quant: Option<u8>,
 }
 
 /// Error type returned by `parse_args`, carrying the intended process exit code.
@@ -1817,6 +1846,9 @@ pub fn parse_args(argv: Vec<String>) -> Result<(Args, Option<Commands>), CliErro
         chime: cli.chime,
         silent: cli.silent,
         ai: cli.ai,
+        profile: cli.profile,
+        render_mode: cli.render_mode,
+        color_quant: cli.color_quant,
     };
 
     Ok((args, cli.command))
@@ -2094,6 +2126,15 @@ pub fn build_scene_config(args: &Args) -> Result<SceneConfig, String> {
         cfg.check_updates = false;
     } else if args.check_updates {
         cfg.check_updates = true;
+    }
+    if args.profile {
+        cfg.profile = true;
+    }
+    if let Some(rm) = &args.render_mode {
+        cfg.render_mode = Some(rm.clone());
+    }
+    if let Some(cq) = args.color_quant {
+        cfg.color_quant = Some(cq);
     }
 
     // Validate mascot taxonomy locomotion consistency
@@ -2508,7 +2549,36 @@ pub fn validate_cli_values(cli: &Cli, command: &Option<Commands>) -> Result<(), 
         }
     }
 
-    // 13. Subcommand specific validations
+    // 13. --render-mode
+    if let Some(ref rm) = cli.render_mode {
+        let valid_choices =
+            crate::completions::choices_for_flag("--render-mode").unwrap_or_default();
+        let valid_names: Vec<&str> = valid_choices.iter().map(|(n, _)| *n).collect();
+        if !valid_names.iter().any(|v| v.eq_ignore_ascii_case(rm)) {
+            let closest = find_closest_match(rm, &valid_names);
+            return Err(CliError {
+                exit_code: 64,
+                message: crate::completions::format_invalid_value_error(
+                    "--render-mode",
+                    rm,
+                    closest,
+                    &valid_choices,
+                ),
+            });
+        }
+    }
+
+    // 14. --color-quant
+    if let Some(cq) = cli.color_quant {
+        if cq != 0 && cq != 4 && cq != 8 && cq != 16 {
+            return Err(CliError {
+                exit_code: 64,
+                message: format!("❌ Error: Invalid color quantization '{cq}' for flag '--color-quant'. Valid values are 0 (disabled), 4, 8, 16."),
+            });
+        }
+    }
+
+    // 15. Subcommand specific validations
     if let Some(ref cmd) = command {
         match cmd {
             Commands::Update {

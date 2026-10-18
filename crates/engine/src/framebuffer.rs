@@ -316,6 +316,27 @@ impl FrameBuffer {
         }
     }
 
+    /// Quantize all active back-buffer colors to the specified bit depth to coalesce ANSI escapes.
+    pub fn quantize_colors(&mut self, quant_bits: u8) {
+        if quant_bits == 0 {
+            return;
+        }
+        for cell in self.back.iter_mut() {
+            if cell.alpha > 0 {
+                let (r, g, b) = quantize_rgb(cell.fg.r, cell.fg.g, cell.fg.b, quant_bits);
+                cell.fg.r = r;
+                cell.fg.g = g;
+                cell.fg.b = b;
+                if cell.bg != Color::TRANSPARENT {
+                    let (br, bg, bb) = quantize_rgb(cell.bg.r, cell.bg.g, cell.bg.b, quant_bits);
+                    cell.bg.r = br;
+                    cell.bg.g = bg;
+                    cell.bg.b = bb;
+                }
+            }
+        }
+    }
+
     /// Swap buffers: `front` becomes the frame just built in `back`, and `back`
     /// is repopulated as a copy of that displayed frame so the next frame is
     /// built on top of it.
@@ -330,6 +351,227 @@ impl FrameBuffer {
         std::mem::swap(&mut self.back, &mut self.front);
         self.dirty.fill(false);
         self.damage_list.clear();
+    }
+}
+
+/// Quantize RGB components to reduce ANSI TrueColor escape sequence churn.
+/// - bits = 4: Quantize to 4 bits per channel (16 uniform levels).
+/// - bits = 8: Quantize to 8-bit color cube (3-3-2).
+/// - bits = 16: Quantize to 16-bit 5-6-5 color space.
+/// - bits = 0: No quantization (pass through unchanged).
+#[inline]
+#[must_use]
+pub fn quantize_rgb(r: u8, g: u8, b: u8, bits: u8) -> (u8, u8, u8) {
+    match bits {
+        4 => {
+            let q = |v: u8| -> u8 {
+                let v4 = (u16::from(v) * 15 + 127) / 255;
+                (v4 * 17) as u8
+            };
+            (q(r), q(g), q(b))
+        }
+        8 => {
+            let qr = ((u16::from(r >> 5) * 255) / 7) as u8;
+            let qg = ((u16::from(g >> 5) * 255) / 7) as u8;
+            let qb = ((u16::from(b >> 6) * 255) / 3) as u8;
+            (qr, qg, qb)
+        }
+        16 => {
+            let qr = ((u16::from(r >> 3) * 255) / 31) as u8;
+            let qg = ((u16::from(g >> 2) * 255) / 63) as u8;
+            let qb = ((u16::from(b >> 3) * 255) / 31) as u8;
+            (qr, qg, qb)
+        }
+        _ => (r, g, b),
+    }
+}
+
+/// Sub-cell rasterization mode.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum SubCellMode {
+    #[default]
+    Ascii1x1,
+    HalfBlock1x2,
+    Braille2x4,
+    HybridLiquid,
+}
+
+impl SubCellMode {
+    #[must_use]
+    pub fn parse(s: &str) -> Self {
+        match s.trim().to_ascii_lowercase().as_str() {
+            "halfblock" | "half-block" | "half_block" | "1x2" => Self::HalfBlock1x2,
+            "braille" | "2x4" => Self::Braille2x4,
+            "hybrid" | "hybridliquid" | "liquid" => Self::HybridLiquid,
+            _ => Self::Ascii1x1,
+        }
+    }
+}
+
+/// High-resolution sub-cell canvas rasterizer.
+#[derive(Debug, Clone)]
+pub struct SubCellCanvas {
+    pub cell_width: usize,
+    pub cell_height: usize,
+    pub mode: SubCellMode,
+    pub dots: Vec<bool>,
+    pub colors: Vec<Color>,
+}
+
+impl SubCellCanvas {
+    #[must_use]
+    pub fn new(cell_width: usize, cell_height: usize, mode: SubCellMode) -> Self {
+        let (pw, ph) = match mode {
+            SubCellMode::Braille2x4 | SubCellMode::HybridLiquid => (cell_width * 2, cell_height * 4),
+            SubCellMode::HalfBlock1x2 => (cell_width, cell_height * 2),
+            SubCellMode::Ascii1x1 => (cell_width, cell_height),
+        };
+        let total = pw * ph;
+        Self {
+            cell_width,
+            cell_height,
+            mode,
+            dots: vec![false; total],
+            colors: vec![Color::TRANSPARENT; total],
+        }
+    }
+
+    pub fn clear(&mut self) {
+        self.dots.fill(false);
+        self.colors.fill(Color::TRANSPARENT);
+    }
+
+    #[must_use]
+    pub fn pixel_dimensions(&self) -> (usize, usize) {
+        match self.mode {
+            SubCellMode::Braille2x4 | SubCellMode::HybridLiquid => (self.cell_width * 2, self.cell_height * 4),
+            SubCellMode::HalfBlock1x2 => (self.cell_width, self.cell_height * 2),
+            SubCellMode::Ascii1x1 => (self.cell_width, self.cell_height),
+        }
+    }
+
+    pub fn set_pixel(&mut self, px: usize, py: usize, color: Color) -> bool {
+        let (pw, ph) = self.pixel_dimensions();
+        if px >= pw || py >= ph {
+            return false;
+        }
+        let idx = py * pw + px;
+        self.dots[idx] = true;
+        self.colors[idx] = color;
+        true
+    }
+
+    /// Rasterize the sub-cell pixels onto a target `FrameBuffer`.
+    pub fn render_to_framebuffer(&self, fb: &mut FrameBuffer, color_quant: Option<u8>) {
+        let quant_bits = color_quant.unwrap_or(0);
+        match self.mode {
+            SubCellMode::Braille2x4 | SubCellMode::HybridLiquid => {
+                let pw = self.cell_width * 2;
+                for cy in 0..self.cell_height {
+                    for cx in 0..self.cell_width {
+                        let mut mask = 0u8;
+                        let mut sum_r = 0u32;
+                        let mut sum_g = 0u32;
+                        let mut sum_b = 0u32;
+                        let mut active_count = 0u32;
+
+                        let dot_bits = [
+                            [0x01, 0x08],
+                            [0x02, 0x10],
+                            [0x04, 0x20],
+                            [0x40, 0x80],
+                        ];
+
+                        for (dy, row_bits) in dot_bits.iter().enumerate() {
+                            let py = cy * 4 + dy;
+                            for (dx, &bit) in row_bits.iter().enumerate() {
+                                let px = cx * 2 + dx;
+                                let idx = py * pw + px;
+                                if idx < self.dots.len() && self.dots[idx] {
+                                    mask |= bit;
+                                    let col = self.colors[idx];
+                                    sum_r += u32::from(col.r);
+                                    sum_g += u32::from(col.g);
+                                    sum_b += u32::from(col.b);
+                                    active_count += 1;
+                                }
+                            }
+                        }
+
+                        if mask > 0 {
+                            let ch = char::from_u32(0x2800 + u32::from(mask)).unwrap_or(' ');
+                            let mut avg_col = Color::rgb(
+                                (sum_r / active_count) as u8,
+                                (sum_g / active_count) as u8,
+                                (sum_b / active_count) as u8,
+                            );
+                            if quant_bits > 0 {
+                                let (qr, qg, qb) = quantize_rgb(avg_col.r, avg_col.g, avg_col.b, quant_bits);
+                                avg_col.r = qr;
+                                avg_col.g = qg;
+                                avg_col.b = qb;
+                            }
+                            fb.set(cx, cy, Cell::new(ch, avg_col));
+                        }
+                    }
+                }
+            }
+            SubCellMode::HalfBlock1x2 => {
+                let pw = self.cell_width;
+                for cy in 0..self.cell_height {
+                    for cx in 0..self.cell_width {
+                        let top_idx = (cy * 2) * pw + cx;
+                        let bot_idx = (cy * 2 + 1) * pw + cx;
+                        let top_active = top_idx < self.dots.len() && self.dots[top_idx];
+                        let bot_active = bot_idx < self.dots.len() && self.dots[bot_idx];
+
+                        if top_active || bot_active {
+                            let (ch, mut fg, mut bg) = if top_active && bot_active {
+                                ('▀', self.colors[top_idx], self.colors[bot_idx])
+                            } else if top_active {
+                                ('▀', self.colors[top_idx], Color::TRANSPARENT)
+                            } else {
+                                ('▄', self.colors[bot_idx], Color::TRANSPARENT)
+                            };
+
+                            if quant_bits > 0 {
+                                let (fr, fg_, fb_) = quantize_rgb(fg.r, fg.g, fg.b, quant_bits);
+                                fg.r = fr;
+                                fg.g = fg_;
+                                fg.b = fb_;
+                                if bg != Color::TRANSPARENT {
+                                    let (br, bg_, bb_) = quantize_rgb(bg.r, bg.g, bg.b, quant_bits);
+                                    bg.r = br;
+                                    bg.g = bg_;
+                                    bg.b = bb_;
+                                }
+                            }
+                            let mut cell = Cell::new(ch, fg);
+                            cell.bg = bg;
+                            fb.set(cx, cy, cell);
+                        }
+                    }
+                }
+            }
+            SubCellMode::Ascii1x1 => {
+                let pw = self.cell_width;
+                for cy in 0..self.cell_height {
+                    for cx in 0..self.cell_width {
+                        let idx = cy * pw + cx;
+                        if idx < self.dots.len() && self.dots[idx] {
+                            let mut col = self.colors[idx];
+                            if quant_bits > 0 {
+                                let (qr, qg, qb) = quantize_rgb(col.r, col.g, col.b, quant_bits);
+                                col.r = qr;
+                                col.g = qg;
+                                col.b = qb;
+                            }
+                            fb.set(cx, cy, Cell::new('*', col));
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -943,5 +1185,58 @@ mod tests {
 
         assert!(reusable_damage.contains(&(2, 2)));
         assert_eq!(reusable_damage.capacity(), cap_before);
+    }
+
+    #[test]
+    fn quantize_rgb_modes() {
+        let (r, g, b) = quantize_rgb(255, 128, 64, 4);
+        assert_eq!(r, 255);
+        assert_eq!(g, 136); // nearest 4-bit step
+        assert_eq!(b, 68);
+
+        let (r8, g8, b8) = quantize_rgb(255, 128, 64, 8);
+        assert_eq!(r8, 255);
+        assert!(g8 > 100);
+        assert!(b8 > 0);
+
+        let (r16, g16, b16) = quantize_rgb(255, 128, 64, 16);
+        assert_eq!(r16, 255);
+        assert!(g16 > 120);
+        assert!(b16 > 0);
+
+        let (r0, g0, b0) = quantize_rgb(255, 128, 64, 0);
+        assert_eq!((r0, g0, b0), (255, 128, 64));
+    }
+
+    #[test]
+    fn subcell_braille_canvas_rasterization() {
+        let mut canvas = SubCellCanvas::new(2, 2, SubCellMode::Braille2x4);
+        assert_eq!(canvas.pixel_dimensions(), (4, 8));
+
+        // Dot 1 at (0, 0)
+        canvas.set_pixel(0, 0, Color::rgb(255, 0, 0));
+        let mut fb = FrameBuffer::new(2, 2);
+        canvas.render_to_framebuffer(&mut fb, None);
+
+        // Dot 1 corresponds to '\u{2801}' (⠁)
+        let cell = fb.get_back(0, 0);
+        assert_eq!(cell.ch, '\u{2801}');
+        assert_eq!(cell.fg, Color::rgb(255, 0, 0));
+    }
+
+    #[test]
+    fn subcell_halfblock_canvas_rasterization() {
+        let mut canvas = SubCellCanvas::new(2, 2, SubCellMode::HalfBlock1x2);
+        assert_eq!(canvas.pixel_dimensions(), (2, 4));
+
+        // Top pixel only at (0, 0)
+        canvas.set_pixel(0, 0, Color::rgb(0, 255, 0));
+        let mut fb = FrameBuffer::new(2, 2);
+        canvas.render_to_framebuffer(&mut fb, None);
+
+        let cell = fb.get_back(0, 0);
+        assert_eq!(cell.ch, '▀');
+        assert_eq!(cell.fg, Color::rgb(0, 255, 0));
+        assert_eq!(cell.bg, Color::TRANSPARENT);
     }
 }

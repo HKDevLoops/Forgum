@@ -97,21 +97,171 @@ pub const MAX_FRAME_TIME: f64 = 0.25; // Spiral-of-death clamp
 pub const SPIN_WINDOW: Duration = Duration::from_micros(1500); // 1.5ms spin-wait margin
 
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub struct KinematicSnapshot {
+pub struct SimSnapshot {
     pub x: f64,
     pub y: f64,
-    pub stride_phase: f64,
-    pub rig_phase: f64,
+    pub stride_phase: f64, // normalized [0.0, 1.0)
+    pub rig_phase: f64,    // angle [0.0, 2π)
 }
 
-impl KinematicSnapshot {
+impl SimSnapshot {
     #[must_use]
     pub fn interpolate(prev: Self, curr: Self, alpha: f64) -> Self {
+        let alpha = alpha.clamp(0.0, 1.0);
+
+        // Circular shortest-arc interpolation for stride_phase in [0.0, 1.0)
+        let mut diff_stride = curr.stride_phase - prev.stride_phase;
+        if diff_stride > 0.5 {
+            diff_stride -= 1.0;
+        } else if diff_stride < -0.5 {
+            diff_stride += 1.0;
+        }
+        let interp_stride = (prev.stride_phase + diff_stride * alpha).rem_euclid(1.0);
+
+        // Circular shortest-arc interpolation for rig_phase in [0.0, 2π)
+        use std::f64::consts::TAU;
+        let mut diff_rig = curr.rig_phase - prev.rig_phase;
+        while diff_rig > std::f64::consts::PI {
+            diff_rig -= TAU;
+        }
+        while diff_rig < -std::f64::consts::PI {
+            diff_rig += TAU;
+        }
+        let interp_rig = (prev.rig_phase + diff_rig * alpha).rem_euclid(TAU);
+
         Self {
             x: prev.x + (curr.x - prev.x) * alpha,
             y: prev.y + (curr.y - prev.y) * alpha,
-            stride_phase: prev.stride_phase + (curr.stride_phase - prev.stride_phase) * alpha,
-            rig_phase: prev.rig_phase + (curr.rig_phase - prev.rig_phase) * alpha,
+            stride_phase: interp_stride,
+            rig_phase: interp_rig,
+        }
+    }
+}
+
+pub type KinematicSnapshot = SimSnapshot;
+
+/// Authoritative simulation timeline tracking continuous float time (f64) and frame telemetry.
+#[derive(Debug, Clone)]
+pub struct AuthoritativeTimeline {
+    pub sim_time: f64,
+    pub real_time_start: Instant,
+    pub last_tick_instant: Instant,
+    pub total_sim_frames: u64,
+    pub total_render_frames: u64,
+}
+
+impl AuthoritativeTimeline {
+    #[must_use]
+    pub fn new() -> Self {
+        let now = Instant::now();
+        Self {
+            sim_time: 0.0,
+            real_time_start: now,
+            last_tick_instant: now,
+            total_sim_frames: 0,
+            total_render_frames: 0,
+        }
+    }
+
+    pub fn advance_sim(&mut self, dt: f64) {
+        self.sim_time += dt;
+        self.total_sim_frames = self.total_sim_frames.saturating_add(1);
+    }
+}
+
+impl Default for AuthoritativeTimeline {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// Pre-allocated reusable slot for zero-allocation frame handoff between SIM and RENDER threads.
+#[derive(Debug, Clone)]
+pub struct FrameBufferSlot {
+    pub cells: Vec<Cell>,
+    pub damage: Vec<(usize, usize)>,
+    pub cols: usize,
+    pub rows: usize,
+    pub full_redraw: bool,
+    pub frame_id: u64,
+    pub sim_time: f64,
+}
+
+impl FrameBufferSlot {
+    #[must_use]
+    pub fn new(cols: usize, rows: usize) -> Self {
+        let sz = cols * rows;
+        Self {
+            cells: vec![Cell::empty(); sz],
+            damage: Vec::with_capacity(sz),
+            cols,
+            rows,
+            full_redraw: true,
+            frame_id: 0,
+            sim_time: 0.0,
+        }
+    }
+
+    pub fn resize(&mut self, cols: usize, rows: usize) {
+        if self.cols != cols || self.rows != rows {
+            self.cols = cols;
+            self.rows = rows;
+            let sz = cols * rows;
+            self.cells.clear();
+            self.cells.resize(sz, Cell::empty());
+            self.damage.clear();
+            self.damage.reserve(sz);
+            self.full_redraw = true;
+        }
+    }
+}
+
+/// Zero-allocation triple-buffered frame handoff pool with stale frame dropping.
+#[derive(Debug)]
+pub struct LatestFrameHandoff {
+    pub frame_tx: Sender<Box<FrameBufferSlot>>,
+    pub frame_rx: Receiver<Box<FrameBufferSlot>>,
+    pub recycle_tx: Sender<Box<FrameBufferSlot>>,
+    pub recycle_rx: Receiver<Box<FrameBufferSlot>>,
+    pub dropped_frames: Arc<AtomicU64>,
+}
+
+impl LatestFrameHandoff {
+    #[must_use]
+    pub fn new(cols: usize, rows: usize) -> Self {
+        let (frame_tx, frame_rx) = bounded::<Box<FrameBufferSlot>>(1);
+        let (recycle_tx, recycle_rx) = bounded::<Box<FrameBufferSlot>>(3);
+
+        // Pre-allocate 2 recycling slots (3rd slot is held by SIM during initial frame build)
+        let _ = recycle_tx.send(Box::new(FrameBufferSlot::new(cols, rows)));
+        let _ = recycle_tx.send(Box::new(FrameBufferSlot::new(cols, rows)));
+
+        Self {
+            frame_tx,
+            frame_rx,
+            recycle_tx,
+            recycle_rx,
+            dropped_frames: Arc::new(AtomicU64::new(0)),
+        }
+    }
+
+    /// Acquire a pre-allocated recycled slot with zero heap allocation.
+    pub fn acquire_slot(&self, cols: usize, rows: usize) -> Box<FrameBufferSlot> {
+        if let Ok(mut slot) = self.recycle_rx.try_recv() {
+            slot.resize(cols, rows);
+            slot
+        } else {
+            Box::new(FrameBufferSlot::new(cols, rows))
+        }
+    }
+
+    pub fn publish(&self, slot: Box<FrameBufferSlot>) {
+        if let Err(crossbeam_channel::TrySendError::Full(slot)) = self.frame_tx.try_send(slot) {
+            if let Ok(stale) = self.frame_rx.try_recv() {
+                self.dropped_frames.fetch_add(1, Ordering::Relaxed);
+                let _ = self.recycle_tx.try_send(stale);
+            }
+            let _ = self.frame_tx.try_send(slot);
         }
     }
 }
@@ -324,8 +474,8 @@ impl SimState {
         self.effect.update(dt_f32, self.fb.width, self.fb.height);
     }
 
-    /// Render simulation snapshot at current elapsed clock into front buffer to ship to RENDER.
-    pub fn tick_render(&mut self, alpha: f32, elapsed_secs: f32) -> Arc<Frame> {
+    /// Render simulation snapshot at current elapsed clock into a pre-allocated FrameBufferSlot.
+    pub fn tick_render_slot(&mut self, alpha: f32, elapsed_secs: f32, slot: &mut FrameBufferSlot) {
         // Phase 1.6: O(1) mass-dealloc of last frame's scratch.
         self.arena.reset();
 
@@ -449,6 +599,11 @@ impl SimState {
             self.fb.apply_colorblind_filter(global_mode);
         }
 
+        // Apply color quantization to coalesce ANSI escapes if configured
+        if let Some(quant_bits) = self.config.color_quant {
+            self.fb.quantize_colors(quant_bits);
+        }
+
         // Compute damage against the previous front buffer (BEFORE swap clears it).
         // compute_full_damage_into() includes both newly modified cells and cells vacated/cleared
         // from the previous frame, ensuring AnsiRenderer writes spaces to erase them with zero ghost residue.
@@ -478,15 +633,28 @@ impl SimState {
         self.frame_count = self.frame_count.saturating_add(1);
         FRAME_COUNT.fetch_add(1, Ordering::Relaxed);
 
-        // Clone front for the render thread. Front must stay intact so the
-        // next tick's compute_damage() compares against the last rendered
-        // frame, preserving incremental damage tracking.
+        // Populate reusable slot with zero heap allocations
+        slot.resize(self.fb.width, self.fb.height);
+        slot.cells.copy_from_slice(&self.fb.front);
+        slot.damage.clear();
+        slot.damage.extend_from_slice(&self.damage_scratch);
+        slot.cols = self.fb.width;
+        slot.rows = self.fb.height;
+        slot.full_redraw = full_redraw;
+        slot.frame_id = self.frame_count;
+        slot.sim_time = self.elapsed as f64;
+    }
+
+    /// Render simulation snapshot at current elapsed clock into front buffer to ship to RENDER.
+    pub fn tick_render(&mut self, alpha: f32, elapsed_secs: f32) -> Arc<Frame> {
+        let mut slot = FrameBufferSlot::new(self.fb.width, self.fb.height);
+        self.tick_render_slot(alpha, elapsed_secs, &mut slot);
         Arc::new(Frame {
-            cells: self.fb.front.clone(),
-            damage: self.damage_scratch.clone(),
-            cols: self.fb.width,
-            rows: self.fb.height,
-            full_redraw,
+            cells: slot.cells,
+            damage: slot.damage,
+            cols: slot.cols,
+            rows: slot.rows,
+            full_redraw: slot.full_redraw,
         })
     }
 
@@ -764,7 +932,7 @@ impl SimState {
 fn sim_thread(
     mut sim: SimState,
     control_rx: Receiver<ControlMsg>,
-    frame_tx: Sender<Arc<Frame>>,
+    handoff: Arc<LatestFrameHandoff>,
     shutdown: ShutdownFlag,
     max_frames: u64,
 ) {
@@ -903,17 +1071,12 @@ fn sim_thread(
             sim.tick_physics(dt as f32 * user_speed);
         });
 
-        // Frame snapshot generation with sub-pixel interpolation clock
-        let frame = sim.tick_render(alpha as f32, elapsed_secs as f32);
+        // Frame snapshot generation with zero heap allocations using recycled slot
+        let mut slot = handoff.acquire_slot(sim.fb.width, sim.fb.height);
+        sim.tick_render_slot(alpha as f32, elapsed_secs as f32, &mut slot);
 
-        // Send to render thread with bounded backpressure so zero frames are dropped.
-        if frame_tx.send(frame).is_err() {
-            crate::log_warn!(
-                "engine",
-                "SIM thread: render thread dropped receiver, exiting"
-            );
-            break;
-        }
+        // Publish to render thread with stale frame dropping and zero heap allocations
+        handoff.publish(slot);
 
         // Precision frame pacing: hybrid sleep + microsecond spin window
         governor.pace_frame(&shutdown);
@@ -1008,47 +1171,54 @@ impl RenderState {
         }
     }
 
-    /// Render a frame received from the SIM thread.
-    fn render_frame(&mut self, frame: &Arc<Frame>) -> Result<(), Box<dyn std::error::Error>> {
+    /// Render frame parts (cells and damage) to the terminal output.
+    fn render_parts(
+        &mut self,
+        cells: &[Cell],
+        damage: &[(usize, usize)],
+        cols: usize,
+        rows: usize,
+        full_redraw: bool,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         if let Some(ref mut guard) = self.guard {
             if !guard.should_render(&mut self.out) {
                 return Ok(());
             }
         }
 
-        let dims_changed = self.cols != frame.cols || self.rows != frame.rows;
-        let expected = frame.cols * frame.rows;
+        let dims_changed = self.cols != cols || self.rows != rows;
+        let expected = cols * rows;
         if self.front.len() != expected || dims_changed {
             self.front.resize(expected, Cell::default());
-            self.cols = frame.cols;
-            self.rows = frame.rows;
+            self.cols = cols;
+            self.rows = rows;
         }
 
         if dims_changed && self.is_overlay && self.split_scroll {
             let total_rows = forgum_platform::terminal_size().1 as usize;
             self._total_rows = total_rows;
-            if total_rows > frame.rows + 2 {
-                let scroll_top = (frame.rows + 2).min(total_rows);
+            if total_rows > rows + 2 {
+                let scroll_top = (rows + 2).min(total_rows);
                 let _ = self.out.write_all(
                     format!("\x1b7\x1b[?6l\x1b[{scroll_top};{total_rows}r\x1b8").as_bytes(),
                 );
                 if let Some(ref mut guard) = self.guard {
-                    guard.update_dimensions(scroll_top, total_rows, frame.rows);
+                    guard.update_dimensions(scroll_top, total_rows, rows);
                 }
             }
-            if self.overlay_rows > frame.rows {
-                for y in (frame.rows + 1)..=self.overlay_rows {
+            if self.overlay_rows > rows {
+                for y in (rows + 1)..=self.overlay_rows {
                     let _ = self
                         .out
                         .write_all(format!("\x1b7\x1b[{y};1H\x1b[2K\x1b8").as_bytes());
                 }
             }
-            self.overlay_rows = frame.rows;
+            self.overlay_rows = rows;
             let _ = self.out.flush();
         }
 
         if dims_changed && self.is_banner {
-            let max_r = self.banner_rows.max(frame.rows);
+            let max_r = self.banner_rows.max(rows);
             for y in 0..max_r {
                 let _ = self.out.write_all(b"\x1b8");
                 if y > 0 {
@@ -1057,54 +1227,71 @@ impl RenderState {
                 let _ = self.out.write_all(b"\x1b[2K");
             }
             let _ = self.out.write_all(b"\x1b8");
-            self.banner_rows = frame.rows;
+            self.banner_rows = rows;
             let _ = self.out.flush();
         }
 
-        if (frame.full_redraw || dims_changed) && !self.is_banner && !self.is_overlay {
+        if (full_redraw || dims_changed) && !self.is_banner && !self.is_overlay {
             let _ = self.out.write_all(b"\x1b[2J\x1b[H");
         }
 
         let just_resumed = self.guard.as_mut().is_some_and(|g| g.take_just_resumed());
         let full_damage: Vec<(usize, usize)>;
-        let damage = if just_resumed {
-            full_damage = (0..frame.cols)
-                .flat_map(|x| (0..frame.rows).map(move |y| (x, y)))
+        let active_damage = if just_resumed {
+            full_damage = (0..cols)
+                .flat_map(|x| (0..rows).map(move |y| (x, y)))
                 .collect();
             &full_damage[..]
         } else {
-            &frame.damage[..]
+            damage
         };
 
-        if !damage.is_empty() {
+        if !active_damage.is_empty() {
             let sync = forgum_platform::detect_sync_support();
             if sync {
                 let _ = self.out.write_all(b"\x1b[?2026h");
             }
             self.renderer
-                .render_damage(&mut self.out, &frame.cells, frame.cols, damage)?;
+                .render_damage(&mut self.out, cells, cols, active_damage)?;
             if sync {
                 let _ = self.out.write_all(b"\x1b[?2026l");
             }
             let _ = self.out.flush();
         }
 
-        // Update front buffer by swapping in the frame's cells.
-        if self.front.len() == frame.cells.len() {
-            self.front.clone_from_slice(&frame.cells);
+        // Update front buffer by copying in the frame's cells.
+        if self.front.len() == cells.len() {
+            self.front.clone_from_slice(cells);
         }
 
         Ok(())
     }
+
+    /// Render a frame received from the SIM thread (legacy compatibility).
+    #[allow(dead_code)]
+    fn render_frame(&mut self, frame: &Arc<Frame>) -> Result<(), Box<dyn std::error::Error>> {
+        self.render_parts(&frame.cells, &frame.damage, frame.cols, frame.rows, frame.full_redraw)
+    }
+
+    /// Render a recycled slot received from the SIM thread.
+    fn render_slot(&mut self, slot: &FrameBufferSlot) -> Result<(), Box<dyn std::error::Error>> {
+        self.render_parts(&slot.cells, &slot.damage, slot.cols, slot.rows, slot.full_redraw)
+    }
 }
 
 /// The RENDER thread entry point.
-fn render_thread(mut state: RenderState, frame_rx: Receiver<Arc<Frame>>, shutdown: ShutdownFlag) {
+fn render_thread(
+    mut state: RenderState,
+    handoff: Arc<LatestFrameHandoff>,
+    shutdown: ShutdownFlag,
+) {
     while !shutdown.is_shutdown() {
-        match frame_rx.recv_timeout(Duration::from_millis(50)) {
-            Ok(frame) => {
-                if let Err(e) = state.render_frame(&frame) {
-                    crate::log_error!("engine", "RENDER thread error in render_frame: {}", e);
+        match handoff.frame_rx.recv_timeout(Duration::from_millis(50)) {
+            Ok(slot) => {
+                let res = state.render_slot(&slot);
+                let _ = handoff.recycle_tx.try_send(slot);
+                if let Err(e) = res {
+                    crate::log_error!("engine", "RENDER thread error in render_slot: {}", e);
                     eprintln!("forgum: render error: {e}");
                     break;
                 }
@@ -1192,9 +1379,9 @@ pub fn run_engine(
 
     let active_composed = Arc::new(std::sync::RwLock::new(initial_text));
 
-    // Create channels.
+    // Create channels and zero-allocation frame recycle pool.
     let (control_tx, control_rx) = unbounded::<ControlMsg>();
-    let (frame_tx, frame_rx) = bounded::<Arc<Frame>>(2);
+    let handoff = Arc::new(LatestFrameHandoff::new(cols, rows));
 
     // Create SIM state.
     let sim = SimState::new(
@@ -1243,17 +1430,21 @@ pub fn run_engine(
     // Spawn SIM and RENDER threads.
     let sim_shutdown = shutdown.clone();
     let render_shutdown = shutdown.clone();
+    let sim_handoff = handoff.clone();
+    let render_handoff = handoff.clone();
+    let sim_start = Instant::now();
+    let start_frames = FRAME_COUNT.load(Ordering::Relaxed);
 
     let sim_handle = std::thread::Builder::new()
         .name("sim".into())
         .spawn(move || {
-            sim_thread(sim, control_rx, frame_tx, sim_shutdown, max_frames);
+            sim_thread(sim, control_rx, sim_handoff, sim_shutdown, max_frames);
         })?;
 
     let render_handle = std::thread::Builder::new()
         .name("render".into())
         .spawn(move || {
-            render_thread(render_state, frame_rx, render_shutdown);
+            render_thread(render_state, render_handoff, render_shutdown);
         })?;
 
     // CONTROL thread (main thread): wait for shutdown signal.
@@ -1337,6 +1528,21 @@ pub fn run_engine(
     let _ = sim_handle.join();
     let _ = render_handle.join();
 
+    if config.profile {
+        let total_time = sim_start.elapsed().as_secs_f64();
+        let rendered_frames = FRAME_COUNT.load(Ordering::Relaxed).saturating_sub(start_frames);
+        let dropped = handoff.dropped_frames.load(Ordering::Relaxed);
+        let avg_fps = if total_time > 0.0 {
+            rendered_frames as f64 / total_time
+        } else {
+            0.0
+        };
+        eprintln!(
+            "[forgum::profile] Total time: {:.3}s | Rendered frames: {} | Avg FPS: {:.1} | Dropped frames: {}",
+            total_time, rendered_frames, avg_fps, dropped
+        );
+    }
+
     let final_text = active_composed
         .read()
         .map(|t| t.clone())
@@ -1378,7 +1584,7 @@ pub fn run_engine_banner(
     }
 
     let (control_tx, control_rx) = unbounded::<ControlMsg>();
-    let (frame_tx, frame_rx) = bounded::<Arc<Frame>>(2);
+    let handoff = Arc::new(LatestFrameHandoff::new(cols, rows));
 
     let active_composed = Arc::new(std::sync::RwLock::new(String::new()));
     let sim = SimState::new(
@@ -1424,17 +1630,21 @@ pub fn run_engine_banner(
 
     let sim_shutdown = shutdown.clone();
     let render_shutdown = shutdown.clone();
+    let sim_handoff = handoff.clone();
+    let render_handoff = handoff.clone();
+    let sim_start = Instant::now();
+    let start_frames = FRAME_COUNT.load(Ordering::Relaxed);
 
     let sim_handle = std::thread::Builder::new()
         .name("sim".into())
         .spawn(move || {
-            sim_thread(sim, control_rx, frame_tx, sim_shutdown, max_frames);
+            sim_thread(sim, control_rx, sim_handoff, sim_shutdown, max_frames);
         })?;
 
     let render_handle = std::thread::Builder::new()
         .name("render".into())
         .spawn(move || {
-            render_thread(render_state, frame_rx, render_shutdown);
+            render_thread(render_state, render_handoff, render_shutdown);
         })?;
 
     // In banner mode, strictly no tty reads — wait for frames or signal
@@ -1467,6 +1677,21 @@ pub fn run_engine_banner(
 
     let _ = sim_handle.join();
     let _ = render_handle.join();
+
+    if config.profile {
+        let total_time = sim_start.elapsed().as_secs_f64();
+        let rendered_frames = FRAME_COUNT.load(Ordering::Relaxed).saturating_sub(start_frames);
+        let dropped = handoff.dropped_frames.load(Ordering::Relaxed);
+        let avg_fps = if total_time > 0.0 {
+            rendered_frames as f64 / total_time
+        } else {
+            0.0
+        };
+        eprintln!(
+            "[forgum::profile] Total time: {:.3}s | Rendered frames: {} | Avg FPS: {:.1} | Dropped frames: {}",
+            total_time, rendered_frames, avg_fps, dropped
+        );
+    }
 
     Ok(())
 }
@@ -1510,7 +1735,7 @@ pub fn run_engine_overlay(
     // Only lock scroll margins if enabled AND the terminal emulator supports DECSTBM
     let can_split_scroll = config.split_scroll && caps.emulator.supports_decstbm();
     if can_split_scroll && total_rows > rows + 2 {
-        let scroll_top = rows + 1;
+        let scroll_top = (rows + 2).min(total_rows);
         let _ = out.write_all(
             format!("\x1b[?6l\x1b[{scroll_top};{total_rows}r\x1b[{scroll_top};1H").as_bytes(),
         );
@@ -1530,7 +1755,7 @@ pub fn run_engine_overlay(
     );
 
     let (control_tx, control_rx) = unbounded::<ControlMsg>();
-    let (frame_tx, frame_rx) = bounded::<Arc<Frame>>(2);
+    let handoff = Arc::new(LatestFrameHandoff::new(cols, rows));
 
     let active_composed = Arc::new(std::sync::RwLock::new(String::new()));
     let sim = SimState::new(
@@ -1577,17 +1802,21 @@ pub fn run_engine_overlay(
 
     let sim_shutdown = shutdown.clone();
     let render_shutdown = shutdown.clone();
+    let sim_handoff = handoff.clone();
+    let render_handoff = handoff.clone();
+    let sim_start = Instant::now();
+    let start_frames = FRAME_COUNT.load(Ordering::Relaxed);
 
     let sim_handle = std::thread::Builder::new()
         .name("sim".into())
         .spawn(move || {
-            sim_thread(sim, control_rx, frame_tx, sim_shutdown, max_frames);
+            sim_thread(sim, control_rx, sim_handoff, sim_shutdown, max_frames);
         })?;
 
     let render_handle = std::thread::Builder::new()
         .name("render".into())
         .spawn(move || {
-            render_thread(render_state, frame_rx, render_shutdown);
+            render_thread(render_state, render_handoff, render_shutdown);
         })?;
 
     // In overlay mode, never touch or intercept stdin. Stdin belongs entirely to the active shell.
@@ -1654,6 +1883,21 @@ pub fn run_engine_overlay(
 
     let _ = sim_handle.join();
     let _ = render_handle.join();
+
+    if config.profile {
+        let total_time = sim_start.elapsed().as_secs_f64();
+        let rendered_frames = FRAME_COUNT.load(Ordering::Relaxed).saturating_sub(start_frames);
+        let dropped = handoff.dropped_frames.load(Ordering::Relaxed);
+        let avg_fps = if total_time > 0.0 {
+            rendered_frames as f64 / total_time
+        } else {
+            0.0
+        };
+        eprintln!(
+            "[forgum::profile] Total time: {:.3}s | Rendered frames: {} | Avg FPS: {:.1} | Dropped frames: {}",
+            total_time, rendered_frames, avg_fps, dropped
+        );
+    }
 
     Ok(())
 }

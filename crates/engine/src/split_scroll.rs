@@ -219,6 +219,16 @@ impl SplitOverlayGuard {
     }
 }
 
+impl Drop for SplitOverlayGuard {
+    fn drop(&mut self) {
+        // Unconditionally reset DECSTBM scroll margins, origin mode, and DECSLRM on drop
+        // ensuring margins are restored even if the thread panics or terminates abruptly.
+        let mut stdout = std::io::stdout();
+        let _ = stdout.write_all(b"\x1b[r\x1b[?6l\x1b[?69l\x1b[0m\x1b[?25h");
+        let _ = stdout.flush();
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

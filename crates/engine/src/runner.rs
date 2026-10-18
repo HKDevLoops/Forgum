@@ -1918,7 +1918,7 @@ fn run_inner() -> ExitCode {
                     &data,
                     eyes,
                     tongue,
-                    if args.think { "o" } else { "\\\\" },
+                    if args.think { " " } else { "\\\\" },
                 );
                 let output = if args.think {
                     cow::compose_thought_scene(&cow_text, &speech_text)
