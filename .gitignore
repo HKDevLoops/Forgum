@@ -98,6 +98,8 @@ plans/
 *.draft.*
 drafts/
 audit/
+!/docs/audit/
+!/docs/audit/**
 audits/
 reports/
 todos/

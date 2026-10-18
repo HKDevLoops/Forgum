@@ -104,10 +104,17 @@ pub fn probe_neural_hardware() -> NeuralHardwareReport {
 
     // 3. Apple Silicon Metal / ANE probe on macOS
     #[cfg(target_os = "macos")]
-    {
+    if let Some(gpu) = gpus.iter().find(|d| {
+        d.device_type == crate::gpu::GpuDeviceType::Dedicated
+            || d.device_type == crate::gpu::GpuDeviceType::Integrated
+    }) {
         return NeuralHardwareReport {
             backend: NeuralBackend::CoreMlAne,
-            device_name: "Apple Silicon ANE".to_string(),
+            device_name: if gpu.name.is_empty() {
+                "Apple Silicon ANE".to_string()
+            } else {
+                gpu.name.clone()
+            },
             is_npu: true,
             max_batch_tokens: 512,
             estimated_tokens_per_sec: 60.0,
