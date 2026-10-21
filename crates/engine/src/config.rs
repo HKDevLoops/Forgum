@@ -209,6 +209,7 @@ pub fn merge(base: SceneConfig, overlay: SceneConfig) -> SceneConfig {
         profile: overlay.profile || base.profile,
         render_mode: overlay.render_mode.or(base.render_mode),
         color_quant: overlay.color_quant.or(base.color_quant),
+        telemetry: overlay.telemetry,
     }
 }
 
@@ -296,6 +297,7 @@ pub fn get_config_value(config: &SceneConfig, key: &str) -> Result<String, Strin
             .color_quant
             .map(|q| q.to_string())
             .unwrap_or_else(|| "0".to_string())),
+        "telemetry" | "allow-telemetry" | "telemetry-enabled" => Ok(config.telemetry.to_string()),
         other => {
             let keys = supported_config_keys();
             let key_names: Vec<&str> = keys.iter().map(|(k, _)| *k).collect();
@@ -728,6 +730,20 @@ pub fn set_config_value(config: &mut SceneConfig, key: &str, value: &str) -> Res
                 return Err(format!("❌ Error: Invalid color quantization '{q}' for '{key}'. Valid values are 0 (disabled), 4, 8, 16."));
             }
             config.color_quant = if q == 0 { None } else { Some(q) };
+        }
+        "telemetry" | "allow-telemetry" | "telemetry-enabled" => {
+            config.telemetry = val_trimmed.parse::<bool>().map_err(|_| {
+                let bool_choices = &[
+                    ("true", "Allow anonymous telemetry"),
+                    ("false", "Decline anonymous telemetry"),
+                ];
+                crate::completions::format_invalid_config_value_error(
+                    key,
+                    val_trimmed,
+                    None,
+                    bool_choices,
+                )
+            })?;
         }
         other => {
             let keys = supported_config_keys();

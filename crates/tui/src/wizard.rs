@@ -196,18 +196,15 @@ impl InstallerWizard {
                 KeyCode::Char('y') | KeyCode::Char('Y') => {
                     self.telemetry_selection = true;
                     self.telemetry_allowed = true;
-                    let _ = set_telemetry_consent(true);
                     self.step = InstallStep::ShellSelection;
                 }
                 KeyCode::Char('n') | KeyCode::Char('N') => {
                     self.telemetry_selection = false;
                     self.telemetry_allowed = false;
-                    let _ = set_telemetry_consent(false);
                     self.step = InstallStep::ShellSelection;
                 }
                 KeyCode::Enter | KeyCode::Char(' ') => {
                     self.telemetry_allowed = self.telemetry_selection;
-                    let _ = set_telemetry_consent(self.telemetry_selection);
                     self.step = InstallStep::ShellSelection;
                 }
                 KeyCode::Esc => self.step = InstallStep::Preflight,
@@ -300,7 +297,22 @@ impl InstallerWizard {
                 if let Some(parent) = comp_path.parent() {
                     let _ = std::fs::create_dir_all(parent);
                 }
-                let script = get_shell_completion_content(sh);
+                let script = match std::env::current_exe() {
+                    Ok(exe) => {
+                        let out = std::process::Command::new(exe)
+                            .args(["completions", &sh.to_string()])
+                            .output();
+                        match out {
+                            Ok(o) if o.status.success() && !o.stdout.is_empty() => {
+                                String::from_utf8(o.stdout).unwrap_or_else(|_| {
+                                    get_shell_completion_content(sh).to_string()
+                                })
+                            }
+                            _ => get_shell_completion_content(sh).to_string(),
+                        }
+                    }
+                    Err(_) => get_shell_completion_content(sh).to_string(),
+                };
                 if std::fs::write(&comp_path, script).is_ok() {
                     self.install_logs
                         .push(format!("✓ Installed completions for {sh}"));
@@ -320,8 +332,17 @@ impl InstallerWizard {
                     Shell::Bash => "eval \"$(forgum init bash)\"",
                     Shell::Zsh => "eval \"$(forgum init zsh)\"",
                     Shell::Fish => "forgum init fish | source",
-                    Shell::Pwsh | Shell::PowerShell => "Invoke-Expression (&forgum init pwsh)",
-                    Shell::Nushell => "forgum init nu",
+                    Shell::Pwsh => "Invoke-Expression (&forgum init pwsh)",
+                    Shell::PowerShell => "Invoke-Expression (&forgum init powershell)",
+                    Shell::Nushell => "forgum init nu | save -f ~/.config/forgum/init.nu\nsource ~/.config/forgum/init.nu",
+                    Shell::Elvish => "eval (forgum init elvish)",
+                    Shell::Xonsh => "exec($(forgum init xonsh))",
+                    Shell::Tcsh => "eval `forgum init tcsh`",
+                    Shell::Ksh => "eval \"$(forgum init ksh)\"",
+                    Shell::Ion => "eval $(forgum init ion)",
+                    Shell::Oil => "eval \"$(forgum init oil)\"",
+                    Shell::Yash => "eval \"$(forgum init yash)\"",
+                    Shell::Cmd => "call forgum init cmd",
                     _ => "forgum init",
                 };
 
@@ -346,6 +367,7 @@ impl InstallerWizard {
         self.progress = 80;
 
         // 3. Telemetry consent registration
+        let _ = set_telemetry_consent(self.telemetry_allowed);
         if self.telemetry_allowed {
             record_installed();
             self.install_logs.push(

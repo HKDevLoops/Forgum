@@ -16,12 +16,14 @@ struct FailureState {
 }
 
 fn streak_file_path() -> PathBuf {
+    let sess = forgum_platform::detect_session_id();
+    let filename = format!("failure_streak_{sess}.json");
     if let Ok(rt) = forgum_platform::runtime_dir() {
-        rt.join("failure_streak.json")
+        rt.join(&filename)
     } else if let Ok(cfg) = forgum_platform::config_dir() {
-        cfg.join(".failure_streak.json")
+        cfg.join(format!(".{filename}"))
     } else {
-        PathBuf::from(".forgum_failure_streak.json")
+        PathBuf::from(format!(".forgum_{filename}"))
     }
 }
 

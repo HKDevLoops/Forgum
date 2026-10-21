@@ -83,6 +83,24 @@ impl Drop for TuiTerminalGuard {
     }
 }
 
+/// Write a configuration file atomically using a temporary file and rename.
+fn atomic_write_config(target_path: &Path, content: &str) -> anyhow::Result<()> {
+    if let Some(parent) = target_path.parent() {
+        let _ = fs::create_dir_all(parent);
+    }
+    let tmp_path = target_path.with_extension(format!("tmp.{}", std::process::id()));
+    fs::write(&tmp_path, content)
+        .with_context(|| format!("write temp file {}", tmp_path.display()))?;
+    fs::rename(&tmp_path, target_path).with_context(|| {
+        format!(
+            "atomic rename {} -> {}",
+            tmp_path.display(),
+            target_path.display()
+        )
+    })?;
+    Ok(())
+}
+
 /// Run the interactive TUI associated with a config path (backward compatibility).
 ///
 /// NOTE: Even if `config_path` does not exist on disk, this DOES NOT fail. It
@@ -242,9 +260,8 @@ pub fn run_tui(
                                 }
                             };
 
-                            // Write new configuration file first
-                            fs::write(&target_path, text)
-                                .with_context(|| format!("write {}", target_path.display()))?;
+                            // Write new configuration file atomically
+                            atomic_write_config(&target_path, &text)?;
 
                             // Remove conflicting alternate format configs in the directory to satisfy mutual exclusivity
                             if let Some(target_dir) = target_path.parent() {
@@ -299,8 +316,8 @@ pub fn run_tui(
                                 }
                             };
 
-                            fs::write(&target_path, text)
-                                .with_context(|| format!("write {}", target_path.display()))?;
+                            // Write new configuration file atomically
+                            atomic_write_config(&target_path, &text)?;
 
                             // Remove conflicting alternate format configs in the directory to satisfy mutual exclusivity
                             if let Some(target_dir) = target_path.parent() {
@@ -406,7 +423,7 @@ pub fn run_tui(
 
                             #[cfg(windows)]
                             {
-                                if command_exists("code") {
+                                if forgum_platform::editor::command_exists("code") {
                                     let _ = std::process::Command::new("code.cmd")
                                         .arg(&target_path)
                                         .spawn();
@@ -511,152 +528,14 @@ fn detect_terminal_editor(configured: Option<&str>) -> Option<String> {
         let trimmed = custom.trim();
         if !trimmed.is_empty() && !trimmed.eq_ignore_ascii_case("auto") {
             let prog = trimmed.split_whitespace().next().unwrap_or(trimmed);
-            if command_exists(prog) {
-                return Some(trimmed.to_string());
+            if let Some(p) = forgum_platform::find_editor_binary(prog) {
+                return Some(p.display().to_string());
             }
         }
     }
 
-    if let Ok(vis) = std::env::var("VISUAL") {
-        let trimmed = vis.trim();
-        if !trimmed.is_empty() {
-            let prog = trimmed.split_whitespace().next().unwrap_or(trimmed);
-            if command_exists(prog) {
-                return Some(trimmed.to_string());
-            }
-        }
-    }
-
-    if let Ok(ed) = std::env::var("EDITOR") {
-        let trimmed = ed.trim();
-        if !trimmed.is_empty() {
-            let prog = trimmed.split_whitespace().next().unwrap_or(trimmed);
-            if command_exists(prog) {
-                return Some(trimmed.to_string());
-            }
-        }
-    }
-
-    #[cfg(windows)]
-    {
-        // 1. Neovim (check explicit install paths then PATH)
-        let nvim_paths = [
-            r"C:\Program Files\Neovim\bin\nvim.exe",
-            r"C:\Program Files (x86)\Neovim\bin\nvim.exe",
-        ];
-        for path in nvim_paths {
-            if std::path::Path::new(path).is_file() {
-                return Some(path.to_string());
-            }
-        }
-        if command_exists("nvim.exe") || command_exists("nvim") {
-            return Some("nvim".to_string());
-        }
-
-        // 2. Vim
-        let vim_paths = [
-            r"C:\Program Files\Vim\vim91\vim.exe",
-            r"C:\Program Files\Vim\vim90\vim.exe",
-            r"C:\Program Files (x86)\Vim\vim91\vim.exe",
-            r"C:\Program Files\Git\usr\bin\vim.exe",
-        ];
-        for path in vim_paths {
-            if std::path::Path::new(path).is_file() {
-                return Some(path.to_string());
-            }
-        }
-        if command_exists("vim.exe") || command_exists("vim") {
-            return Some("vim".to_string());
-        }
-
-        // 3. Nano
-        let nano_paths = [r"C:\Program Files\Git\usr\bin\nano.exe"];
-        for path in nano_paths {
-            if std::path::Path::new(path).is_file() {
-                return Some(path.to_string());
-            }
-        }
-        if command_exists("nano.exe") || command_exists("nano") {
-            return Some("nano".to_string());
-        }
-
-        // 4. Emacs
-        if command_exists("emacs.exe") || command_exists("emacs") {
-            return Some("emacs".to_string());
-        }
-
-        // 5. Micro
-        if command_exists("micro.exe") || command_exists("micro") {
-            return Some("micro".to_string());
-        }
-
-        // 6. Helix
-        if command_exists("helix.exe") || command_exists("helix") {
-            return Some("helix".to_string());
-        }
-        if command_exists("hx.exe") || command_exists("hx") {
-            return Some("hx".to_string());
-        }
-
-        // 7. System / GUI editors fallback
-        if command_exists("code.cmd") || command_exists("code") {
-            return Some("code".to_string());
-        }
-        if command_exists("notepad.exe") || command_exists("notepad") {
-            return Some("notepad".to_string());
-        }
-
-        None
-    }
-
-    #[cfg(not(windows))]
-    {
-        let candidates = [
-            "nvim", "vim", "nano", "emacs", "micro", "helix", "hx", "code", "vi", "ed",
-        ];
-        for name in candidates {
-            if command_exists(name) {
-                return Some(name.to_string());
-            }
-        }
-        None
-    }
-}
-
-/// Check if a binary/command exists in PATH or on disk.
-fn command_exists(cmd: &str) -> bool {
-    let p = std::path::Path::new(cmd);
-    if p.is_file() {
-        return true;
-    }
-
-    #[cfg(windows)]
-    {
-        if let Ok(output) = std::process::Command::new("where.exe").arg(cmd).output() {
-            if output.status.success() {
-                return true;
-            }
-        }
-        let query = if cmd.ends_with(".exe") || cmd.ends_with(".cmd") || cmd.ends_with(".bat") {
-            cmd.to_string()
-        } else {
-            format!("{cmd}.exe")
-        };
-        if let Ok(output) = std::process::Command::new("where.exe").arg(&query).output() {
-            if output.status.success() {
-                return true;
-            }
-        }
-    }
-    #[cfg(not(windows))]
-    {
-        if let Ok(output) = std::process::Command::new("which").arg(cmd).output() {
-            if output.status.success() {
-                return true;
-            }
-        }
-    }
-    false
+    let editors = forgum_platform::detect_installed_editors();
+    editors.first().map(|e| e.path.display().to_string())
 }
 
 /// Broadcast updated configuration parameters to active background daemons via control socket.

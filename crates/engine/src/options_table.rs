@@ -88,13 +88,31 @@ pub fn format_table(headers: &[&str], rows: &[Vec<&str>]) -> String {
     out.push(vt);
     for (i, h) in headers.iter().enumerate() {
         out.push(' ');
+        let w = col_widths[i];
         let display_w = str_display_width(h);
         out.push_str("\x1b[1;36m");
-        out.push_str(h);
-        out.push_str("\x1b[0m");
-        for _ in display_w..col_widths[i] {
-            out.push(' ');
+        if display_w > w {
+            let mut truncated = String::new();
+            let mut tw = 0;
+            for ch in h.chars() {
+                let cw = char_display_width(ch);
+                if tw + cw > w {
+                    break;
+                }
+                truncated.push(ch);
+                tw += cw;
+            }
+            out.push_str(&truncated);
+            for _ in tw..w {
+                out.push(' ');
+            }
+        } else {
+            out.push_str(h);
+            for _ in display_w..w {
+                out.push(' ');
+            }
         }
+        out.push_str("\x1b[0m");
         out.push(' ');
         out.push(vt);
     }

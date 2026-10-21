@@ -41,23 +41,39 @@ pub fn is_telemetry_allowed() -> bool {
     // 1. Check environment variable override
     if let Ok(val) = std::env::var("FORGUM_TELEMETRY") {
         let v = val.trim().to_lowercase();
-        if v == "0" || v == "false" || v == "off" || v == "no" || v == "disable" {
+        if matches!(v.as_str(), "0" | "false" | "off" | "no" | "disable") {
             return false;
         }
-        if v == "1" || v == "true" || v == "on" || v == "yes" {
+        if matches!(v.as_str(), "1" | "true" | "on" | "yes") {
             return true;
         }
     }
 
-    // 2. Check config file if accessible
+    // 2. Check user consent marker (.telemetry_consent)
     if let Ok(cfg_dir) = crate::paths::config_dir() {
-        let cfg_file = cfg_dir.join("config.json");
-        if cfg_file.exists() {
-            if let Ok(content) = std::fs::read_to_string(&cfg_file) {
-                if content.contains("\"telemetry\": false")
-                    || content.contains("\"telemetry\":false")
-                {
+        let consent_file = cfg_dir.join(".telemetry_consent");
+        if consent_file.is_file() {
+            if let Ok(content) = std::fs::read_to_string(&consent_file) {
+                let trimmed = content.trim().to_lowercase();
+                if matches!(trimmed.as_str(), "0" | "false" | "no" | "decline") {
                     return false;
+                }
+                if matches!(trimmed.as_str(), "1" | "true" | "yes" | "allow") {
+                    return true;
+                }
+            }
+        }
+
+        // 3. Check active configuration file across formats (JSON, YAML, TOML)
+        if let Ok((cfg_path, fmt)) = crate::paths::detect_config_file(None) {
+            if cfg_path.is_file() {
+                if let Ok(content) = std::fs::read_to_string(&cfg_path) {
+                    if let Ok(cfg) = crate::protocol::SceneConfig::parse_with_format(&content, fmt)
+                    {
+                        if !cfg.telemetry {
+                            return false;
+                        }
+                    }
                 }
             }
         }
@@ -238,6 +254,19 @@ fn dispatch_counter_hit(metric: Metric) {
 
 /// Ping the counter endpoint using built-in system tools (curl or PowerShell).
 fn execute_ping(url: &str) {
+    // 1. Strict URL validation to prevent command injection
+    if !url.starts_with("https://") && !url.starts_with("http://") {
+        return;
+    }
+    if url.chars().any(|c| {
+        matches!(
+            c,
+            '\'' | '"' | ';' | '`' | '$' | '|' | '&' | '<' | '>' | '\n' | '\r' | ' ' | '\t'
+        )
+    }) {
+        return;
+    }
+
     // Attempt curl first (present on modern Windows 10/11, macOS, and Linux)
     #[cfg(windows)]
     {
@@ -251,15 +280,14 @@ fn execute_ping(url: &str) {
             .output();
 
         if curl_res.is_err() {
-            // Fallback to powershell WebClient with TLS 1.2
-            let ps_script = format!(
-                "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; (New-Object Net.WebClient).DownloadString('{url}')"
-            );
+            // Safe parameter-bound fallback to powershell WebClient with TLS 1.2
+            let ps_script = "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; (New-Object Net.WebClient).DownloadString($args[0])";
             let _ = Command::new("powershell.exe")
                 .arg("-NoProfile")
                 .arg("-NonInteractive")
                 .arg("-Command")
-                .arg(&ps_script)
+                .arg(ps_script)
+                .arg(url)
                 .output();
         }
     }

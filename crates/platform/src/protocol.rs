@@ -221,6 +221,14 @@ pub struct SceneConfig {
     /// Color quantization bits for ANSI run coalescing: 0 (disabled), 4, 8, 16.
     #[serde(default)]
     pub color_quant: Option<u8>,
+
+    /// Motivation telemetry consent: true = allowed, false = disabled.
+    #[serde(
+        default = "default_telemetry",
+        alias = "allow_telemetry",
+        alias = "telemetry_enabled"
+    )]
+    pub telemetry: bool,
 }
 
 /// Custom TUI keybindings configuration.
@@ -491,6 +499,10 @@ fn default_check_updates() -> bool {
     true
 }
 
+fn default_telemetry() -> bool {
+    true
+}
+
 impl Default for SceneConfig {
     fn default() -> Self {
         Self {
@@ -538,6 +550,7 @@ impl Default for SceneConfig {
             profile: false,
             render_mode: None,
             color_quant: None,
+            telemetry: true,
         }
     }
 }
@@ -664,6 +677,7 @@ define_forgum_config! {
     field: profile, type: bool, default: false, category: "Display", label: "profile", desc: "Live frame telemetry profiler summary on exit";
     field: render_mode, type: Option<String>, default: None, category: "Display", label: "render_mode", desc: "Sub-cell rendering canvas mode (ascii, halfblock, braille, hybrid)";
     field: color_quant, type: Option<u8>, default: None, category: "Display", label: "color_quant", desc: "Color bit quantization for ANSI escape sequence coalescing (0, 4, 8, 16)";
+    field: telemetry, type: bool, default: default_telemetry(), category: "System", label: "telemetry", desc: "Motivation telemetry consent (anonymous usage counter)", aliases: ["allow_telemetry", "telemetry_enabled"];
 }
 
 #[cfg(test)]
@@ -823,6 +837,7 @@ mod tests {
             profile: true,
             render_mode: Some("braille".into()),
             color_quant: Some(8),
+            telemetry: false,
         };
 
         for format in [ConfigFormat::Json, ConfigFormat::Yaml, ConfigFormat::Toml] {

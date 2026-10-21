@@ -538,6 +538,20 @@ pub fn filter_entries(entries: &[LogEntry], query: &str) -> Vec<LogEntry> {
         .collect()
 }
 
+/// Safely truncate a string to at most `max_bytes` without slicing inside a UTF-8 character boundary.
+#[must_use]
+pub fn safe_truncate_str(s: &str, max_bytes: usize) -> &str {
+    if s.len() <= max_bytes {
+        s
+    } else {
+        let mut idx = max_bytes;
+        while idx > 0 && !s.is_char_boundary(idx) {
+            idx -= 1;
+        }
+        &s[..idx]
+    }
+}
+
 /// Format log entries into a high-visibility, dark-humored ANSI table.
 pub fn format_log_table(entries: &[LogEntry]) -> String {
     if entries.is_empty() {
@@ -558,21 +572,11 @@ pub fn format_log_table(entries: &[LogEntry]) -> String {
             _ => "\x1b[90m",         // gray
         };
 
-        // Format timestamp cleanly
-        let ts = if entry.timestamp.len() > 23 {
-            &entry.timestamp[..23]
-        } else {
-            &entry.timestamp
-        };
-
-        let target_display = if entry.target.len() > 20 {
-            &entry.target[..20]
-        } else {
-            &entry.target
-        };
-
+        // Format timestamp cleanly with safe char boundary truncation
+        let ts = safe_truncate_str(&entry.timestamp, 23);
+        let target_display = safe_truncate_str(&entry.target, 20);
         let msg_display = if entry.message.len() > 54 {
-            format!("{}...", &entry.message[..51])
+            format!("{}...", safe_truncate_str(&entry.message, 51))
         } else {
             entry.message.clone()
         };
@@ -837,11 +841,7 @@ pub fn format_diagnostic_report(report: &DiagnosticReport) -> String {
     } else {
         for (i, action) in report.user_action_items.iter().enumerate() {
             let num = format!("{}. ", i + 1);
-            let display = if action.len() > 80 {
-                &action[..80]
-            } else {
-                action.as_str()
-            };
+            let display = safe_truncate_str(action, 80);
             out.push_str(&format!(
                 "\x1b[1;36m┃\x1b[0m  \x1b[1m{}{:<81}\x1b[0m\x1b[1;36m┃\x1b[0m\n",
                 num, display
@@ -1029,5 +1029,24 @@ mod tests {
             fs::read(temp_dir.path().join("forgum.log.3")).unwrap()[0],
             b'B'
         );
+    }
+
+    #[test]
+    fn test_safe_truncate_str_unicode_boundaries() {
+        // Multi-byte emoji: 🐄 is 4 bytes: F0 9F 90 84
+        let cow_str = "A 🐄 in the pasture";
+        // Byte 3 is inside the emoji (bytes 2..6)
+        let truncated = safe_truncate_str(cow_str, 3);
+        assert_eq!(truncated, "A ");
+        assert!(cow_str.is_char_boundary(truncated.len()));
+
+        // Slicing exactly at boundary
+        let truncated_exact = safe_truncate_str(cow_str, 6);
+        assert_eq!(truncated_exact, "A 🐄");
+
+        // Chinese multi-byte characters (3 bytes each)
+        let cjk = "龙牛羊";
+        let trunc_cjk = safe_truncate_str(cjk, 4);
+        assert_eq!(trunc_cjk, "龙");
     }
 }

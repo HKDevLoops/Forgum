@@ -30,17 +30,37 @@ pub const EDITOR_CANDIDATES: &[(&str, &str, bool)] = &[
     ("Windows Notepad", "notepad", false),
 ];
 
+/// Check whether an executable exists in PATH or standard install locations.
+#[must_use]
+pub fn command_exists(cmd: &str) -> bool {
+    find_editor_binary(cmd).is_some()
+}
+
 /// Probe whether an executable exists in PATH or standard system install locations.
 pub fn find_editor_binary(cmd: &str) -> Option<PathBuf> {
     #[cfg(windows)]
     {
-        // 1. Try 'where.exe <cmd>'
         let query = if cmd.ends_with(".exe") || cmd.ends_with(".cmd") {
             cmd.to_string()
         } else {
             format!("{cmd}.exe")
         };
 
+        // 0. Fast in-memory PATH scan (0.05ms, zero subprocesses)
+        if let Some(path_var) = std::env::var_os("PATH") {
+            for dir in std::env::split_paths(&path_var) {
+                let p1 = dir.join(&query);
+                if p1.is_file() {
+                    return Some(p1);
+                }
+                let p2 = dir.join(cmd);
+                if p2.is_file() {
+                    return Some(p2);
+                }
+            }
+        }
+
+        // 1. Try 'where.exe <cmd>' fallback
         if let Ok(output) = Command::new("where.exe").arg(&query).output() {
             if output.status.success() {
                 if let Ok(text) = String::from_utf8(output.stdout) {
@@ -151,6 +171,17 @@ pub fn find_editor_binary(cmd: &str) -> Option<PathBuf> {
 
     #[cfg(not(windows))]
     {
+        // 0. Fast in-memory PATH scan
+        if let Some(path_var) = std::env::var_os("PATH") {
+            for dir in std::env::split_paths(&path_var) {
+                let p = dir.join(cmd);
+                if p.is_file() {
+                    return Some(p);
+                }
+            }
+        }
+
+        // 1. Fallback to which
         if let Ok(output) = Command::new("which").arg(cmd).output() {
             if output.status.success() {
                 if let Ok(text) = String::from_utf8(output.stdout) {
@@ -217,14 +248,54 @@ pub fn find_neovim() -> Option<EditorInfo> {
 /// Detect all installed text editors available on this host.
 pub fn detect_installed_editors() -> Vec<EditorInfo> {
     let mut out = Vec::new();
+    let mut seen_paths = std::collections::HashSet::new();
+
+    // 1. Check $VISUAL
+    if let Ok(vis) = std::env::var("VISUAL") {
+        let trimmed = vis.trim();
+        if !trimmed.is_empty() {
+            let prog = trimmed.split_whitespace().next().unwrap_or(trimmed);
+            if let Some(path) = find_editor_binary(prog) {
+                seen_paths.insert(path.clone());
+                out.push(EditorInfo {
+                    name: "User Default ($VISUAL)",
+                    command: "visual",
+                    path,
+                    is_terminal: true,
+                });
+            }
+        }
+    }
+
+    // 2. Check $EDITOR
+    if let Ok(ed) = std::env::var("EDITOR") {
+        let trimmed = ed.trim();
+        if !trimmed.is_empty() {
+            let prog = trimmed.split_whitespace().next().unwrap_or(trimmed);
+            if let Some(path) = find_editor_binary(prog) {
+                if seen_paths.insert(path.clone()) {
+                    out.push(EditorInfo {
+                        name: "User Default ($EDITOR)",
+                        command: "editor",
+                        path,
+                        is_terminal: true,
+                    });
+                }
+            }
+        }
+    }
+
+    // 3. Check standard candidate editors
     for &(name, cmd, is_term) in EDITOR_CANDIDATES {
         if let Some(path) = find_editor_binary(cmd) {
-            out.push(EditorInfo {
-                name,
-                command: cmd,
-                path,
-                is_terminal: is_term,
-            });
+            if seen_paths.insert(path.clone()) {
+                out.push(EditorInfo {
+                    name,
+                    command: cmd,
+                    path,
+                    is_terminal: is_term,
+                });
+            }
         }
     }
     out

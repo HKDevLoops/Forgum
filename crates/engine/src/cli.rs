@@ -634,6 +634,9 @@ pub enum Commands {
         /// Target shell, or 'update' to check and update available shells, 'check' to verify status, or 'list' to view supported shells.
         #[arg(value_enum, default_value = "update")]
         shell: ShellArg,
+        /// Automatically install / attach the completion into the shell's configuration directory and profile.
+        #[arg(short = 'i', long)]
+        install: bool,
     },
     /// List available options for animals, effects, scenery, colors, or shells in structured tables.
     #[command(name = "list", alias = "options", alias = "ls", alias = "show")]
@@ -2972,7 +2975,8 @@ mod tests {
         assert!(matches!(
             cmd,
             Some(Commands::Completions {
-                shell: ShellArg::Zsh
+                shell: ShellArg::Zsh,
+                ..
             })
         ));
     }

@@ -144,7 +144,7 @@ pub fn detect_config_file(
     let mut found: Vec<(PathBuf, ConfigFormat)> = Vec::new();
     for (name, fmt) in candidates {
         let path = dir.join(name);
-        if path.is_file() && !found.iter().any(|(_, f)| *f == fmt) {
+        if path.is_file() {
             found.push((path, fmt));
         }
     }

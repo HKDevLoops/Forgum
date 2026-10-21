@@ -210,7 +210,7 @@ if (-not $Version) {
     } catch {}
 }
 if (-not $Version) {
-    $Version = "0.0.12-beta"
+    $Version = "0.0.13-beta"
 }
 
 $Tag = "v$Version"
@@ -432,8 +432,8 @@ try {
 } catch {}
 
 # --- launch wizard or headless setup ---------------------------------------
+$telemetryArg = if ($Telemetry) { @("--telemetry", $Telemetry) } else { @() }
 if ($Headless -or -not $isInteractive) {
-    $telemetryArg = if ($Telemetry) { @("--telemetry", $Telemetry) } else { @() }
     & "$binPath" install --headless @telemetryArg
     Write-Host ""
     Write-Host "✦ FORGUM CELESTIAL INSTALLATION COMPLETE ✦" -ForegroundColor Green
@@ -443,5 +443,5 @@ if ($Headless -or -not $isInteractive) {
     Write-Host ""
 } else {
     # Launch celestial Terminal UI wizard
-    & "$binPath" install
+    & "$binPath" install @telemetryArg
 }

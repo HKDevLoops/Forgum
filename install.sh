@@ -14,7 +14,7 @@
 #                [--telemetry allow|decline] [-y|--yes] [--no-deps] [--build-from-source]
 #
 # Environment overrides:
-#   FORGUM_VERSION      release version to install (e.g. 0.0.12-beta)
+#   FORGUM_VERSION      release version to install (e.g. 0.0.13-beta)
 #   FORGUM_CHANNEL      release channel stream (default: stable)
 #   FORGUM_INSTALL_DIR  explicit install directory (must be on PATH)
 #   FORGUM_REPO         owner/name of the GitHub repo (default: HKDevLoops/Forgum)
@@ -550,7 +550,7 @@ resolve_version() {
   fi
 
   # Default fallback constant (never blocks on network)
-  echo "0.0.12-beta"
+  echo "0.0.13-beta"
 }
 
 VERSION="$(resolve_version)"
@@ -687,7 +687,7 @@ if [ "$DOWNLOAD_OK" -eq 0 ]; then
 
     if [ "$DOWNLOAD_OK" -eq 1 ] && [ -n "$ARCHIVE" ]; then
       tar xzf "$ARCHIVE" -C "$TMP" 2>/dev/null || true
-      EXTRACTED="$(find "$TMP" -maxdepth 2 -type f \( -name 'forgum' -o -name 'forgum-engine' \) | head -n1 || true)"
+      EXTRACTED="$(find "$TMP" -maxdepth 2 -type f -name 'forgum' | head -n1 || true)"
       if [ -n "$EXTRACTED" ]; then
         chmod +x "$EXTRACTED" 2>/dev/null || true
         if "$EXTRACTED" --version >/dev/null 2>&1; then
@@ -810,7 +810,7 @@ if [ "$HEADLESS" -eq 1 ] || [ ! -t 0 ]; then
   echo ""
 elif [ -t 0 ] && [ -t 1 ]; then
   # Standard interactive terminal execution
-  "$BIN_PATH" install
+  "$BIN_PATH" install $TELEM_ARG
 else
   # Fallback headless execution
   "$BIN_PATH" install --headless $TELEM_ARG

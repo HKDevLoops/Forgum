@@ -761,7 +761,14 @@ pub fn get_embedded_dna(cow_name: &str) -> Option<&'static CowDna> {
         return None;
     }
     let catalog = get_embedded_catalog();
-    catalog.get(clean).or_else(|| catalog.get(cow_name))
+    if let Some(dna) = catalog.get(clean) {
+        return Some(dna);
+    }
+    let lower = clean.to_ascii_lowercase();
+    if let Some(dna) = catalog.get(&lower) {
+        return Some(dna);
+    }
+    catalog.get(cow_name)
 }
 
 /// Ultra-fast, zero-allocation lookup path for cold CLI execution (`forgum say`, shell prompt banners).

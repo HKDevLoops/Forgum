@@ -8,6 +8,9 @@ This directory stores permanent, version-controlled engineering audit reports, a
 
 | Release / Audit Cycle | Report Document | Primary Scope & Highlights |
 | :--- | :--- | :--- |
+| **0.0.13-beta Release** | [`RELEASE_0.0.13_BETA_COMPLETION_REPORT.md`](RELEASE_0.0.13_BETA_COMPLETION_REPORT.md) | 16 defect remediations flight checklist, 25-point manifest audit, 0 CR line endings, smoke tests, and dual-branch synchronization. |
+| **0.0.13 Code Audit** | [`AUDIT_0.0.13_COMPREHENSIVE_CODE_AUDIT_REPORT.md`](AUDIT_0.0.13_COMPREHENSIVE_CODE_AUDIT_REPORT.md) | Comprehensive adversarial audit covering SEC-001..003, PERF-001..003, BUG-001..005, UI-001..003, and PORT-001..002. |
+| **0.0.12-beta Release** | [`RELEASE_0.0.12_BETA_COMPLETION_REPORT.md`](RELEASE_0.0.12_BETA_COMPLETION_REPORT.md) | Authoritative timeline, triple-buffered frame recycling, sub-cell rasterization, OKLab contrast floor, and RAII terminal margin restoration. |
 | **0.0.11-beta Release** | [`RELEASE_0.0.11_BETA_COMPLETION_REPORT.md`](RELEASE_0.0.11_BETA_COMPLETION_REPORT.md) | Release flight checklist, 25-point manifest audit, 0 CR line endings, smoke tests, and dual-branch synchronization. |
 | **0.0.10 New Comprehensive Audit** | [`AUDIT_0.0.10_NEW_COMPREHENSIVE_COMPLETION_REPORT.md`](AUDIT_0.0.10_NEW_COMPREHENSIVE_COMPLETION_REPORT.md) | 2D test oracle (`exact_alignment_oracle.rs`), speech bubble 0-column drift assertions, emergency VT crash restore hook, 2MB bounded log rotation, and OKLab contrast floor. |
 | **Upgrader & Release Protocol** | [`../RELEASE_AND_UPGRADE_AUDIT_MAP.md`](../RELEASE_AND_UPGRADE_AUDIT_MAP.md) | The 7-step release protocol, multi-channel packaging table, and network endpoint validation. |

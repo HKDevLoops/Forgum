@@ -34,10 +34,24 @@ fn is_list_query(s: &str) -> bool {
         || s.eq_ignore_ascii_case("show")
 }
 
+fn is_background_or_hook_invocation() -> bool {
+    let args: Vec<String> = std::env::args().collect();
+    args.iter().any(|a| {
+        a == "--background"
+            || a == "--daemon"
+            || a == "status"
+            || a == "status-line"
+            || a == "init"
+            || a.starts_with("--internal")
+    })
+}
+
 pub fn run() -> ExitCode {
     let code = run_inner();
     if code == ExitCode::SUCCESS {
-        crate::taunt::reset_failure_streak();
+        if !is_background_or_hook_invocation() {
+            crate::taunt::reset_failure_streak();
+        }
     } else {
         let streak = crate::taunt::record_and_get_failure_streak();
         if streak > 2 {
@@ -861,7 +875,7 @@ fn run_inner() -> ExitCode {
         }
 
         // ── completions <shell> ──────────────────────────────────────
-        Some(cli::Commands::Completions { shell }) => {
+        Some(cli::Commands::Completions { shell, install }) => {
             let mut cmd = forgum_engine::cli::Cli::command();
             match shell {
                 cli::ShellArg::Update => {
@@ -901,14 +915,30 @@ fn run_inner() -> ExitCode {
                 }
                 other => {
                     let target_shell: Shell = other.into();
-                    match forgum_engine::completions::install_completions(target_shell, &mut cmd) {
-                        Ok(res) => {
-                            print!("{}", res.message);
-                            ExitCode::SUCCESS
+                    if install {
+                        match forgum_engine::completions::install_completions(
+                            target_shell,
+                            &mut cmd,
+                        ) {
+                            Ok(res) => {
+                                print!("{}", res.message);
+                                ExitCode::SUCCESS
+                            }
+                            Err(e) => {
+                                eprintln!("{PROGRAM}: completions installation error: {e}");
+                                ExitCode::from(71)
+                            }
                         }
-                        Err(e) => {
-                            eprintln!("{PROGRAM}: completions installation error: {e}");
-                            ExitCode::from(71)
+                    } else {
+                        match forgum_engine::completions::generate_completions(
+                            target_shell,
+                            &mut cmd,
+                        ) {
+                            Ok(()) => ExitCode::SUCCESS,
+                            Err(e) => {
+                                eprintln!("{PROGRAM}: completions generation error: {e}");
+                                ExitCode::from(71)
+                            }
                         }
                     }
                 }

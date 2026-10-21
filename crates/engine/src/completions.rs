@@ -196,7 +196,12 @@ pub fn inspect_shell_completion(
         Some(path) if path.exists() => {
             let expected = generate_completion_script(shell, cmd);
             match std::fs::read_to_string(path) {
-                Ok(existing) if existing == expected => ShellCompletionStatus::UpToDate,
+                Ok(existing)
+                    if existing.replace("\r\n", "\n").trim()
+                        == expected.replace("\r\n", "\n").trim() =>
+                {
+                    ShellCompletionStatus::UpToDate
+                }
                 _ => ShellCompletionStatus::Outdated,
             }
         }
@@ -4037,6 +4042,12 @@ pub const CONFIG_KEYS_METADATA: &[ConfigKeyMeta] = &[
         value_type: "integer",
         description: "ANSI 24-bit color quantization depth in bits (0=off, 4, 8, 16)",
     },
+    ConfigKeyMeta {
+        key: "telemetry",
+        aliases: &["allow-telemetry", "telemetry-enabled"],
+        value_type: "boolean",
+        description: "Allow anonymous motivation telemetry (true/false)",
+    },
 ];
 
 pub const ALL_ANIMALS: &[&str] = &[
@@ -4577,7 +4588,10 @@ pub fn choices_for_config_key(key: &str) -> Option<Vec<(&'static str, &'static s
         | "reduce-motion"
         | "reduced-motion"
         | "text-only"
-        | "fortune-only" => Some(vec![
+        | "fortune-only"
+        | "telemetry"
+        | "allow-telemetry"
+        | "telemetry-enabled" => Some(vec![
             ("true", "Enable this configuration flag"),
             ("false", "Disable this configuration flag"),
         ]),

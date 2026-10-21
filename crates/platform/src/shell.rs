@@ -358,22 +358,47 @@ impl Shell {
             if matches!(self, Shell::Cmd) {
                 return true;
             }
-            std::process::Command::new("where.exe")
-                .arg(bin)
-                .output()
-                .map(|o| o.status.success())
-                .unwrap_or(false)
+            if let Some(path_var) = std::env::var_os("PATH") {
+                let pathext =
+                    std::env::var("PATHEXT").unwrap_or_else(|_| ".COM;.EXE;.BAT;.CMD".to_string());
+                let exts: Vec<&str> = pathext.split(';').collect();
+                for dir in std::env::split_paths(&path_var) {
+                    if dir.join(bin).is_file() {
+                        return true;
+                    }
+                    for ext in &exts {
+                        if dir.join(format!("{bin}{ext}")).is_file() {
+                            return true;
+                        }
+                    }
+                }
+            }
+            false
         }
         #[cfg(not(windows))]
         {
             if matches!(self, Shell::Cmd) {
                 return false;
             }
-            std::process::Command::new("which")
-                .arg(bin)
-                .output()
-                .map(|o| o.status.success())
-                .unwrap_or(false)
+            if let Some(path_var) = std::env::var_os("PATH") {
+                for dir in std::env::split_paths(&path_var) {
+                    if dir.join(bin).is_file() {
+                        return true;
+                    }
+                }
+            }
+            for standard_dir in [
+                "/bin",
+                "/usr/bin",
+                "/usr/local/bin",
+                "/opt/homebrew/bin",
+                "/home/linuxbrew/.linuxbrew/bin",
+            ] {
+                if Path::new(standard_dir).join(bin).is_file() {
+                    return true;
+                }
+            }
+            false
         }
     }
 }

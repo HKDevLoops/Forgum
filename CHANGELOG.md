@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.0.13-beta] - 2026-10-21
+
+### Security
+- **Secure Process Execution (`crates/platform/src/process.rs`)**:
+  - Remediated command execution vulnerability in `run_editor()` by adopting direct binary execution with safely split argument vectors, avoiding arbitrary shell command injection (`SEC-001`).
+- **Filesystem & State Hardening (`crates/platform/src/daemon.rs`, `crates/engine/src/cow.rs`)**:
+  - Enforced restricted permissions (0600 / ACLs) on daemon PID files and lock sockets (`SEC-002`).
+  - Added strict path canonicalization and directory jail checks preventing directory traversal via mascot names in `~/.config/forgum/cows` (`SEC-003`).
+
+### Fixed
+- **Terminal State Safety & Signal Recovery (`crates/platform/src/guards.rs`, `crates/engine/src/split_scroll.rs`)**:
+  - Hardened emergency terminal restoration hook to reliably reset cursor visibility, mouse tracking, alternate screen buffers, and DECSTBM margins across all abnormal exits (`BUG-001`).
+  - Corrected margin clamping and minimum row reservations under narrow terminal viewports ($W < 80$) to eliminate prompt clipping (`BUG-002`).
+- **Nature Mathematics & Scenery Rasterization (`crates/engine/src/scenery.rs`)**:
+  - Fixed off-by-one column boundary error in procedural mountain harmonic superposition and peak synthesis (`BUG-003`).
+  - Corrected wide-character display width calculation for multi-byte Unicode runes and Asian ideographs within speech and thought bubbles (`BUG-004`).
+- **TUI Dashboard & Configurator Usability (`crates/tui/`)**:
+  - Enhanced focus indicator contrast in dark terminal environments for improved accessibility (`UI-001`).
+  - Resolved keybinding cheat sheet modal truncation on 80x24 viewports (`UI-002`).
+  - Hardened numeric slider input validation and boundary clamping for frame rate and duration (`UI-003`).
+- **Cross-Platform Installers & Telemetry (`install.sh`, `install.ps1`)**:
+  - Fixed telemetry opt-out parsing in standalone install scripts to guarantee 100% offline installation when `--telemetry decline` or `-Telemetry decline` is passed (`BUG-005`).
+  - Ensured Windows Virtual Terminal processing flag is properly initialized on legacy Windows consoles (`PORT-001`).
+  - Hardened Unix signal handling and RAII teardown on BSD and macOS platforms (`PORT-002`).
+
+### Performance
+- **Zero-Allocation Hot-Loop Optimization (`crates/engine/src/framebuffer.rs`, `crates/engine/src/engine_core.rs`)**:
+  - Replaced ad-hoc string and buffer allocations in dirty-damage diff calculation with pre-allocated scratch buffers (`PERF-001`, `PERF-002`).
+  - Optimized atomic lock contention in audio bell telemetry and structured logging queues (`PERF-003`).
+
+---
+
 ## [0.0.12-beta] - 2026-10-18
 
 ### Added
