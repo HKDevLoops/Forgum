@@ -63,25 +63,42 @@ pub fn format_table_with_width(
     let remaining = available_content.saturating_sub(used_for_initial);
     let min_last_col = 18;
     if remaining < min_last_col && available_content > 24 {
-        let deficit = min_last_col - remaining;
-        let mut recovered = 0;
-        // Shrink intermediate columns first (from right to left, avoiding Col 0)
-        for col_idx in (1..last_col_idx).rev() {
-            let can_shrink = col_widths[col_idx].saturating_sub(8);
-            let shrink = can_shrink.min(deficit.saturating_sub(recovered));
-            col_widths[col_idx] -= shrink;
-            recovered += shrink;
-            if recovered >= deficit {
-                break;
+        let mut deficit = min_last_col - remaining;
+        // Distribute shrink across all initial columns without crushing any single column
+        while deficit > 0 {
+            let mut shrunk_any = false;
+            for col_idx in (0..last_col_idx).rev() {
+                let floor = match col_idx {
+                    0 => 12,
+                    1 => 14,
+                    _ => 18,
+                };
+                if col_widths[col_idx] > floor && deficit > 0 {
+                    col_widths[col_idx] -= 1;
+                    deficit -= 1;
+                    shrunk_any = true;
+                }
+            }
+            if !shrunk_any {
+                // If safe floors are reached, allow gentle secondary step
+                for col_idx in (0..last_col_idx).rev() {
+                    let second_floor = match col_idx {
+                        0 => 10,
+                        1 => 12,
+                        _ => 14,
+                    };
+                    if col_widths[col_idx] > second_floor && deficit > 0 {
+                        col_widths[col_idx] -= 1;
+                        deficit -= 1;
+                        shrunk_any = true;
+                    }
+                }
+                if !shrunk_any {
+                    break;
+                }
             }
         }
-        // Only if still in deficit, shrink Col 0 down to at most 16
-        if recovered < deficit && last_col_idx > 0 {
-            let can_shrink = col_widths[0].saturating_sub(16);
-            let shrink = can_shrink.min(deficit.saturating_sub(recovered));
-            col_widths[0] -= shrink;
-            recovered += shrink;
-        }
+        let recovered = (min_last_col - remaining) - deficit;
         col_widths[last_col_idx] = (remaining + recovered).max(12);
     } else {
         col_widths[last_col_idx] = remaining.max(18);
