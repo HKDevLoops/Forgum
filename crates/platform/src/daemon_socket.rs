@@ -49,7 +49,6 @@ impl DaemonSocket {
             // Ensure the parent directory exists and is restricted to user-only (0o700)
             if let Some(parent) = path.parent() {
                 let _ = std::fs::create_dir_all(parent);
-                let _ = std::fs::set_permissions(parent, std::fs::Permissions::from_mode(0o700));
 
                 // Verify directory ownership on Unix to prevent unauthorized access or directory hijacking
                 #[allow(unsafe_code)]
@@ -57,7 +56,15 @@ impl DaemonSocket {
                     use std::os::unix::fs::MetadataExt;
                     if let Ok(meta) = std::fs::metadata(parent) {
                         let current_uid = unsafe { libc::getuid() };
-                        if meta.uid() != current_uid {
+                        if meta.uid() == current_uid {
+                            let _ = std::fs::set_permissions(
+                                parent,
+                                std::fs::Permissions::from_mode(0o700),
+                            );
+                        } else if meta.uid() == 0 && (meta.mode() & 0o1000) != 0 {
+                            // Sticky system temporary directory owned by root (e.g. /tmp, /var/tmp)
+                            // Valid and safe; do not modify system-wide permissions.
+                        } else {
                             return Err(PlatformError::Io(std::io::Error::new(
                                 std::io::ErrorKind::PermissionDenied,
                                 format!(

@@ -45,8 +45,8 @@ use forgum_engine::control_socket::{
 use forgum_platform::{handle_count, DaemonSocket};
 
 fn socket_path() -> PathBuf {
-    let tmp = std::env::temp_dir();
-    tmp.join(format!("forgum-soak-{}.sock", std::process::id()))
+    let base = forgum_platform::runtime_dir().unwrap_or_else(|_| std::env::temp_dir());
+    base.join(format!("forgum-soak-{}.sock", std::process::id()))
 }
 
 #[test]
