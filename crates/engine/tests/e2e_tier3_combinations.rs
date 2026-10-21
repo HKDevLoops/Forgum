@@ -302,8 +302,8 @@ fn t3_combo_shell_hooks_marker_isolation_and_uninstall() {
         "export PATH=$HOME/bin:$PATH\n{}\nalias ll='ls -lah'\n",
         bash_hook
     );
-    let (cleaned, removed) =
-        remove_delimited_block(&mock_bashrc, "# >>> forgum (bash) >>>", "# <<< forgum <<<");
+    let (marker_begin, marker_end) = Shell::Bash.hook_markers();
+    let (cleaned, removed) = remove_delimited_block(&mock_bashrc, marker_begin, marker_end);
     assert!(removed, "Delimited block must be excised");
     assert!(!cleaned.contains("forgum"));
     assert!(cleaned.contains("export PATH"));
