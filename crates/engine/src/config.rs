@@ -861,6 +861,49 @@ pub fn validate_config(config: &SceneConfig) -> Result<(), Vec<String>> {
         ));
     }
 
+    if config.duration > 86400 {
+        errors.push(format!(
+            "❌ Error: Invalid duration '{}' in configuration. Duration cannot exceed 86400 seconds (24 hours).",
+            config.duration
+        ));
+    }
+
+    if let Some(ratio) = config.split_ratio {
+        if ratio.is_nan() || ratio.is_infinite() || ratio < 0.05 || ratio > 0.95 {
+            errors.push(format!(
+                "❌ Error: Invalid split_ratio '{:.2}' in configuration. Must be between 0.05 and 0.95.",
+                ratio
+            ));
+        }
+    }
+
+    if let Some(rows) = config.reserve_rows {
+        if rows > 1000 {
+            errors.push(format!(
+                "❌ Error: Invalid reserve_rows '{}'. Cannot exceed 1000 rows.",
+                rows
+            ));
+        }
+    }
+
+    if let Some(cols) = config.reserve_cols {
+        if cols > 4096 {
+            errors.push(format!(
+                "❌ Error: Invalid reserve_cols '{}'. Cannot exceed 4096 columns.",
+                cols
+            ));
+        }
+    }
+
+    if let Some(q) = config.color_quant {
+        if q != 0 && q != 4 && q != 8 && q != 16 {
+            errors.push(format!(
+                "❌ Error: Invalid color_quant '{}'. Allowed values are 0, 4, 8, or 16.",
+                q
+            ));
+        }
+    }
+
     if errors.is_empty() {
         Ok(())
     } else {

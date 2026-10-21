@@ -184,6 +184,32 @@ graph TD
 
 ---
 
+## 1.8 Full Security Hardening, Zero-Allocation Trees & Universal Shell Isolation (0.0.13-beta)
+
+- **IPC & Daemon Security Hardening (`crates/platform/src/daemon_socket.rs`, `paths.rs`, `spawn.rs`)**:
+  - `FILE_FLAG_FIRST_PIPE_INSTANCE` enforced on Windows named pipes, preventing pipe squatting or unauthorized pre-creation attacks (`SEC-004`).
+  - Scoped Unix fallback runtime paths to `/tmp/forgum-<uid>` with strict `0o700` POSIX permissions and parent directory UID ownership checks on bind (`SEC-005`).
+  - Guarded process termination against terminating the caller's process group or PID 1 (`pid <= 1 || pid == self_pid`) (`SEC-006`).
+- **Universal Shell Injection Defense & Marker Isolation (`crates/engine/src/init.rs`, `crates/platform/src/shell.rs`)**:
+  - Applied lexical argument escaping via `shell_escape_arg()` and strictly quoted subshells across all 15 supported shells (Bash, Zsh, Fish, PowerShell, Pwsh, Nushell, Elvish, Xonsh, Tcsh, Ksh, Ion, Oil, Yash, Cmd) (`SEC-007`).
+  - Standardized shell hook marker isolation delimiters via `Shell::hook_markers()` to `# >>> forgum >>>` ... `# <<< forgum <<<` (`rem >>> forgum >>>` on Cmd) (`PORT-003`).
+  - Implemented complete Unix uninstaller PATH profile excision in `uninstaller.rs` across `~/.bashrc`, `~/.zshrc`, `~/.bash_profile`, and `~/.profile` (`PORT-004`).
+- **Windows Editor Path Safety & Decompression Bomb Defense (`crates/tui/`, `image_ascii.rs`)**:
+  - Resolved whitespace splitting on Windows editor executable paths via `ResolvedEditor` (CWE-428 defense), and sanitized binary arguments against leading flags, null bytes, and newlines (`SEC-008`).
+  - Pre-decode header dimension inspection via `image::image_dimensions()` strictly capping input images at 4096×4096 pixels before memory decompression (`SEC-009`).
+- **Zero-Allocation Scenery & PRNG Numerical Stability (`crates/engine/src/scenery.rs`, `particles.rs`)**:
+  - Eliminated per-frame `Vec<char>` allocations in tree row rasterization in favor of zero-allocation character iterators (`PERF-004`).
+  - Eliminated zombie immortal particles by guarding particle expiration against floating-point `NaN` (`PERF-005`).
+  - Clamped random inputs away from `ln(0)` and `ln(1)` mathematical singularities in Box-Muller Gaussian sampling (`PERF-006`).
+- **Terminal Lock-in Prevention & Responsive Widescreen Tables (`crates/tui/`, `options_table.rs`)**:
+  - Added `install_tui_panic_hook()` ensuring alternate screen and raw mode are restored cleanly before panic traces are output, and wired emergency recovery into Windows Ctrl-C handlers (`BUG-006`).
+  - Implemented `format_table_with_width()` supporting 80 up to 512 columns without word-wrapping key identifiers across lines (`BUG-009`).
+  - Hardened multi-byte UTF-8 string truncation (`truncate_utf8()`) and established strict upper bounds across all `SceneConfig` fields (`BUG-007`, `BUG-008`).
+- **Hardened Multi-Channel Installers (`install.sh`, `install.ps1`)**:
+  - Eliminated arbitrary `eval` and `Invoke-Expression` execution risks, enforced `-LiteralPath` across all file operations, added parameter regex validation, and built complete standalone uninstaller routines (`PORT-005`).
+
+---
+
 ## 2. Universal Hardware Acceleration Architecture (2006 to 2026)
 
 ### A. GPU Microarchitecture Timeline & Vendor Classification

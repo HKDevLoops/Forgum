@@ -321,64 +321,83 @@ fn run_inner() -> ExitCode {
 
             let mut combined_render_args = Vec::new();
             if let Some(cow) = &args.cow {
-                combined_render_args.push(format!("--animal {cow}"));
+                combined_render_args.push("--animal".to_string());
+                combined_render_args.push(cow.clone());
             }
             if let Some(anim) = &args.animation {
-                combined_render_args.push(format!("--animation {anim}"));
+                combined_render_args.push("--animation".to_string());
+                combined_render_args.push(anim.clone());
             }
             if let Some(at) = &args.animation_type {
-                combined_render_args.push(format!("--animation-type {at}"));
+                combined_render_args.push("--animation-type".to_string());
+                combined_render_args.push(at.clone());
             }
             if let Some(env) = &args.environment {
-                combined_render_args.push(format!("--environment {env}"));
+                combined_render_args.push("--environment".to_string());
+                combined_render_args.push(env.clone());
             }
             if let Some(road) = &args.road {
-                combined_render_args.push(format!("--road {road}"));
+                combined_render_args.push("--road".to_string());
+                combined_render_args.push(road.clone());
             }
             if let Some(mountain) = &args.mountain {
-                combined_render_args.push(format!("--mountain {mountain}"));
+                combined_render_args.push("--mountain".to_string());
+                combined_render_args.push(mountain.clone());
             }
             if let Some(cm) = &args.color_mode {
-                combined_render_args.push(format!("--color-mode {cm}"));
+                combined_render_args.push("--color-mode".to_string());
+                combined_render_args.push(cm.clone());
             }
             if let Some(pal) = &args.palette {
-                combined_render_args.push(format!("--palette {pal}"));
+                combined_render_args.push("--palette".to_string());
+                combined_render_args.push(pal.clone());
             }
             if let Some(interval_seconds) = args.thought_interval {
-                combined_render_args.push(format!("--thought-interval {interval_seconds}"));
+                combined_render_args.push("--thought-interval".to_string());
+                combined_render_args.push(interval_seconds.to_string());
             }
             if args.split_scroll {
                 combined_render_args.push("--split-scroll".to_string());
             }
             if let Some(reserved_rows_count) = args.reserve_rows {
-                combined_render_args.push(format!("--reserve-rows {reserved_rows_count}"));
+                combined_render_args.push("--reserve-rows".to_string());
+                combined_render_args.push(reserved_rows_count.to_string());
             }
             if let Some(reserved_cols_count) = args.reserve_cols {
-                combined_render_args.push(format!("--reserve-cols {reserved_cols_count}"));
+                combined_render_args.push("--reserve-cols".to_string());
+                combined_render_args.push(reserved_cols_count.to_string());
             }
             if let Some(split_ratio_val) = args.split_ratio {
-                combined_render_args.push(format!("--split-ratio {split_ratio_val}"));
+                combined_render_args.push("--split-ratio".to_string());
+                combined_render_args.push(split_ratio_val.to_string());
             }
             if let Some(effect_name) = &args.effect {
-                combined_render_args.push(format!("--effect {effect_name}"));
+                combined_render_args.push("--effect".to_string());
+                combined_render_args.push(effect_name.clone());
             }
             if let Some(eyes) = &args.eyes {
-                combined_render_args.push(format!("--eyes {eyes}"));
+                combined_render_args.push("--eyes".to_string());
+                combined_render_args.push(eyes.clone());
             }
             if let Some(tongue) = &args.tongue {
-                combined_render_args.push(format!("--tongue {tongue}"));
+                combined_render_args.push("--tongue".to_string());
+                combined_render_args.push(tongue.clone());
             }
             if let Some(aspect) = &args.aspect {
-                combined_render_args.push(format!("--aspect {aspect}"));
+                combined_render_args.push("--aspect".to_string());
+                combined_render_args.push(aspect.clone());
             }
             if let Some(aspect_mode_val) = &args.aspect_mode {
-                combined_render_args.push(format!("--aspect-mode {aspect_mode_val}"));
+                combined_render_args.push("--aspect-mode".to_string());
+                combined_render_args.push(aspect_mode_val.clone());
             }
             if let Some(accel) = &args.accel {
-                combined_render_args.push(format!("--accel {accel}"));
+                combined_render_args.push("--accel".to_string());
+                combined_render_args.push(accel.clone());
             }
             if let Some(split_mode_val) = &args.split_mode {
-                combined_render_args.push(format!("--split-mode {split_mode_val}"));
+                combined_render_args.push("--split-mode".to_string());
+                combined_render_args.push(split_mode_val.clone());
             }
             if args.reduce_motion {
                 combined_render_args.push("--reduce-motion".to_string());
@@ -390,10 +409,12 @@ fn run_inner() -> ExitCode {
                 combined_render_args.push("--banner".to_string());
             }
             if let Some(duration_seconds) = args.duration {
-                combined_render_args.push(format!("--duration {duration_seconds}"));
+                combined_render_args.push("--duration".to_string());
+                combined_render_args.push(duration_seconds.to_string());
             }
             if let Some(target_fps) = args.fps {
-                combined_render_args.push(format!("--fps {target_fps}"));
+                combined_render_args.push("--fps".to_string());
+                combined_render_args.push(target_fps.to_string());
             }
             combined_render_args.extend(render_args);
 
@@ -407,18 +428,20 @@ fn run_inner() -> ExitCode {
                 match shell.shell_rc_path() {
                     Some(rc_path) => {
                         let existing = std::fs::read_to_string(&rc_path).unwrap_or_default();
-                        let begin_marker = if matches!(shell, Shell::Cmd) {
+                        let (begin_marker, end_marker) = shell.hook_markers();
+                        // Clean any previous legacy marker (e.g. # >>> forgum (bash) >>>) to avoid duplication
+                        let legacy_marker = if matches!(shell, Shell::Cmd) {
                             "rem >>> forgum (cmd) >>>"
                         } else {
                             &format!("# >>> forgum ({shell}) >>>")
                         };
-                        let end_marker = if matches!(shell, Shell::Cmd) {
-                            "rem <<< forgum <<<"
-                        } else {
-                            "# <<< forgum <<<"
-                        };
-                        let updated = forgum_platform::shell::update_delimited_block(
+                        let (intermediate, _) = forgum_platform::shell::remove_delimited_block(
                             &existing,
+                            legacy_marker,
+                            end_marker,
+                        );
+                        let updated = forgum_platform::shell::update_delimited_block(
+                            &intermediate,
                             begin_marker,
                             end_marker,
                             &hook,

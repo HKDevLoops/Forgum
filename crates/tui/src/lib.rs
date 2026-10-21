@@ -25,6 +25,19 @@ pub use wizard::{run_installer_wizard, run_uninstaller_wizard};
 pub const FULL_VT_RESET_SEQ: &[u8] =
     b"\x1b[?7h\x1b[0m\x1b[?25h\x1b[?1000l\x1b[?1002l\x1b[?1003l\x1b[?1006l\x1b[?1015l\x1b[?2004l";
 
+static TUI_PANIC_HOOK_INSTALLED: std::sync::atomic::AtomicBool =
+    std::sync::atomic::AtomicBool::new(false);
+
+fn install_tui_panic_hook() {
+    if !TUI_PANIC_HOOK_INSTALLED.swap(true, std::sync::atomic::Ordering::SeqCst) {
+        let prev_hook = std::panic::take_hook();
+        std::panic::set_hook(Box::new(move |panic_info| {
+            restore_terminal_cleanly();
+            prev_hook(panic_info);
+        }));
+    }
+}
+
 /// Restores the terminal cleanly from raw mode, mouse capture, and alternate screen.
 pub fn restore_terminal_cleanly() {
     // 1. Reset margins and attributes INSIDE the alternate screen before leaving
@@ -42,6 +55,7 @@ pub fn restore_terminal_cleanly() {
     let _ = io::stdout().write_all(FULL_VT_RESET_SEQ);
     let _ = io::stdout().flush();
     let _ = crossterm::terminal::disable_raw_mode();
+    forgum_platform::emergency_restore_terminal_idempotent();
 }
 
 /// RAII Drop guard ensuring the terminal is ALWAYS cleanly restored
@@ -53,6 +67,8 @@ pub struct TuiTerminalGuard {
 
 impl TuiTerminalGuard {
     pub fn enter() -> anyhow::Result<Self> {
+        forgum_platform::mark_vt_dirty(1);
+        install_tui_panic_hook();
         crossterm::terminal::enable_raw_mode().context("enable raw mode")?;
         let mut stdout = io::stdout();
         crossterm::execute!(
@@ -372,16 +388,9 @@ pub fn run_tui(
                                 );
                                 let _ = crossterm::terminal::disable_raw_mode();
 
-                                // Launch terminal/configured code editor synchronously
-                                let parts: Vec<&str> = editor.split_whitespace().collect();
-                                let bin = parts.first().copied().unwrap_or(&editor);
-                                let extra_args = if parts.len() > 1 {
-                                    &parts[1..]
-                                } else {
-                                    &[][..]
-                                };
-                                let mut cmd = std::process::Command::new(bin);
-                                cmd.args(extra_args);
+                                // Launch terminal/configured code editor synchronously without unquoted path splitting
+                                let mut cmd = std::process::Command::new(&editor.binary);
+                                cmd.args(&editor.extra_args);
                                 cmd.arg(&target_path);
                                 let _ = cmd.status();
 
@@ -404,7 +413,7 @@ pub fn run_tui(
                                     app.config_path = Some(target_path.clone());
                                     app.mark_saved();
                                     app.status_message =
-                                        format!("Config reloaded after editing in {}", editor);
+                                        format!("Config reloaded after editing in {}", editor.name);
                                 }
                             } else {
                                 app.open_editor_modal();
@@ -423,8 +432,10 @@ pub fn run_tui(
 
                             #[cfg(windows)]
                             {
-                                if forgum_platform::editor::command_exists("code") {
-                                    let _ = std::process::Command::new("code.cmd")
+                                if let Some(code_path) =
+                                    forgum_platform::editor::find_editor_binary("code")
+                                {
+                                    let _ = std::process::Command::new(code_path)
                                         .arg(&target_path)
                                         .spawn();
                                     app.status_message = format!(
@@ -434,8 +445,10 @@ pub fn run_tui(
                                             .and_then(|n| n.to_str())
                                             .unwrap_or("config")
                                     );
-                                } else {
-                                    let _ = std::process::Command::new("notepad.exe")
+                                } else if let Some(notepad_path) =
+                                    forgum_platform::editor::find_editor_binary("notepad")
+                                {
+                                    let _ = std::process::Command::new(notepad_path)
                                         .arg(&target_path)
                                         .spawn();
                                     app.status_message = format!(
@@ -517,25 +530,73 @@ fn read_config_file(
         .map_err(|e| anyhow::anyhow!("parse config: {e}"))
 }
 
+/// Discovered editor execution details.
+#[derive(Debug, Clone)]
+struct ResolvedEditor {
+    name: String,
+    binary: PathBuf,
+    extra_args: Vec<String>,
+}
+
 /// Detect available terminal or preferred code editor in order:
 /// 1. Configured custom editor in settings (if not empty / "auto")
 /// 2. $VISUAL environment variable
 /// 3. $EDITOR environment variable
 /// 4. Available terminal editors (neovim/nvim, vim, nano, emacs, micro, helix/hx)
 /// 5. System/GUI fallback editors (code, notepad on Windows; vi, ed on Unix)
-fn detect_terminal_editor(configured: Option<&str>) -> Option<String> {
+fn detect_terminal_editor(configured: Option<&str>) -> Option<ResolvedEditor> {
     if let Some(custom) = configured {
         let trimmed = custom.trim();
         if !trimmed.is_empty() && !trimmed.eq_ignore_ascii_case("auto") {
-            let prog = trimmed.split_whitespace().next().unwrap_or(trimmed);
-            if let Some(p) = forgum_platform::find_editor_binary(prog) {
-                return Some(p.display().to_string());
+            // 1. If custom points directly to an existing file, use it as-is without splitting on spaces
+            let direct_path = Path::new(trimmed);
+            if direct_path.is_file() {
+                return Some(ResolvedEditor {
+                    name: direct_path
+                        .file_name()
+                        .and_then(|n| n.to_str())
+                        .unwrap_or("custom")
+                        .to_string(),
+                    binary: direct_path.to_path_buf(),
+                    extra_args: Vec::new(),
+                });
+            }
+
+            // 2. Otherwise safely split into binary program and arguments
+            let mut parts = trimmed.split_whitespace();
+            if let Some(prog) = parts.next() {
+                if let Some(p) = forgum_platform::find_editor_binary(prog) {
+                    let mut extra_args = Vec::new();
+                    for arg in parts {
+                        // Strict argument sanitization: reject command injection / shell metacharacters
+                        if !arg.contains('\0')
+                            && !arg.contains('\n')
+                            && !arg.contains('\r')
+                            && !arg.contains(';')
+                            && !arg.contains('|')
+                            && !arg.contains('&')
+                            && !arg.contains('`')
+                            && !arg.contains('$')
+                        {
+                            extra_args.push(arg.to_string());
+                        }
+                    }
+                    return Some(ResolvedEditor {
+                        name: prog.to_string(),
+                        binary: p,
+                        extra_args,
+                    });
+                }
             }
         }
     }
 
     let editors = forgum_platform::detect_installed_editors();
-    editors.first().map(|e| e.path.display().to_string())
+    editors.first().map(|e| ResolvedEditor {
+        name: e.name.to_string(),
+        binary: e.path.clone(),
+        extra_args: Vec::new(),
+    })
 }
 
 /// Broadcast updated configuration parameters to active background daemons via control socket.

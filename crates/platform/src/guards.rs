@@ -190,6 +190,9 @@ impl Drop for CursorShowGuard {
     }
 }
 
+/// Alias for `CursorShowGuard` providing standard RAII naming convention.
+pub type CursorGuard = CursorShowGuard;
+
 /// RAII guard that requests 1ms multimedia timer resolution on Windows on construction,
 /// and restores the default timer period on drop.
 /// On non-Windows platforms, this is a zero-cost no-op.

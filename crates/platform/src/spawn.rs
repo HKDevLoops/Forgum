@@ -410,6 +410,9 @@ pub fn process_is_alive(pid: u32) -> bool {
 #[cfg(unix)]
 #[allow(unsafe_code)]
 pub fn kill_process(pid: u32) -> bool {
+    if pid <= 1 || pid == std::process::id() {
+        return false;
+    }
     unsafe { libc::kill(pid as i32, libc::SIGKILL) == 0 }
 }
 
@@ -417,6 +420,9 @@ pub fn kill_process(pid: u32) -> bool {
 #[cfg(windows)]
 #[allow(unsafe_code)]
 pub fn kill_process(pid: u32) -> bool {
+    if pid <= 1 || pid == std::process::id() {
+        return false;
+    }
     use windows_sys::Win32::Foundation::CloseHandle;
     use windows_sys::Win32::System::Threading::{OpenProcess, TerminateProcess, PROCESS_TERMINATE};
     unsafe {
@@ -641,5 +647,12 @@ mod tests {
         // linux/macOS/Windows native still goes through posix_spawn
         // unless the env is set.
         let _ = prefer_fork_exec(); // tautology; we're just exercising it.
+    }
+
+    #[test]
+    fn kill_process_rejects_pid_zero_one_and_self() {
+        assert!(!kill_process(0));
+        assert!(!kill_process(1));
+        assert!(!kill_process(std::process::id()));
     }
 }

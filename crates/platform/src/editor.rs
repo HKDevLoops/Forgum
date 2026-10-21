@@ -38,12 +38,23 @@ pub fn command_exists(cmd: &str) -> bool {
 
 /// Probe whether an executable exists in PATH or standard system install locations.
 pub fn find_editor_binary(cmd: &str) -> Option<PathBuf> {
+    let trimmed = cmd.trim();
+    if trimmed.is_empty()
+        || trimmed.starts_with('-')
+        || trimmed.starts_with('/')
+        || trimmed.contains('\0')
+        || trimmed.contains('\n')
+        || trimmed.contains('\r')
+    {
+        return None;
+    }
+
     #[cfg(windows)]
     {
-        let query = if cmd.ends_with(".exe") || cmd.ends_with(".cmd") {
-            cmd.to_string()
+        let query = if trimmed.ends_with(".exe") || trimmed.ends_with(".cmd") {
+            trimmed.to_string()
         } else {
-            format!("{cmd}.exe")
+            format!("{trimmed}.exe")
         };
 
         // 0. Fast in-memory PATH scan (0.05ms, zero subprocesses)
@@ -53,7 +64,7 @@ pub fn find_editor_binary(cmd: &str) -> Option<PathBuf> {
                 if p1.is_file() {
                     return Some(p1);
                 }
-                let p2 = dir.join(cmd);
+                let p2 = dir.join(trimmed);
                 if p2.is_file() {
                     return Some(p2);
                 }
@@ -75,7 +86,7 @@ pub fn find_editor_binary(cmd: &str) -> Option<PathBuf> {
         }
 
         // Also try without .exe if query had it
-        if let Ok(output) = Command::new("where.exe").arg(cmd).output() {
+        if let Ok(output) = Command::new("where.exe").arg(trimmed).output() {
             if output.status.success() {
                 if let Ok(text) = String::from_utf8(output.stdout) {
                     if let Some(first_line) = text.lines().next() {
@@ -89,7 +100,7 @@ pub fn find_editor_binary(cmd: &str) -> Option<PathBuf> {
         }
 
         // 2. Standard hardcoded paths for popular editors on Windows
-        let standard_candidates: &[&str] = match cmd {
+        let standard_candidates: &[&str] = match trimmed {
             "nvim" | "nvim.exe" => &[
                 r"C:\Program Files\Neovim\bin\nvim.exe",
                 r"C:\Program Files (x86)\Neovim\bin\nvim.exe",
@@ -174,7 +185,7 @@ pub fn find_editor_binary(cmd: &str) -> Option<PathBuf> {
         // 0. Fast in-memory PATH scan
         if let Some(path_var) = std::env::var_os("PATH") {
             for dir in std::env::split_paths(&path_var) {
-                let p = dir.join(cmd);
+                let p = dir.join(trimmed);
                 if p.is_file() {
                     return Some(p);
                 }
@@ -182,7 +193,7 @@ pub fn find_editor_binary(cmd: &str) -> Option<PathBuf> {
         }
 
         // 1. Fallback to which
-        if let Ok(output) = Command::new("which").arg(cmd).output() {
+        if let Ok(output) = Command::new("which").arg(trimmed).output() {
             if output.status.success() {
                 if let Ok(text) = String::from_utf8(output.stdout) {
                     if let Some(first_line) = text.lines().next() {
@@ -195,7 +206,7 @@ pub fn find_editor_binary(cmd: &str) -> Option<PathBuf> {
             }
         }
 
-        let standard_paths = match cmd {
+        let standard_paths = match trimmed {
             "nvim" => &[
                 "/usr/bin/nvim",
                 "/usr/local/bin/nvim",
@@ -225,7 +236,7 @@ pub fn find_editor_binary(cmd: &str) -> Option<PathBuf> {
         }
 
         if let Ok(home) = std::env::var("HOME") {
-            let p = PathBuf::from(home).join(".local").join("bin").join(cmd);
+            let p = PathBuf::from(home).join(".local").join("bin").join(trimmed);
             if p.is_file() {
                 return Some(p);
             }
@@ -316,5 +327,22 @@ pub fn open_in_editor(editor: &EditorInfo, file_path: &Path) -> std::io::Result<
     } else {
         Command::new(&editor.path).arg(file_path).spawn()?;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_find_editor_binary_rejects_injection_and_flags() {
+        assert_eq!(find_editor_binary(""), None);
+        assert_eq!(find_editor_binary("   "), None);
+        assert_eq!(find_editor_binary("-help"), None);
+        assert_eq!(find_editor_binary("--version"), None);
+        assert_eq!(find_editor_binary("/?"), None);
+        assert_eq!(find_editor_binary("nvim\0evil"), None);
+        assert_eq!(find_editor_binary("nvim\nrm -rf /"), None);
+        assert_eq!(find_editor_binary("nvim\rcalc.exe"), None);
     }
 }

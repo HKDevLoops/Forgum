@@ -12,6 +12,7 @@
 # Usage:
 #   ./install.sh [--version X.Y.Z] [--channel stable|alpha|nightly|dev] [--headless]
 #                [--telemetry allow|decline] [-y|--yes] [--no-deps] [--build-from-source]
+#                [--uninstall] [--purge]
 #
 # Environment overrides:
 #   FORGUM_VERSION      release version to install (e.g. 0.0.13-beta)
@@ -25,6 +26,8 @@
 #   ./install.sh --channel alpha
 #   ./install.sh --channel nightly
 #   ./install.sh --headless -y
+#   ./install.sh --uninstall
+#   ./install.sh --purge
 #
 
 set -euo pipefail
@@ -38,6 +41,8 @@ FIRST_RUN=0
 ASSUME_YES=0
 AUTO_DEPS="${FORGUM_AUTO_DEPS:-1}"
 BUILD_FROM_SOURCE=0
+UNINSTALL=0
+PURGE=0
 
 # --- argument parsing -------------------------------------------------------
 while [ $# -gt 0 ]; do
@@ -56,6 +61,8 @@ while [ $# -gt 0 ]; do
     -y|--yes) ASSUME_YES=1; shift ;;
     --no-deps) AUTO_DEPS=0; shift ;;
     --build-from-source|--source) BUILD_FROM_SOURCE=1; shift ;;
+    --uninstall|uninstall) UNINSTALL=1; shift ;;
+    --purge|purge) PURGE=1; UNINSTALL=1; shift ;;
     -h|--help)
       grep '^#' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) echo "error: unknown argument '$1' (try --help)" >&2; exit 2 ;;
@@ -274,6 +281,103 @@ run_elevated() {
   fi
 }
 
+# --- uninstallation routine (soft & purge) ----------------------------------
+perform_uninstall() {
+  local mode="soft"
+  if [ "$PURGE" -eq 1 ]; then
+    mode="purge"
+  fi
+
+  echo -e "\033[35m━━━ Forgum De-Orbit Uninstaller (install.sh) ━━━\033[0m"
+  echo -e "Executing: \033[36m${mode}\033[0m uninstallation\n"
+
+  # 1. Attempt binary delegation if available
+  local bin_candidates=(
+    "${FORGUM_INSTALL_DIR:-}/forgum"
+    "/usr/local/bin/forgum"
+    "$HOME/.local/bin/forgum"
+  )
+  if command -v forgum >/dev/null 2>&1; then
+    bin_candidates+=("$(command -v forgum)")
+  fi
+
+  for candidate in "${bin_candidates[@]}"; do
+    if [ -n "$candidate" ] && [ -x "$candidate" ]; then
+      echo -e "\033[32m>> Delegating to Forgum uninstaller: $candidate\033[0m"
+      if "$candidate" uninstall --method "$mode" --non-interactive; then
+        echo -e "\n\033[32m✓ Uninstallation successfully completed via Forgum engine.\033[0m"
+        exit 0
+      fi
+    fi
+  done
+
+  # 2. Standalone shell fallback uninstallation
+  echo -e "\033[33m>> Performing standalone shell uninstallation...\033[0m"
+
+  # Excising shell rc hooks and path blocks
+  local rc_files=(
+    "$HOME/.bashrc"
+    "$HOME/.zshrc"
+    "$HOME/.bash_profile"
+    "$HOME/.profile"
+    "$HOME/.config/fish/config.fish"
+    "$HOME/.xonshrc"
+    "$HOME/.tcshrc"
+    "$HOME/.kshrc"
+    "$HOME/.yashrc"
+  )
+  for rc in "${rc_files[@]}"; do
+    if [ -f "$rc" ]; then
+      if grep -q -E 'forgum|>>> forgum' "$rc" 2>/dev/null; then
+        sed -i.bak '/# >>> forgum/,/# <<< forgum/d' "$rc" 2>/dev/null && rm -f "${rc}.bak" 2>/dev/null || true
+        echo -e "  \033[32m[✓]\033[0m Cleaned Forgum hooks and PATH from $rc"
+      fi
+    fi
+  done
+
+  # Remove completions
+  if [ -d "$HOME/.config/forgum/completions" ]; then
+    rm -rf "$HOME/.config/forgum/completions"
+    echo -e "  \033[32m[✓]\033[0m Removed shell completions directory"
+  fi
+
+  # Remove binaries
+  local remove_bins=(
+    "/usr/local/bin/forgum"
+    "/usr/local/bin/forgum-engine"
+    "$HOME/.local/bin/forgum"
+    "$HOME/.local/bin/forgum-engine"
+  )
+  if [ -n "${FORGUM_INSTALL_DIR:-}" ]; then
+    remove_bins+=("${FORGUM_INSTALL_DIR}/forgum" "${FORGUM_INSTALL_DIR}/forgum-engine")
+  fi
+  for b in "${remove_bins[@]}"; do
+    if [ -f "$b" ]; then
+      rm -f "$b" 2>/dev/null || run_elevated rm -f "$b" 2>/dev/null || true
+      echo -e "  \033[32m[✓]\033[0m Removed binary: $b"
+    fi
+  done
+
+  # If purge: remove config, data, logs, runtime
+  if [ "$mode" = "purge" ]; then
+    echo -e ">> Purging all configuration, cache, and data directories..."
+    rm -rf "$HOME/.config/forgum"
+    rm -rf "$HOME/.local/share/forgum"
+    rm -rf "/usr/local/share/forgum" 2>/dev/null || run_elevated rm -rf "/usr/local/share/forgum" 2>/dev/null || true
+    rm -rf "/tmp/forgum-${UID:-$(id -u)}" 2>/dev/null || true
+    echo -e "  \033[32m[✓]\033[0m Purged ~/.config/forgum and data directories"
+  else
+    echo -e "  \033[90m[-] Preserved user configuration in ~/.config/forgum (Soft mode)\033[0m"
+  fi
+
+  echo -e "\n\033[32m✓ Uninstallation completed successfully.\033[0m"
+  exit 0
+}
+
+if [ "$UNINSTALL" -eq 1 ]; then
+  perform_uninstall
+fi
+
 # --- package installation helper --------------------------------------------
 install_system_packages() {
   local pkgs=("$@")
@@ -477,7 +581,7 @@ elif command -v nix-env >/dev/null 2>&1 && nix-env -q forgum 2>/dev/null | grep 
 elif [ -f "$HOME/.cargo/bin/forgum" ]; then
   EXISTING_PM="Cargo"
   EXISTING_PATH="$HOME/.cargo/bin/forgum"
-  EXISTING_UPDATE_CMD="cargo install --force forgum-cli"
+  EXISTING_UPDATE_CMD="cargo install --force forgum"
 elif command -v forgum >/dev/null 2>&1; then
   ACTIVE_BIN="$(command -v forgum)"
   if [ "$ACTIVE_BIN" != "$BIN_PATH" ]; then
@@ -508,10 +612,10 @@ if [ -n "$EXISTING_PM" ] && [ "$HEADLESS" -eq 0 ] && [ "$ASSUME_YES" -eq 0 ]; th
     CHOICE="${USER_CHOICE:-2}"
     if [ "$CHOICE" = "1" ] && [ "$EXISTING_PM" != "PATH Shadow" ]; then
       echo -e "\033[32m>> Delegating update to ${EXISTING_PM}...\033[0m"
-      eval "$EXISTING_UPDATE_CMD"
+      sh -c "$EXISTING_UPDATE_CMD"
       exit 0
     elif [ "$CHOICE" = "1" ] && [ "$EXISTING_PM" = "PATH Shadow" ]; then
-      eval "$EXISTING_UPDATE_CMD" || true
+      rm -f "$EXISTING_PATH" 2>/dev/null || run_elevated rm -f "$EXISTING_PATH" 2>/dev/null || true
     fi
   else
     # Non-interactive / piped execution (curl ... | bash): automatically proceed with standalone upgrade
@@ -724,18 +828,18 @@ if [ "$DOWNLOAD_OK" -eq 0 ]; then
     else
       echo -e "\033[36m>> Fetching latest source from https://github.com/${REPO}.git...\033[0m"
       BUILD_DIR="$TMP/src"
-      CLONE_BRANCH=""
-      CARGO_BRANCH_ARG=""
+      CLONE_BRANCH=()
+      CARGO_BRANCH_ARG=()
       if [ "$CHANNEL" = "dev" ]; then
-        CLONE_BRANCH="--branch dev"
-        CARGO_BRANCH_ARG="--branch dev"
+        CLONE_BRANCH=("--branch" "dev")
+        CARGO_BRANCH_ARG=("--branch" "dev")
       fi
-      if git clone --depth 1 ${CLONE_BRANCH} "https://github.com/${REPO}.git" "$BUILD_DIR" 2>/dev/null; then
+      if git clone --depth 1 "${CLONE_BRANCH[@]}" "https://github.com/${REPO}.git" "$BUILD_DIR" 2>/dev/null; then
         cargo build --release --manifest-path "$BUILD_DIR/Cargo.toml" --package forgum-engine --bin forgum
         install -m 0755 "$BUILD_DIR/target/release/forgum" "$BIN_PATH"
       else
         echo -e "\033[36m>> Compiling via cargo install --git...\033[0m"
-        cargo install --git "https://github.com/${REPO}.git" ${CARGO_BRANCH_ARG} --package forgum-engine --bin forgum --root "$TMP/cargo-bin" --force
+        cargo install --git "https://github.com/${REPO}.git" "${CARGO_BRANCH_ARG[@]}" --package forgum-engine --bin forgum --root "$TMP/cargo-bin" --force
         install -m 0755 "$TMP/cargo-bin/bin/forgum" "$BIN_PATH"
       fi
     fi
@@ -750,10 +854,10 @@ if [ ! -w /usr/local/share ] && [ ! -w /usr/local ]; then
 fi
 if [ -d "data" ]; then
   mkdir -p "$SHARE_DIR" 2>/dev/null || run_elevated mkdir -p "$SHARE_DIR" 2>/dev/null || true
-  cp -r data/* "$SHARE_DIR/" 2>/dev/null || run_elevated cp -r data/* "$SHARE_DIR/" 2>/dev/null || true
+  cp -r data/. "$SHARE_DIR/" 2>/dev/null || run_elevated cp -r data/. "$SHARE_DIR/" 2>/dev/null || true
 elif [ -n "${BUILD_DIR:-}" ] && [ -d "$BUILD_DIR/data" ]; then
   mkdir -p "$SHARE_DIR" 2>/dev/null || run_elevated mkdir -p "$SHARE_DIR" 2>/dev/null || true
-  cp -r "$BUILD_DIR/data/"* "$SHARE_DIR/" 2>/dev/null || run_elevated cp -r "$BUILD_DIR/data/"* "$SHARE_DIR/" 2>/dev/null || true
+  cp -r "$BUILD_DIR/data/." "$SHARE_DIR/" 2>/dev/null || run_elevated cp -r "$BUILD_DIR/data/." "$SHARE_DIR/" 2>/dev/null || true
 fi
 
 # --- check & update PATH (idempotent prepend) --------------------------------
@@ -794,14 +898,14 @@ cat > "$RECEIPT_DIR/install_receipt.json" <<EOF
 EOF
 
 # --- launch wizard or headless setup ---------------------------------------
-TELEM_ARG=""
+TELEM_ARGS=()
 if [ -n "$TELEMETRY" ]; then
-  TELEM_ARG="--telemetry $TELEMETRY"
+  TELEM_ARGS=("--telemetry" "$TELEMETRY")
 fi
 
 if [ "$HEADLESS" -eq 1 ] || [ ! -t 0 ]; then
   # Headless execution or piped curl invocation (e.g. curl ... | bash)
-  "$BIN_PATH" install --headless $TELEM_ARG
+  "$BIN_PATH" install --headless "${TELEM_ARGS[@]}"
   echo ""
   echo -e "\033[32m✦ FORGUM CELESTIAL INSTALLATION COMPLETE ✦\033[0m"
   echo -e "  • Installed binary: \033[36m${BIN_PATH}\033[0m"
@@ -810,8 +914,8 @@ if [ "$HEADLESS" -eq 1 ] || [ ! -t 0 ]; then
   echo ""
 elif [ -t 0 ] && [ -t 1 ]; then
   # Standard interactive terminal execution
-  "$BIN_PATH" install $TELEM_ARG
+  "$BIN_PATH" install "${TELEM_ARGS[@]}"
 else
   # Fallback headless execution
-  "$BIN_PATH" install --headless $TELEM_ARG
+  "$BIN_PATH" install --headless "${TELEM_ARGS[@]}"
 fi

@@ -36,14 +36,20 @@
 #>
 [CmdletBinding()]
 param(
+    [ValidatePattern('^([vV]?[0-9]+\.[0-9]+\.[0-9]+.*|latest|)$')]
     [string] $Version,
     [ValidateSet('stable', 'alpha', 'nightly', 'dev', '')]
     [string] $Channel = 'stable',
+    [ValidatePattern('^[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+$')]
     [string] $Repo = 'HKDevLoops/Forgum',
     [switch] $Headless,
     [ValidateSet('allow', 'decline', '')]
     [string] $Telemetry = '',
-    [switch] $FirstRun
+    [switch] $FirstRun,
+    [Alias('y', 'Yes')]
+    [switch] $AssumeYes,
+    [switch] $Uninstall,
+    [switch] $Purge
 )
 
 $ErrorActionPreference = 'Stop'
@@ -89,12 +95,119 @@ if ($hasFfmpeg) {
 }
 
 # --- install location -------------------------------------------------------
-$installDir = if ($env:FORGUM_INSTALL_DIR) { $env:FORGUM_INSTALL_DIR } `
-              else { Join-Path $env:LOCALAPPDATA 'Forgum' }
+$localAppDataDir = if ($env:LOCALAPPDATA) {
+    $env:LOCALAPPDATA
+} elseif ($env:USERPROFILE) {
+    Join-Path $env:USERPROFILE 'AppData\Local'
+} else {
+    'C:\ProgramData'
+}
+$installDir = if ($env:FORGUM_INSTALL_DIR) {
+    $env:FORGUM_INSTALL_DIR
+} else {
+    Join-Path $localAppDataDir 'Forgum'
+}
 if (-not (Test-Path -LiteralPath $installDir)) {
-    New-Item -ItemType Directory -Path $installDir -Force | Out-Null
+    New-Item -ItemType Directory -LiteralPath $installDir -Force | Out-Null
 }
 $binPath = Join-Path $installDir 'forgum.exe'
+
+# --- uninstallation routine (soft & purge) ----------------------------------
+if ($Uninstall -or $Purge) {
+    $mode = if ($Purge) { 'purge' } else { 'soft' }
+    Write-Host "━━━ Forgum De-Orbit Uninstaller (PowerShell) ━━━" -ForegroundColor Magenta
+    Write-Host "Executing: $mode uninstallation`n" -ForegroundColor Cyan
+
+    # 1. Attempt binary delegation if available
+    $binCandidates = @($binPath)
+    if (Get-Command forgum -ErrorAction SilentlyContinue) {
+        $binCandidates += (Get-Command forgum).Source
+    }
+    foreach ($cand in $binCandidates) {
+        if ($cand -and (Test-Path -LiteralPath $cand)) {
+            Write-Host ">> Delegating to Forgum uninstaller: $cand" -ForegroundColor Green
+            try {
+                & "$cand" uninstall --method $mode --non-interactive
+                Write-Host "`n✓ Uninstallation successfully completed via Forgum engine." -ForegroundColor Green
+                exit 0
+            } catch {
+                Write-Host ">> Binary uninstaller returned error, proceeding with PowerShell cleanup..." -ForegroundColor Yellow
+            }
+        }
+    }
+
+    # 2. Standalone PowerShell fallback uninstallation
+    Write-Host ">> Performing standalone PowerShell uninstallation..." -ForegroundColor Yellow
+
+    # Excising shell hooks from PowerShell profiles
+    $profilesToCheck = @(
+        $PROFILE.CurrentUserAllHosts,
+        $PROFILE.CurrentUserCurrentHost,
+        (Join-Path $HOME 'Documents\PowerShell\Microsoft.PowerShell_profile.ps1'),
+        (Join-Path $HOME 'Documents\WindowsPowerShell\Microsoft.PowerShell_profile.ps1'),
+        (Join-Path $HOME 'OneDrive\Documents\PowerShell\Microsoft.PowerShell_profile.ps1'),
+        (Join-Path $HOME 'OneDrive\Documents\WindowsPowerShell\Microsoft.PowerShell_profile.ps1')
+    ) | Where-Object { $_ -and (Test-Path -LiteralPath $_) }
+
+    foreach ($prof in $profilesToCheck) {
+        try {
+            $content = Get-Content -LiteralPath $prof -Raw -ErrorAction SilentlyContinue
+            if ($content -and ($content -match '>>> forgum|forgum')) {
+                $cleaned = $content -replace '(?s)# >>> forgum.*?# <<< forgum <<<[\r\n]*', ''
+                $cleaned = $cleaned -replace '(?s)rem >>> forgum.*?rem <<< forgum <<<[\r\n]*', ''
+                Set-Content -LiteralPath $prof -Value $cleaned -Encoding UTF8 -Force
+                Write-Host "  [✓] Cleaned Forgum hooks from $prof" -ForegroundColor Green
+            }
+        } catch {}
+    }
+
+    # Remove completions
+    $compDir = Join-Path $HOME '.config\forgum\completions'
+    if (Test-Path -LiteralPath $compDir) {
+        Remove-Item -LiteralPath $compDir -Recurse -Force -ErrorAction SilentlyContinue
+        Write-Host "  [✓] Removed completions directory" -ForegroundColor Green
+    }
+
+    # Remove binary
+    if (Test-Path -LiteralPath $binPath) {
+        Remove-Item -LiteralPath $binPath -Force -ErrorAction SilentlyContinue
+        Write-Host "  [✓] Removed binary: $binPath" -ForegroundColor Green
+    }
+
+    # Clean User PATH
+    try {
+        $currPath = [Environment]::GetEnvironmentVariable('PATH', 'User')
+        if ($currPath) {
+            $parts = $currPath -split ';' | Where-Object { $_ -and $_.TrimEnd('\') -ne $installDir.TrimEnd('\') }
+            [Environment]::SetEnvironmentVariable('PATH', ($parts -join ';'), 'User')
+            Write-Host "  [✓] Cleaned User PATH" -ForegroundColor Green
+        }
+    } catch {}
+
+    # If Purge: remove all configuration and data directories
+    if ($mode -eq 'purge') {
+        Write-Host ">> Purging all configuration, cache, and data directories..." -ForegroundColor Yellow
+        $cfgDir = Join-Path $HOME '.config\forgum'
+        if (Test-Path -LiteralPath $cfgDir) {
+            Remove-Item -LiteralPath $cfgDir -Recurse -Force -ErrorAction SilentlyContinue
+            Write-Host "  [✓] Purged $cfgDir" -ForegroundColor Green
+        }
+        if (Test-Path -LiteralPath $installDir) {
+            Remove-Item -LiteralPath $installDir -Recurse -Force -ErrorAction SilentlyContinue
+            Write-Host "  [✓] Purged $installDir" -ForegroundColor Green
+        }
+        $tempForgum = Join-Path $env:TEMP 'Forgum'
+        if (Test-Path -LiteralPath $tempForgum) {
+            Remove-Item -LiteralPath $tempForgum -Recurse -Force -ErrorAction SilentlyContinue
+            Write-Host "  [✓] Purged $tempForgum" -ForegroundColor Green
+        }
+    } else {
+        Write-Host "  [-] Preserved user configuration in ~/.config/forgum (Soft mode)" -ForegroundColor DarkGray
+    }
+
+    Write-Host "`n✓ Uninstallation completed successfully." -ForegroundColor Green
+    exit 0
+}
 
 # --- detect existing package manager installations & shadow binaries --------
 $existingInstallations = @()
@@ -174,8 +287,16 @@ if ($existingInstallations.Count -gt 0 -and -not $Headless -and -not $AssumeYes 
         Write-Host "  • Found existing Forgum via $($inst.Manager): $($inst.Path)" -ForegroundColor Cyan
     }
     Write-Host ""
+    $firstInst = $existingInstallations[0]
+    $firstCmdDisplay = switch ($firstInst.Manager) {
+        'Scoop'      { 'scoop update forgum' }
+        'WinGet'     { 'winget upgrade HKDevLoops.Forgum' }
+        'Chocolatey' { 'choco upgrade forgum -y' }
+        'Cargo'      { 'cargo install --force forgum' }
+        default      { $firstInst.UpdateCmd }
+    }
     Write-Host "How would you like to proceed?" -ForegroundColor White
-    Write-Host "  [1] Delegate to package manager (Run '$($existingInstallations[0].UpdateCmd)' and exit)" -ForegroundColor Green
+    Write-Host "  [1] Delegate to package manager (Run '$firstCmdDisplay' and exit)" -ForegroundColor Green
     Write-Host "  [2] Switch to standalone channel build (Install to $installDir and update PATH)" -ForegroundColor Cyan
     Write-Host "  [3] Clean reinstall / overwrite" -ForegroundColor Yellow
     Write-Host ""
@@ -184,8 +305,16 @@ if ($existingInstallations.Count -gt 0 -and -not $Headless -and -not $AssumeYes 
     if (-not $choice) { $choice = '2' }
     
     if ($choice.Trim() -eq '1') {
-        Write-Host ">> Delegating update to $($existingInstallations[0].Manager)..." -ForegroundColor Green
-        Invoke-Expression $existingInstallations[0].UpdateCmd
+        Write-Host ">> Delegating update to $($firstInst.Manager)..." -ForegroundColor Green
+        switch ($firstInst.Manager) {
+            'Scoop'      { & scoop update forgum }
+            'WinGet'     { & winget upgrade HKDevLoops.Forgum }
+            'Chocolatey' { & choco upgrade forgum -y }
+            'Cargo'      { & cargo install --force forgum }
+            default {
+                Write-Host "Manual update required for $($firstInst.Path)" -ForegroundColor Yellow
+            }
+        }
         exit 0
     }
 }
@@ -290,7 +419,7 @@ if (-not $localInstalled) {
     }
 
     $tmp = Join-Path ([System.IO.Path]::GetTempPath()) ("forgum-" + [guid]::NewGuid().ToString('N'))
-    New-Item -ItemType Directory -Path $tmp -Force | Out-Null
+    New-Item -ItemType Directory -LiteralPath $tmp -Force | Out-Null
     $zipPath = Join-Path $tmp 'archive.zip'
 
     $downloadOk = $false
@@ -414,7 +543,7 @@ if ($installDir -notin ($env:PATH -split ';')) {
 try {
     $receiptDir = Join-Path $HOME '.config\forgum'
     if (-not (Test-Path -LiteralPath $receiptDir)) {
-        New-Item -ItemType Directory -Path $receiptDir -Force | Out-Null
+        New-Item -ItemType Directory -LiteralPath $receiptDir -Force | Out-Null
     }
     $receiptPath = Join-Path $receiptDir 'install_receipt.json'
     $epochSeconds = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
@@ -428,7 +557,7 @@ try {
   "auto_update": true
 }
 "@
-    Set-Content -Path $receiptPath -Value $receiptContent -Encoding UTF8 -Force
+    Set-Content -LiteralPath $receiptPath -Value $receiptContent -Encoding UTF8 -Force
 } catch {}
 
 # --- launch wizard or headless setup ---------------------------------------

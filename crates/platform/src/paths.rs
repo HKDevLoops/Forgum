@@ -248,10 +248,12 @@ fn default_runtime_dir() -> PathBuf {
     if let Some(p) = std::env::var_os("XDG_RUNTIME_DIR") {
         return PathBuf::from(p).join("forgum");
     }
+    #[allow(unsafe_code)]
+    let uid = unsafe { libc::getuid() };
     if let Some(tmp) = std::env::var_os("TMPDIR") {
-        return PathBuf::from(tmp).join("forgum");
+        return PathBuf::from(tmp).join(format!("forgum-{}", uid));
     }
-    PathBuf::from("/tmp/forgum")
+    PathBuf::from(format!("/tmp/forgum-{}", uid))
 }
 
 #[cfg(unix)]
@@ -319,9 +321,14 @@ fn ensure_parent(path: PathBuf) -> Result<PathBuf, PlatformError> {
     Ok(path)
 }
 
-/// Ensure a directory exists.
+/// Ensure a directory exists with strict user permissions.
 fn ensure_dir(path: PathBuf) -> Result<PathBuf, PlatformError> {
     std::fs::create_dir_all(&path)?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let _ = std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o700));
+    }
     Ok(path)
 }
 
@@ -439,11 +446,21 @@ pub fn candidate_runtime_dirs() -> Vec<PathBuf> {
     }
     #[cfg(unix)]
     {
+        #[allow(unsafe_code)]
+        let uid = unsafe { libc::getuid() };
         if let Ok(tmp) = std::env::var("TMPDIR") {
+            let p_uid = PathBuf::from(&tmp).join(format!("forgum-{}", uid));
+            if !dirs.contains(&p_uid) {
+                dirs.push(p_uid);
+            }
             let p = PathBuf::from(tmp).join("Forgum");
             if !dirs.contains(&p) {
                 dirs.push(p);
             }
+        }
+        let fallback_uid = PathBuf::from(format!("/tmp/forgum-{}", uid));
+        if !dirs.contains(&fallback_uid) {
+            dirs.push(fallback_uid);
         }
         let fallback = PathBuf::from("/tmp/Forgum");
         if !dirs.contains(&fallback) {

@@ -854,7 +854,7 @@ fn t1_f15_test01_bash_hook_contains_cli_args() {
         "Bash hook must embed engine path"
     );
     assert!(
-        hook.contains("# >>> forgum (bash) >>>"),
+        hook.contains("# >>> forgum >>>") || hook.contains("# >>> forgum (bash) >>>"),
         "Bash hook must contain begin marker"
     );
     assert!(

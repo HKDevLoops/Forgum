@@ -10,13 +10,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.0.13-beta] - 2026-10-21
 
 ### Security
+- **Named Pipe Squatting & Hijacking Prevention (`crates/platform/src/daemon_socket.rs`)**:
+  - Enforced `FILE_FLAG_FIRST_PIPE_INSTANCE` on Windows named pipes, rejecting pipe squatting or unauthorized pre-creation attempts (`SEC-004`).
+- **Unix Multi-User Collision & Hijack Protection (`crates/platform/src/paths.rs`)**:
+  - Scoped runtime directories to `/tmp/forgum-<uid>` with strict `0o700` POSIX permissions and parent directory UID ownership verification prior to socket binding (`SEC-005`).
+- **Unbounded Process Termination Guard (`crates/platform/src/spawn.rs`)**:
+  - Prevented termination of caller process group or PID 1 by strictly rejecting `pid <= 1` or current PID in `kill_process()` (`SEC-006`).
+- **Shell Command & Subshell Injection Immunity (`crates/engine/src/init.rs`)**:
+  - Applied lexical argument escaping via `shell_escape_arg()` and strictly quoted subshell expansions across all 15 supported shells (Bash, Zsh, Fish, PowerShell, Pwsh, Nushell, Elvish, Xonsh, Tcsh, Ksh, Ion, Oil, Yash, Cmd) (`SEC-007`).
+- **Windows Editor Path Splitting Defense (CWE-428) (`crates/tui/src/lib.rs`, `crates/platform/src/editor.rs`)**:
+  - Resolved whitespace splitting for Windows executable paths via `ResolvedEditor`, sanitized command arguments against leading flags/nulls/newlines, and bypassed batch wrapper risks (`SEC-008`).
+- **Image Decompression Bomb Defense (`crates/engine/src/image_ascii.rs`)**:
+  - Implemented header-only pre-decode dimension probing via `image::image_dimensions()`, strictly rejecting images exceeding 4096×4096 pixels before decompression (`SEC-009`).
 - **Secure Process Execution (`crates/platform/src/process.rs`)**:
-  - Remediated command execution vulnerability in `run_editor()` by adopting direct binary execution with safely split argument vectors, avoiding arbitrary shell command injection (`SEC-001`).
+  - Remediated command execution vulnerability in `run_editor()` by adopting direct binary execution with safely split argument vectors (`SEC-001`).
 - **Filesystem & State Hardening (`crates/platform/src/daemon.rs`, `crates/engine/src/cow.rs`)**:
   - Enforced restricted permissions (0600 / ACLs) on daemon PID files and lock sockets (`SEC-002`).
   - Added strict path canonicalization and directory jail checks preventing directory traversal via mascot names in `~/.config/forgum/cows` (`SEC-003`).
 
+### Performance & Memory
+- **Zero Heap Allocations in Scenery Hot Loops (`crates/engine/src/scenery.rs`)**:
+  - Eliminated per-frame `Vec<char>` vector allocations in tree row rasterization in favor of zero-allocation character iterators (`PERF-004`).
+- **Zombie Immortal Particle Elimination (`crates/engine/src/particles.rs`)**:
+  - Hardened particle expiration against floating-point `NaN` values, preventing dead particles from leaking particle pool memory (`PERF-005`).
+- **Box-Muller PRNG Singularity Avoidance (`crates/engine/src/particles.rs`)**:
+  - Clamped uniform random inputs away from `ln(0)` and `ln(1)` mathematical singularities in atmospheric dispersion sampling (`PERF-006`).
+- **Zero-Allocation Hot-Loop Optimization (`crates/engine/src/framebuffer.rs`, `crates/engine/src/engine_core.rs`)**:
+  - Replaced ad-hoc string and buffer allocations in dirty-damage diff calculation with pre-allocated scratch buffers (`PERF-001`, `PERF-002`).
+  - Optimized atomic lock contention in audio bell telemetry and structured logging queues (`PERF-003`).
+
 ### Fixed
+- **Terminal Lock-in Prevention & Emergency VT Restoration (`crates/tui/src/lib.rs`, `crates/platform/src/signal.rs`)**:
+  - Added `install_tui_panic_hook()` restoring raw mode and alternate screen before panic stack trace printing, and wired emergency terminal recovery into Windows Ctrl-C handlers (`BUG-006`).
+- **Multi-Byte UTF-8 String Truncation Safety (`crates/platform/src/protocol.rs`)**:
+  - Replaced raw byte slicing in `SceneConfig::validate()` with character-boundary-aware `truncate_utf8()`, preventing panics on multi-byte UTF-8 inputs (`BUG-007`).
+- **Configuration Boundary Hardening (`crates/platform/src/protocol.rs`, `crates/engine/src/config.rs`)**:
+  - Established strict bounds on `split_ratio` (0.05..=0.95), `reserve_rows` (1000), `reserve_cols` (4096), `thought_interval` (1 week), `color_quant`, and keybinding string lengths (`BUG-008`).
+- **Responsive Widescreen Table Formatting & Word Wrapping (`crates/engine/src/options_table.rs`)**:
+  - Implemented `format_table_with_width()` supporting 80 up to 512 columns, and refined column-shrinking to preserve primary identifier words (`BUG-009`).
+- **Universal Marker Delimiter Standardization (`crates/platform/src/shell.rs`, `crates/engine/src/init.rs`)**:
+  - Standardized shell hook marker delimiters across all 15 supported shells via `Shell::hook_markers()` to eliminate orphaned blocks during updates (`PORT-003`).
+- **Unix Uninstaller PATH Profile Excision (`crates/platform/src/uninstaller.rs`)**:
+  - Implemented clean excision of `# >>> forgum path >>>` blocks across `~/.bashrc`, `~/.zshrc`, `~/.bash_profile`, and `~/.profile` (`PORT-004`).
+- **Installer Eval Elimination & Standalone Uninstaller (`install.sh`, `install.ps1`)**:
+  - Eliminated arbitrary `eval` and `Invoke-Expression` calls in favor of typed command execution, added parameter validation, and implemented full standalone `--uninstall` and `--purge` routines (`PORT-005`).
 - **Terminal State Safety & Signal Recovery (`crates/platform/src/guards.rs`, `crates/engine/src/split_scroll.rs`)**:
   - Hardened emergency terminal restoration hook to reliably reset cursor visibility, mouse tracking, alternate screen buffers, and DECSTBM margins across all abnormal exits (`BUG-001`).
   - Corrected margin clamping and minimum row reservations under narrow terminal viewports ($W < 80$) to eliminate prompt clipping (`BUG-002`).
@@ -31,11 +68,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Fixed telemetry opt-out parsing in standalone install scripts to guarantee 100% offline installation when `--telemetry decline` or `-Telemetry decline` is passed (`BUG-005`).
   - Ensured Windows Virtual Terminal processing flag is properly initialized on legacy Windows consoles (`PORT-001`).
   - Hardened Unix signal handling and RAII teardown on BSD and macOS platforms (`PORT-002`).
-
-### Performance
-- **Zero-Allocation Hot-Loop Optimization (`crates/engine/src/framebuffer.rs`, `crates/engine/src/engine_core.rs`)**:
-  - Replaced ad-hoc string and buffer allocations in dirty-damage diff calculation with pre-allocated scratch buffers (`PERF-001`, `PERF-002`).
-  - Optimized atomic lock contention in audio bell telemetry and structured logging queues (`PERF-003`).
 
 ---
 

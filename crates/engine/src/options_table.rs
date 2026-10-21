@@ -5,14 +5,23 @@
 
 use crate::cow::{char_display_width, str_display_width, wrap_words};
 
-/// Format an adaptive Unicode or ASCII table.
+/// Format an adaptive Unicode or ASCII table using the current terminal dimensions.
 pub fn format_table(headers: &[&str], rows: &[Vec<&str>]) -> String {
+    let (term_w, _) = forgum_platform::terminal_size();
+    format_table_with_width(headers, rows, term_w as usize)
+}
+
+/// Format an adaptive Unicode or ASCII table with an explicit target column width (e.g. 80 to 200+).
+pub fn format_table_with_width(
+    headers: &[&str],
+    rows: &[Vec<&str>],
+    target_width: usize,
+) -> String {
     if headers.is_empty() {
         return String::new();
     }
 
-    let (term_w, _) = forgum_platform::terminal_size();
-    let total_width = (term_w as usize).clamp(60, 110);
+    let total_width = target_width.clamp(80, 512);
 
     // Border and padding overhead: 1 border per col + 1 on end, plus 2 spaces padding per col
     let num_cols = headers.len();
@@ -23,6 +32,14 @@ pub fn format_table(headers: &[&str], rows: &[Vec<&str>]) -> String {
     // First N-1 columns get compact width based on their header/content, last column takes the rest
     let mut col_widths = vec![0usize; num_cols];
     let mut used_for_initial = 0;
+
+    let max_cap = if total_width >= 180 {
+        36
+    } else if total_width >= 120 {
+        30
+    } else {
+        26
+    };
 
     for (col_idx, w) in col_widths
         .iter_mut()
@@ -36,7 +53,7 @@ pub fn format_table(headers: &[&str], rows: &[Vec<&str>]) -> String {
             .max()
             .unwrap_or(0);
         let header_w = str_display_width(headers[col_idx]);
-        let ideal = max_content.max(header_w).clamp(8, 26);
+        let ideal = max_content.max(header_w).clamp(8, max_cap);
         *w = ideal;
         used_for_initial += ideal;
     }
@@ -44,17 +61,26 @@ pub fn format_table(headers: &[&str], rows: &[Vec<&str>]) -> String {
     // Last column takes remaining width
     let last_col_idx = num_cols.saturating_sub(1);
     let remaining = available_content.saturating_sub(used_for_initial);
-    if remaining < 18 && available_content > 24 {
-        let deficit = 18 - remaining;
+    let min_last_col = 18;
+    if remaining < min_last_col && available_content > 24 {
+        let deficit = min_last_col - remaining;
         let mut recovered = 0;
-        for w in col_widths.iter_mut().take(last_col_idx) {
-            let can_shrink = (*w).saturating_sub(8);
+        // Shrink intermediate columns first (from right to left, avoiding Col 0)
+        for col_idx in (1..last_col_idx).rev() {
+            let can_shrink = col_widths[col_idx].saturating_sub(8);
             let shrink = can_shrink.min(deficit.saturating_sub(recovered));
-            *w -= shrink;
+            col_widths[col_idx] -= shrink;
             recovered += shrink;
             if recovered >= deficit {
                 break;
             }
+        }
+        // Only if still in deficit, shrink Col 0 down to at most 16
+        if recovered < deficit && last_col_idx > 0 {
+            let can_shrink = col_widths[0].saturating_sub(16);
+            let shrink = can_shrink.min(deficit.saturating_sub(recovered));
+            col_widths[0] -= shrink;
+            recovered += shrink;
         }
         col_widths[last_col_idx] = (remaining + recovered).max(12);
     } else {
@@ -1947,6 +1973,44 @@ mod tests {
                 w, expected_w,
                 "Table line {i} ('{line}') visible width {w} != expected {expected_w}"
             );
+        }
+    }
+
+    #[test]
+    fn test_format_table_widths_80_to_240_plus() {
+        let headers = ["Mascot", "Habitat", "Locomotion", "Detailed Notes"];
+        let rows = vec![
+            vec!["dragon", "Inferno", "fly", "Ancient fire-breathing creature that flies over volcanoes and generates dynamic embers."],
+            vec!["whale", "Ocean", "swim", "Aquatic mammal requiring submarine bounding hull without road bleed-through."],
+        ];
+
+        for width in [80, 100, 120, 140, 160, 200, 240, 300] {
+            let table = format_table_with_width(&headers, &rows, width);
+            assert!(
+                !table.is_empty(),
+                "Table at width {width} must not be empty"
+            );
+
+            let border_lines: Vec<&str> = table
+                .lines()
+                .filter(|l| {
+                    l.starts_with('┌')
+                        || l.starts_with('├')
+                        || l.starts_with('└')
+                        || l.starts_with('│')
+                })
+                .collect();
+            assert!(border_lines.len() >= 4);
+
+            let visible_w = |s: &str| str_display_width(&crate::status_line::strip_ansi(s));
+            let expected_w = visible_w(border_lines[0]);
+            for (i, line) in border_lines.iter().enumerate() {
+                let w = visible_w(line);
+                assert_eq!(
+                    w, expected_w,
+                    "Width {width} table line {i} width {w} != expected {expected_w}"
+                );
+            }
         }
     }
 }

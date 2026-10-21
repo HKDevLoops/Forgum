@@ -180,26 +180,26 @@ pub fn calculate_dimensions(
     let orig_h = orig_h.max(1);
 
     match (target_width, target_height) {
-        (Some(w), Some(h)) => (w.max(1) as u32, h.max(1) as u32),
+        (Some(w), Some(h)) => (
+            (w as u32).clamp(1, MAX_IMAGE_DIMENSION),
+            (h as u32).clamp(1, MAX_IMAGE_DIMENSION),
+        ),
         (Some(w), None) => {
-            let w = w.max(1) as u32;
-            let h = ((orig_h as f32 * w as f32 / orig_w as f32) * 0.5)
-                .round()
-                .max(1.0) as u32;
+            let w = (w as u32).clamp(1, MAX_IMAGE_DIMENSION);
+            let h = (((orig_h as f64 * w as f64 / orig_w as f64) * 0.5).round() as u32)
+                .clamp(1, MAX_IMAGE_DIMENSION);
             (w, h)
         }
         (None, Some(h)) => {
-            let h = h.max(1) as u32;
-            let w = ((orig_w as f32 * h as f32 / orig_h as f32) * 2.0)
-                .round()
-                .max(1.0) as u32;
+            let h = (h as u32).clamp(1, MAX_IMAGE_DIMENSION);
+            let w = (((orig_w as f64 * h as f64 / orig_h as f64) * 2.0).round() as u32)
+                .clamp(1, MAX_IMAGE_DIMENSION);
             (w, h)
         }
         (None, None) => {
-            let w = 40u32.min(orig_w).max(10);
-            let h = ((orig_h as f32 * w as f32 / orig_w as f32) * 0.5)
-                .round()
-                .max(1.0) as u32;
+            let w = 40u32.min(orig_w).clamp(10, MAX_IMAGE_DIMENSION);
+            let h = (((orig_h as f64 * w as f64 / orig_w as f64) * 0.5).round() as u32)
+                .clamp(1, MAX_IMAGE_DIMENSION);
             (w, h)
         }
     }
@@ -319,6 +319,14 @@ pub fn convert_image_path_to_ascii(
             )));
         }
     }
+    // Pre-decoding decompression bomb protection: inspect dimensions directly from image header
+    if let Ok((w, h)) = image::image_dimensions(p) {
+        if w > MAX_IMAGE_DIMENSION || h > MAX_IMAGE_DIMENSION {
+            return Err(ImageAsciiError::Custom(format!(
+                "image dimensions ({w}x{h}) exceed safety ceiling of 4096x4096",
+            )));
+        }
+    }
     let img = image::open(p).map_err(|e| ImageAsciiError::ImageDecode {
         path: p.to_path_buf(),
         source: e,
@@ -426,6 +434,14 @@ pub fn image_to_cow(
             return Err(ImageAsciiError::Custom(format!(
                 "image file size ({} bytes) exceeds safety ceiling of 25MB",
                 meta.len()
+            )));
+        }
+    }
+    // Pre-decoding decompression bomb protection: inspect dimensions directly from image header
+    if let Ok((w, h)) = image::image_dimensions(p) {
+        if w > MAX_IMAGE_DIMENSION || h > MAX_IMAGE_DIMENSION {
+            return Err(ImageAsciiError::Custom(format!(
+                "image dimensions ({w}x{h}) exceed safety ceiling of 4096x4096",
             )));
         }
     }
@@ -561,5 +577,17 @@ mod tests {
         assert!(!expanded.contains("$thoughts"));
         assert!(expanded.contains("oo"));
         assert!(expanded.contains('\\'));
+    }
+
+    #[test]
+    fn test_dimensions_guard_and_decompression_bomb_bounds() {
+        // Extreme requested dimensions must be clamped to MAX_IMAGE_DIMENSION
+        let (w, h) = calculate_dimensions(100, 100, Some(50_000), Some(50_000));
+        assert_eq!(w, MAX_IMAGE_DIMENSION);
+        assert_eq!(h, MAX_IMAGE_DIMENSION);
+
+        let (w2, h2) = calculate_dimensions(100, 100, Some(100_000), None);
+        assert_eq!(w2, MAX_IMAGE_DIMENSION);
+        assert!(h2 <= MAX_IMAGE_DIMENSION);
     }
 }

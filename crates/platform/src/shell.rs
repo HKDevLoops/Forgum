@@ -321,6 +321,14 @@ impl Shell {
         }
     }
 
+    /// Return the standard begin and end marker delimiters for shell hook blocks.
+    pub fn hook_markers(&self) -> (&'static str, &'static str) {
+        match self {
+            Shell::Cmd => ("rem >>> forgum >>>", "rem <<< forgum <<<"),
+            _ => (HOOK_MARKER_BEGIN, HOOK_MARKER_END),
+        }
+    }
+
     /// Return the canonical executable binary name for this shell.
     pub fn binary_name(&self) -> &'static str {
         match self {

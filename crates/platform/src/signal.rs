@@ -238,6 +238,7 @@ unsafe extern "system" fn windows_ctrl_handler(event_type: u32) -> i32 {
         }
         if count > 0 {
             // Second interrupt signal received: force immediate termination.
+            crate::guards::emergency_restore_terminal_idempotent();
             std::process::exit(130);
         }
     }

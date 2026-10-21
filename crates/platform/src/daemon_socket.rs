@@ -50,6 +50,24 @@ impl DaemonSocket {
             if let Some(parent) = path.parent() {
                 let _ = std::fs::create_dir_all(parent);
                 let _ = std::fs::set_permissions(parent, std::fs::Permissions::from_mode(0o700));
+
+                // Verify directory ownership on Unix to prevent unauthorized access or directory hijacking
+                #[allow(unsafe_code)]
+                {
+                    use std::os::unix::fs::MetadataExt;
+                    if let Ok(meta) = std::fs::metadata(parent) {
+                        let current_uid = unsafe { libc::getuid() };
+                        if meta.uid() != current_uid {
+                            return Err(PlatformError::Io(std::io::Error::new(
+                                std::io::ErrorKind::PermissionDenied,
+                                format!(
+                                    "runtime directory {:?} is not owned by current user (UID {}, owned by UID {})",
+                                    parent, current_uid, meta.uid()
+                                ),
+                            )));
+                        }
+                    }
+                }
             }
 
             // Remove stale socket file from a previous unclean shutdown,
@@ -106,6 +124,10 @@ impl DaemonSocket {
             },
             #[cfg(windows)]
             SocketInner::Windows { pipe_name, .. } => {
+                // Win32 FILE_FLAG_FIRST_PIPE_INSTANCE (0x00080000) guarantees that the server pipe is the
+                // first instance, preventing pipe squatting / hijacking attacks.
+                const FILE_FLAG_FIRST_PIPE_INSTANCE: u32 = 0x0008_0000;
+
                 // Create a new pipe instance and wait for a client to connect.
                 // Each call creates a fresh instance so multiple clients can be
                 // served sequentially.
@@ -113,7 +135,8 @@ impl DaemonSocket {
                 let new_handle = unsafe {
                     windows_sys::Win32::System::Pipes::CreateNamedPipeW(
                         pipe_name.as_ptr(),
-                        windows_sys::Win32::Storage::FileSystem::PIPE_ACCESS_DUPLEX,
+                        windows_sys::Win32::Storage::FileSystem::PIPE_ACCESS_DUPLEX
+                            | FILE_FLAG_FIRST_PIPE_INSTANCE,
                         windows_sys::Win32::System::Pipes::PIPE_TYPE_BYTE
                             | windows_sys::Win32::System::Pipes::PIPE_READMODE_BYTE
                             | windows_sys::Win32::System::Pipes::PIPE_WAIT,

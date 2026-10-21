@@ -86,7 +86,7 @@ pub use error::PlatformError;
 pub use gpu::{detect_gpu_devices, resolve_acceleration, AccelerationMode, GpuDeviceType, GpuInfo};
 pub use guards::{
     emergency_restore_terminal_idempotent, install_crash_safe_vt_hook, mark_vt_dirty,
-    AltScreenGuard, CursorShowGuard, RawModeGuard, TimerResolutionGuard,
+    AltScreenGuard, CursorGuard, CursorShowGuard, RawModeGuard, TimerResolutionGuard,
     EMERGENCY_VT_RESTORE_BYTES,
 };
 pub use marketplace::{

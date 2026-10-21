@@ -133,7 +133,7 @@ impl ParticlePool {
                 p.x += p.vx * dt;
                 p.y += p.vy * dt;
                 p.life -= dt;
-                if p.life <= 0.0 {
+                if !p.life.is_finite() || p.life <= 0.0 {
                     self.dead_keys.push(key);
                 }
             }
@@ -176,7 +176,7 @@ impl ParticlePool {
         for i in 0..self.scratch_keys.len() {
             let key = self.scratch_keys[i];
             let life = self.scratch_life[i];
-            if life <= 0.0 {
+            if !life.is_finite() || life <= 0.0 {
                 self.dead_keys.push(key);
             } else if let Some(p) = self.particles.get_mut(key) {
                 p.x = self.scratch_px[i];
@@ -217,7 +217,11 @@ impl ParticlePool {
             if xi >= fb.width || yi >= fb.height || yi < min_y {
                 continue;
             }
-            let life_ratio = (p.life / p.max_life).clamp(0.0, 1.0);
+            let life_ratio = if p.max_life > 0.0 && p.life.is_finite() && p.max_life.is_finite() {
+                (p.life / p.max_life).clamp(0.0, 1.0)
+            } else {
+                0.0
+            };
             let alpha = (alpha_fn(1.0 - life_ratio) * 255.0) as u8;
             let display_ch = smooth_particle_glyph(p.ch, life_ratio);
             let mut c = p.color;
@@ -465,21 +469,39 @@ pub fn next_u64() -> u64 {
 
 /// Get a pseudo-random f32 in [0.0, 1.0).
 pub fn rand_01() -> f32 {
-    (next_u64() >> 40) as f32 / (1u32 << 24) as f32
+    let val = (next_u64() >> 40) as f32 / (1u32 << 24) as f32;
+    val.clamp(0.0, 0.9999999)
 }
 
 /// Get a pseudo-random f32 in [lo, hi).
 pub fn rand_range(lo: f32, hi: f32) -> f32 {
+    let lo = if lo.is_finite() { lo } else { 0.0 };
+    let hi = if hi.is_finite() { hi } else { lo };
+    let (lo, hi) = if lo <= hi { (lo, hi) } else { (hi, lo) };
     lo + rand_01() * (hi - lo)
 }
 
 /// Box-Muller Gaussian normal distribution sampling: N(mean, std_dev^2).
 /// Provides authentic natural diffusion for particle plumes, thermal convection, and kinematic bursts.
 pub fn rand_normal(mean: f32, std_dev: f32) -> f32 {
-    let u1 = rand_01().max(1e-7); // guard against ln(0)
+    let mean = if mean.is_finite() { mean } else { 0.0 };
+    let std_dev = if std_dev.is_finite() {
+        std_dev.abs()
+    } else {
+        0.0
+    };
+    if std_dev == 0.0 {
+        return mean;
+    }
+    let u1 = rand_01().clamp(1e-7, 0.9999999); // guard against ln(0) and ln(1)
     let u2 = rand_01();
     let z0 = (-2.0 * u1.ln()).sqrt() * (2.0 * std::f32::consts::PI * u2).cos();
-    mean + z0 * std_dev
+    let res = mean + z0 * std_dev;
+    if res.is_finite() {
+        res
+    } else {
+        mean
+    }
 }
 
 /// Seed the frame PRNG. Call once per frame.
@@ -950,5 +972,48 @@ mod tests {
         // Test resize to 0 clears everything
         pool.on_resize(0, 0);
         assert_eq!(pool.active_count(), 0);
+    }
+
+    #[test]
+    fn test_prng_and_box_muller_bounds_resilience() {
+        // 1. Box-Muller with 0 std_dev returns mean
+        assert_eq!(rand_normal(5.0, 0.0), 5.0);
+
+        // 2. Box-Muller with negative std_dev treats as abs
+        let val_neg = rand_normal(0.0, -1.0);
+        assert!(val_neg.is_finite());
+
+        // 3. Box-Muller with NaN/Inf values returns finite fallback
+        let val_nan_mean = rand_normal(f32::NAN, 1.0);
+        assert!(val_nan_mean.is_finite());
+        assert_eq!(rand_normal(10.0, f32::NAN), 10.0);
+        let val_inf = rand_normal(f32::INFINITY, 1.0);
+        assert!(val_inf.is_finite());
+
+        // 4. rand_range with NaN/Inf or inverted bounds
+        let r_nan = rand_range(f32::NAN, 10.0);
+        assert!(r_nan.is_finite());
+        let r_inv = rand_range(10.0, 5.0);
+        assert!(r_inv >= 5.0 && r_inv <= 10.0);
+
+        // 5. Particle expiration with NaN life
+        let mut pool = ParticlePool::new();
+        pool.spawn(Particle {
+            x: 0.0,
+            y: 0.0,
+            vx: 0.0,
+            vy: 0.0,
+            life: f32::NAN,
+            max_life: 1.0,
+            ch: '*',
+            color: Color::WHITE,
+        });
+        assert_eq!(pool.active_count(), 1);
+        pool.update(0.1);
+        assert_eq!(
+            pool.active_count(),
+            0,
+            "NaN life particle must immediately expire"
+        );
     }
 }

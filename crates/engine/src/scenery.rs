@@ -795,8 +795,8 @@ pub fn calculate_mountain_peaks_aspect(
     let phi = 1.618_034_f32;
     let base_peaks = (width as f32) / (lambda * (phi * 0.5));
     let mult = aspect.map(|a| a.peak_density_multiplier()).unwrap_or(1.0);
-    let peak_count = (base_peaks * mult).round() as usize;
-    peak_count.max(1)
+    let peak_count = (base_peaks * mult).max(1.0).min(width as f32).round() as usize;
+    peak_count.clamp(1, width)
 }
 
 /// Calculate the tectonic macro-range envelope factor E_range(x_world) in [0.0, 1.0].
@@ -862,6 +862,10 @@ pub fn calculate_mountain_height_aspect(
     time: f32,
     aspect: Option<AspectRatioFormat>,
 ) -> f32 {
+    if !x.is_finite() || !time.is_finite() || width == 0 || mountain_base_y == 0 {
+        return 0.0;
+    }
+
     let (base_h, max_var): (f32, f32) = match style {
         MountainStyle::Hills => (2.2, 1.2),
         MountainStyle::Peaks => (2.5, 1.8),
@@ -910,12 +914,18 @@ pub fn calculate_mountain_height_aspect(
         }
         MountainStyle::Volcano => {
             // Volcanic caldera: Lorentzian cone with central crater depression
-            let period = w_f / n_peaks;
+            let period = (w_f / n_peaks).max(1.0);
             let rel_x = ((x_world % period) + period) % period - (period * 0.5);
-            let sigma = period * 0.25;
-            let cone = scaled_max_var * 1.8 / (1.0 + (rel_x / sigma).powi(2));
-            let crater = if rel_x.abs() < sigma * 0.35 {
-                (1.0 - (rel_x / (sigma * 0.35)).abs()) * (scaled_max_var * 0.5)
+            let sigma = (period * 0.25).max(0.25);
+            let denom = 1.0 + (rel_x / sigma).powi(2);
+            let cone = if denom > 0.0 {
+                scaled_max_var * 1.8 / denom
+            } else {
+                0.0
+            };
+            let crater_r = (sigma * 0.35).max(0.1);
+            let crater = if rel_x.abs() < crater_r {
+                (1.0 - (rel_x / crater_r).abs()) * (scaled_max_var * 0.5)
             } else {
                 0.0
             };
@@ -942,10 +952,15 @@ pub fn calculate_mountain_height_aspect(
     };
 
     let envelope = calculate_mountain_range_envelope(x_world, style);
-    if envelope <= 0.02 {
+    if envelope <= 0.02 || !envelope.is_finite() {
         return 0.0;
     }
-    (raw_h * envelope).clamp(0.0, max_allowed)
+    let h = (raw_h * envelope).clamp(0.0, max_allowed);
+    if h.is_finite() {
+        h
+    } else {
+        0.0
+    }
 }
 
 /// Render mountain / horizon layer directly behind the creature, anchored to the horizon above the road.
@@ -971,7 +986,7 @@ pub fn render_mountain_with_tod(
     time: f32,
     tod: TimeOfDay,
 ) {
-    if style == MountainStyle::None || fb.height < 2 || width == 0 {
+    if style == MountainStyle::None || fb.height < 2 || width == 0 || mountain_base_y == 0 {
         return;
     }
 
@@ -1011,7 +1026,7 @@ pub fn render_mountain_with_tod(
         for i in 0..chunk_len {
             let x = chunk_start + i;
             let h_curr = heights[i];
-            if h_curr < 0.5 {
+            if !h_curr.is_finite() || h_curr < 0.5 {
                 continue;
             }
             let h_prev = if i > 0 {
@@ -1051,7 +1066,10 @@ pub fn render_mountain_with_tod(
             let h_int = h_curr.round() as usize;
             let start_y = mountain_base_y.saturating_sub(h_int);
 
-            let slope = h_next - h_prev;
+            let mut slope = h_next - h_prev;
+            if !slope.is_finite() {
+                slope = 0.0;
+            }
             for y in start_y..=mountain_base_y {
                 if y >= fb.height {
                     continue;
@@ -2398,12 +2416,16 @@ pub fn render_trees_with_animal_and_tod_and_season(
                 time,
                 t_idx,
             );
-            let chars: Vec<char> = s.chars().collect();
-            let first_non_space = chars.iter().position(|&c| c != ' ');
-            let last_non_space = chars.iter().rposition(|&c| c != ' ');
+            let first_non_space = s.chars().position(|c| c != ' ');
+            let last_non_space = s.chars().count().checked_sub(1).and_then(|last_idx| {
+                s.chars()
+                    .rev()
+                    .position(|c| c != ' ')
+                    .map(|rev_pos| last_idx - rev_pos)
+            });
 
             let mut fb_guard = fb_cell.borrow_mut();
-            for (i, &c) in chars.iter().enumerate() {
+            for (i, c) in s.chars().enumerate() {
                 if c == ' ' {
                     if let (Some(first), Some(last)) = (first_non_space, last_non_space) {
                         if i > first && i < last {
@@ -3347,6 +3369,7 @@ pub fn render_trees_with_animal_and_tod_and_season(
 /// Mathematical road surface texture generator based on harmonic roughness synthesis.
 /// Mimics physical soil grains, cobblestone mortar joints, cooled magma crust, and ice fractures.
 pub fn calculate_road_texture(x: usize, style: RoadStyle, time: f32) -> (char, Color) {
+    let time = if time.is_finite() { time } else { 0.0 };
     let x_f = x as f32;
     // Multi-harmonic deterministic surface roughness synthesis
     let r1 = (x_f * 0.43 + time * 1.8).sin();
@@ -3516,6 +3539,7 @@ pub fn calculate_road_texture(x: usize, style: RoadStyle, time: f32) -> (char, C
 
 /// Generate subsurface foundation bed texture for realistic multi-row ground surfaces.
 pub fn calculate_road_subsurface(x: usize, style: RoadStyle, time: f32) -> (char, Color) {
+    let time = if time.is_finite() { time } else { 0.0 };
     let x_f = x as f32;
     let r1 = (x_f * 0.37 + time * 1.5).sin();
     let r2 = (x_f * 0.83 - time * 0.6).cos();
@@ -3663,6 +3687,7 @@ pub fn calculate_road_subsurface(x: usize, style: RoadStyle, time: f32) -> (char
 
 /// Generate near curb gutter band texture for multi-band perspective gradient from horizon to near curb.
 pub fn calculate_road_curb_gutter(x: usize, style: RoadStyle, time: f32) -> (char, Color) {
+    let time = if time.is_finite() { time } else { 0.0 };
     let x_f = x as f32;
     let r1 = (x_f * 0.51 + time * 1.2).sin();
     let r2 = (x_f * 1.13 - time * 0.4).cos();
@@ -5367,5 +5392,66 @@ mod tests {
             let has_sun = (1..=6).any(|y| (0..100).any(|x| fb.get_back(x, y).ch == '*'));
             assert!(has_sun, "Sun must be visible in the sky at time {time}");
         }
+    }
+
+    #[test]
+    fn test_nature_math_bounds_resilience() {
+        // 1. Zero/extreme width handling
+        assert_eq!(
+            calculate_mountain_peaks_aspect(0, MountainStyle::Peaks, None),
+            0
+        );
+        assert_eq!(
+            calculate_mountain_peaks_aspect(1, MountainStyle::Peaks, None),
+            1
+        );
+        let peaks_huge = calculate_mountain_peaks_aspect(10_000, MountainStyle::Peaks, None);
+        assert!(peaks_huge >= 1 && peaks_huge <= 10_000);
+
+        // 2. calculate_mountain_height_aspect resilience under NaN, inf, zero width/base
+        assert_eq!(
+            calculate_mountain_height_aspect(f32::NAN, 100, 20, MountainStyle::Peaks, 0.0, None),
+            0.0
+        );
+        assert_eq!(
+            calculate_mountain_height_aspect(10.0, 100, 20, MountainStyle::Peaks, f32::NAN, None),
+            0.0
+        );
+        assert_eq!(
+            calculate_mountain_height_aspect(10.0, 0, 20, MountainStyle::Peaks, 0.0, None),
+            0.0
+        );
+        assert_eq!(
+            calculate_mountain_height_aspect(10.0, 100, 0, MountainStyle::Peaks, 0.0, None),
+            0.0
+        );
+        assert_eq!(
+            calculate_mountain_height_aspect(
+                f32::INFINITY,
+                100,
+                20,
+                MountainStyle::Peaks,
+                0.0,
+                None
+            ),
+            0.0
+        );
+
+        // Volcano caldera division by zero resilience
+        let h_volcano =
+            calculate_mountain_height_aspect(0.0, 100, 20, MountainStyle::Volcano, 0.0, None);
+        assert!(h_volcano.is_finite() && h_volcano >= 0.0);
+
+        // 3. render_mountain & render_road zero panics under boundary conditions
+        let mut fb = FrameBuffer::new(120, 30);
+        render_mountain(&mut fb, MountainStyle::Volcano, 0, 120, 0.0);
+        render_mountain(&mut fb, MountainStyle::Peaks, 35, 120, f32::NAN);
+        render_road(&mut fb, RoadStyle::Magma, 35, 120, 0.0);
+        render_road(&mut fb, RoadStyle::Dirt, 10, 0, 0.0);
+        render_road(&mut fb, RoadStyle::Cobblestone, 10, 120, f32::NAN);
+
+        // calculate_road_texture resilience with NaN time
+        let (ch, _) = calculate_road_texture(10, RoadStyle::Dirt, f32::NAN);
+        assert!(ch != '\0');
     }
 }

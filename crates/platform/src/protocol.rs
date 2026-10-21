@@ -266,6 +266,42 @@ pub struct KeybindingsConfig {
     pub scroll_up: Option<String>,
 }
 
+impl KeybindingsConfig {
+    /// Validates all keybinding strings to ensure bounded size and valid UTF-8 boundaries.
+    pub fn validate(&mut self) {
+        if let Some(ref mut v) = self.quit {
+            truncate_utf8(v, 32);
+        }
+        if let Some(ref mut v) = self.save_and_quit {
+            truncate_utf8(v, 32);
+        }
+        if let Some(ref mut v) = self.search {
+            truncate_utf8(v, 32);
+        }
+        if let Some(ref mut v) = self.help {
+            truncate_utf8(v, 32);
+        }
+        if let Some(ref mut v) = self.jump_top {
+            truncate_utf8(v, 32);
+        }
+        if let Some(ref mut v) = self.jump_bottom {
+            truncate_utf8(v, 32);
+        }
+        if let Some(ref mut v) = self.next_tab {
+            truncate_utf8(v, 32);
+        }
+        if let Some(ref mut v) = self.prev_tab {
+            truncate_utf8(v, 32);
+        }
+        if let Some(ref mut v) = self.scroll_down {
+            truncate_utf8(v, 32);
+        }
+        if let Some(ref mut v) = self.scroll_up {
+            truncate_utf8(v, 32);
+        }
+    }
+}
+
 /// Universal random configuration setting.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(untagged)]
@@ -422,18 +458,135 @@ impl ConfigFormat {
     }
 }
 
+/// Truncate string to `max_bytes` without panicking on multi-byte UTF-8 boundaries.
+pub fn truncate_utf8(s: &mut String, max_bytes: usize) {
+    if s.len() > max_bytes {
+        let mut idx = max_bytes;
+        while idx > 0 && !s.is_char_boundary(idx) {
+            idx -= 1;
+        }
+        s.truncate(idx);
+    }
+}
+
 impl SceneConfig {
     pub fn validate(&mut self) {
         self.fps = self.fps.clamp(1, 240);
         self.duration = self.duration.min(86400);
-        if self.text.len() > 4096 {
-            self.text.truncate(4096);
-        }
+        self.thought_interval = self.thought_interval.min(604800);
+
+        truncate_utf8(&mut self.text, 4096);
+
         self.cow = self
             .cow
             .chars()
             .filter(|c| c.is_alphanumeric() || *c == '-' || *c == '_')
             .collect();
+        if self.cow.is_empty() {
+            self.cow = "default".to_string();
+        }
+        truncate_utf8(&mut self.cow, 64);
+        truncate_utf8(&mut self.eyes, 16);
+        truncate_utf8(&mut self.tongue, 16);
+        truncate_utf8(&mut self.effect, 64);
+        truncate_utf8(&mut self.color_mode, 32);
+        truncate_utf8(&mut self.shell_attach_mode, 32);
+        truncate_utf8(&mut self.default_shell, 64);
+
+        if let Some(r) = self.reserve_rows {
+            self.reserve_rows = Some(r.min(1000));
+        }
+        if let Some(c) = self.reserve_cols {
+            self.reserve_cols = Some(c.min(4096));
+        }
+        if let Some(ratio) = self.split_ratio {
+            if ratio.is_nan() || ratio.is_infinite() {
+                self.split_ratio = None;
+            } else {
+                self.split_ratio = Some(ratio.clamp(0.05, 0.95));
+            }
+        }
+        if let Some(q) = self.color_quant {
+            if q != 0 && q != 4 && q != 8 && q != 16 {
+                self.color_quant = Some(if q <= 2 {
+                    0
+                } else if q <= 6 {
+                    4
+                } else if q <= 12 {
+                    8
+                } else {
+                    16
+                });
+            }
+        }
+
+        if let Some(ref mut pal) = self.palette {
+            truncate_utf8(pal, 256);
+        }
+        if let Some(ref mut env) = self.environment {
+            truncate_utf8(env, 64);
+        }
+        if let Some(ref mut road) = self.road {
+            truncate_utf8(road, 64);
+        }
+        if let Some(ref mut mtn) = self.mountain {
+            truncate_utf8(mtn, 64);
+        }
+        if let Some(ref mut tod) = self.time_of_day {
+            truncate_utf8(tod, 32);
+        }
+        if let Some(ref mut s) = self.season {
+            truncate_utf8(s, 32);
+        }
+        if let Some(ref mut a) = self.animation {
+            truncate_utf8(a, 64);
+        }
+        if let Some(ref mut at) = self.animation_type {
+            truncate_utf8(at, 64);
+        }
+        if let Some(ref mut sm) = self.split_mode {
+            truncate_utf8(sm, 32);
+        }
+        if let Some(ref mut cm) = self.contrast_mode {
+            truncate_utf8(cm, 32);
+        }
+        if let Some(ref mut cbm) = self.colorblind_mode {
+            truncate_utf8(cbm, 32);
+        }
+        if let Some(ref mut am) = self.accel_mode {
+            truncate_utf8(am, 32);
+        }
+        if let Some(ref mut asp) = self.aspect {
+            truncate_utf8(asp, 32);
+        }
+        if let Some(ref mut am) = self.aspect_mode {
+            truncate_utf8(am, 32);
+        }
+        if let Some(ref mut um) = self.update_method {
+            truncate_utf8(um, 64);
+        }
+        if let Some(ref mut rm) = self.render_mode {
+            truncate_utf8(rm, 32);
+        }
+        if let Some(ref mut ed) = self.editor {
+            truncate_utf8(ed, 128);
+        }
+        if let Some(ref mut img) = self.image {
+            truncate_utf8(img, 512);
+        }
+        if let Some(ref mut kb) = self.keybindings {
+            kb.validate();
+        }
+        if let Some(RandomSetting::String(ref mut s)) = self.random {
+            truncate_utf8(s, 512);
+        } else if let Some(RandomSetting::List(ref mut list)) = self.random {
+            if list.len() > 64 {
+                list.truncate(64);
+            }
+            for item in list.iter_mut() {
+                truncate_utf8(item, 64);
+            }
+        }
     }
 
     pub fn parse_with_format(text: &str, format: ConfigFormat) -> Result<Self, String> {
@@ -1020,5 +1173,65 @@ help = "?"
         let s_toml = SceneConfig::parse_with_format(toml_str, ConfigFormat::Toml).unwrap();
         assert_eq!(s_toml.update_method.as_deref(), Some("prompt"));
         assert!(s_toml.check_updates);
+    }
+
+    #[test]
+    fn scene_config_utf8_truncation_does_not_panic() {
+        // Multi-byte character string that crosses the 4096-byte limit
+        let text = "🦀".repeat(2000); // 4 bytes each = 8000 bytes
+        let mut cfg = SceneConfig {
+            text: text.clone(),
+            eyes: "👀".repeat(10),   // 4 bytes each = 40 bytes (max 16)
+            tongue: "👅".repeat(10), // 4 bytes each = 40 bytes (max 16)
+            effect: "✨".repeat(30), // 3 bytes each = 90 bytes (max 64)
+            ..SceneConfig::default()
+        };
+        cfg.validate();
+        assert!(cfg.text.len() <= 4096);
+        assert!(std::str::from_utf8(cfg.text.as_bytes()).is_ok());
+        assert!(cfg.eyes.len() <= 16);
+        assert!(std::str::from_utf8(cfg.eyes.as_bytes()).is_ok());
+        assert!(cfg.tongue.len() <= 16);
+        assert!(std::str::from_utf8(cfg.tongue.as_bytes()).is_ok());
+        assert!(cfg.effect.len() <= 64);
+        assert!(std::str::from_utf8(cfg.effect.as_bytes()).is_ok());
+    }
+
+    #[test]
+    fn scene_config_bounds_and_nan_validation() {
+        let mut cfg = SceneConfig {
+            fps: 9999,
+            duration: 9999999,
+            thought_interval: 9999999,
+            reserve_rows: Some(65535),
+            reserve_cols: Some(65535),
+            split_ratio: Some(f32::NAN),
+            color_quant: Some(255),
+            ..SceneConfig::default()
+        };
+        cfg.validate();
+        assert_eq!(cfg.fps, 240);
+        assert_eq!(cfg.duration, 86400);
+        assert_eq!(cfg.thought_interval, 604800);
+        assert_eq!(cfg.reserve_rows, Some(1000));
+        assert_eq!(cfg.reserve_cols, Some(4096));
+        assert!(cfg.split_ratio.is_none());
+        assert_eq!(cfg.color_quant, Some(16));
+
+        // Test infinite split_ratio
+        let mut cfg2 = SceneConfig {
+            split_ratio: Some(f32::INFINITY),
+            ..SceneConfig::default()
+        };
+        cfg2.validate();
+        assert!(cfg2.split_ratio.is_none());
+
+        // Test out-of-range split_ratio clamping
+        let mut cfg3 = SceneConfig {
+            split_ratio: Some(0.99),
+            ..SceneConfig::default()
+        };
+        cfg3.validate();
+        assert_eq!(cfg3.split_ratio, Some(0.95));
     }
 }

@@ -249,9 +249,37 @@ fn remove_from_user_path(logs: &mut Vec<String>, errors: &mut Vec<String>) -> bo
 
     #[cfg(unix)]
     {
-        let _ = logs;
-        let _ = errors;
-        true
+        let mut cleaned_any = false;
+        if let Ok(home) = std::env::var("HOME") {
+            let home_p = PathBuf::from(home);
+            for rc_name in &[".bashrc", ".zshrc", ".bash_profile", ".profile"] {
+                let rc_path = home_p.join(rc_name);
+                if rc_path.is_file() {
+                    if let Ok(content) = std::fs::read_to_string(&rc_path) {
+                        let (cleaned, removed) = crate::shell::remove_delimited_block(
+                            &content,
+                            "# >>> forgum path >>>",
+                            "# <<< forgum path <<<",
+                        );
+                        if removed {
+                            if let Err(e) = std::fs::write(&rc_path, cleaned) {
+                                errors.push(format!(
+                                    "Failed to clean PATH from {}: {e}",
+                                    rc_path.display()
+                                ));
+                            } else {
+                                logs.push(format!(
+                                    "✓ Removed Forgum PATH export from {}",
+                                    rc_path.display()
+                                ));
+                                cleaned_any = true;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        cleaned_any
     }
 }
 
