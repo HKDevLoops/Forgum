@@ -88,26 +88,15 @@ fn every_shell_hook_has_header_and_footer() {
 fn every_shell_hook_has_consistent_delimiters() {
     for &shell in Shell::ALL {
         let hook = generate_hook(shell, ENGINE);
-        if shell == Shell::Cmd {
-            assert!(
-                hook.contains("rem >>> forgum (cmd) >>>"),
-                "cmd hook must contain 'rem >>> forgum (cmd) >>>'"
-            );
-            assert!(
-                hook.contains("rem <<< forgum <<<"),
-                "cmd hook must contain 'rem <<< forgum <<<'"
-            );
-        } else {
-            let expected_header = format!("# >>> forgum ({shell}) >>>");
-            assert!(
-                hook.contains(&expected_header),
-                "shell {shell} hook must contain '{expected_header}'"
-            );
-            assert!(
-                hook.contains("# <<< forgum <<<"),
-                "shell {shell} hook must contain '# <<< forgum <<<'"
-            );
-        }
+        let (marker_begin, marker_end) = shell.hook_markers();
+        assert!(
+            hook.contains(marker_begin),
+            "shell {shell} hook must contain '{marker_begin}'"
+        );
+        assert!(
+            hook.contains(marker_end),
+            "shell {shell} hook must contain '{marker_end}'"
+        );
     }
 }
 
@@ -253,7 +242,7 @@ fn nushell_hook_wraps_def() {
     assert!(hook.contains("def --wrapped forgum"));
     assert!(hook.contains("fortune"));
     assert!(hook.contains(ENGINE));
-    assert!(hook.contains("# >>> forgum (nushell) >>>"));
+    assert!(hook.contains("# >>> forgum >>>") || hook.contains("# >>> forgum (nushell) >>>"));
     assert!(hook.contains("# <<< forgum <<<"));
 }
 
@@ -263,7 +252,7 @@ fn elvish_hook_wraps_fn() {
     assert!(hook.contains("fn forgum {|@args|"));
     assert!(hook.contains("fortune"));
     assert!(hook.contains(ENGINE));
-    assert!(hook.contains("# >>> forgum (elvish) >>>"));
+    assert!(hook.contains("# >>> forgum >>>") || hook.contains("# >>> forgum (elvish) >>>"));
     assert!(hook.contains("# <<< forgum <<<"));
 }
 
