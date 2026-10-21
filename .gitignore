@@ -85,6 +85,7 @@ commit_msg*.txt
 /TEMP*.md
 /test*.md
 /TEST*.md
+!/TEST_RESULTS.md
 /audit*.md
 /AUDIT*.md
 /report*.md

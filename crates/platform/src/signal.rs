@@ -200,6 +200,9 @@ impl Drop for SignalGuard {
         #[cfg(windows)]
         #[allow(unsafe_code)]
         {
+            if let Ok(mut lock) = WINDOWS_FLAG.lock() {
+                *lock = None;
+            }
             // Re-enable default Ctrl-C handling.
             unsafe {
                 let _ = windows_sys::Win32::System::Console::SetConsoleCtrlHandler(None, 0);
@@ -212,12 +215,12 @@ impl Drop for SignalGuard {
 type ConsoleHandlerRoutine = unsafe extern "system" fn(u32) -> i32;
 
 #[cfg(windows)]
-static mut WINDOWS_FLAG: Option<Arc<AtomicBool>> = None;
+static WINDOWS_FLAG: std::sync::Mutex<Option<Arc<AtomicBool>>> = std::sync::Mutex::new(None);
 #[cfg(windows)]
 static CTRL_C_COUNT: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
 
 #[cfg(windows)]
-#[allow(unsafe_code, static_mut_refs)]
+#[allow(unsafe_code)]
 unsafe extern "system" fn windows_ctrl_handler(event_type: u32) -> i32 {
     use windows_sys::Win32::System::Console::{
         CTRL_BREAK_EVENT, CTRL_CLOSE_EVENT, CTRL_C_EVENT, CTRL_LOGOFF_EVENT, CTRL_SHUTDOWN_EVENT,
@@ -232,9 +235,10 @@ unsafe extern "system" fn windows_ctrl_handler(event_type: u32) -> i32 {
     );
     if triggered {
         let count = CTRL_C_COUNT.fetch_add(1, Ordering::SeqCst);
-        let flag_opt = unsafe { WINDOWS_FLAG.as_ref() };
-        if let Some(flag) = flag_opt {
-            flag.store(true, Ordering::Relaxed);
+        if let Ok(guard) = WINDOWS_FLAG.lock() {
+            if let Some(flag) = guard.as_ref() {
+                flag.store(true, Ordering::Relaxed);
+            }
         }
         if count > 0 {
             // Second interrupt signal received: force immediate termination.
@@ -250,8 +254,10 @@ unsafe extern "system" fn windows_ctrl_handler(event_type: u32) -> i32 {
 fn install_windows(flag: ShutdownFlag) -> Result<(), PlatformError> {
     use windows_sys::Win32::System::Console::SetConsoleCtrlHandler;
     CTRL_C_COUNT.store(0, Ordering::SeqCst);
+    if let Ok(mut lock) = WINDOWS_FLAG.lock() {
+        *lock = Some(flag.shutdown_handle());
+    }
     unsafe {
-        WINDOWS_FLAG = Some(flag.shutdown_handle());
         let result = SetConsoleCtrlHandler(Some(windows_ctrl_handler as ConsoleHandlerRoutine), 1);
         if result == 0 {
             return Err(PlatformError::SignalRegistration {

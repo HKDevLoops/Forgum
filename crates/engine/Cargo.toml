@@ -47,7 +47,6 @@ forgum-tui = { path = "../tui", optional = true }
 crossterm = "0.28"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-serde_yaml = "0.9"
 toml = "0.8"
 thiserror = "1"
 clap = { version = "4", features = ["derive", "env"] }
@@ -72,4 +71,5 @@ blake3 = "1"
 criterion = "0.5"
 chrono = "0.4"
 serde_json = "1"
+serde_yaml = "0.9"
 ratatui = "0.29"

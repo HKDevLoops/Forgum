@@ -777,7 +777,6 @@ dependencies = [
  "forgum-platform",
  "ratatui",
  "serde_json",
- "serde_yaml",
  "toml",
 ]
 
