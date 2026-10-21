@@ -4,7 +4,7 @@
 # ║   Ready-made scenes to get you started — copy, paste, and enjoy.       ║
 # ╚══════════════════════════════════════════════════════════════════════════╝
 
-These sample `SceneConfig` files validate against the **v0.0.13-beta** schema.
+These sample `SceneConfig` files validate against the **v0.0.14-beta** schema.
 The schema adheres to Mandate D (resilient deserialization), ensuring backward
 and forward compatibility across all versions.
 

@@ -29,7 +29,7 @@
 > Cross-platform on Windows, macOS, Linux, and BSD.
 
 <p align="center">
-  <a href="https://github.com/HKDevLoops/Forgum/releases"><img src="https://img.shields.io/badge/version-0.0.13--beta-blueviolet.svg?style=for-the-badge&logo=rust" alt="Version 0.0.13-beta" /></a>
+  <a href="https://github.com/HKDevLoops/Forgum/releases"><img src="https://img.shields.io/badge/version-0.0.14--beta-blueviolet.svg?style=for-the-badge&logo=rust" alt="Version 0.0.14-beta" /></a>
   <a href="docs/TELEMETRY.md"><img src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fcountapi.mileshilliard.com%2Fapi%2Fv1%2Fget%2Fhkdevloops_forgum_users_tried&query=%24.value&label=Users%20Tried&color=blueviolet&style=for-the-badge&logo=starship" alt="Users Tried" /></a>
   <a href="docs/TELEMETRY.md"><img src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fcountapi.mileshilliard.com%2Fapi%2Fv1%2Fget%2Fhkdevloops_forgum_users_installed&query=%24.value&label=Installations&color=00F2FE&style=for-the-badge&logo=spacex" alt="Installations" /></a>
   <a href="docs/TELEMETRY.md"><img src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fcountapi.mileshilliard.com%2Fapi%2Fv1%2Fget%2Fhkdevloops_forgum_active_users&query=%24.value&label=Active%20Users&color=F59E0B&style=for-the-badge&logo=sparkles" alt="Active Users" /></a>

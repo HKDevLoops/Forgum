@@ -339,7 +339,7 @@ if (-not $Version) {
     } catch {}
 }
 if (-not $Version) {
-    $Version = "0.0.13-beta"
+    $Version = "0.0.14-beta"
 }
 
 $Tag = "v$Version"

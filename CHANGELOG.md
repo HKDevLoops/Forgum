@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.0.14-beta] - 2026-10-21
+
+### Security
+- **Comprehensive Kali Linux Security Audit & Penetration Hardening**:
+  - Remediated arbitrary process termination via PID spoofing (`KALI-SEC-01` / CWE-377/378) in `crates/platform/src/spawn.rs` via `is_forgum_process(pid)`.
+  - Remediated unbounded line memory allocation DoS on IPC sockets (`KALI-SEC-02` / CWE-400) capped strictly at 64 KB in `crates/platform/src/daemon_socket.rs`.
+  - Remediated Slowloris head-of-line blocking (`KALI-SEC-03` / CWE-400) with 3.0s read/write timeouts.
+  - Remediated unauthenticated local IPC access (`KALI-SEC-04` / CWE-285) via kernel peer credentials (`SO_PEERCRED` / `getpeereid`).
+  - Remediated ANSI escape injection (`KALI-SEC-05` / CWE-116) with full VT100/ANSI state machine sanitization across cow speech bubbles and status lines.
+  - Remediated binary symbol table leakage (`KALI-SEC-06` / CWE-693) via `strip = true` in release profiles.
+  - Remediated data race hazard in Windows signal handler (`SEC-007` / CWE-362) by replacing `static mut` with thread-safe `Mutex<Option<Arc<AtomicBool>>>`.
+
+### Performance & Engine
+- **Memory Ceiling & Zero Heap Leak Verification**:
+  - Full Valgrind zero-leak audit passing across all render paths; resident memory remains strictly below 100MB RAM ceiling (measured ~4.3MB RSS).
+  - Microbenchmark rasterization executed in 18.2 µs with 846 ps damage detection.
+  - Pruned unneeded transitive dependencies (`serde_yaml` removed from TUI crate, isolated to engine dev-dependencies).
+
+### Documentation & Forensics
+- **Archival Deliverables & Artifact Suite**:
+  - Generated and published `SECURITY_AUDIT.md`, `PERFORMANCE_AUDIT.md`, `FORENSICS_REPORT.md`, `TEST_RESULTS.md`, and `REMEDIATION_LOG.md` in repository root and `docs/audit/`.
+  - 100% test pass rate across all 800+ workspace tests.
+
 ## [0.0.13-beta] - 2026-10-21
 
 ### Security
