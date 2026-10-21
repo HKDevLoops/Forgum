@@ -10,6 +10,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.0.13-beta] - 2026-10-21
 
 ### Security
+- **Arbitrary Process Termination via PID Spoofing Immunity (`crates/platform/src/spawn.rs`)**:
+  - Implemented `is_forgum_process(pid)` verification via `/proc/{pid}/comm`, `/proc/{pid}/exe` (Unix) and `QueryFullProcessImageNameW` (Windows) before issuing termination signals. `kill_process(pid)` strictly refuses to kill any non-forgum process, neutralizing arbitrary process termination attacks from forged/manipulated state files (`KALI-SEC-01`).
+- **Unbounded Memory Line Allocation DoS Protection (`crates/platform/src/daemon_socket.rs`)**:
+  - Implemented `MAX_IPC_LINE_LENGTH = 65_536` (64 KB maximum ceiling) on both Unix and Windows IPC connections in `read_line()`. Rejects oversized frames with `InvalidData`, strictly enforcing the <100MB resident RAM mandate (`KALI-SEC-02`).
+- **Head-of-Line Blocking & Slowloris Timeout Defense (`crates/platform/src/daemon_socket.rs`)**:
+  - Added 3-second read/write timeouts on daemon-accepted socket streams and 5-second timeouts on client connections, preventing stalled or slowloris connections from starving daemon control threads (`KALI-SEC-03`).
+- **Kernel-Level Peer Credential Verification (`crates/platform/src/daemon_socket.rs`)**:
+  - Integrated `SO_PEERCRED` (Linux) and `getpeereid` (macOS/FreeBSD) in `accept()`, ensuring only processes owned by the exact same user UID can communicate with the daemon (`KALI-SEC-04`).
+- **Full ANSI/VT100 Escape Parser & Injection Sanitization (`crates/engine/src/status_line.rs`, `crates/engine/src/cow.rs`)**:
+  - Replaced naive loop with a comprehensive state machine handling CSI, OSC (OSC 52 clipboard hijacking, OSC 8 hyperlink spoofing), DCS/APC, and 2-byte escape sequences (`KALI-SEC-05`).
+- **Full Release Binary Symbol Stripping (`Cargo.toml`)**:
+  - Configured `strip = true` in `[profile.release]`, eliminating leaked symbol tables and function metadata in production builds (`KALI-SEC-06`).
 - **Named Pipe Squatting & Hijacking Prevention (`crates/platform/src/daemon_socket.rs`)**:
   - Enforced `FILE_FLAG_FIRST_PIPE_INSTANCE` on Windows named pipes, rejecting pipe squatting or unauthorized pre-creation attempts (`SEC-004`).
 - **Unix Multi-User Collision & Hijack Protection (`crates/platform/src/paths.rs`)**:

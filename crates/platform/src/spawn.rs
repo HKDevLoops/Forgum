@@ -406,21 +406,90 @@ pub fn process_is_alive(pid: u32) -> bool {
     }
 }
 
+/// Check whether a process PID belongs to forgum / forgum-engine.
+#[cfg(unix)]
+pub fn is_forgum_process(pid: u32) -> bool {
+    if pid <= 1 {
+        return false;
+    }
+    // Check /proc/{pid}/comm on Linux
+    let comm_path = format!("/proc/{pid}/comm");
+    if let Ok(comm) = std::fs::read_to_string(comm_path) {
+        let c = comm.trim().to_lowercase();
+        if c == "forgum" || c == "forgum-engine" {
+            return true;
+        }
+    }
+    // Check /proc/{pid}/exe symlink
+    let exe_path = format!("/proc/{pid}/exe");
+    if let Ok(target) = std::fs::read_link(exe_path) {
+        if let Some(file_name) = target.file_name().and_then(|s| s.to_str()) {
+            let f = file_name.to_lowercase();
+            if f == "forgum" || f == "forgum-engine" {
+                return true;
+            }
+        }
+    }
+    // Fallback: check if pid is in find_forgum_pids()
+    find_forgum_pids().contains(&pid)
+}
+
+/// Check whether a process PID belongs to forgum / forgum-engine (Windows).
+#[cfg(windows)]
+#[allow(unsafe_code)]
+pub fn is_forgum_process(pid: u32) -> bool {
+    if pid <= 1 {
+        return false;
+    }
+    use windows_sys::Win32::Foundation::CloseHandle;
+    use windows_sys::Win32::System::Threading::{
+        OpenProcess, QueryFullProcessImageNameW, PROCESS_QUERY_LIMITED_INFORMATION,
+    };
+    unsafe {
+        let handle = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, pid);
+        if !handle.is_null() {
+            let mut buf = [0u16; 1024];
+            let mut len = buf.len() as u32;
+            let ok = QueryFullProcessImageNameW(handle, 0, buf.as_mut_ptr(), &mut len);
+            CloseHandle(handle);
+            if ok != 0 {
+                let path_str = String::from_utf16_lossy(&buf[..len as usize]);
+                let p = std::path::Path::new(&path_str);
+                if let Some(name) = p.file_name().and_then(|s| s.to_str()) {
+                    let n = name.to_lowercase();
+                    if n == "forgum.exe" || n == "forgum-engine.exe" {
+                        return true;
+                    }
+                }
+            }
+        }
+    }
+    find_forgum_pids().contains(&pid)
+}
+
 /// Terminate a process by PID (Unix).
+/// Verifies process identity to prevent arbitrary process termination (CWE-377 / CWE-378).
 #[cfg(unix)]
 #[allow(unsafe_code)]
 pub fn kill_process(pid: u32) -> bool {
     if pid <= 1 || pid == std::process::id() {
         return false;
     }
+    if !is_forgum_process(pid) {
+        return false;
+    }
     unsafe { libc::kill(pid as i32, libc::SIGKILL) == 0 }
 }
 
 /// Terminate a process by PID (Windows).
+/// Verifies process identity to prevent arbitrary process termination (CWE-377 / CWE-378).
 #[cfg(windows)]
 #[allow(unsafe_code)]
 pub fn kill_process(pid: u32) -> bool {
     if pid <= 1 || pid == std::process::id() {
+        return false;
+    }
+    if !is_forgum_process(pid) {
         return false;
     }
     use windows_sys::Win32::Foundation::CloseHandle;
@@ -654,5 +723,34 @@ mod tests {
         assert!(!kill_process(0));
         assert!(!kill_process(1));
         assert!(!kill_process(std::process::id()));
+    }
+
+    #[test]
+    fn kill_process_rejects_arbitrary_non_forgum_pid() {
+        // Spawn a benign non-forgum process (e.g. sleep/cmd/powershell)
+        #[cfg(unix)]
+        let mut child = Command::new("sleep")
+            .arg("60")
+            .spawn()
+            .expect("spawn sleep");
+        #[cfg(windows)]
+        let mut child = Command::new("cmd.exe")
+            .args(["/c", "pause"])
+            .spawn()
+            .expect("spawn cmd");
+
+        let pid = child.id();
+        assert!(
+            !is_forgum_process(pid),
+            "benign process should not be identified as forgum"
+        );
+        assert!(
+            !kill_process(pid),
+            "kill_process must refuse to terminate non-forgum process"
+        );
+
+        // Clean up our spawned child
+        let _ = child.kill();
+        let _ = child.wait();
     }
 }

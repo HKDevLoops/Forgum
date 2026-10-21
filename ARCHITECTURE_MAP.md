@@ -189,7 +189,15 @@ graph TD
 - **IPC & Daemon Security Hardening (`crates/platform/src/daemon_socket.rs`, `paths.rs`, `spawn.rs`)**:
   - `FILE_FLAG_FIRST_PIPE_INSTANCE` enforced on Windows named pipes, preventing pipe squatting or unauthorized pre-creation attacks (`SEC-004`).
   - Scoped Unix fallback runtime paths to `/tmp/forgum-<uid>` with strict `0o700` POSIX permissions and parent directory UID ownership checks on bind (`SEC-005`).
-  - Guarded process termination against terminating the caller's process group or PID 1 (`pid <= 1 || pid == self_pid`) (`SEC-006`).
+  - Guarded process termination against terminating arbitrary processes (`kill_process()` verifies `is_forgum_process(pid)` via `/proc/{pid}/comm`, `/proc/{pid}/exe` on Unix and `QueryFullProcessImageNameW` on Windows) (`KALI-SEC-01`).
+  - Implemented strict `MAX_IPC_LINE_LENGTH = 65_536` (64 KB ceiling) on IPC socket commands to prevent unbounded memory allocation DoS (`KALI-SEC-02`).
+  - Added 3-second read/write timeouts on accepted streams and 5-second timeouts on client connections, preventing slowloris / head-of-line blocking (`KALI-SEC-03`).
+  - Enforced kernel-level peer credential authentication (`SO_PEERCRED` on Linux, `getpeereid` on macOS/FreeBSD) in `accept()`, ensuring only processes owned by the exact same user UID can communicate with the daemon (`KALI-SEC-04`).
+- **Terminal Injection Defense & ANSI Parser Hardening (`crates/engine/src/status_line.rs`, `crates/engine/src/cow.rs`)**:
+  - Replaced naive escape stripping with a complete ANSI/VT100 state machine handling CSI, OSC (OSC 52 clipboard hijacking, OSC 8 hyperlink spoofing), DCS/APC, and 2-byte escape sequences (`KALI-SEC-05`).
+  - Updated `str_display_width()` in `cow.rs` to sanitize non-printing ANSI escapes before calculating visual cell widths, guaranteeing column-aligned speech bubbles without visual drift.
+- **Binary Hardening & Release Stripping (`Cargo.toml`)**:
+  - Configured `strip = true` in `[profile.release]`, eliminating leaked symbol tables and metadata in production artifacts (`KALI-SEC-06`).
 - **Universal Shell Injection Defense & Marker Isolation (`crates/engine/src/init.rs`, `crates/platform/src/shell.rs`)**:
   - Applied lexical argument escaping via `shell_escape_arg()` and strictly quoted subshells across all 15 supported shells (Bash, Zsh, Fish, PowerShell, Pwsh, Nushell, Elvish, Xonsh, Tcsh, Ksh, Ion, Oil, Yash, Cmd) (`SEC-007`).
   - Standardized shell hook marker isolation delimiters via `Shell::hook_markers()` to `# >>> forgum >>>` ... `# <<< forgum <<<` (`rem >>> forgum >>>` on Cmd) (`PORT-003`).

@@ -6,13 +6,51 @@ use crate::fortune;
 pub(crate) fn strip_ansi(s: &str) -> String {
     let mut result = String::with_capacity(s.len());
     let mut chars = s.chars().peekable();
+
     while let Some(ch) = chars.next() {
         if ch == '\x1b' {
-            while let Some(&next) = chars.peek() {
-                chars.next();
-                if next == 'm' {
-                    break;
+            match chars.peek() {
+                Some('[') => {
+                    // CSI sequence: \x1b[ ... [0x40..=0x7E]
+                    chars.next(); // consume '['
+                    for next in chars.by_ref() {
+                        let b = next as u32;
+                        if (0x40..=0x7E).contains(&b) {
+                            break;
+                        }
+                    }
                 }
+                Some(']') => {
+                    // OSC sequence: \x1b] ... (\x07 | \x1b\\)
+                    chars.next(); // consume ']'
+                    while let Some(next) = chars.next() {
+                        if next == '\x07' {
+                            break;
+                        }
+                        if next == '\x1b' && chars.peek() == Some(&'\\') {
+                            chars.next(); // consume '\\'
+                            break;
+                        }
+                    }
+                }
+                Some('P') | Some('_') | Some('^') | Some('X') => {
+                    // DCS / APC / PM / SOS sequence: terminated by ST (\x1b\\) or BEL (\x07)
+                    chars.next();
+                    while let Some(next) = chars.next() {
+                        if next == '\x07' {
+                            break;
+                        }
+                        if next == '\x1b' && chars.peek() == Some(&'\\') {
+                            chars.next();
+                            break;
+                        }
+                    }
+                }
+                Some(&next) if (0x20..=0x7E).contains(&(next as u32)) => {
+                    // 2-character escape sequence (e.g. \x1b=, \x1b>, \x1b7, \x1b8, \x1bM)
+                    chars.next();
+                }
+                _ => {}
             }
         } else {
             result.push(ch);
@@ -145,5 +183,18 @@ mod tests {
     fn visible_length_only_ansi_sequences() {
         let input = "\x1b[31m\x1b[32m\x1b[0m";
         assert_eq!(visible_length(input), 0);
+    }
+
+    #[test]
+    fn strip_ansi_csi_non_color_cursor_and_screen_codes() {
+        let input = "\x1b[2J\x1b[HHello \x1b[12;34HCow!\x1b[?25h";
+        assert_eq!(strip_ansi(input), "Hello Cow!");
+    }
+
+    #[test]
+    fn strip_ansi_osc_clipboard_and_hyperlink_injection() {
+        let input =
+            "Safe \x1b]52;c;c3RlYWw=\x07Mascot \x1b]8;;http://evil.com\x1b\\Link\x1b]8;;\x1b\\!";
+        assert_eq!(strip_ansi(input), "Safe Mascot Link!");
     }
 }

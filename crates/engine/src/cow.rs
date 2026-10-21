@@ -1189,9 +1189,10 @@ pub fn char_display_width(ch: char) -> usize {
     1
 }
 
-/// Return the visible display width of a string in terminal cells.
+/// Return the visible display width of a string in terminal cells, ignoring non-printing ANSI escapes.
 pub fn str_display_width(s: &str) -> usize {
-    s.chars().map(char_display_width).sum()
+    let stripped = crate::status_line::strip_ansi(s);
+    stripped.chars().map(char_display_width).sum()
 }
 
 /// Wrap text to a maximum line width, breaking words if necessary.

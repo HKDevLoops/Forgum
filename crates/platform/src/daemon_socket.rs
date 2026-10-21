@@ -125,7 +125,56 @@ impl DaemonSocket {
         match &self.inner {
             #[cfg(unix)]
             SocketInner::Unix { listener, .. } => match listener.accept() {
-                Ok((stream, _addr)) => Ok(Some(SocketConnection::Unix(BufReader::new(stream)))),
+                Ok((stream, _addr)) => {
+                    // Set read and write timeouts (3s) to prevent slowloris / head-of-line blocking DoS (CWE-400)
+                    let timeout = Some(std::time::Duration::from_secs(3));
+                    let _ = stream.set_read_timeout(timeout);
+                    let _ = stream.set_write_timeout(timeout);
+
+                    // Peer Credential Verification (CWE-285):
+                    // Ensure the connecting peer UID strictly matches current daemon UID.
+                    #[allow(unsafe_code)]
+                    {
+                        #[cfg(target_os = "linux")]
+                        {
+                            use std::os::unix::io::AsRawFd;
+                            let fd = stream.as_raw_fd();
+                            let mut ucred: libc::ucred = unsafe { std::mem::zeroed() };
+                            let mut len = std::mem::size_of::<libc::ucred>() as libc::socklen_t;
+                            let ret = unsafe {
+                                libc::getsockopt(
+                                    fd,
+                                    libc::SOL_SOCKET,
+                                    libc::SO_PEERCRED,
+                                    &mut ucred as *mut _ as *mut libc::c_void,
+                                    &mut len,
+                                )
+                            };
+                            if ret == 0 {
+                                let my_uid = unsafe { libc::getuid() };
+                                if ucred.uid != my_uid {
+                                    return Ok(None);
+                                }
+                            }
+                        }
+                        #[cfg(any(target_os = "macos", target_os = "freebsd"))]
+                        {
+                            use std::os::unix::io::AsRawFd;
+                            let fd = stream.as_raw_fd();
+                            let mut euid: libc::uid_t = 0;
+                            let mut egid: libc::gid_t = 0;
+                            let ret = unsafe { libc::getpeereid(fd, &mut euid, &mut egid) };
+                            if ret == 0 {
+                                let my_uid = unsafe { libc::getuid() };
+                                if euid != my_uid {
+                                    return Ok(None);
+                                }
+                            }
+                        }
+                    }
+
+                    Ok(Some(SocketConnection::Unix(BufReader::new(stream))))
+                }
                 Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => Ok(None),
                 Err(e) => Err(PlatformError::Io(e)),
             },
@@ -215,7 +264,9 @@ impl DaemonSocket {
         {
             use std::os::unix::net::UnixStream;
             let stream = UnixStream::connect(path).map_err(PlatformError::Io)?;
-            stream.set_read_timeout(None).map_err(PlatformError::Io)?;
+            let timeout = Some(std::time::Duration::from_secs(5));
+            let _ = stream.set_read_timeout(timeout);
+            let _ = stream.set_write_timeout(timeout);
             Ok(SocketConnection::Unix(BufReader::new(stream)))
         }
         #[cfg(windows)]
@@ -267,12 +318,22 @@ impl SocketConnection {
     ///
     /// Returns `Ok(Some(line))` on success, `Ok(None)` on EOF.
     pub fn read_line(&mut self) -> Result<Option<String>, PlatformError> {
+        // Enforce strict upper bound on IPC command line length (64 KB)
+        // to prevent unbounded heap allocations and memory exhaustion DoS (CWE-400 / Mandate 2.I).
+        const MAX_IPC_LINE_LENGTH: usize = 65_536;
+
         match self {
             #[cfg(unix)]
             Self::Unix(reader) => {
                 let mut line = String::new();
-                match reader.read_line(&mut line) {
+                use std::io::Read;
+                let mut limited = reader.by_ref().take(MAX_IPC_LINE_LENGTH as u64 + 1);
+                match limited.read_line(&mut line) {
                     Ok(0) => Ok(None),
+                    Ok(n) if n > MAX_IPC_LINE_LENGTH => Err(PlatformError::Io(io::Error::new(
+                        io::ErrorKind::InvalidData,
+                        "IPC command line exceeds 64KB maximum limit",
+                    ))),
                     Ok(_) => {
                         // Trim the trailing newline.
                         if line.ends_with('\n') {
@@ -283,6 +344,15 @@ impl SocketConnection {
                         }
                         Ok(Some(line))
                     }
+                    Err(ref e)
+                        if e.kind() == io::ErrorKind::TimedOut
+                            || e.kind() == io::ErrorKind::WouldBlock =>
+                    {
+                        Err(PlatformError::Io(io::Error::new(
+                            io::ErrorKind::TimedOut,
+                            "IPC connection timed out waiting for line delimiter",
+                        )))
+                    }
                     Err(e) => Err(PlatformError::Io(e)),
                 }
             }
@@ -292,6 +362,12 @@ impl SocketConnection {
                 let mut buf = [0u8; 1];
 
                 loop {
+                    if line.len() >= MAX_IPC_LINE_LENGTH {
+                        return Err(PlatformError::Io(io::Error::new(
+                            io::ErrorKind::InvalidData,
+                            "IPC command line exceeds 64KB maximum limit",
+                        )));
+                    }
                     let mut bytes_read = 0u32;
                     // SAFETY: handle is valid (server pipe handle), buf is a
                     // valid 1-byte buffer, and bytes_read is a valid pointer

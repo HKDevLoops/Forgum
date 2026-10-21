@@ -57,5 +57,5 @@ windows-sys = { version = "0.59", default-features = false }
 opt-level = 3
 lto = "thin"
 codegen-units = 1
-strip = "debuginfo"
+strip = true
 panic = "unwind"   # RAII guards must run on panic
