@@ -1405,7 +1405,11 @@ impl ConfigApp {
     }
 
     pub fn tick(&mut self, dt: f32) {
-        self.animation_time += dt;
+        // Do not advance time in static mode — the mascot must stay frozen.
+        let is_static = self.config.animation.as_deref().unwrap_or("dynamic") == "static";
+        if !is_static {
+            self.animation_time += dt;
+        }
     }
 
     /// Return the responsive layout breakpoint for the last known terminal size.
@@ -1423,12 +1427,26 @@ impl ConfigApp {
 
     /// Auto-synchronize animation type (`static` vs `dynamic`) with chosen effect
     /// to prevent invalid combinations from being saved to disk and causing CLI parse issues.
+    ///
+    /// Priority order:
+    /// 1. If the user explicitly chose `animation = "static"` (via the Animation dropdown),
+    ///    always preserve that — clear animation_type and keep effect for display only.
+    /// 2. If effect is "static" or "none", also force animation = "static".
+    /// 3. Otherwise, animation = "dynamic" and animation_type mirrors the effect.
     pub fn enforce_animation_effect_consistency(&mut self) {
+        let anim = self.config.animation.as_deref().unwrap_or("dynamic").to_lowercase();
         let eff = self.config.effect.to_lowercase();
-        if eff == "static" || eff == "none" {
+
+        if anim == "static" {
+            // User explicitly picked static mode — honour it unconditionally.
+            self.config.animation = Some("static".to_string());
+            self.config.animation_type = None;
+        } else if eff == "static" || eff == "none" {
+            // Effect field itself signals static — sync animation accordingly.
             self.config.animation = Some("static".to_string());
             self.config.animation_type = None;
         } else {
+            // Dynamic mode: animation_type mirrors the effect.
             self.config.animation = Some("dynamic".to_string());
             self.config.animation_type = Some(self.config.effect.clone());
         }
@@ -7314,7 +7332,12 @@ export extern "forgum" [
 
     /// Live Holographic Preview Canvas rendering ASCII mascot + procedural scenery & road.
     fn render_live_preview(&self, f: &mut Frame, area: Rect) {
-        let quantized_t = Self::quantize_time(self.animation_time, self.config.fps);
+        let is_static = self.config.animation.as_deref().unwrap_or("dynamic") == "static";
+        let quantized_t = if is_static {
+            0.0
+        } else {
+            Self::quantize_time(self.animation_time, self.config.fps)
+        };
         let (t, progress_fraction) = Self::cycle_duration_time(quantized_t, self.config.duration);
         let elapsed_display = t;
         let contrast = self.active_contrast_mode();
@@ -7346,7 +7369,9 @@ export extern "forgum" [
         let compute = forgum_platform::compute::get_compute_engine(Some(accel_mode));
         let accel_badge = self.active_accel_badge();
 
-        let hud_line = if self.config.duration > 0 {
+        let hud_line = if is_static {
+            format!("📷 Static Preview • {} FPS • {} Live", self.config.fps, accel_badge)
+        } else if self.config.duration > 0 {
             let percent = (progress_fraction * 100.0) as u32;
             let bar_width = 14;
             let filled = ((progress_fraction * bar_width as f32).round() as usize).min(bar_width);
