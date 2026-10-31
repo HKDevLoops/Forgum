@@ -3747,8 +3747,8 @@ pub const ALL_EFFECTS: &[&str] = &[
 ];
 
 pub fn random_dynamic_animation() -> &'static str {
-    use rand::seq::SliceRandom;
-    let mut rng = rand::thread_rng();
+    use rand::seq::IndexedRandom;
+    let mut rng = rand::rng();
     DYNAMIC_ANIMATION_TYPES
         .choose(&mut rng)
         .copied()
@@ -3756,8 +3756,8 @@ pub fn random_dynamic_animation() -> &'static str {
 }
 
 pub fn random_effect_name() -> &'static str {
-    use rand::seq::SliceRandom;
-    let mut rng = rand::thread_rng();
+    use rand::seq::IndexedRandom;
+    let mut rng = rand::rng();
     ALL_EFFECTS.choose(&mut rng).copied().unwrap_or("breathe")
 }
 

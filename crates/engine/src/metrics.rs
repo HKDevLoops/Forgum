@@ -2,9 +2,9 @@ use sysinfo::{Components, Cpu, CpuRefreshKind, Networks, RefreshKind, System};
 
 #[derive(Debug)]
 pub struct SystemMetrics {
-    sys: System,
-    networks: Networks,
-    components: Components,
+    sys: Option<System>,
+    networks: Option<Networks>,
+    components: Option<Components>,
 }
 
 impl SystemMetrics {
@@ -12,43 +12,53 @@ impl SystemMetrics {
         Self {
             sys: System::new_with_specifics(
                 RefreshKind::nothing()
-                    .with_cpu(CpuRefreshKind::nothing().with_cpu_usage())
+                    .with_cpu(CpuRefreshKind::nothing().with_usage())
                     .with_memory(sysinfo::MemoryRefreshKind::nothing().with_ram()),
-            ),
-            networks: Networks::new_with_refreshed_list(),
-            components: Components::new_with_refreshed_list(),
+            )
+            .ok(),
+            networks: Networks::new_with_refreshed_list().ok(),
+            components: Components::new_with_refreshed_list().ok(),
         }
     }
 
     pub fn refresh(&mut self) {
-        self.sys.refresh_cpu_all();
-        self.sys.refresh_memory();
-        self.networks.refresh(true);
-        self.components.refresh(true);
+        if let Some(ref mut sys) = self.sys {
+            sys.refresh_cpu_all();
+            sys.refresh_memory();
+        }
+        if let Some(ref mut networks) = self.networks {
+            networks.refresh(true);
+        }
+        if let Some(ref mut components) = self.components {
+            components.refresh(true);
+        }
     }
 
     /// CPU usage as 0.0–1.0
     pub fn cpu_usage(&self) -> f32 {
-        let cpus = self.sys.cpus();
+        let Some(ref sys) = self.sys else { return 0.0 };
+        let cpus = sys.cpus();
         if cpus.is_empty() {
             return 0.0;
         }
-        let total: f32 = cpus.iter().map(|c: &Cpu| c.cpu_usage()).sum();
+        let total: f32 = cpus.iter().map(|c: &Cpu| c.usage()).sum();
         (total / cpus.len() as f32 / 100.0).clamp(0.0, 1.0)
     }
 
     /// Memory usage as 0.0–1.0
     pub fn memory_usage(&self) -> f32 {
-        let total = self.sys.total_memory();
+        let Some(ref sys) = self.sys else { return 0.0 };
+        let total = sys.total_memory();
         if total == 0 {
             return 0.0;
         }
-        (self.sys.used_memory() as f32 / total as f32).clamp(0.0, 1.0)
+        (sys.used_memory() as f32 / total as f32).clamp(0.0, 1.0)
     }
 
     /// Network bytes/sec (delta since last refresh)
     pub fn network_bytes_per_sec(&self) -> u64 {
-        self.networks
+        let Some(ref networks) = self.networks else { return 0 };
+        networks
             .values()
             .map(|data| data.total_transmitted() + data.total_received())
             .sum()
@@ -72,7 +82,8 @@ impl SystemMetrics {
 
     /// Temperature readings (empty on most systems)
     pub fn temperatures(&self) -> Vec<(String, f32)> {
-        self.components
+        let Some(ref components) = self.components else { return Vec::new() };
+        components
             .iter()
             .filter_map(|c| c.temperature().map(|t| (c.label().to_string(), t)))
             .collect()

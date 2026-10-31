@@ -425,7 +425,8 @@ fn challenge_memory_ceiling_under_heavy_animation_and_high_fps() {
     let pid = Pid::from_u32(std::process::id());
     let mut sys = System::new_with_specifics(
         RefreshKind::nothing().with_processes(ProcessRefreshKind::nothing().with_memory()),
-    );
+    )
+    .expect("init System");
 
     let mut peak_mem_bytes = 0u64;
     let mut mem_at_frame_200 = 0u64;
@@ -506,7 +507,8 @@ fn challenge_parallel_heavy_simulations_memory_strictly_under_100mb() {
         let pid = Pid::from_u32(std::process::id());
         let mut sys = System::new_with_specifics(
             RefreshKind::nothing().with_processes(ProcessRefreshKind::nothing().with_memory()),
-        );
+        )
+        .expect("init System");
         while monitor_running.load(Ordering::Relaxed) {
             sys.refresh_processes_specifics(
                 sysinfo::ProcessesToUpdate::Some(&[pid]),

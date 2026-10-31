@@ -247,7 +247,7 @@ pub fn resolve_cow_name(cow_name: &str, data_dir: &Path) -> String {
     if entries.is_empty() {
         return "default".to_string();
     }
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     entries.shuffle(&mut rng);
     entries[0].clone()
 }

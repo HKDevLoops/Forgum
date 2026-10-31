@@ -31,7 +31,7 @@
 //! cfg_windows! { /* windows-only code */ }
 //! ```
 
-#![doc(html_root_url = "https://docs.rs/forgum-platform/0.0.14-beta")]
+#![doc(html_root_url = "https://docs.rs/forgum-platform/0.0.15-beta")]
 
 pub mod audio_bell;
 pub mod biome;

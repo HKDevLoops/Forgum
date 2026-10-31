@@ -18,7 +18,7 @@ fn bench_damage_diff(c: &mut Criterion) {
     c.bench_function("compute_damage_50pct", |b| {
         b.iter(|| {
             let d = fb.compute_damage();
-            criterion::black_box(d.len())
+            std::hint::black_box(d.len())
         })
     });
 }
@@ -38,7 +38,7 @@ fn bench_render_region(c: &mut Criterion) {
             out.clear();
             r.render_damage(&mut out, &fb.back, fb.cols(), &dmg)
                 .expect("render_damage failed");
-            criterion::black_box(out.len())
+            std::hint::black_box(out.len())
         })
     });
 }

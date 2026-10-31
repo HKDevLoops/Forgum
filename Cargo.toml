@@ -7,7 +7,7 @@ members = [
 ]
 
 [workspace.package]
-version = "0.0.14-beta"
+version = "0.0.15-beta"
 edition = "2021"
 rust-version = "1.98.0"
 license = "MIT"
@@ -50,8 +50,7 @@ approx_constant = "allow"
 manual_range_contains = "allow"
 
 [workspace.dependencies]
-# Pin shared versions so we don't end up with 0.59 + 0.61 in the dep graph.
-windows-sys = { version = "0.59", default-features = false }
+windows-sys = { version = "0.61", default-features = false }
 
 [profile.release]
 opt-level = 3

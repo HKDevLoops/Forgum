@@ -324,7 +324,8 @@ fn t2_boundary_memory_ceiling_under_100mb() {
     let pid = Pid::from_u32(std::process::id());
     let mut sys = System::new_with_specifics(
         RefreshKind::nothing().with_processes(ProcessRefreshKind::nothing().with_memory()),
-    );
+    )
+    .expect("init System");
     sys.refresh_processes_specifics(
         sysinfo::ProcessesToUpdate::Some(&[pid]),
         true,

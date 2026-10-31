@@ -5,7 +5,7 @@
 
 use std::path::Path;
 
-use rand::seq::SliceRandom;
+use rand::seq::{IndexedRandom, SliceRandom};
 
 /// Load all fortunes from the data directory.
 ///
@@ -105,7 +105,7 @@ const FALLBACK_FORTUNES: &[&str] = &[
 
 /// Pick a random fortune from the list (legacy independent sampling).
 pub fn pick_fortune(fortunes: &[String]) -> Option<&str> {
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     fortunes.choose(&mut rng).map(|s| s.as_str())
 }
 
@@ -137,7 +137,7 @@ pub fn pick_fortune_distributed(fortunes: &[String], data_dir: &Path) -> Option<
         })
         .unwrap_or_else(|| {
             let mut deck: Vec<usize> = (0..fortunes.len()).collect();
-            let mut rng = rand::thread_rng();
+            let mut rng = rand::rng();
             deck.shuffle(&mut rng);
             ThoughtDeckState {
                 corpus_hash,
@@ -148,7 +148,7 @@ pub fn pick_fortune_distributed(fortunes: &[String], data_dir: &Path) -> Option<
         });
 
     if state.cursor >= state.deck.len() {
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         state.deck.shuffle(&mut rng);
         if let Some(ref last) = state.last_drawn {
             if state.deck.len() > 1 && &fortunes[state.deck[0]] == last {

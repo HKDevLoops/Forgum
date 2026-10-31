@@ -41,8 +41,8 @@ impl MountainStyle {
     ];
 
     pub fn random() -> Self {
-        use rand::seq::SliceRandom;
-        let mut rng = rand::thread_rng();
+        use rand::seq::IndexedRandom;
+        let mut rng = rand::rng();
         *Self::ALL_NON_NONE.choose(&mut rng).unwrap_or(&Self::Hills)
     }
 
@@ -123,8 +123,8 @@ impl RoadStyle {
     ];
 
     pub fn random() -> Self {
-        use rand::seq::SliceRandom;
-        let mut rng = rand::thread_rng();
+        use rand::seq::IndexedRandom;
+        let mut rng = rand::rng();
         *Self::ALL_NON_NONE.choose(&mut rng).unwrap_or(&Self::Dirt)
     }
 
@@ -211,8 +211,8 @@ impl EnvironmentStyle {
     ];
 
     pub fn random() -> Self {
-        use rand::seq::SliceRandom;
-        let mut rng = rand::thread_rng();
+        use rand::seq::IndexedRandom;
+        let mut rng = rand::rng();
         *Self::ALL_NON_NONE
             .choose(&mut rng)
             .unwrap_or(&Self::Pasture)

@@ -1,5 +1,5 @@
 Name:           forgum
-Version:        0.0.14
+Version:        0.0.15
 Release:        1%{?dist}
 Summary:        Cross-platform ANSI animation mascot and shell integration engine
 
@@ -19,6 +19,8 @@ install -m 755 forgum %{buildroot}%{_bindir}/forgum
 %{_bindir}/forgum
 
 %changelog
+* Sat Oct 31 2026 harish2222 <harish2222@users.noreply.github.com> - 0.0.15-1
+- Release 0.0.15 beta: High-precision nanosecond/millisecond pixel animation engine, Xiaolin Wu subpixel rasterization, zero forced glyph scenery, complete Rust dependency ecosystem upgrade (rand 0.10, sysinfo 0.40, ratatui 0.30, crossterm 0.29, windows-sys 0.61, thiserror 2, criterion 0.8), and comprehensive adversarial security hardening
 * Wed Oct 21 2026 harish2222 <harish2222@users.noreply.github.com> - 0.0.14-1
 - Release 0.0.14 beta: Kali Linux security audit remediation, PID verification guard, IPC bounded buffer protection, VT100 ANSI state machine escaping, thread-safe signal handler, and binary symbol stripping
 * Wed Oct 21 2026 harish2222 <harish2222@users.noreply.github.com> - 0.0.13-1

@@ -42,13 +42,16 @@ pub struct FetchInfo {
 impl FetchInfo {
     /// Collect all system information quickly with zero-panic fallbacks.
     pub fn collect() -> Self {
-        let mut sys = System::new_with_specifics(
+        let mut sys_opt = System::new_with_specifics(
             RefreshKind::nothing()
-                .with_cpu(CpuRefreshKind::nothing().with_cpu_usage())
+                .with_cpu(CpuRefreshKind::nothing().with_usage())
                 .with_memory(MemoryRefreshKind::nothing().with_ram()),
-        );
-        sys.refresh_cpu_all();
-        sys.refresh_memory();
+        )
+        .ok();
+        if let Some(ref mut sys) = sys_opt {
+            sys.refresh_cpu_all();
+            sys.refresh_memory();
+        }
 
         let user = std::env::var("USER")
             .or_else(|_| std::env::var("USERNAME"))
@@ -58,18 +61,18 @@ impl FetchInfo {
             .or_else(|_| std::env::var("COMPUTERNAME"))
             .unwrap_or_else(|_| "localhost".to_string());
 
-        let os_name = System::name().unwrap_or_else(|| std::env::consts::OS.to_string());
-        let os_version = System::os_version().unwrap_or_default();
+        let os_name = System::name().ok().unwrap_or_else(|| std::env::consts::OS.to_string());
+        let os_version = System::os_version().ok().unwrap_or_default();
         let os = if os_version.is_empty() {
             os_name
         } else {
             format!("{os_name} {os_version}")
         };
 
-        let kernel = System::kernel_version().unwrap_or_else(|| "unknown".to_string());
+        let kernel = System::kernel_version().ok().unwrap_or_else(|| "unknown".to_string());
         let arch = std::env::consts::ARCH.to_string();
 
-        let uptime_secs = System::uptime();
+        let uptime_secs = System::uptime().unwrap_or(0);
         let days = uptime_secs / 86400;
         let hours = (uptime_secs % 86400) / 3600;
         let mins = (uptime_secs % 3600) / 60;
@@ -115,7 +118,7 @@ impl FetchInfo {
         };
         let terminal = format!("{} ({})", emulator.name(), color_lvl);
 
-        let cpu = {
+        let cpu = if let Some(ref sys) = sys_opt {
             let cpus = sys.cpus();
             if cpus.is_empty() {
                 "Unknown CPU".to_string()
@@ -123,16 +126,20 @@ impl FetchInfo {
                 let brand = cpus[0].brand().trim();
                 format!("{} ({} cores)", brand, cpus.len())
             }
+        } else {
+            "Unknown CPU".to_string()
         };
 
-        let cpu_usage = {
+        let cpu_usage = if let Some(ref sys) = sys_opt {
             let cpus = sys.cpus();
             if cpus.is_empty() {
                 0.0
             } else {
-                let sum: f32 = cpus.iter().map(|c| c.cpu_usage()).sum();
+                let sum: f32 = cpus.iter().map(|c| c.usage()).sum();
                 (sum / cpus.len() as f32).clamp(0.0, 100.0)
             }
+        } else {
+            0.0
         };
 
         let gpus = {
@@ -150,16 +157,20 @@ impl FetchInfo {
             }
         };
 
-        let total_mem = sys.total_memory();
-        let used_mem = sys.used_memory();
-        let (memory, memory_fraction) = if total_mem > 0 {
-            let used_gb = used_mem as f64 / (1024.0 * 1024.0 * 1024.0);
-            let total_gb = total_mem as f64 / (1024.0 * 1024.0 * 1024.0);
-            let pct = (used_mem as f64 / total_mem as f64) * 100.0;
-            (
-                format!("{used_gb:.2} GiB / {total_gb:.2} GiB ({pct:.0}%)"),
-                (used_mem as f32 / total_mem as f32).clamp(0.0, 1.0),
-            )
+        let (memory, memory_fraction) = if let Some(ref sys) = sys_opt {
+            let total_mem = sys.total_memory();
+            let used_mem = sys.used_memory();
+            if total_mem > 0 {
+                let used_gb = used_mem as f64 / (1024.0 * 1024.0 * 1024.0);
+                let total_gb = total_mem as f64 / (1024.0 * 1024.0 * 1024.0);
+                let pct = (used_mem as f64 / total_mem as f64) * 100.0;
+                (
+                    format!("{used_gb:.2} GiB / {total_gb:.2} GiB ({pct:.0}%)"),
+                    (used_mem as f32 / total_mem as f32).clamp(0.0, 1.0),
+                )
+            } else {
+                ("Unknown".to_string(), 0.0)
+            }
         } else {
             ("Unknown".to_string(), 0.0)
         };

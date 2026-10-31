@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.0.15-beta] - 2026-10-31
+
+### Added
+- **High-Precision Pixel Animation Engine (`pixel_engine.rs`)**:
+  - Implemented `NanosecondClock` timekeeper tracking rolling-window FPS, frame delta times, and sub-millisecond pacing jitter.
+  - Implemented `PrecisionFramePacer` supporting 1..=1000 FPS and uncapped operation with hybrid coarse sleep and high-resolution spin-wait kernel.
+  - Implemented `PixelCanvas` 2D subpixel TrueColor rasterizer ($W_{\text{px}} \times H_{\text{px}} = \text{cols} \times 2\cdot\text{rows}$) with bilinear fractional anti-aliasing (`set_pixel_f32`), Xiaolin Wu subpixel line rasterization (`draw_line_f32`), and subpixel circles (`draw_circle_f32`).
+  - Integrated `blit_into_framebuffer` for zero-allocation blitting into `FrameBuffer` using half-block TrueColor pairs.
+  - Added continuous fluid wave simulation (`SubpixelWaveField`) and kinematic particle physics (`SubpixelKinematicBody`).
+
+### Changed
+- **Zero Forced Glyphs Scenery Refactoring**:
+  - Purged all forced Unicode block glyphs (`█`, `▓`, `▒`, `░`, `│`, `─`) from procedural environmental scenery.
+  - Refactored alpine mountain elevation to dual-pixel continuous sub-block rendering (`calculate_mountain_subpixel_color`).
+  - Replaced sky gradient blocks with clean ASCII micro-particles.
+  - Refactored ocean waves to continuous sinusoidal half-block rasterization.
+- **Complete Rust Dependency Modernization (Latest Major Releases)**:
+  - Upgraded `rand` to `0.10.3` with `IndexedRandom` / `SliceRandom` migration across mascots, scenery, fortunes, and effects.
+  - Upgraded `sysinfo` to `0.40.1` with fallible system query migration and zero-panic wrappers in `fetch` and `metrics`.
+  - Upgraded `ratatui` to `0.30.2` and `crossterm` to `0.29.0` across engine, platform, and TUI crates.
+  - Unified Windows platform bindings on `windows-sys 0.61.2`.
+  - Upgraded `thiserror` to `2.0.21` across platform and engine crates.
+  - Upgraded `criterion` to `0.8.2` with `std::hint::black_box()` migration.
+  - Upgraded `nix` to `0.31.3` for Unix process and signal isolation.
+
+### Security
+- **Security Hardening (`KALI-SEC-07` through `KALI-SEC-12`)**:
+  - Remediated sticky runtime directory ownership checks, PID collision handling, and ANSI sanitization hardening.
+
+---
+
 ## [0.0.14-beta] - 2026-10-21
 
 ### Security

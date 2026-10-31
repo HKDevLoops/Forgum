@@ -26,7 +26,8 @@ fn test_parallel_rendering_memory_strictly_under_100mb() {
         let pid = Pid::from_u32(std::process::id());
         let mut sys = System::new_with_specifics(
             RefreshKind::nothing().with_processes(ProcessRefreshKind::nothing().with_memory()),
-        );
+        )
+        .expect("init System");
         while monitor_running.load(Ordering::Relaxed) {
             sys.refresh_processes_specifics(
                 sysinfo::ProcessesToUpdate::Some(&[pid]),
@@ -124,7 +125,8 @@ fn test_parallel_rendering_memory_strictly_under_100mb() {
         let pid = Pid::from_u32(std::process::id());
         let mut sys = System::new_with_specifics(
             RefreshKind::nothing().with_processes(ProcessRefreshKind::nothing().with_memory()),
-        );
+        )
+        .expect("init System");
         sys.refresh_processes_specifics(
             sysinfo::ProcessesToUpdate::Some(&[pid]),
             true,
