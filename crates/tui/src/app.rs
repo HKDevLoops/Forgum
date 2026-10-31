@@ -1434,7 +1434,12 @@ impl ConfigApp {
     /// 2. If effect is "static" or "none", also force animation = "static".
     /// 3. Otherwise, animation = "dynamic" and animation_type mirrors the effect.
     pub fn enforce_animation_effect_consistency(&mut self) {
-        let anim = self.config.animation.as_deref().unwrap_or("dynamic").to_lowercase();
+        let anim = self
+            .config
+            .animation
+            .as_deref()
+            .unwrap_or("dynamic")
+            .to_lowercase();
         let eff = self.config.effect.to_lowercase();
 
         if anim == "static" {
@@ -7370,7 +7375,10 @@ export extern "forgum" [
         let accel_badge = self.active_accel_badge();
 
         let hud_line = if is_static {
-            format!("📷 Static Preview • {} FPS • {} Live", self.config.fps, accel_badge)
+            format!(
+                "📷 Static Preview • {} FPS • {} Live",
+                self.config.fps, accel_badge
+            )
         } else if self.config.duration > 0 {
             let percent = (progress_fraction * 100.0) as u32;
             let bar_width = 14;

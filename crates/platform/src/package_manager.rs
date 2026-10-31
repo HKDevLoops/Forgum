@@ -2689,7 +2689,9 @@ mod tests {
 
     #[test]
     fn test_clear_update_cache_removes_file() {
-        let _guard = crate::paths::env_lock().lock().unwrap_or_else(|p| p.into_inner());
+        let _guard = crate::paths::env_lock()
+            .lock()
+            .unwrap_or_else(|p| p.into_inner());
         let temp = tempfile::tempdir().unwrap();
         let cfg = temp.path().join("config.json");
         let saved = std::env::var("FORGUM_CONFIG").ok();

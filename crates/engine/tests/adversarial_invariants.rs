@@ -1003,14 +1003,15 @@ fn test_security_ansi_escape_sanitization_in_cow_and_speech_bubbles() {
 
     // 1. Malicious cow template with OSC 52, DEC private mode, and cursor moves
     let malicious_cow = " (\\$eyes) \x1b]52;c;evil_clipboard\x07 \x1b[?1049h\x1b[2J\x1b[12;34H [\\$tongue] \\$thoughts";
-    let expanded = expand_cow(
-        malicious_cow,
-        "\x1b[?25loo",
-        "\x1bcU",
-        "\x1b[6no",
+    let expanded = expand_cow(malicious_cow, "\x1b[?25loo", "\x1bcU", "\x1b[6no");
+    assert!(
+        !expanded.contains("\x1b"),
+        "All ANSI escape sequences must be stripped from expanded cow art"
     );
-    assert!(!expanded.contains("\x1b"), "All ANSI escape sequences must be stripped from expanded cow art");
-    assert!(!expanded.contains("evil_clipboard"), "OSC 52 clipboard payload must be neutralized");
+    assert!(
+        !expanded.contains("evil_clipboard"),
+        "OSC 52 clipboard payload must be neutralized"
+    );
     assert!(expanded.contains("oo"), "Eyes glyph must be preserved");
     assert!(expanded.contains('U'), "Tongue glyph must be preserved");
     assert!(expanded.contains('o'), "Thoughts glyph must be preserved");
@@ -1018,20 +1019,38 @@ fn test_security_ansi_escape_sanitization_in_cow_and_speech_bubbles() {
     // 2. Malicious bubble text
     let dirty_bubble = "Hello \x1b]52;c;steal\x07\x1b[2JWorld\u{009B}H\u{009D}0;Title\x07!";
     let bubble = wrap_bubble(dirty_bubble, 20);
-    assert!(!bubble.contains("\x1b"), "Speech bubble must strip all ANSI sequences");
-    assert!(!bubble.contains("\u{009B}") && !bubble.contains("\u{009D}"), "Speech bubble must strip C1 sequences");
-    assert!(bubble.contains("Hello World!"), "Printable text must be preserved in bubble: {bubble}");
+    assert!(
+        !bubble.contains("\x1b"),
+        "Speech bubble must strip all ANSI sequences"
+    );
+    assert!(
+        !bubble.contains("\u{009B}") && !bubble.contains("\u{009D}"),
+        "Speech bubble must strip C1 sequences"
+    );
+    assert!(
+        bubble.contains("Hello World!"),
+        "Printable text must be preserved in bubble: {bubble}"
+    );
 
     let thought_bubble = wrap_thought_bubble(dirty_bubble, 20);
-    assert!(!thought_bubble.contains("\x1b"), "Thought bubble must strip all ANSI sequences");
-    assert!(thought_bubble.contains("Hello World!"), "Printable text must be preserved in thought bubble: {thought_bubble}");
+    assert!(
+        !thought_bubble.contains("\x1b"),
+        "Thought bubble must strip all ANSI sequences"
+    );
+    assert!(
+        thought_bubble.contains("Hello World!"),
+        "Printable text must be preserved in thought bubble: {thought_bubble}"
+    );
 }
 
 #[test]
 fn test_security_mascot_pack_stage2_comprehensive_escape_rejection() {
-    use forgum_engine::pack_importer::{verify_and_compile_mascot_pack, MascotPackManifest, PackVerifyError};
+    use forgum_engine::pack_importer::{
+        verify_and_compile_mascot_pack, MascotPackManifest, PackVerifyError,
+    };
 
-    let valid_cow = "  ^__^\n  (oo)\\_______\n   (__)\\       )\\/\\\n       ||----w |\n       ||     ||";
+    let valid_cow =
+        "  ^__^\n  (oo)\\_______\n   (__)\\       )\\/\\\n       ||----w |\n       ||     ||";
     let valid_palette = [
         "#FFFFFF".into(),
         "#000000".into(),

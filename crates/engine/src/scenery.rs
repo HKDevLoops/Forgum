@@ -1119,11 +1119,7 @@ pub fn blend_color(c1: Color, c2: Color, t: f32) -> Color {
 
 /// Continuous subpixel color calculation for mountain terrain with Leonardo da Vinci sfumato atmospheric perspective.
 #[inline]
-pub fn calculate_mountain_subpixel_color(
-    base_fg: Color,
-    depth_ratio: f32,
-    slope: f32,
-) -> Color {
+pub fn calculate_mountain_subpixel_color(base_fg: Color, depth_ratio: f32, slope: f32) -> Color {
     // 1. Directional solar slope illumination: sunlit vs shaded facets
     let slope_lum = if slope >= 0.0 {
         1.0 + (slope * 0.12).clamp(0.0, 0.30)
@@ -1148,7 +1144,11 @@ pub fn calculate_mountain_subpixel_color(
         )
     } else {
         // Foothills: sfumato aerial perspective (cool slate/cyan mist)
-        blend_color(base_fg, SFUMATO_SLATE, (0.45 + depth_ratio * 0.30).clamp(0.0, 0.90))
+        blend_color(
+            base_fg,
+            SFUMATO_SLATE,
+            (0.45 + depth_ratio * 0.30).clamp(0.0, 0.90),
+        )
     };
 
     depth_col.scale_luminance(slope_lum)
@@ -1178,16 +1178,34 @@ pub fn calculate_mountain_depth_cell(
         // ── Peak silhouette row ──────────────────────────────────────────
         let ch = match style {
             MountainStyle::Skyline => {
-                if x.is_multiple_of(3) { '|' } else { '_' }
+                if x.is_multiple_of(3) {
+                    '|'
+                } else {
+                    '_'
+                }
             }
             MountainStyle::Castle => {
-                if x.is_multiple_of(2) { '▲' } else { '_' }
+                if x.is_multiple_of(2) {
+                    '▲'
+                } else {
+                    '_'
+                }
             }
             MountainStyle::Plateau => {
-                if slope.abs() < 0.2 { '▀' } else if slope > 0.0 { '/' } else { '\\' }
+                if slope.abs() < 0.2 {
+                    '▀'
+                } else if slope > 0.0 {
+                    '/'
+                } else {
+                    '\\'
+                }
             }
             MountainStyle::Garden => {
-                if x.is_multiple_of(4) { '❀' } else { '▲' }
+                if x.is_multiple_of(4) {
+                    '❀'
+                } else {
+                    '▲'
+                }
             }
             MountainStyle::Iceberg => '▲',
             _ => {
@@ -1223,7 +1241,6 @@ pub fn calculate_mountain_depth_cell(
             )
         };
         (ch, col, Color::TRANSPARENT)
-
     } else if y >= mountain_base_y.saturating_sub(1) {
         // ── Ground contact: solid terrain edge with half-block ───────────
         let ch = match style {
@@ -1238,7 +1255,6 @@ pub fn calculate_mountain_depth_cell(
             base_fg.b.saturating_sub(25),
         );
         (ch, col, Color::TRANSPARENT)
-
     } else {
         // ── Interior body: dual-pixel half-block TrueColor rasterization ─
         let total_h = mountain_base_y.saturating_sub(start_y).max(1) as f32;
@@ -1251,7 +1267,9 @@ pub fn calculate_mountain_depth_cell(
 
         // Architecture styles keep structural accents
         match style {
-            MountainStyle::Skyline if (x + y).is_multiple_of(3) => ('|', col_top, Color::TRANSPARENT),
+            MountainStyle::Skyline if (x + y).is_multiple_of(3) => {
+                ('|', col_top, Color::TRANSPARENT)
+            }
             MountainStyle::Castle if x.is_multiple_of(3) => ('#', col_top, Color::TRANSPARENT),
             _ => ('▀', col_top, col_bot),
         }
@@ -4073,7 +4091,8 @@ pub fn render_environment_with_tod(
             let deep_blue = Color::rgb(16, 64, 110); // Ocean depth navy
             for x in 0..width {
                 let wave_harmonic = (x as f32 * 0.28 + time * 3.5).sin();
-                let crest_subpixel = (surface_y as f32 * 2.0 + wave_harmonic * 0.8).clamp(0.0, (ground_y * 2) as f32);
+                let crest_subpixel = (surface_y as f32 * 2.0 + wave_harmonic * 0.8)
+                    .clamp(0.0, (ground_y * 2) as f32);
                 let cell_y = (crest_subpixel / 2.0).floor() as usize;
                 let sub_y = crest_subpixel % 2.0;
 
@@ -4312,31 +4331,20 @@ pub fn render_sky_gradient(
 
         // Pick sky gradient colors based on environment and time of day
         let (top_col, horizon_col) = match env {
-            EnvironmentStyle::Space | EnvironmentStyle::Cyber => (
-                Color::rgb(5, 5, 20),
-                Color::rgb(10, 20, 60),
-            ),
-            EnvironmentStyle::Inferno => (
-                Color::rgb(30, 5, 5),
-                Color::rgb(80, 30, 10),
-            ),
-            EnvironmentStyle::Ocean | EnvironmentStyle::Swamp => (
-                Color::rgb(0, 20, 60),
-                Color::rgb(0, 60, 100),
-            ),
-            EnvironmentStyle::Arctic => (
-                Color::rgb(200, 230, 255),
-                Color::rgb(170, 210, 245),
-            ),
-            EnvironmentStyle::Graveyard => (
-                Color::rgb(15, 15, 25),
-                Color::rgb(35, 35, 55),
-            ),
+            EnvironmentStyle::Space | EnvironmentStyle::Cyber => {
+                (Color::rgb(5, 5, 20), Color::rgb(10, 20, 60))
+            }
+            EnvironmentStyle::Inferno => (Color::rgb(30, 5, 5), Color::rgb(80, 30, 10)),
+            EnvironmentStyle::Ocean | EnvironmentStyle::Swamp => {
+                (Color::rgb(0, 20, 60), Color::rgb(0, 60, 100))
+            }
+            EnvironmentStyle::Arctic => (Color::rgb(200, 230, 255), Color::rgb(170, 210, 245)),
+            EnvironmentStyle::Graveyard => (Color::rgb(15, 15, 25), Color::rgb(35, 35, 55)),
             _ => match tod_resolved {
                 TimeOfDay::Night => (Color::rgb(5, 8, 28), Color::rgb(15, 20, 55)),
-                TimeOfDay::Dawn  => (Color::rgb(30, 20, 80), Color::rgb(255, 140, 60)),
-                TimeOfDay::Dusk  => (Color::rgb(80, 30, 80), Color::rgb(255, 100, 50)),
-                _                => (Color::rgb(30, 80, 170), Color::rgb(80, 160, 220)),
+                TimeOfDay::Dawn => (Color::rgb(30, 20, 80), Color::rgb(255, 140, 60)),
+                TimeOfDay::Dusk => (Color::rgb(80, 30, 80), Color::rgb(255, 100, 50)),
+                _ => (Color::rgb(30, 80, 170), Color::rgb(80, 160, 220)),
             },
         };
 
@@ -4351,10 +4359,18 @@ pub fn render_sky_gradient(
             // Atmospheric density character: atmospheric haze mist near horizon
             let ch = if depth > 0.85 {
                 // Horizon haze — soft atmospheric mist particle
-                if (x + row) % 4 == 0 { '.' } else { ' ' }
+                if (x + row) % 4 == 0 {
+                    '.'
+                } else {
+                    ' '
+                }
             } else if depth > 0.60 {
                 // Lower sky — very sparse haze dot
-                if (x * 7 + row * 13) % 23 == 0 { '.' } else { ' ' }
+                if (x * 7 + row * 13) % 23 == 0 {
+                    '.'
+                } else {
+                    ' '
+                }
             } else {
                 // Stars / space in upper sky for night/space modes
                 let is_star = match tod_resolved {
@@ -4367,7 +4383,11 @@ pub fn render_sky_gradient(
                 // Twinkle effect using time
                 if is_star {
                     let twinkle = (time * 2.3 + (x as f32) * 0.5 + (row as f32) * 1.7).sin() > 0.0;
-                    if twinkle { '·' } else { '.' }
+                    if twinkle {
+                        '·'
+                    } else {
+                        '.'
+                    }
                 } else {
                     ' '
                 }
@@ -4505,7 +4525,11 @@ impl SceneryCache {
 
         // Quantize time into sub-millisecond buckets so elements drift continuously
         // and smoothly up to 240Hz liquid refresh rate.
-        let safe_time = if time.is_finite() && time >= 0.0 { time } else { 0.0 };
+        let safe_time = if time.is_finite() && time >= 0.0 {
+            time
+        } else {
+            0.0
+        };
         let time_bucket = (safe_time * 240.0).floor() as u32;
 
         let key = SceneryCacheKey {

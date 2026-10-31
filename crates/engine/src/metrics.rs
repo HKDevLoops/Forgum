@@ -57,7 +57,9 @@ impl SystemMetrics {
 
     /// Network bytes/sec (delta since last refresh)
     pub fn network_bytes_per_sec(&self) -> u64 {
-        let Some(ref networks) = self.networks else { return 0 };
+        let Some(ref networks) = self.networks else {
+            return 0;
+        };
         networks
             .values()
             .map(|data| data.total_transmitted() + data.total_received())
@@ -82,7 +84,9 @@ impl SystemMetrics {
 
     /// Temperature readings (empty on most systems)
     pub fn temperatures(&self) -> Vec<(String, f32)> {
-        let Some(ref components) = self.components else { return Vec::new() };
+        let Some(ref components) = self.components else {
+            return Vec::new();
+        };
         components
             .iter()
             .filter_map(|c| c.temperature().map(|t| (c.label().to_string(), t)))

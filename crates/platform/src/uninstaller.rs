@@ -341,7 +341,10 @@ fn remove_binaries(logs: &mut Vec<String>, errors: &mut Vec<String>) -> bool {
                     let _ = std::fs::rename(&path, &temp_del);
                     // Schedule background deletion after process termination if path is safe
                     let target_str = temp_del.to_string_lossy().to_string();
-                    if !target_str.contains('&') && !target_str.contains('%') && !target_str.contains('^') {
+                    if !target_str.contains('&')
+                        && !target_str.contains('%')
+                        && !target_str.contains('^')
+                    {
                         let _ = Command::new("cmd.exe")
                             .args([
                                 "/C",

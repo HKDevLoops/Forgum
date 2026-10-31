@@ -61,7 +61,9 @@ impl FetchInfo {
             .or_else(|_| std::env::var("COMPUTERNAME"))
             .unwrap_or_else(|_| "localhost".to_string());
 
-        let os_name = System::name().ok().unwrap_or_else(|| std::env::consts::OS.to_string());
+        let os_name = System::name()
+            .ok()
+            .unwrap_or_else(|| std::env::consts::OS.to_string());
         let os_version = System::os_version().ok().unwrap_or_default();
         let os = if os_version.is_empty() {
             os_name
@@ -69,7 +71,9 @@ impl FetchInfo {
             format!("{os_name} {os_version}")
         };
 
-        let kernel = System::kernel_version().ok().unwrap_or_else(|| "unknown".to_string());
+        let kernel = System::kernel_version()
+            .ok()
+            .unwrap_or_else(|| "unknown".to_string());
         let arch = std::env::consts::ARCH.to_string();
 
         let uptime_secs = System::uptime().unwrap_or(0);

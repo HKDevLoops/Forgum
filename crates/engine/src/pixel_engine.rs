@@ -33,8 +33,8 @@
 //!
 //! **Zero `#[cfg]` lives in this module.** Strictly compliant with Forgum architecture.
 
-use std::time::{Duration, Instant};
 use crate::framebuffer::{Cell, Color, FrameBuffer};
+use std::time::{Duration, Instant};
 
 /// Sub-millisecond spin-wait threshold for high-precision frame pacing.
 pub const SUB_MS_SPIN_THRESHOLD: Duration = Duration::from_micros(1200);
@@ -179,7 +179,11 @@ impl PrecisionFramePacer {
     #[must_use]
     pub fn new(fps: u32) -> Self {
         let is_uncapped = fps == 0;
-        let safe_fps = if is_uncapped { 1000 } else { fps.clamp(1, 1000) };
+        let safe_fps = if is_uncapped {
+            1000
+        } else {
+            fps.clamp(1, 1000)
+        };
         let target_period = Duration::from_nanos(1_000_000_000 / u64::from(safe_fps));
         let now = Instant::now();
         Self {
@@ -204,7 +208,11 @@ impl PrecisionFramePacer {
     /// Set a new target frame rate.
     pub fn set_fps(&mut self, fps: u32) {
         self.is_uncapped = fps == 0;
-        let safe_fps = if self.is_uncapped { 1000 } else { fps.clamp(1, 1000) };
+        let safe_fps = if self.is_uncapped {
+            1000
+        } else {
+            fps.clamp(1, 1000)
+        };
         self.target_period = Duration::from_nanos(1_000_000_000 / u64::from(safe_fps));
         self.clock.target_period_nanos = self.target_period.as_nanos() as u64;
     }
@@ -363,7 +371,14 @@ impl PixelCanvas {
     }
 
     /// Draw a continuous subpixel line using Xiaolin Wu's anti-aliased algorithm.
-    pub fn draw_line_f32(&mut self, mut x0: f32, mut y0: f32, mut x1: f32, mut y1: f32, color: Color) {
+    pub fn draw_line_f32(
+        &mut self,
+        mut x0: f32,
+        mut y0: f32,
+        mut x1: f32,
+        mut y1: f32,
+        color: Color,
+    ) {
         if !x0.is_finite() || !y0.is_finite() || !x1.is_finite() || !y1.is_finite() {
             return;
         }
@@ -776,8 +791,8 @@ mod tests {
         let top_color = Color::rgb(200, 50, 50);
         let bot_color = Color::rgb(50, 50, 200);
 
-        canvas.set_pixel(5, 10, top_color);     // top subpixel of cell (5, 5)
-        canvas.set_pixel(5, 11, bot_color);     // bot subpixel of cell (5, 5)
+        canvas.set_pixel(5, 10, top_color); // top subpixel of cell (5, 5)
+        canvas.set_pixel(5, 11, bot_color); // bot subpixel of cell (5, 5)
 
         canvas.blit_to_framebuffer(&mut fb);
         let cell = fb.get_back(5, 5);
@@ -801,7 +816,13 @@ mod tests {
         assert!(elev1.is_finite());
 
         let mut canvas = PixelCanvas::new(40, 20);
-        wave.render_wave_surface(&mut canvas, 15.0, 0.5, Color::rgb(0, 200, 255), Color::rgb(0, 20, 60));
+        wave.render_wave_surface(
+            &mut canvas,
+            15.0,
+            0.5,
+            Color::rgb(0, 200, 255),
+            Color::rgb(0, 20, 60),
+        );
         assert_ne!(canvas.get_pixel(20, 16), Color::TRANSPARENT);
     }
 
