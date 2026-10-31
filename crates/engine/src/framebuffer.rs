@@ -355,6 +355,19 @@ impl FrameBuffer {
         }
     }
 
+    /// Create a high-resolution 2D TrueColor `PixelCanvas` mapped to this FrameBuffer's dimensions.
+    #[must_use]
+    pub fn to_pixel_canvas(&self) -> crate::pixel_engine::PixelCanvas {
+        let mut canvas = crate::pixel_engine::PixelCanvas::new(self.width, self.height);
+        canvas.blit_from_framebuffer(self);
+        canvas
+    }
+
+    /// Blit a `PixelCanvas` directly into this FrameBuffer's back buffer using dual-pixel encoding.
+    pub fn blit_pixel_canvas(&mut self, canvas: &crate::pixel_engine::PixelCanvas) {
+        canvas.blit_to_framebuffer(self);
+    }
+
     /// Swap buffers: `front` becomes the frame just built in `back`, and `back`
     /// is repopulated as a copy of that displayed frame so the next frame is
     /// built on top of it.

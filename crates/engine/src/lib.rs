@@ -40,6 +40,7 @@ pub mod neural_dialogue;
 pub mod options_table;
 pub mod pack_importer;
 pub mod particles;
+pub mod pixel_engine;
 pub mod protocol;
 pub mod protocol_io;
 pub mod random_engine;

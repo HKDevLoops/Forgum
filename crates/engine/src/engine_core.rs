@@ -295,6 +295,24 @@ impl LiquidFrameGovernor {
         self.target_period
     }
 
+    /// Target frame period in nanoseconds.
+    #[must_use]
+    pub fn target_period_nanos(&self) -> u64 {
+        self.target_period.as_nanos() as u64
+    }
+
+    /// Total simulation elapsed time in nanoseconds.
+    #[must_use]
+    pub fn elapsed_nanos(&self) -> u128 {
+        (self.elapsed_secs * 1_000_000_000.0).round() as u128
+    }
+
+    /// Total simulation elapsed time in milliseconds.
+    #[must_use]
+    pub fn elapsed_millis(&self) -> f64 {
+        self.elapsed_secs * 1000.0
+    }
+
     pub fn set_fps(&mut self, fps: u32) {
         let safe_fps = fps.clamp(1, 1000);
         self.target_period = Duration::from_nanos(1_000_000_000 / u64::from(safe_fps));
