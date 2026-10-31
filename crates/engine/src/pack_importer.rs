@@ -104,6 +104,45 @@ pub fn compute_pack_dna_signature(pack_id: &str, raw_cow: &str, palette: &[Strin
     format!("forgum-dna-v1:{:016x}", hasher.finish())
 }
 
+/// Checks for dangerous or unapproved terminal escape sequences.
+/// Only harmless SGR color codes (`\x1b[...m`) are permitted; all OSC, DCS, APC,
+/// DEC private modes, cursor movements, screen clear codes, and C0/C1 controls are forbidden.
+fn has_forbidden_terminal_escapes(raw: &str) -> bool {
+    let mut chars = raw.chars().peekable();
+    while let Some(ch) = chars.next() {
+        if ch == '\x1b' {
+            match chars.peek() {
+                Some('[') => {
+                    chars.next(); // consume '['
+                    let mut is_sgr = false;
+                    for c in chars.by_ref() {
+                        if c == 'm' {
+                            is_sgr = true;
+                            break;
+                        }
+                        if !c.is_ascii_digit() && c != ';' {
+                            return true; // Non-SGR code: cursor move, mode change, screen clear
+                        }
+                    }
+                    if !is_sgr {
+                        return true;
+                    }
+                }
+                _ => return true, // Any non-CSI escape (OSC, DCS, APC, 2-byte escape, etc.) is forbidden
+            }
+        } else {
+            let code = ch as u32;
+            if (0x80..=0x9F).contains(&code)
+                || (code < 0x20 && ch != '\n' && ch != '\r' && ch != '\t')
+                || ch == '\x7F'
+            {
+                return true;
+            }
+        }
+    }
+    false
+}
+
 /// Validates a user-created `.cow` mascot and its isolated `CowDna` manifest
 /// before importing or hot-reloading into the user catalog overlay.
 pub fn verify_and_compile_mascot_pack(
@@ -120,12 +159,7 @@ pub fn verify_and_compile_mascot_pack(
     }
 
     // Stage 2: Safe-SGR ANSI Escape Filter (SEC-PACK-002)
-    if raw_cow_body.contains("\x1b]")
-        || raw_cow_body.contains("\x1bP")
-        || raw_cow_body.contains("\x1b[?")
-        || raw_cow_body.contains("\x1b[2J")
-        || raw_cow_body.contains("\x1b[r")
-    {
+    if has_forbidden_terminal_escapes(raw_cow_body) {
         return Err(PackVerifyError::ForbiddenTerminalEscapeSequence);
     }
 

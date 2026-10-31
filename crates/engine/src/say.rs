@@ -46,11 +46,12 @@ pub fn execute_say_cmd(cmd: &[String]) -> String {
         })
         .unwrap_or_else(|_| cmd.join(" "));
 
-    let text = output.trim().to_string();
-    if text.is_empty() {
+    let text = output.trim();
+    let sanitized = forgum_platform::strip_ansi_and_controls(text);
+    if sanitized.is_empty() {
         "No output.".to_string()
     } else {
-        text
+        sanitized
     }
 }
 

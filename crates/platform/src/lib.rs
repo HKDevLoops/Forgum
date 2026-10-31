@@ -81,7 +81,10 @@ pub use daemon_socket::{DaemonSocket, SocketConnection};
 pub use editor::{
     detect_installed_editors, find_editor_binary, find_neovim, open_in_editor, EditorInfo,
 };
-pub use encoding::{decode_text_compatible, read_text_file_compatible, sanitize_and_normalize};
+pub use encoding::{
+    decode_text_compatible, read_text_file_compatible, sanitize_and_normalize,
+    strip_ansi_and_controls,
+};
 pub use error::PlatformError;
 pub use gpu::{detect_gpu_devices, resolve_acceleration, AccelerationMode, GpuDeviceType, GpuInfo};
 pub use guards::{

@@ -10735,4 +10735,31 @@ mod tests {
         assert!(!app.editing_config);
         assert_eq!(app.config.update_method.as_deref(), Some("zypper"));
     }
+
+    #[test]
+    fn test_static_animation_mode_preservation_and_frozen_simulation() {
+        let mut app = ConfigApp::new(None, None, Some(Tab::Config));
+        app.config.animation = Some("static".to_string());
+        app.config.effect = "walk".to_string();
+        app.enforce_animation_effect_consistency();
+
+        // 1. Static animation mode is preserved unconditionally
+        assert_eq!(app.config.animation.as_deref(), Some("static"));
+        // 2. animation_type is cleared to None to satisfy CLI invariant
+        assert_eq!(app.config.animation_type, None);
+
+        // 3. tick(dt) does not advance animation_time in static mode
+        let initial_time = app.animation_time;
+        app.tick(0.033);
+        assert_eq!(app.animation_time, initial_time);
+
+        // 4. Switching to dynamic mode advances animation_time and syncs animation_type
+        app.config.animation = Some("dynamic".to_string());
+        app.config.effect = "fly".to_string();
+        app.enforce_animation_effect_consistency();
+        assert_eq!(app.config.animation.as_deref(), Some("dynamic"));
+        assert_eq!(app.config.animation_type.as_deref(), Some("fly"));
+        app.tick(0.033);
+        assert!(app.animation_time > initial_time);
+    }
 }

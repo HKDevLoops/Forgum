@@ -342,9 +342,14 @@ pub fn expand_cow_with_landmarks(
     let mut result = String::with_capacity(cow_template.len());
     let mut landmarks = Vec::new();
 
-    let cow_body = extract_heredoc_body(cow_template);
+    let sanitized_template = forgum_platform::strip_ansi_and_controls(cow_template);
+    let cow_body = extract_heredoc_body(&sanitized_template);
 
-    let eye_chars: Vec<char> = eyes.chars().collect();
+    let clean_eyes = forgum_platform::strip_ansi_and_controls(eyes);
+    let clean_tongue = forgum_platform::strip_ansi_and_controls(tongue);
+    let clean_thoughts = forgum_platform::strip_ansi_and_controls(thoughts);
+
+    let eye_chars: Vec<char> = clean_eyes.chars().collect();
     let left_eye = eye_chars.first().copied().unwrap_or('o').to_string();
     let right_eye = eye_chars
         .get(1)
@@ -365,7 +370,7 @@ pub fn expand_cow_with_landmarks(
                 "${thoughts}",
                 "$thoughts",
             ] {
-                line = line.replace(pat, thoughts);
+                line = line.replace(pat, &clean_thoughts);
             }
 
             // 2. Expand tongue placeholders (longest first)
@@ -377,7 +382,7 @@ pub fn expand_cow_with_landmarks(
                 "${tongue}",
                 "$tongue",
             ] {
-                line = line.replace(pat, tongue);
+                line = line.replace(pat, &clean_tongue);
             }
 
             // 3. Expand plural $eyes placeholders (longest first)
@@ -391,8 +396,8 @@ pub fn expand_cow_with_landmarks(
             ] {
                 while let Some(pos) = line.find(pat) {
                     let col = pos;
-                    line.replace_range(pos..pos + pat.len(), eyes);
-                    for (c_offset, _) in eyes.chars().enumerate() {
+                    line.replace_range(pos..pos + pat.len(), &clean_eyes);
+                    for (c_offset, _) in clean_eyes.chars().enumerate() {
                         landmarks.push((row, col + c_offset));
                     }
                 }
@@ -1283,14 +1288,15 @@ pub fn wrap_words(text: &str, max_width: usize) -> Vec<String> {
 /// |_______________|
 /// ```
 pub fn wrap_bubble(text: &str, min_width: usize) -> String {
-    if text.is_empty() {
+    let clean_text = forgum_platform::strip_ansi_and_controls(text);
+    if clean_text.is_empty() {
         return String::new();
     }
     let (term_w, _) = forgum_platform::terminal_size();
     let term_max = (term_w as usize).saturating_sub(6).max(8);
     let eff_min_w = min_width.min(term_max);
     let max_inner = term_max;
-    let lines = wrap_words(text, max_inner);
+    let lines = wrap_words(&clean_text, max_inner);
     if lines.is_empty() {
         return String::new();
     }
@@ -1344,7 +1350,8 @@ pub fn wrap_bubble(text: &str, min_width: usize) -> String {
 ///  (_______________)
 /// ```
 pub fn wrap_thought_bubble(text: &str, cow_width: usize) -> String {
-    if text.is_empty() {
+    let clean_text = forgum_platform::strip_ansi_and_controls(text);
+    if clean_text.is_empty() {
         return String::new();
     }
     let (term_w, _) = forgum_platform::terminal_size();
@@ -1358,7 +1365,7 @@ pub fn wrap_thought_bubble(text: &str, cow_width: usize) -> String {
         term_max
     };
 
-    let lines = wrap_words(text, max_inner);
+    let lines = wrap_words(&clean_text, max_inner);
     if lines.is_empty() {
         return String::new();
     }

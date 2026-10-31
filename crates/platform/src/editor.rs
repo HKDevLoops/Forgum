@@ -45,6 +45,15 @@ pub fn find_editor_binary(cmd: &str) -> Option<PathBuf> {
         || trimmed.contains('\0')
         || trimmed.contains('\n')
         || trimmed.contains('\r')
+        || trimmed.contains(';')
+        || trimmed.contains('&')
+        || trimmed.contains('|')
+        || trimmed.contains('`')
+        || trimmed.contains('$')
+        || trimmed.contains('"')
+        || trimmed.contains('\'')
+        || trimmed.contains('<')
+        || trimmed.contains('>')
     {
         return None;
     }
@@ -344,5 +353,12 @@ mod tests {
         assert_eq!(find_editor_binary("nvim\0evil"), None);
         assert_eq!(find_editor_binary("nvim\nrm -rf /"), None);
         assert_eq!(find_editor_binary("nvim\rcalc.exe"), None);
+        assert_eq!(find_editor_binary("nvim;calc.exe"), None);
+        assert_eq!(find_editor_binary("nvim&notepad"), None);
+        assert_eq!(find_editor_binary("nvim|sh"), None);
+        assert_eq!(find_editor_binary("`rm -rf /`"), None);
+        assert_eq!(find_editor_binary("$(whoami)"), None);
+        assert_eq!(find_editor_binary("\"nvim\""), None);
+        assert_eq!(find_editor_binary("'vim'"), None);
     }
 }

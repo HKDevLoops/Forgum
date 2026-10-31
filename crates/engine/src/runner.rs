@@ -3373,7 +3373,8 @@ fn print_colored_scene(
 
 fn render_subcommand(args: cli::Args) -> ExitCode {
     // Read scene from --file or stdin (capped to 4 MB per BUG-D4 / BUG-D5).
-    let scene_input = match forgum_engine::protocol_io::read_scene(args.file.as_deref(), true) {
+    // Note: cleanup is false so user-specified input files are never deleted (CWE-377 / CWE-73).
+    let scene_input = match forgum_engine::protocol_io::read_scene(args.file.as_deref(), false) {
         Ok(s) => s,
         Err(e) => {
             eprintln!("{PROGRAM}: {e}");

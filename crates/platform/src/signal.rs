@@ -200,9 +200,8 @@ impl Drop for SignalGuard {
         #[cfg(windows)]
         #[allow(unsafe_code)]
         {
-            if let Ok(mut lock) = WINDOWS_FLAG.lock() {
-                *lock = None;
-            }
+            let mut lock = WINDOWS_FLAG.lock().unwrap_or_else(|p| p.into_inner());
+            *lock = None;
             // Re-enable default Ctrl-C handling.
             unsafe {
                 let _ = windows_sys::Win32::System::Console::SetConsoleCtrlHandler(None, 0);
@@ -235,10 +234,9 @@ unsafe extern "system" fn windows_ctrl_handler(event_type: u32) -> i32 {
     );
     if triggered {
         let count = CTRL_C_COUNT.fetch_add(1, Ordering::SeqCst);
-        if let Ok(guard) = WINDOWS_FLAG.lock() {
-            if let Some(flag) = guard.as_ref() {
-                flag.store(true, Ordering::Relaxed);
-            }
+        let guard = WINDOWS_FLAG.lock().unwrap_or_else(|p| p.into_inner());
+        if let Some(flag) = guard.as_ref() {
+            flag.store(true, Ordering::Relaxed);
         }
         if count > 0 {
             // Second interrupt signal received: force immediate termination.
@@ -254,9 +252,8 @@ unsafe extern "system" fn windows_ctrl_handler(event_type: u32) -> i32 {
 fn install_windows(flag: ShutdownFlag) -> Result<(), PlatformError> {
     use windows_sys::Win32::System::Console::SetConsoleCtrlHandler;
     CTRL_C_COUNT.store(0, Ordering::SeqCst);
-    if let Ok(mut lock) = WINDOWS_FLAG.lock() {
-        *lock = Some(flag.shutdown_handle());
-    }
+    let mut lock = WINDOWS_FLAG.lock().unwrap_or_else(|p| p.into_inner());
+    *lock = Some(flag.shutdown_handle());
     unsafe {
         let result = SetConsoleCtrlHandler(Some(windows_ctrl_handler as ConsoleHandlerRoutine), 1);
         if result == 0 {

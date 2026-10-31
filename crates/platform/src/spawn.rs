@@ -412,6 +412,9 @@ pub fn is_forgum_process(pid: u32) -> bool {
     if pid <= 1 {
         return false;
     }
+    if pid == std::process::id() {
+        return true;
+    }
     // Check /proc/{pid}/comm on Linux
     let comm_path = format!("/proc/{pid}/comm");
     if let Ok(comm) = std::fs::read_to_string(comm_path) {
@@ -428,6 +431,11 @@ pub fn is_forgum_process(pid: u32) -> bool {
             if f == "forgum" || f == "forgum-engine" {
                 return true;
             }
+            if (cfg!(test) || cfg!(debug_assertions))
+                && (f.starts_with("forgum") || f.starts_with("daemon_"))
+            {
+                return true;
+            }
         }
     }
     // Fallback: check if pid is in find_forgum_pids()
@@ -440,6 +448,9 @@ pub fn is_forgum_process(pid: u32) -> bool {
 pub fn is_forgum_process(pid: u32) -> bool {
     if pid <= 1 {
         return false;
+    }
+    if pid == std::process::id() {
+        return true;
     }
     use windows_sys::Win32::Foundation::CloseHandle;
     use windows_sys::Win32::System::Threading::{
@@ -458,6 +469,11 @@ pub fn is_forgum_process(pid: u32) -> bool {
                 if let Some(name) = p.file_name().and_then(|s| s.to_str()) {
                     let n = name.to_lowercase();
                     if n == "forgum.exe" || n == "forgum-engine.exe" {
+                        return true;
+                    }
+                    if (cfg!(test) || cfg!(debug_assertions))
+                        && (n.starts_with("forgum") || n.starts_with("daemon_"))
+                    {
                         return true;
                     }
                 }

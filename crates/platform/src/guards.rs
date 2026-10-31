@@ -72,6 +72,10 @@ pub fn emergency_restore_terminal_idempotent() {
             use std::io::Write;
             let _ = std::io::stdout().write_all(EMERGENCY_VT_RESTORE_BYTES);
             let _ = std::io::stdout().flush();
+            if let Ok(mut conout) = std::fs::OpenOptions::new().write(true).open("CONOUT$") {
+                let _ = conout.write_all(EMERGENCY_VT_RESTORE_BYTES);
+                let _ = conout.flush();
+            }
         }
     }
 }

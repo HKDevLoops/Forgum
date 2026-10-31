@@ -119,16 +119,36 @@ pub fn read_text_file_compatible(path: &Path) -> io::Result<String> {
 }
 
 /// Sanitize and normalize string for universal terminal compatibility:
+/// - Strips all ANSI escape sequences (CSI, OSC, DCS, APC, PM, SOS, DEC modes).
+/// - Strips all non-printable C0 and C1 control characters (BEL, BS, DEL, etc.), preserving tabs and newlines.
 /// - Normalizes line endings (`\r\n` and `\r` to `\n`).
 /// - Strips zero-width BOM markers (`\u{feff}`) embedded in text.
 /// - Strips Trojan Source BiDi override control characters (`U+202A..=U+202E`, `U+2066..=U+2069`).
 /// - Strips null bytes (`\0`) to avoid Win32/C-string truncation.
 #[must_use]
 pub fn sanitize_and_normalize(s: &str) -> String {
+    strip_ansi_and_controls(s)
+}
+
+/// Strip all ANSI escape sequences, terminal controls, and dangerous C0/C1 control codes
+/// from `s`, preserving standard printable Unicode text, spaces, tabs (`\t`), and line breaks (`\n`).
+///
+/// Strips:
+/// - CSI sequences: `\x1b[ ... [0x40..=0x7E]` and C1 `\u{009B} ... [0x40..=0x7E]`
+/// - OSC sequences: `\x1b] ... (\x07 | \x1b\\ | \u{009C})` and C1 `\u{009D} ... (\x07 | \x1b\\ | \u{009C})`
+/// - DCS / APC / PM / SOS: `\x1b[P_X^]` and C1 `\u{0090}`, `\u{0098}`, `\u{009E}`, `\u{009F}`
+/// - Two-byte escape sequences: `\x1b[0x20..=0x7E]` (e.g. `\x1bc`, `\x1b=`, `\x1b7`, `\x1b8`, `\x1bM`)
+/// - C0 control characters (`\x00..=\x08`, `\x0B`, `\x0C`, `\x0E..=\x1F`, `\x7F`)
+/// - C1 control characters (`0x80..=0x9F`)
+/// - Trojan Source BiDi overrides (`U+202A..=U+202E`, `U+2066..=U+2069`)
+/// - Null bytes and BOM markers
+#[must_use]
+pub fn strip_ansi_and_controls(s: &str) -> String {
     let mut out = String::with_capacity(s.len());
+    let mut chars = s.chars().peekable();
     let mut prev_cr = false;
 
-    for ch in s.chars() {
+    while let Some(ch) = chars.next() {
         // Strip BOM and null bytes
         if ch == '\u{feff}' || ch == '\0' {
             continue;
@@ -157,15 +177,107 @@ pub fn sanitize_and_normalize(s: &str) -> String {
             continue;
         } else if ch == '\n' {
             if prev_cr {
-                // Already emitted LF for preceding CR
                 prev_cr = false;
                 continue;
             }
             out.push('\n');
-        } else {
-            out.push(ch);
+            prev_cr = false;
+            continue;
         }
         prev_cr = false;
+
+        // Escape sequences starting with ESC (\x1b)
+        if ch == '\x1b' {
+            match chars.peek() {
+                Some('[') => {
+                    chars.next(); // consume '['
+                    for next in chars.by_ref() {
+                        let b = next as u32;
+                        if (0x40..=0x7E).contains(&b) {
+                            break;
+                        }
+                    }
+                }
+                Some(']') => {
+                    chars.next(); // consume ']'
+                    while let Some(next) = chars.next() {
+                        if next == '\x07' || next == '\u{009C}' {
+                            break;
+                        }
+                        if next == '\x1b' && chars.peek() == Some(&'\\') {
+                            chars.next(); // consume '\\'
+                            break;
+                        }
+                    }
+                }
+                Some('P') | Some('_') | Some('^') | Some('X') => {
+                    chars.next(); // consume prefix
+                    while let Some(next) = chars.next() {
+                        if next == '\x07' || next == '\u{009C}' {
+                            break;
+                        }
+                        if next == '\x1b' && chars.peek() == Some(&'\\') {
+                            chars.next();
+                            break;
+                        }
+                    }
+                }
+                Some(&next) if (0x20..=0x7E).contains(&(next as u32)) => {
+                    chars.next(); // consume 2-byte escape
+                }
+                _ => {}
+            }
+            continue;
+        }
+
+        // C1 control characters (U+0080..=U+009F)
+        let code = ch as u32;
+        if (0x80..=0x9F).contains(&code) {
+            match ch {
+                '\u{009B}' => {
+                    // C1 CSI
+                    for next in chars.by_ref() {
+                        let b = next as u32;
+                        if (0x40..=0x7E).contains(&b) {
+                            break;
+                        }
+                    }
+                }
+                '\u{009D}' => {
+                    // C1 OSC
+                    while let Some(next) = chars.next() {
+                        if next == '\x07' || next == '\u{009C}' {
+                            break;
+                        }
+                        if next == '\x1b' && chars.peek() == Some(&'\\') {
+                            chars.next();
+                            break;
+                        }
+                    }
+                }
+                '\u{0090}' | '\u{0098}' | '\u{009E}' | '\u{009F}' => {
+                    // C1 DCS / SOS / PM / APC
+                    while let Some(next) = chars.next() {
+                        if next == '\x07' || next == '\u{009C}' {
+                            break;
+                        }
+                        if next == '\x1b' && chars.peek() == Some(&'\\') {
+                            chars.next();
+                            break;
+                        }
+                    }
+                }
+                _ => {}
+            }
+            continue;
+        }
+
+        // C0 control characters (0x00..0x1F except \n, \t; and 0x7F DEL)
+        if ch == '\t' {
+            out.push('\t');
+        } else if code >= 0x20 && code != 0x7F {
+            out.push(ch);
+        }
     }
 
     out
@@ -246,5 +358,35 @@ mod tests {
     fn test_null_byte_sanitization() {
         let with_nulls = "Hello\0World\0Forgum";
         assert_eq!(sanitize_and_normalize(with_nulls), "HelloWorldForgum");
+    }
+
+    #[test]
+    fn test_strip_ansi_csi_and_osc() {
+        let dirty = "\x1b[31;1mRed Alert\x1b[0m \x1b]52;c;evil_clipboard\x07Clean Text";
+        assert_eq!(strip_ansi_and_controls(dirty), "Red Alert Clean Text");
+    }
+
+    #[test]
+    fn test_strip_dec_modes_and_cursor_hijack() {
+        let malicious = "\x1b[?1049h\x1b[?25l\x1b[2J\x1b[10;20HMascot Art\x1b[6n";
+        assert_eq!(strip_ansi_and_controls(malicious), "Mascot Art");
+    }
+
+    #[test]
+    fn test_strip_two_byte_and_c1_escapes() {
+        let input = "\x1bc\x1b=\x1b7\x1b8\u{009B}2J\u{009D}0;Title\x07Protected Art";
+        assert_eq!(strip_ansi_and_controls(input), "Protected Art");
+    }
+
+    #[test]
+    fn test_strip_c0_controls_preserving_newlines_and_tabs() {
+        let input = "Line 1\x07\x08\r\n\tTabbed\x1f\x7f Line 2";
+        assert_eq!(strip_ansi_and_controls(input), "Line 1\n\tTabbed Line 2");
+    }
+
+    #[test]
+    fn test_unicode_and_mascot_symbols_preserved() {
+        let art = "  ▲ █ ▓ ▒ ░ ▀ ▄ ❀ 🐮 Forgum ✨  ";
+        assert_eq!(strip_ansi_and_controls(art), art);
     }
 }

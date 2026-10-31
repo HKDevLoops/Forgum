@@ -319,7 +319,22 @@ fn zero_cp437_mojibake_symbols_invariance() {
         }
     }
 
-    // Assert that scenery, effects, and particles module sources are 100% pure ASCII to prevent CP437 mojibake (Γöé, Γòæ, òæ)
+    // Assert that scenery, effects, and particles module sources contain no accidental CP437
+    // mojibake (Γöé, Γòæ, òæ).  Intentional Unicode block-drawing and box-drawing glyphs
+    // used by the Termflix solid-gradient renderer are whitelisted.
+    const ALLOWED_UNICODE_RENDERING_CHARS: &[char] = &[
+        '\u{2580}', // ▀  upper half block
+        '\u{2584}', // ▄  lower half block
+        '\u{2588}', // █  full block
+        '\u{2591}', // ░  light shade
+        '\u{2592}', // ▒  medium shade
+        '\u{2593}', // ▓  dark shade
+        '\u{2500}', // ─  box light horizontal
+        '\u{2502}', // │  box light vertical
+        '\u{25B2}', // ▲  black up-pointing triangle
+        '\u{2740}', // ❀  white florette
+        '\u{00B7}', // ·  middle dot (star twinkling)
+    ];
     for path in [
         "crates/engine/src/scenery.rs",
         "crates/engine/src/effects.rs",
@@ -348,7 +363,7 @@ fn zero_cp437_mojibake_symbols_invariance() {
             }
             for ch in code_part.chars() {
                 assert!(
-                    ch.is_ascii(),
+                    ch.is_ascii() || ALLOWED_UNICODE_RENDERING_CHARS.contains(&ch),
                     "{} line {} contains non-ASCII character '{}' (U+{:04X}) that can cause CP437 mojibake",
                     path,
                     line_no + 1,
@@ -980,4 +995,102 @@ fn invariant_custom_mascot_pack_verifier_zero_catalog_poisoning() {
             "Canonical mascot '{cow_name}' must remain valid"
         );
     }
+}
+
+#[test]
+fn test_security_ansi_escape_sanitization_in_cow_and_speech_bubbles() {
+    use forgum_engine::cow::{expand_cow, wrap_bubble, wrap_thought_bubble};
+
+    // 1. Malicious cow template with OSC 52, DEC private mode, and cursor moves
+    let malicious_cow = " (\\$eyes) \x1b]52;c;evil_clipboard\x07 \x1b[?1049h\x1b[2J\x1b[12;34H [\\$tongue] \\$thoughts";
+    let expanded = expand_cow(
+        malicious_cow,
+        "\x1b[?25loo",
+        "\x1bcU",
+        "\x1b[6no",
+    );
+    assert!(!expanded.contains("\x1b"), "All ANSI escape sequences must be stripped from expanded cow art");
+    assert!(!expanded.contains("evil_clipboard"), "OSC 52 clipboard payload must be neutralized");
+    assert!(expanded.contains("oo"), "Eyes glyph must be preserved");
+    assert!(expanded.contains('U'), "Tongue glyph must be preserved");
+    assert!(expanded.contains('o'), "Thoughts glyph must be preserved");
+
+    // 2. Malicious bubble text
+    let dirty_bubble = "Hello \x1b]52;c;steal\x07\x1b[2JWorld\u{009B}H\u{009D}0;Title\x07!";
+    let bubble = wrap_bubble(dirty_bubble, 20);
+    assert!(!bubble.contains("\x1b"), "Speech bubble must strip all ANSI sequences");
+    assert!(!bubble.contains("\u{009B}") && !bubble.contains("\u{009D}"), "Speech bubble must strip C1 sequences");
+    assert!(bubble.contains("Hello World!"), "Printable text must be preserved in bubble: {bubble}");
+
+    let thought_bubble = wrap_thought_bubble(dirty_bubble, 20);
+    assert!(!thought_bubble.contains("\x1b"), "Thought bubble must strip all ANSI sequences");
+    assert!(thought_bubble.contains("Hello World!"), "Printable text must be preserved in thought bubble: {thought_bubble}");
+}
+
+#[test]
+fn test_security_mascot_pack_stage2_comprehensive_escape_rejection() {
+    use forgum_engine::pack_importer::{verify_and_compile_mascot_pack, MascotPackManifest, PackVerifyError};
+
+    let valid_cow = "  ^__^\n  (oo)\\_______\n   (__)\\       )\\/\\\n       ||----w |\n       ||     ||";
+    let valid_palette = [
+        "#FFFFFF".into(),
+        "#000000".into(),
+        "#555555".into(),
+        "#AAAAAA".into(),
+        "#DDDDDD".into(),
+    ];
+    let mut manifest = MascotPackManifest {
+        pack_id: "sec_pack".to_string(),
+        author: "Security Tester".to_string(),
+        version: "1.0.0".to_string(),
+        dna_signature: String::new(),
+        habitat: forgum_engine::dna::Habitat::Terrestrial,
+        base_anim: forgum_engine::dna::BaseAnim::Walk,
+        palette_hex: valid_palette.clone(),
+    };
+    manifest.dna_signature = forgum_engine::pack_importer::compute_pack_dna_signature(
+        "sec_pack",
+        valid_cow,
+        &manifest.palette_hex,
+    );
+
+    // Rejection of dangerous terminal sequences
+    let forbidden_samples = [
+        ("osc_52", " (oo) \x1b]52;c;payload\x07"),
+        ("cursor_home", " (oo) \x1b[H"),
+        ("dsr_query", " (oo) \x1b[6n"),
+        ("terminal_reset", " (oo) \x1bc"),
+        ("dec_mode", " (oo) \x1b[?1049h"),
+        ("screen_clear", " (oo) \x1b[2J"),
+        ("apc_seq", " (oo) \x1b_payload\x07"),
+        ("c1_csi", " (oo) \u{009B}2J"),
+        ("c1_osc", " (oo) \u{009D}0;Title\x07"),
+        ("c0_bell", " (oo) \x07"),
+    ];
+
+    for (name, cow_art) in forbidden_samples {
+        let err = verify_and_compile_mascot_pack("sec_pack", cow_art, &manifest)
+            .expect_err(&format!("Forbidden sequence {name} must be rejected"));
+        assert_eq!(
+            err,
+            PackVerifyError::ForbiddenTerminalEscapeSequence,
+            "Failed on {name}"
+        );
+    }
+}
+
+#[test]
+fn test_security_protocol_io_user_file_preservation() {
+    let tmp = tempfile::tempdir().unwrap();
+    let file_path = tmp.path().join("my_scene.json");
+    std::fs::write(&file_path, r#"{"cow":"default","effect":"default"}"#).unwrap();
+
+    assert!(file_path.exists());
+    let res = forgum_engine::protocol_io::read_scene(Some(&file_path), false);
+    assert!(res.is_ok());
+    // User file MUST be preserved when cleanup=false (preventing arbitrary file deletion)
+    assert!(
+        file_path.exists(),
+        "User-supplied input file must never be deleted by protocol_io"
+    );
 }

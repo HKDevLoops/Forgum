@@ -104,6 +104,22 @@ impl Cell {
             alpha: 255,
         }
     }
+
+    #[must_use]
+    pub const fn with_bg(ch: char, fg: Color, bg: Color) -> Self {
+        let code = ch as u32;
+        let sanitized_glyph = if code < 0x20 || code == 0x7F || (code >= 0x80 && code <= 0x9F) {
+            ' '
+        } else {
+            ch
+        };
+        Self {
+            ch: sanitized_glyph,
+            fg,
+            bg,
+            alpha: 255,
+        }
+    }
 }
 
 impl Default for Cell {
@@ -171,6 +187,8 @@ impl FrameBuffer {
     /// Used by the SIM thread to avoid cloning when building frames.
     #[must_use]
     pub fn from_raw_owned(width: usize, height: usize, cells: Vec<Cell>) -> Self {
+        let width = width.min(MAX_WIDTH);
+        let height = height.min(MAX_HEIGHT);
         let sz = width.saturating_mul(height);
         let mut back = cells;
         back.resize(sz, Cell::empty());

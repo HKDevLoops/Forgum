@@ -1074,7 +1074,7 @@ pub fn render_mountain_with_tod(
                 if y >= fb.height {
                     continue;
                 }
-                let (ch, col) = calculate_mountain_depth_cell(
+                let (ch, col_fg, col_bg) = calculate_mountain_depth_cell(
                     style,
                     fg,
                     x,
@@ -1088,7 +1088,13 @@ pub fn render_mountain_with_tod(
                 );
 
                 if ch != ' ' {
-                    let _ = fb.set(x, y, Cell::new(ch, tod.apply_lighting(col)));
+                    let fg_lit = tod.apply_lighting(col_fg);
+                    let bg_lit = if col_bg == Color::TRANSPARENT {
+                        Color::TRANSPARENT
+                    } else {
+                        tod.apply_lighting(col_bg)
+                    };
+                    let _ = fb.set(x, y, Cell::with_bg(ch, fg_lit, bg_lit));
                 }
             }
         }
@@ -1111,11 +1117,51 @@ pub fn blend_color(c1: Color, c2: Color, t: f32) -> Color {
     )
 }
 
+/// Continuous subpixel color calculation for mountain terrain with Leonardo da Vinci sfumato atmospheric perspective.
+#[inline]
+pub fn calculate_mountain_subpixel_color(
+    base_fg: Color,
+    depth_ratio: f32,
+    slope: f32,
+) -> Color {
+    // 1. Directional solar slope illumination: sunlit vs shaded facets
+    let slope_lum = if slope >= 0.0 {
+        1.0 + (slope * 0.12).clamp(0.0, 0.30)
+    } else {
+        1.0 + (slope * 0.15).clamp(-0.35, 0.0)
+    };
+
+    // 2. Continuous depth strata shading & Leonardo da Vinci sfumato aerial perspective
+    let depth_col = if depth_ratio < 0.25 {
+        Color::rgb(
+            base_fg.r.saturating_add(20),
+            base_fg.g.saturating_add(20),
+            base_fg.b.saturating_add(28),
+        )
+    } else if depth_ratio < 0.55 {
+        base_fg
+    } else if depth_ratio < 0.80 {
+        Color::rgb(
+            base_fg.r.saturating_sub(18),
+            base_fg.g.saturating_sub(18),
+            base_fg.b.saturating_sub(12),
+        )
+    } else {
+        // Foothills: sfumato aerial perspective (cool slate/cyan mist)
+        blend_color(base_fg, SFUMATO_SLATE, (0.45 + depth_ratio * 0.30).clamp(0.0, 0.90))
+    };
+
+    depth_col.scale_luminance(slope_lum)
+}
+
 /// Calculate the depth-shaded cell glyph and TrueColor for mountain rendering across multiple strata.
-/// Implements atmospheric aerial perspective (Leonardo da Vinci sfumato principle):
-/// - Foreground crests: high-contrast sunlit highlights and deep shadow facets.
-/// - Mid-ground foothills: rock strata and crevasse textures.
-/// - Distant mountain layer: cool slate/cyan desaturation and soft mist textures.
+///
+/// Implements Termflix/Chafa dual-pixel half-block TrueColor rasterization combined with
+/// Leonardo da Vinci sfumato atmospheric aerial perspective:
+/// - **Peak** (topmost row): outline glyph for silhouette definition (`▲`, `/`, `\`) with solar highlight
+/// - **Interior body**: continuous dual-pixel half-block (`▀`) with independent top and bottom TrueColor subpixels
+///   eliminating forced Unicode blocks (`█`, `▓`, `▒`, `░`, `│`, `─`) for fluid, non-distorted pixel animation
+/// - **Ground contact** (base rows): solid terrain edge (`▄`) with darkened earth contact band
 pub fn calculate_mountain_depth_cell(
     style: MountainStyle,
     base_fg: Color,
@@ -1127,159 +1173,88 @@ pub fn calculate_mountain_depth_cell(
     h_curr: f32,
     h_prev: f32,
     h_next: f32,
-) -> (char, Color) {
+) -> (char, Color, Color) {
     if y == start_y {
-        // Foreground Crests: High-contrast sunlit highlights & deep shadow facets
+        // ── Peak silhouette row ──────────────────────────────────────────
         let ch = match style {
             MountainStyle::Skyline => {
-                if x.is_multiple_of(3) {
-                    '|'
-                } else {
-                    '_'
-                }
+                if x.is_multiple_of(3) { '|' } else { '_' }
             }
             MountainStyle::Castle => {
-                if x.is_multiple_of(2) {
-                    '#'
-                } else {
-                    '_'
-                }
+                if x.is_multiple_of(2) { '▲' } else { '_' }
             }
             MountainStyle::Plateau => {
-                if slope.abs() < 0.2 {
-                    '_'
-                } else if slope > 0.0 {
-                    '/'
-                } else {
-                    '\\'
-                }
+                if slope.abs() < 0.2 { '▀' } else if slope > 0.0 { '/' } else { '\\' }
             }
             MountainStyle::Garden => {
-                if x.is_multiple_of(4) {
-                    '*'
-                } else {
-                    '^'
-                }
+                if x.is_multiple_of(4) { '❀' } else { '▲' }
             }
+            MountainStyle::Iceberg => '▲',
             _ => {
                 if h_curr > h_prev && h_curr > h_next {
-                    '^'
+                    '▲'
                 } else if slope > 0.25 {
                     '/'
                 } else if slope < -0.25 {
                     '\\'
                 } else {
-                    '-'
+                    '▀'
                 }
             }
         };
-
+        // Sunlit peak apex highlight (bright white tint)
         let col = if h_curr > h_prev && h_curr > h_next {
-            // Sunlit alpine peak apex highlight
             Color::rgb(
-                base_fg.r.saturating_add(55),
-                base_fg.g.saturating_add(55),
-                base_fg.b.saturating_add(65),
+                base_fg.r.saturating_add(60),
+                base_fg.g.saturating_add(60),
+                base_fg.b.saturating_add(70),
             )
         } else if slope >= 0.0 {
-            // Sunward slope highlight
             Color::rgb(
-                base_fg.r.saturating_add(40),
-                base_fg.g.saturating_add(40),
-                base_fg.b.saturating_add(50),
+                base_fg.r.saturating_add(45),
+                base_fg.g.saturating_add(45),
+                base_fg.b.saturating_add(55),
             )
         } else {
-            // Deep shadow facet on leeward slope
             Color::rgb(
-                base_fg.r.saturating_sub(25),
-                base_fg.g.saturating_sub(25),
+                base_fg.r.saturating_sub(30),
+                base_fg.g.saturating_sub(30),
                 base_fg.b.saturating_sub(20),
             )
         };
-        (ch, col)
-    } else if y >= mountain_base_y.saturating_sub(1) {
-        // Distant Mountain Layer: Cool slate/cyan desaturation and soft mist textures (Sfumato)
-        let ch = if y == mountain_base_y {
-            match style {
-                MountainStyle::Volcano => '~',
-                MountainStyle::Skyline => '_',
-                MountainStyle::Seamount => '~',
-                _ => '.',
-            }
-        } else {
-            match (x + y) % 4 {
-                0 => '~',
-                1 => '.',
-                2 => ':',
-                _ => '-',
-            }
-        };
-        let col = blend_color(base_fg, SFUMATO_SLATE, 0.55);
-        (ch, col)
-    } else {
-        // Mid-Ground Foothills Layer: Rock strata and crevasse textures
-        let strata = (y * 2 + x / 3) % 4;
-        let is_crevasse = (x * 5 + y * 7).is_multiple_of(11);
-        let ch = if is_crevasse {
-            ':'
-        } else {
-            match style {
-                MountainStyle::Skyline => {
-                    if (x + y).is_multiple_of(2) {
-                        '#'
-                    } else {
-                        '|'
-                    }
-                }
-                MountainStyle::Iceberg => {
-                    if (x + y).is_multiple_of(3) {
-                        '^'
-                    } else {
-                        '|'
-                    }
-                }
-                MountainStyle::Volcano => {
-                    if (x + y).is_multiple_of(4) {
-                        '/'
-                    } else {
-                        '\\'
-                    }
-                }
-                MountainStyle::Gothic => {
-                    if x.is_multiple_of(3) {
-                        '|'
-                    } else {
-                        '/'
-                    }
-                }
-                _ => {
-                    if strata == 0 {
-                        '='
-                    } else if (x + y).is_multiple_of(3) {
-                        '|'
-                    } else {
-                        '/'
-                    }
-                }
-            }
-        };
+        (ch, col, Color::TRANSPARENT)
 
-        let col = if is_crevasse {
-            Color::rgb(
-                base_fg.r.saturating_sub(20),
-                base_fg.g.saturating_sub(20),
-                base_fg.b.saturating_sub(15),
-            )
-        } else if strata == 0 {
-            Color::rgb(
-                base_fg.r.saturating_add(18),
-                base_fg.g.saturating_add(18),
-                base_fg.b.saturating_add(22),
-            )
-        } else {
-            base_fg
+    } else if y >= mountain_base_y.saturating_sub(1) {
+        // ── Ground contact: solid terrain edge with half-block ───────────
+        let ch = match style {
+            MountainStyle::Skyline if x.is_multiple_of(4) => '|',
+            MountainStyle::Castle if x.is_multiple_of(3) => '#',
+            _ => '▄',
         };
-        (ch, col)
+        // Darkened earth contact band
+        let col = Color::rgb(
+            base_fg.r.saturating_sub(35),
+            base_fg.g.saturating_sub(35),
+            base_fg.b.saturating_sub(25),
+        );
+        (ch, col, Color::TRANSPARENT)
+
+    } else {
+        // ── Interior body: dual-pixel half-block TrueColor rasterization ─
+        let total_h = mountain_base_y.saturating_sub(start_y).max(1) as f32;
+        let depth_from_peak_top = (y.saturating_sub(start_y) as f32).max(0.0);
+        let depth_ratio_top = (depth_from_peak_top / total_h).clamp(0.0, 1.0);
+        let depth_ratio_bot = ((depth_from_peak_top + 0.5) / total_h).clamp(0.0, 1.0);
+
+        let col_top = calculate_mountain_subpixel_color(base_fg, depth_ratio_top, slope);
+        let col_bot = calculate_mountain_subpixel_color(base_fg, depth_ratio_bot, slope);
+
+        // Architecture styles keep structural accents
+        match style {
+            MountainStyle::Skyline if (x + y).is_multiple_of(3) => ('|', col_top, Color::TRANSPARENT),
+            MountainStyle::Castle if x.is_multiple_of(3) => ('#', col_top, Color::TRANSPARENT),
+            _ => ('▀', col_top, col_bot),
+        }
     }
 }
 
@@ -3388,11 +3363,11 @@ pub fn calculate_road_texture(x: usize, style: RoadStyle, time: f32) -> (char, C
             let ch = if roughness > 0.82 {
                 'o' // small pebble
             } else if roughness > 0.55 {
-                '.' // gravel grain
+                '▄' // solid earth edge — half-block for ground depth
             } else if roughness > 0.30 {
                 '_' // earth furrow
             } else {
-                ' ' // packed soil
+                '▄' // packed soil — solid block ground contact
             };
             (ch, fg)
         }
@@ -4092,16 +4067,22 @@ pub fn render_environment_with_tod(
             }
         }
         EnvironmentStyle::Ocean => {
-            // Render surface ocean waves horizon across the water boundary
+            // Render surface ocean waves horizon across the water boundary with continuous dual-pixel half-blocks
             let surface_y = if ground_y >= 6 { 1 } else { 0 };
             let wave_fg = Color::rgb(72, 202, 228); // Luminous sea surface cyan
+            let deep_blue = Color::rgb(16, 64, 110); // Ocean depth navy
             for x in 0..width {
-                let wave_harmonic = (x as f32 * 0.28 + time * 3.5).sin() * 0.45;
-                let wave_pos = ((x as f32 + time * 6.0) % 4.0 + 4.0) % 4.0;
-                let wave_ch = if wave_pos < 2.0 { '~' } else { '-' };
-                let y_wave = ((surface_y as f32 + wave_harmonic).round() as usize)
-                    .min(ground_y.saturating_sub(1));
-                let _ = fb.set(x, y_wave, Cell::new(wave_ch, wave_fg));
+                let wave_harmonic = (x as f32 * 0.28 + time * 3.5).sin();
+                let crest_subpixel = (surface_y as f32 * 2.0 + wave_harmonic * 0.8).clamp(0.0, (ground_y * 2) as f32);
+                let cell_y = (crest_subpixel / 2.0).floor() as usize;
+                let sub_y = crest_subpixel % 2.0;
+
+                let y_wave = cell_y.min(ground_y.saturating_sub(1));
+                if sub_y < 1.0 {
+                    let _ = fb.set(x, y_wave, Cell::with_bg('▀', wave_fg, deep_blue));
+                } else {
+                    let _ = fb.set(x, y_wave, Cell::with_bg('▄', wave_fg, Color::TRANSPARENT));
+                }
             }
 
             // Rising bubbles ascending through the water column from seabed to surface
@@ -4307,6 +4288,98 @@ pub fn render_scenery_full_with_tod(
     );
 }
 
+/// Render a Termflix-style sky gradient at the top of the frame.
+///
+/// Paints rows 0..sky_rows with a smooth vertical color gradient from deep sky
+/// (top) to horizon haze (bottom). Uses `░` / `▒` block shading for atmospheric
+/// density and scatters deterministic stars in night/dusk modes.
+pub fn render_sky_gradient(
+    fb: &mut FrameBuffer,
+    env: EnvironmentStyle,
+    mountain_base_y: usize,
+    time: f32,
+    tod: TimeOfDay,
+) {
+    let sky_rows = mountain_base_y.min(fb.height).min(8);
+    if sky_rows == 0 || fb.width == 0 {
+        return;
+    }
+    let tod_resolved = tod.resolve();
+
+    for row in 0..sky_rows {
+        // Depth ratio: 0 = top of sky, 1 = horizon
+        let depth = row as f32 / sky_rows.max(1) as f32;
+
+        // Pick sky gradient colors based on environment and time of day
+        let (top_col, horizon_col) = match env {
+            EnvironmentStyle::Space | EnvironmentStyle::Cyber => (
+                Color::rgb(5, 5, 20),
+                Color::rgb(10, 20, 60),
+            ),
+            EnvironmentStyle::Inferno => (
+                Color::rgb(30, 5, 5),
+                Color::rgb(80, 30, 10),
+            ),
+            EnvironmentStyle::Ocean | EnvironmentStyle::Swamp => (
+                Color::rgb(0, 20, 60),
+                Color::rgb(0, 60, 100),
+            ),
+            EnvironmentStyle::Arctic => (
+                Color::rgb(200, 230, 255),
+                Color::rgb(170, 210, 245),
+            ),
+            EnvironmentStyle::Graveyard => (
+                Color::rgb(15, 15, 25),
+                Color::rgb(35, 35, 55),
+            ),
+            _ => match tod_resolved {
+                TimeOfDay::Night => (Color::rgb(5, 8, 28), Color::rgb(15, 20, 55)),
+                TimeOfDay::Dawn  => (Color::rgb(30, 20, 80), Color::rgb(255, 140, 60)),
+                TimeOfDay::Dusk  => (Color::rgb(80, 30, 80), Color::rgb(255, 100, 50)),
+                _                => (Color::rgb(30, 80, 170), Color::rgb(80, 160, 220)),
+            },
+        };
+
+        let sky_col = blend_color(top_col, horizon_col, depth);
+
+        for x in 0..fb.width {
+            // Skip if a cell is already drawn (star, sun, moon from environment)
+            if fb.get_back(x, row).ch != ' ' {
+                continue;
+            }
+
+            // Atmospheric density character: atmospheric haze mist near horizon
+            let ch = if depth > 0.85 {
+                // Horizon haze — soft atmospheric mist particle
+                if (x + row) % 4 == 0 { '.' } else { ' ' }
+            } else if depth > 0.60 {
+                // Lower sky — very sparse haze dot
+                if (x * 7 + row * 13) % 23 == 0 { '.' } else { ' ' }
+            } else {
+                // Stars / space in upper sky for night/space modes
+                let is_star = match tod_resolved {
+                    TimeOfDay::Night => (x * 37 + row * 53) % 11 == 0,
+                    TimeOfDay::Dawn | TimeOfDay::Dusk => (x * 41 + row * 67) % 29 == 0,
+                    _ => false,
+                } || matches!(env, EnvironmentStyle::Space | EnvironmentStyle::Cyber)
+                    && (x * 31 + row * 47) % 13 == 0;
+
+                // Twinkle effect using time
+                if is_star {
+                    let twinkle = (time * 2.3 + (x as f32) * 0.5 + (row as f32) * 1.7).sin() > 0.0;
+                    if twinkle { '·' } else { '.' }
+                } else {
+                    ' '
+                }
+            };
+
+            if ch != ' ' {
+                let _ = fb.set(x, row, Cell::new(ch, sky_col));
+            }
+        }
+    }
+}
+
 /// Composite full scenery with explicit animal kinematics, clearing ground cover, solar illumination, and seasonal phenology.
 #[allow(clippy::too_many_arguments)]
 pub fn render_scenery_full_with_tod_and_season(
@@ -4331,6 +4404,7 @@ pub fn render_scenery_full_with_tod_and_season(
     let tod = time_of_day.unwrap_or_default().resolve();
     let current_season = season.unwrap_or_default().resolve();
     let mountain_base_y = road_y.saturating_sub(1);
+    render_sky_gradient(fb, env, mountain_base_y, time, tod);
     render_mountain_with_tod(fb, mountain, mountain_base_y, w, time, tod);
     render_trees_with_animal_and_tod_and_season(
         fb,
@@ -4431,7 +4505,8 @@ impl SceneryCache {
 
         // Quantize time into sub-millisecond buckets so elements drift continuously
         // and smoothly up to 240Hz liquid refresh rate.
-        let time_bucket = (time * 240.0).floor() as u32;
+        let safe_time = if time.is_finite() && time >= 0.0 { time } else { 0.0 };
+        let time_bucket = (safe_time * 240.0).floor() as u32;
 
         let key = SceneryCacheKey {
             width: w,
@@ -4449,8 +4524,9 @@ impl SceneryCache {
         if self.key.as_ref() == Some(&key) && self.cached_cells.len() == w * h {
             // Cache hit: populate back buffer from cached cells
             for y in 0..h {
+                let row_offset = y * w;
                 for x in 0..w {
-                    let cell = self.cached_cells[y * w + x];
+                    let cell = self.cached_cells[row_offset + x];
                     if cell.alpha > 0 || cell.ch != ' ' {
                         let _ = fb.set(x, y, cell);
                     }
@@ -4475,12 +4551,12 @@ impl SceneryCache {
         );
 
         // Snapshot generated scenery cells
+        let total = w.saturating_mul(h);
         self.cached_cells.clear();
-        self.cached_cells.reserve(w * h);
-        for y in 0..h {
-            for x in 0..w {
-                self.cached_cells.push(fb.get_back(x, y));
-            }
+        if fb.back.len() >= total {
+            self.cached_cells.extend_from_slice(&fb.back[..total]);
+        } else {
+            self.cached_cells.extend_from_slice(&fb.back);
         }
         self.key = Some(key);
     }
@@ -4781,7 +4857,7 @@ mod tests {
         let mountain_base_y = 20;
 
         // 1. Foreground crests: apex highlight is brighter than base
-        let (ch_apex, col_apex) = calculate_mountain_depth_cell(
+        let (ch_apex, col_apex, col_apex_bg) = calculate_mountain_depth_cell(
             MountainStyle::Peaks,
             base_fg,
             10,
@@ -4793,11 +4869,12 @@ mod tests {
             12.0,
             12.0,
         );
-        assert_eq!(ch_apex, '^');
+        assert_eq!(ch_apex, '▲');
+        assert_eq!(col_apex_bg, Color::TRANSPARENT);
         assert!(col_apex.r > base_fg.r && col_apex.g > base_fg.g && col_apex.b > base_fg.b);
 
         // Leeward shadow facet is darker than base
-        let (_ch_shadow, col_shadow) = calculate_mountain_depth_cell(
+        let (_ch_shadow, col_shadow, _) = calculate_mountain_depth_cell(
             MountainStyle::Peaks,
             base_fg,
             10,
@@ -4811,8 +4888,8 @@ mod tests {
         );
         assert!(col_shadow.r < base_fg.r && col_shadow.g < base_fg.g && col_shadow.b < base_fg.b);
 
-        // 2. Mid-ground foothills layer: strata / crevasse texturing
-        let (ch_mid, _) = calculate_mountain_depth_cell(
+        // 2. Mid-ground foothills layer: continuous dual-pixel half-block TrueColor rasterization
+        let (ch_mid, col_mid_top, col_mid_bot) = calculate_mountain_depth_cell(
             MountainStyle::Peaks,
             base_fg,
             10,
@@ -4824,10 +4901,12 @@ mod tests {
             10.0,
             10.0,
         );
-        assert!(matches!(ch_mid, '=' | ':' | '|' | '/'));
+        assert_eq!(ch_mid, '▀');
+        assert_ne!(col_mid_top, Color::TRANSPARENT);
+        assert_ne!(col_mid_bot, Color::TRANSPARENT);
 
-        // 3. Distant mountain layer: Leonardo da Vinci sfumato desaturation & mist textures
-        let (ch_base, col_base) = calculate_mountain_depth_cell(
+        // 3. Distant mountain layer: Leonardo da Vinci sfumato desaturation & ground contact
+        let (ch_base, col_base, col_base_bg) = calculate_mountain_depth_cell(
             MountainStyle::Peaks,
             base_fg,
             10,
@@ -4839,10 +4918,10 @@ mod tests {
             5.0,
             5.0,
         );
-        assert_eq!(ch_base, '.');
-        let dist_to_slate_base = (col_base.r as i32 - SFUMATO_SLATE.r as i32).abs();
-        let dist_to_slate_orig = (base_fg.r as i32 - SFUMATO_SLATE.r as i32).abs();
-        assert!(dist_to_slate_base <= dist_to_slate_orig);
+        assert_eq!(ch_base, '▄');
+        assert_eq!(col_base_bg, Color::TRANSPARENT);
+        // Ground contact band should be darkened relative to base
+        assert!(col_base.r < base_fg.r && col_base.g < base_fg.g);
     }
 
     #[test]

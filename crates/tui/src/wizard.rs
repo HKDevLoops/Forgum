@@ -1865,11 +1865,18 @@ pub fn run_installer_wizard() -> Result<(), Box<dyn std::error::Error>> {
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend).context("build terminal")?;
 
+    let platform_shutdown = forgum_platform::signal::ShutdownFlag::new();
+    let _signal_guard =
+        forgum_platform::signal::SignalGuard::install(platform_shutdown.clone()).ok();
+
     let mut wizard = InstallerWizard::new();
     let tick_rate = Duration::from_millis(33); // ~30 FPS
 
     let res = (|| -> anyhow::Result<()> {
         loop {
+            if platform_shutdown.is_shutdown() {
+                break;
+            }
             terminal.draw(|f| wizard.render(f))?;
 
             if event::poll(tick_rate)? {
@@ -1895,11 +1902,18 @@ pub fn run_uninstaller_wizard() -> Result<(), Box<dyn std::error::Error>> {
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend).context("build terminal")?;
 
+    let platform_shutdown = forgum_platform::signal::ShutdownFlag::new();
+    let _signal_guard =
+        forgum_platform::signal::SignalGuard::install(platform_shutdown.clone()).ok();
+
     let mut wizard = UninstallerWizard::new();
     let tick_rate = Duration::from_millis(33); // ~30 FPS
 
     let res = (|| -> anyhow::Result<()> {
         loop {
+            if platform_shutdown.is_shutdown() {
+                break;
+            }
             terminal.draw(|f| wizard.render(f))?;
 
             if event::poll(tick_rate)? {

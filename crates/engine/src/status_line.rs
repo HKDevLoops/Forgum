@@ -4,59 +4,7 @@ use crate::fortune;
 
 #[allow(dead_code)]
 pub(crate) fn strip_ansi(s: &str) -> String {
-    let mut result = String::with_capacity(s.len());
-    let mut chars = s.chars().peekable();
-
-    while let Some(ch) = chars.next() {
-        if ch == '\x1b' {
-            match chars.peek() {
-                Some('[') => {
-                    // CSI sequence: \x1b[ ... [0x40..=0x7E]
-                    chars.next(); // consume '['
-                    for next in chars.by_ref() {
-                        let b = next as u32;
-                        if (0x40..=0x7E).contains(&b) {
-                            break;
-                        }
-                    }
-                }
-                Some(']') => {
-                    // OSC sequence: \x1b] ... (\x07 | \x1b\\)
-                    chars.next(); // consume ']'
-                    while let Some(next) = chars.next() {
-                        if next == '\x07' {
-                            break;
-                        }
-                        if next == '\x1b' && chars.peek() == Some(&'\\') {
-                            chars.next(); // consume '\\'
-                            break;
-                        }
-                    }
-                }
-                Some('P') | Some('_') | Some('^') | Some('X') => {
-                    // DCS / APC / PM / SOS sequence: terminated by ST (\x1b\\) or BEL (\x07)
-                    chars.next();
-                    while let Some(next) = chars.next() {
-                        if next == '\x07' {
-                            break;
-                        }
-                        if next == '\x1b' && chars.peek() == Some(&'\\') {
-                            chars.next();
-                            break;
-                        }
-                    }
-                }
-                Some(&next) if (0x20..=0x7E).contains(&(next as u32)) => {
-                    // 2-character escape sequence (e.g. \x1b=, \x1b>, \x1b7, \x1b8, \x1bM)
-                    chars.next();
-                }
-                _ => {}
-            }
-        } else {
-            result.push(ch);
-        }
-    }
-    result
+    forgum_platform::strip_ansi_and_controls(s)
 }
 
 #[allow(dead_code)]
@@ -196,5 +144,17 @@ mod tests {
         let input =
             "Safe \x1b]52;c;c3RlYWw=\x07Mascot \x1b]8;;http://evil.com\x1b\\Link\x1b]8;;\x1b\\!";
         assert_eq!(strip_ansi(input), "Safe Mascot Link!");
+    }
+
+    #[test]
+    fn strip_ansi_c1_control_codes_and_terminal_reset() {
+        let input = "\u{009B}2J\u{009D}0;Hacked Title\x07\x1bcMascot";
+        assert_eq!(strip_ansi(input), "Mascot");
+    }
+
+    #[test]
+    fn strip_ansi_dec_modes_and_bidi() {
+        let input = "\x1b[?1049h\x1b[?25lNormal \u{202E}Reversed\u{202C} End";
+        assert_eq!(strip_ansi(input), "Normal Reversed End");
     }
 }

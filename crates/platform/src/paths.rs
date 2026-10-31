@@ -570,17 +570,14 @@ pub fn detect_session_id() -> String {
 }
 
 #[cfg(test)]
+pub(crate) fn env_lock() -> &'static std::sync::Mutex<()> {
+    static LOCK: std::sync::OnceLock<std::sync::Mutex<()>> = std::sync::OnceLock::new();
+    LOCK.get_or_init(|| std::sync::Mutex::new(()))
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::{Mutex, OnceLock};
-
-    /// Serializes the env-mutating tests below. `FORGUM_*` are process-global,
-    /// so concurrent `set_var`/`remove_var` across parallel tests races and
-    /// intermittently fails (e.g. under `cargo llvm-cov` instrumented runs).
-    fn env_lock() -> &'static Mutex<()> {
-        static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
-        LOCK.get_or_init(|| Mutex::new(()))
-    }
 
     #[test]
     fn shell_kind_parse_round_trip() {

@@ -208,23 +208,23 @@ pub fn probe_windows_gpus_registry() -> Vec<(String, String, Option<u64>)> {
                 if res != 0 || byte_len == 0 {
                     return None;
                 }
-                let mut buf = vec![0u8; byte_len as usize];
+                let u16_len = (byte_len as usize).div_ceil(2);
+                let mut buf = vec![0u16; u16_len];
                 let res = unsafe {
                     RegQueryValueExW(
                         hkey,
                         val_wide.as_ptr(),
                         std::ptr::null_mut(),
                         &mut val_type,
-                        buf.as_mut_ptr(),
+                        buf.as_mut_ptr() as *mut u8,
                         &mut byte_len,
                     )
                 };
                 if res != 0 {
                     return None;
                 }
-                let u16_slice: &[u16] = unsafe {
-                    std::slice::from_raw_parts(buf.as_ptr() as *const u16, (byte_len as usize) / 2)
-                };
+                let actual_len = (byte_len as usize) / 2;
+                let u16_slice = &buf[..actual_len];
                 let end = u16_slice
                     .iter()
                     .position(|&c| c == 0)

@@ -149,6 +149,7 @@ impl Renderer for AnsiRenderer {
         let mut cur_y = 0;
         let mut cur_cursor: Option<(usize, usize)> = None;
         let mut last_fg: Option<Color> = None;
+        let mut last_bg: Option<Color> = None;
         let mut i = 0;
         while i < damage.len() {
             let (x0, y0) = damage[i];
@@ -182,6 +183,10 @@ impl Renderer for AnsiRenderer {
             }
 
             if cell0.alpha == 0 {
+                if last_bg.is_some() {
+                    buf.extend_from_slice(b"\x1b[49m");
+                    last_bg = None;
+                }
                 let mut run_len = 1;
                 while i + run_len < damage.len() {
                     let (nx, ny) = damage[i + run_len];
@@ -212,6 +217,22 @@ impl Renderer for AnsiRenderer {
                     last_fg = Some(cell0.fg);
                 }
 
+                if cell0.bg != Color::TRANSPARENT {
+                    if !last_bg.is_some_and(|last| color_close(last, cell0.bg)) {
+                        buf.extend_from_slice(b"\x1b[48;2;");
+                        Self::write_decimal(buf, u32::from(cell0.bg.r));
+                        buf.push(b';');
+                        Self::write_decimal(buf, u32::from(cell0.bg.g));
+                        buf.push(b';');
+                        Self::write_decimal(buf, u32::from(cell0.bg.b));
+                        buf.push(b'm');
+                        last_bg = Some(cell0.bg);
+                    }
+                } else if last_bg.is_some() {
+                    buf.extend_from_slice(b"\x1b[49m");
+                    last_bg = None;
+                }
+
                 let mut ch_buf = [0u8; 4];
                 let s = cell0.ch.encode_utf8(&mut ch_buf);
                 buf.extend_from_slice(s.as_bytes());
@@ -224,7 +245,7 @@ impl Renderer for AnsiRenderer {
                     }
                     let nidx = ny * cols + nx;
                     let nc = cells.get(nidx).copied().unwrap_or_default();
-                    if nc.alpha == 0 || !color_close(nc.fg, cell0.fg) {
+                    if nc.alpha == 0 || !color_close(nc.fg, cell0.fg) || nc.bg != cell0.bg {
                         break;
                     }
                     let s = nc.ch.encode_utf8(&mut ch_buf);
@@ -235,7 +256,7 @@ impl Renderer for AnsiRenderer {
                 i += run_len;
             }
         }
-        if last_fg.is_some() {
+        if last_fg.is_some() || last_bg.is_some() {
             buf.extend_from_slice(b"\x1b[0m");
         }
         if self.mode == RenderMode::Overlay {
@@ -388,16 +409,16 @@ impl Renderer for PlatformRendererAdapter {
         damage: &[(usize, usize)],
     ) -> std::io::Result<()> {
         let rows = cells.len().checked_div(cols).unwrap_or(0);
-        match &mut self.cached_fb {
-            Some(fb) if fb.width == cols && fb.height == rows => {
+        if let Some(fb) = &mut self.cached_fb {
+            if fb.width == cols && fb.height == rows && fb.back.len() == cells.len() {
                 fb.back.copy_from_slice(cells);
-                self.inner.render_damage(out, fb, damage)
-            }
-            _ => {
-                let fb = FrameBuffer::from_raw(cols, rows, cells);
-                self.inner.render_damage(out, &fb, damage)
+                return self.inner.render_damage(out, fb, damage);
             }
         }
+        let fb = FrameBuffer::from_raw(cols, rows, cells);
+        let res = self.inner.render_damage(out, &fb, damage);
+        self.cached_fb = Some(fb);
+        res
     }
 
     fn begin_sync(&self) -> &'static str {

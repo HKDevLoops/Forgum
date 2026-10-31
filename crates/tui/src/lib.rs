@@ -202,6 +202,9 @@ pub fn run_tui(
     let mut terminal = Terminal::new(backend).context("build terminal")?;
 
     let shutdown_flag = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+    let platform_shutdown = forgum_platform::signal::ShutdownFlag::new();
+    let _signal_guard =
+        forgum_platform::signal::SignalGuard::install(platform_shutdown.clone()).ok();
     let input_paused = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
 
     let shutdown_thread = shutdown_flag.clone();
@@ -234,6 +237,11 @@ pub fn run_tui(
         let mut last_tick = Instant::now();
 
         loop {
+            if platform_shutdown.is_shutdown() {
+                shutdown_for_closure.store(true, std::sync::atomic::Ordering::Relaxed);
+                return Ok(());
+            }
+
             let fps = (app.config().fps).clamp(1, 240) as u64;
             let frame_budget = Duration::from_micros(1_000_000 / fps);
             let frame_start = Instant::now();
@@ -524,9 +532,8 @@ fn read_config_file(
     format: ConfigFormat,
 ) -> Result<forgum_platform::protocol::SceneConfig, anyhow::Error> {
     let bytes = std::fs::read(path)?;
-    let text = std::str::from_utf8(&bytes)
-        .map_err(|_| anyhow::anyhow!("config is not valid UTF-8: {}", path.display()))?;
-    forgum_platform::protocol::SceneConfig::parse_with_format(text, format)
+    let text = forgum_platform::decode_text_compatible(&bytes);
+    forgum_platform::protocol::SceneConfig::parse_with_format(&text, format)
         .map_err(|e| anyhow::anyhow!("parse config: {e}"))
 }
 
@@ -548,6 +555,19 @@ fn detect_terminal_editor(configured: Option<&str>) -> Option<ResolvedEditor> {
     if let Some(custom) = configured {
         let trimmed = custom.trim();
         if !trimmed.is_empty() && !trimmed.eq_ignore_ascii_case("auto") {
+            // Strict injection defense: reject any custom command containing shell metacharacters
+            if trimmed.contains(';')
+                || trimmed.contains('&')
+                || trimmed.contains('|')
+                || trimmed.contains('`')
+                || trimmed.contains('$')
+                || trimmed.contains('\0')
+                || trimmed.contains('\n')
+                || trimmed.contains('\r')
+            {
+                return None;
+            }
+
             // 1. If custom points directly to an existing file, use it as-is without splitting on spaces
             let direct_path = Path::new(trimmed);
             if direct_path.is_file() {
@@ -604,18 +624,56 @@ fn broadcast_daemon_reload(config: &forgum_platform::SceneConfig) {
     let session_id = forgum_platform::detect_session_id();
     let socket_path = forgum_platform::control_socket_path(&session_id);
     if let Ok(mut conn) = forgum_platform::DaemonSocket::connect(&socket_path) {
-        let _ = conn.write_response(&format!(
-            "{{\"cmd\":\"EFFECT\",\"arg\":\"{}\"}}\n",
-            config.effect
-        ));
-        let _ = conn.write_response(&format!("{{\"cmd\":\"COW\",\"arg\":\"{}\"}}\n", config.cow));
-        let _ = conn.write_response(&format!(
-            "{{\"cmd\":\"TEXT\",\"arg\":\"{}\"}}\n",
-            config.text
-        ));
-        let _ = conn.write_response(&format!(
-            "{{\"cmd\":\"COLOR\",\"arg\":\"{}\"}}\n",
-            config.color_mode
-        ));
+        let eff = if config.animation.as_deref() == Some("static") {
+            "static"
+        } else {
+            &config.effect
+        };
+        let commands = [
+            ("EFFECT", eff),
+            ("COW", config.cow.as_str()),
+            ("TEXT", config.text.as_str()),
+            ("COLOR", config.color_mode.as_str()),
+        ];
+        for (cmd, arg) in commands {
+            if let Ok(json) = serde_json::to_string(&serde_json::json!({
+                "cmd": cmd,
+                "arg": arg
+            })) {
+                let _ = conn.write_response(&format!("{json}\n"));
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_read_config_file_with_bom_and_crlf() {
+        let dir = std::env::temp_dir().join(format!("forgum_tui_test_{}", std::process::id()));
+        let _ = fs::create_dir_all(&dir);
+        let path = dir.join("config.json");
+
+        // Write JSON with UTF-8 BOM (\xEF\xBB\xBF) and Windows CRLF
+        let mut bytes = vec![0xEF, 0xBB, 0xBF];
+        bytes.extend_from_slice(b"{\r\n  \"cow\": \"tux\",\r\n  \"fps\": 60\r\n}\r\n");
+        fs::write(&path, bytes).expect("write temp config");
+
+        let cfg = read_config_file(&path, ConfigFormat::Json).expect("parse with BOM");
+        assert_eq!(cfg.cow, "tux");
+        assert_eq!(cfg.fps, 60);
+
+        let _ = fs::remove_file(&path);
+        let _ = fs::remove_dir(&dir);
+    }
+
+    #[test]
+    fn test_detect_terminal_editor_rejects_injection() {
+        assert!(detect_terminal_editor(Some("nvim;rm -rf /")).is_none());
+        assert!(detect_terminal_editor(Some("vim&calc.exe")).is_none());
+        assert!(detect_terminal_editor(Some("`id`")).is_none());
+        assert!(detect_terminal_editor(Some("$(whoami)")).is_none());
     }
 }

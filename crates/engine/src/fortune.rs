@@ -47,16 +47,18 @@ fn parse_fortunes(content: &str, out: &mut Vec<String>) {
         // Standard fortune format: % separated
         for fortune in content.split('%') {
             let trimmed = fortune.trim();
-            if !trimmed.is_empty() {
-                out.push(trimmed.to_string());
+            let sanitized = forgum_platform::strip_ansi_and_controls(trimmed);
+            if !sanitized.is_empty() {
+                out.push(sanitized);
             }
         }
     } else {
         // Line-based format: each non-empty line is a fortune
         for line in content.lines() {
             let trimmed = line.trim();
-            if !trimmed.is_empty() {
-                out.push(trimmed.to_string());
+            let sanitized = forgum_platform::strip_ansi_and_controls(trimmed);
+            if !sanitized.is_empty() {
+                out.push(sanitized);
             }
         }
     }

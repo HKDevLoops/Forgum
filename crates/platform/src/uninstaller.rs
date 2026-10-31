@@ -216,8 +216,9 @@ fn remove_from_user_path(logs: &mut Vec<String>, errors: &mut Vec<String>) -> bo
             Err(_) => return false,
         };
 
+        let escaped_target = install_dir.replace('\'', "''");
         let script = format!(
-            "$target = '{install_dir}'; \
+            "$target = '{escaped_target}'; \
              $curr = [Environment]::GetEnvironmentVariable('PATH', 'User'); \
              if ($curr) {{ \
                  $parts = $curr -split ';' | Where-Object {{ $_ -and $_.TrimEnd('\\') -ne $target.TrimEnd('\\') }}; \
@@ -338,15 +339,17 @@ fn remove_binaries(logs: &mut Vec<String>, errors: &mut Vec<String>) -> bool {
                 if is_current {
                     let temp_del = path.with_extension("exe.del");
                     let _ = std::fs::rename(&path, &temp_del);
-                    // Schedule background deletion after process termination
+                    // Schedule background deletion after process termination if path is safe
                     let target_str = temp_del.to_string_lossy().to_string();
-                    let _ = Command::new("cmd.exe")
-                        .args([
-                            "/C",
-                            "ping 127.0.0.1 -n 2 > nul & del /F /Q",
-                            &format!("\"{target_str}\""),
-                        ])
-                        .spawn();
+                    if !target_str.contains('&') && !target_str.contains('%') && !target_str.contains('^') {
+                        let _ = Command::new("cmd.exe")
+                            .args([
+                                "/C",
+                                "ping 127.0.0.1 -n 2 > nul & del /F /Q",
+                                &format!("\"{target_str}\""),
+                            ])
+                            .spawn();
+                    }
                     logs.push(format!("✓ Scheduled binary deletion: {}", path.display()));
                     any_removed = true;
                     continue;

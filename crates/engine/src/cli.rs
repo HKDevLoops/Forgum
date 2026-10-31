@@ -1995,11 +1995,14 @@ pub fn build_scene_config(args: &Args) -> Result<SceneConfig, String> {
         if args.mountain.is_none() && (cli_cow_passed || cfg.mountain.is_none()) {
             cfg.mountain = Some(profile.mountain.as_str().to_string());
         }
-        if args.animation_type.is_none()
+        let is_explicit_static = args.animation.as_deref() == Some("static")
+            || (args.animation.is_none() && cfg.animation.as_deref() == Some("static"));
+
+        if !is_explicit_static
+            && args.animation_type.is_none()
             && args.effect.is_none()
             && (cli_cow_passed
                 || cfg.effect == "default"
-                || cfg.effect == "static"
                 || cfg.effect == "animal_natural"
                 || cfg.effect == "natural"
                 || cfg.effect.is_empty())
@@ -2241,6 +2244,12 @@ pub fn build_scene_config(args: &Args) -> Result<SceneConfig, String> {
         if let Some((remapped, _)) = biome.remap_incompatible_effect(anim) {
             cfg.animation_type = Some(remapped.to_string());
         }
+    }
+
+    if cfg.animation.as_deref() == Some("static") || args.animation.as_deref() == Some("static") {
+        cfg.animation = Some("static".to_string());
+        cfg.effect = "static".to_string();
+        cfg.animation_type = None;
     }
 
     Ok(cfg)

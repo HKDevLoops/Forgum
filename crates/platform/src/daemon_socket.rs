@@ -50,11 +50,17 @@ impl DaemonSocket {
             if let Some(parent) = path.parent() {
                 let _ = std::fs::create_dir_all(parent);
 
-                // Verify directory ownership on Unix to prevent unauthorized access or directory hijacking
+                // Verify directory ownership on Unix to prevent unauthorized access, directory hijacking, or symlink TOCTOU (CWE-59)
                 #[allow(unsafe_code)]
                 {
                     use std::os::unix::fs::MetadataExt;
-                    if let Ok(meta) = std::fs::metadata(parent) {
+                    if let Ok(meta) = std::fs::symlink_metadata(parent) {
+                        if meta.file_type().is_symlink() {
+                            return Err(PlatformError::Io(std::io::Error::new(
+                                std::io::ErrorKind::PermissionDenied,
+                                "runtime directory is a symlink — refusing to bind",
+                            )));
+                        }
                         let current_uid = unsafe { libc::getuid() };
                         if meta.uid() == current_uid {
                             let _ = std::fs::set_permissions(
@@ -226,6 +232,26 @@ impl DaemonSocket {
                     return Err(PlatformError::Io(err));
                 }
 
+                // Peer Credential Verification (Windows):
+                // Verify that the connecting client is an authentic Forgum process to prevent PID spoofing and unauthorized IPC (CWE-285).
+                #[allow(unsafe_code)]
+                {
+                    let mut client_pid: u32 = 0;
+                    let ret = unsafe {
+                        windows_sys::Win32::System::Pipes::GetNamedPipeClientProcessId(
+                            new_handle,
+                            &mut client_pid,
+                        )
+                    };
+                    if ret != 0 && client_pid != 0 && !crate::spawn::is_forgum_process(client_pid) {
+                        unsafe {
+                            windows_sys::Win32::System::Pipes::DisconnectNamedPipe(new_handle);
+                            windows_sys::Win32::Foundation::CloseHandle(new_handle);
+                        }
+                        return Ok(None);
+                    }
+                }
+
                 Ok(Some(SocketConnection::Windows(new_handle)))
             }
         }
@@ -297,6 +323,28 @@ impl DaemonSocket {
 
             if handle == windows_sys::Win32::Foundation::INVALID_HANDLE_VALUE {
                 return Err(PlatformError::Io(io::Error::last_os_error()));
+            }
+
+            // Server Process Verification (Windows):
+            // Verify that the named pipe server is an authentic Forgum process (CWE-285).
+            #[allow(unsafe_code)]
+            {
+                let mut server_pid: u32 = 0;
+                let ret = unsafe {
+                    windows_sys::Win32::System::Pipes::GetNamedPipeServerProcessId(
+                        handle,
+                        &mut server_pid,
+                    )
+                };
+                if ret != 0 && server_pid != 0 && !crate::spawn::is_forgum_process(server_pid) {
+                    unsafe {
+                        windows_sys::Win32::Foundation::CloseHandle(handle);
+                    }
+                    return Err(PlatformError::Io(io::Error::new(
+                        io::ErrorKind::PermissionDenied,
+                        "connected named pipe server is not a verified forgum process",
+                    )));
+                }
             }
 
             Ok(SocketConnection::Windows(handle))
@@ -473,7 +521,16 @@ fn path_to_pipe_name(path: &Path) -> String {
         .file_name()
         .and_then(|n| n.to_str())
         .unwrap_or("forgum-ipc");
-    format!("\\\\.\\pipe\\{}", file_name)
+    let safe_name: String = file_name
+        .chars()
+        .filter(|&c| c.is_ascii_alphanumeric() || c == '-' || c == '_' || c == '.')
+        .collect();
+    let effective = if safe_name.is_empty() {
+        "forgum-ipc"
+    } else {
+        &safe_name
+    };
+    format!("\\\\.\\pipe\\{}", effective)
 }
 
 #[cfg(test)]

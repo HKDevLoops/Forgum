@@ -2689,6 +2689,14 @@ mod tests {
 
     #[test]
     fn test_clear_update_cache_removes_file() {
+        let _guard = crate::paths::env_lock().lock().unwrap_or_else(|p| p.into_inner());
+        let temp = tempfile::tempdir().unwrap();
+        let cfg = temp.path().join("config.json");
+        let saved = std::env::var("FORGUM_CONFIG").ok();
+        #[allow(unsafe_code)]
+        unsafe {
+            std::env::set_var("FORGUM_CONFIG", &cfg);
+        }
         let cache = UpdateCheckCache {
             last_checked: 1700000000,
             latest_version: "0.0.10-beta".to_string(),
@@ -2699,6 +2707,13 @@ mod tests {
         assert!(res.is_ok());
         let after = read_update_cache().unwrap_or(None);
         assert_eq!(after, None);
+        #[allow(unsafe_code)]
+        unsafe {
+            match saved {
+                Some(v) => std::env::set_var("FORGUM_CONFIG", v),
+                None => std::env::remove_var("FORGUM_CONFIG"),
+            }
+        }
     }
 
     #[test]

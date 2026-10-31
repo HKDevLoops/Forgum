@@ -172,6 +172,9 @@ fn discover_via_ssh(host: &str) -> Result<Vec<RemoteDaemon>, String> {
     use std::process::Command;
 
     let user = local_user();
+    if !user.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_') {
+        return Err(format!("Unsafe local user name: {:?}", user));
+    }
     let remote_cmd = format!("ls /tmp/forgum-{}/daemon-*.json 2>/dev/null || true", user);
 
     let output = Command::new("ssh")
@@ -185,6 +188,14 @@ fn discover_via_ssh(host: &str) -> Result<Vec<RemoteDaemon>, String> {
     for line in stdout.lines() {
         let path = line.trim();
         if path.is_empty() {
+            continue;
+        }
+
+        // Validate path strictly matches expected daemon state file pattern to prevent SSH command injection (CWE-78)
+        if !path.starts_with("/tmp/forgum-")
+            || !path.ends_with(".json")
+            || !path.chars().all(|c| c.is_ascii_alphanumeric() || c == '/' || c == '-' || c == '_' || c == '.')
+        {
             continue;
         }
 
